@@ -15,13 +15,17 @@ class MenuScreen:
         self.menu_selection = 0
         self.menu_options = ["New Game", "Quit"]
 
+    def update_console(self, console: tcod.console.Console) -> None:
+        """コンソールの更新"""
+        self.console = console
+
     def render(self) -> None:
         """Render the menu screen."""
         self.console.clear()
         
         # タイトルを表示
         title = "PyRogue"
-        title_y = 10
+        title_y = self.console.height // 4
         self.console.print(
             x=(self.console.width - len(title)) // 2,
             y=title_y,

@@ -48,13 +48,40 @@ class Engine:
 
     def initialize(self) -> None:
         """Initialize the game engine and TCOD console."""
+        # Create the context with resizable window
         self.context = tcod.context.new(
             columns=self.screen_width,
             rows=self.screen_height,
             title=self.title,
             vsync=True,
+            sdl_window_flags=tcod.context.SDL_WINDOW_RESIZABLE,
         )
         game_logger.debug("Game engine initialized")
+
+    def handle_resize(self, event: tcod.event.WindowEvent) -> None:
+        """ウィンドウリサイズ時の処理"""
+        # 新しいウィンドウサイズを取得
+        pixel_width = event.width
+        pixel_height = event.height
+        
+        # ピクセルサイズから文字数を計算（フォントサイズで割る）
+        self.screen_width = max(80, pixel_width // 10)  # 最小幅は80文字
+        self.screen_height = max(50, pixel_height // 10)  # 最小高さは50文字
+        
+        # コンソールを再作成
+        self.console = tcod.console.Console(self.screen_width, self.screen_height)
+        
+        # 各画面のコンソールを更新
+        self.menu_screen.update_console(self.console)
+        self.game_screen.update_console(self.console)
+        
+        game_logger.debug(
+            "Window resized",
+            extra={
+                "new_width": self.screen_width,
+                "new_height": self.screen_height,
+            },
+        )
 
     def run(self) -> None:
         """Run the main game loop."""
@@ -78,8 +105,9 @@ class Engine:
                         game_logger.debug("Quit event received")
                         self.running = False
                         break
-                    
-                    if event.type == "KEYDOWN":
+                    elif event.type == "WINDOWRESIZED":
+                        self.handle_resize(event)
+                    elif event.type == "KEYDOWN":
                         if not self.handle_keydown(event):
                             self.running = False
                             break
