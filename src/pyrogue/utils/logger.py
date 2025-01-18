@@ -31,7 +31,7 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
         
-        return json.dumps(log_data)
+        return json.dumps(log_data, ensure_ascii=False)
 
     def _convert_numpy(self, obj: Any) -> Any:
         """Convert numpy types to Python native types."""
@@ -63,7 +63,7 @@ class GameLogger:
         
         # Create logger
         self.logger = logging.getLogger("pyrogue")
-        self.logger.setLevel(self.TRACE)
+        self.logger.setLevel(logging.DEBUG)
         
         # Create logs directory
         self.log_dir = Path("data/logs")
@@ -72,18 +72,17 @@ class GameLogger:
         # Configure game.log handler (DEBUG, INFO, WARN, TRACE)
         game_handler = logging.handlers.RotatingFileHandler(
             filename=self.log_dir / "game.log",
-            maxBytes=1024,  # 1KB for testing rotation
+            maxBytes=1024 * 1024,  # 1MB
             backupCount=5,  # Keep 5 backup files
             encoding="utf-8"
         )
         game_handler.setFormatter(JsonFormatter())
-        game_handler.setLevel(self.TRACE)
-        game_handler.addFilter(lambda record: record.levelno <= logging.WARNING)
+        game_handler.setLevel(logging.DEBUG)
         
         # Configure error.log handler (ERROR, FATAL)
         error_handler = logging.handlers.RotatingFileHandler(
             filename=self.log_dir / "error.log",
-            maxBytes=1024,  # 1KB for testing rotation
+            maxBytes=1024 * 1024,  # 1MB
             backupCount=5,  # Keep 5 backup files
             encoding="utf-8"
         )

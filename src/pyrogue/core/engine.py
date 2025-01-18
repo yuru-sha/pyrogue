@@ -13,14 +13,9 @@ import tcod.tileset
 from pyrogue.utils import game_logger
 from pyrogue.ui.screens.menu_screen import MenuScreen
 from pyrogue.ui.screens.game_screen import GameScreen
-
-class GameState:
-    """Represents the current state of the game."""
-    MENU = "menu"
-    GAME = "game"
-    INVENTORY = "inventory"
-    HELP = "help"
-    GAME_OVER = "game_over"
+from pyrogue.core.game_states import GameStates
+from pyrogue.entities.actors.player import Player
+from pyrogue.map.dungeon import DungeonGenerator
 
 class Engine:
     """Main game engine class."""
@@ -28,14 +23,17 @@ class Engine:
     def __init__(self):
         self.screen_width = 80
         self.screen_height = 50
+        self.map_width = 80
+        self.map_height = 43  # 画面上部にステータス表示、下部にメッセージログ用の余白を確保
         self.title = "PyRogue"
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
-        self.state = GameState.MENU
+        self.state = GameStates.MENU
         self.running = False
+        self.message_log = []  # メッセージログを追加
         
         # 画面の初期化
-        self.menu_screen = MenuScreen(self.console)
-        self.game_screen = GameScreen(self.console)
+        self.menu_screen = MenuScreen(self.console, self)
+        self.game_screen = GameScreen(self)
         
         game_logger.debug(
             "Initializing game engine",
@@ -48,10 +46,22 @@ class Engine:
 
     def initialize(self) -> None:
         """Initialize the game engine and TCOD console."""
+        # フォントの設定
+        tileset = tcod.tileset.load_tilesheet(
+            "data/assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
+            32, 8,  # 列数と行数
+            tcod.tileset.CHARMAP_TCOD,  # 文字マップ
+        )
+        
+        # フォントサイズの設定
+        self.font_width = 10
+        self.font_height = 10
+
         # Create the context with resizable window
         self.context = tcod.context.new(
             columns=self.screen_width,
             rows=self.screen_height,
+            tileset=tileset,
             title=self.title,
             vsync=True,
             sdl_window_flags=tcod.context.SDL_WINDOW_RESIZABLE,
@@ -64,9 +74,9 @@ class Engine:
         pixel_width = event.width
         pixel_height = event.height
         
-        # ピクセルサイズから文字数を計算（フォントサイズで割る）
-        self.screen_width = max(80, pixel_width // 10)  # 最小幅は80文字
-        self.screen_height = max(50, pixel_height // 10)  # 最小高さは50文字
+        # ピクセルサイズから文字数を計算
+        self.screen_width = max(80, pixel_width // self.font_width)  # 最小幅は80文字
+        self.screen_height = max(50, pixel_height // self.font_height)  # 最小高さは50文字
         
         # コンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
@@ -93,9 +103,9 @@ class Engine:
                 self.console.clear()
                 
                 # 現在の状態に応じて描画
-                if self.state == GameState.MENU:
+                if self.state == GameStates.MENU:
                     self.menu_screen.render()
-                elif self.state == GameState.GAME:
+                elif self.state == GameStates.PLAYERS_TURN:
                     self.game_screen.render()
                 
                 self.context.present(self.console)
@@ -108,7 +118,7 @@ class Engine:
                     elif event.type == "WINDOWRESIZED":
                         self.handle_resize(event)
                     elif event.type == "KEYDOWN":
-                        if not self.handle_keydown(event):
+                        if not self.handle_input(event):
                             self.running = False
                             break
 
@@ -121,28 +131,29 @@ class Engine:
         finally:
             self.cleanup()
 
-    def handle_keydown(self, event: tcod.event.KeyDown) -> bool:
-        """Handle keyboard input.
+    def handle_input(self, event: tcod.event.KeyDown) -> bool:
+        """キー入力の処理
         
         Returns:
-            bool: False if the game should quit, True otherwise.
+            bool: ゲームを続行する場合はTrue、終了する場合はFalse
         """
         # ESCキーの処理
         if event.sym == tcod.event.KeySym.ESCAPE:
-            if self.state == GameState.GAME:
-                self.state = GameState.MENU
+            if self.state == GameStates.PLAYERS_TURN:
+                self.state = GameStates.MENU
                 return True
-            elif self.state == GameState.MENU:
+            elif self.state == GameStates.MENU:
                 return False
 
         # 状態に応じたキー処理
-        if self.state == GameState.MENU:
-            if self.menu_screen.handle_keydown(event):
-                if self.menu_screen.menu_selection == 0:  # New Game selected
-                    self.state = GameState.GAME
-                return True
-            return False
-        elif self.state == GameState.GAME:
+        if self.state == GameStates.MENU:
+            new_state = self.menu_screen.handle_input(event)
+            if new_state:
+                if new_state == GameStates.EXIT:
+                    return False
+                self.state = new_state
+            return True
+        elif self.state == GameStates.PLAYERS_TURN:
             self.game_screen.handle_keydown(event)
             return True
         return True
@@ -150,3 +161,8 @@ class Engine:
     def cleanup(self) -> None:
         """Cleanup resources before exiting."""
         game_logger.debug("Cleaning up resources") 
+
+    def new_game(self) -> None:
+        """新しいゲームを開始"""
+        self.game_screen.setup_new_game()
+        self.state = GameStates.PLAYERS_TURN 

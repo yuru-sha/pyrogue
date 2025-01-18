@@ -1,34 +1,26 @@
-"""Main entry point for the game."""
-
+"""Main module."""
 import sys
 import traceback
-from pathlib import Path
 
-from pyrogue.core import Engine
+from pyrogue.core.engine import Engine
 from pyrogue.utils import game_logger
 
 def main() -> None:
-    """Main entry point for the game."""
+    """Main function."""
     try:
-        # Create data directories if they don't exist
-        data_dir = Path("data")
-        fonts_dir = data_dir / "fonts"
-        fonts_dir.mkdir(parents=True, exist_ok=True)
-
-        # Initialize and run the game
         engine = Engine()
         engine.initialize()
         engine.run()
-
     except Exception as e:
         game_logger.error(
-            "Fatal error occurred",
+            "Fatal error",
             extra={
                 "error": str(e),
-                "traceback": traceback.format_exc(),
-            },
+                "traceback": traceback.format_exc()
+            }
         )
-        print(f"Fatal error: {e}", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

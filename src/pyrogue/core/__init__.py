@@ -1,5 +1,5 @@
-"""Core game systems."""
+"""Core package."""
 
-from pyrogue.core.engine import Engine, GameState
+from pyrogue.core.engine import Engine
 
-__all__ = ["Engine", "GameState"]
+__all__ = ["Engine"]

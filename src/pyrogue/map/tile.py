@@ -1,0 +1,165 @@
+"""Tile module."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional, Tuple
+
+@dataclass
+class Tile:
+    """タイルの基底クラス"""
+    walkable: bool
+    transparent: bool
+    dark: Tuple[int, int, int]  # RGB color when not in FOV
+    light: Tuple[int, int, int]  # RGB color when in FOV
+    char: str
+
+class Floor(Tile):
+    """床タイル"""
+    def __init__(
+        self,
+        has_gold: bool = False,
+        has_potion: bool = False,
+        has_scroll: bool = False,
+        has_weapon: bool = False,
+        has_armor: bool = False,
+        has_ring: bool = False,
+        has_food: bool = False,
+        has_amulet: bool = False,
+    ) -> None:
+        super().__init__(
+            walkable=True,
+            transparent=True,
+            dark=(64, 64, 64),
+            light=(192, 192, 192),
+            char="."
+        )
+        self.has_gold = has_gold
+        self.has_potion = has_potion
+        self.has_scroll = has_scroll
+        self.has_weapon = has_weapon
+        self.has_armor = has_armor
+        self.has_ring = has_ring
+        self.has_food = has_food
+        self.has_amulet = has_amulet
+
+    @property
+    def has_item(self) -> bool:
+        """アイテムを持っているかどうか"""
+        return any([
+            self.has_gold,
+            self.has_potion,
+            self.has_scroll,
+            self.has_weapon,
+            self.has_armor,
+            self.has_ring,
+            self.has_food,
+            self.has_amulet,
+        ])
+
+    @property
+    def item_char(self) -> str:
+        """アイテムの表示文字を返す"""
+        if self.has_gold:
+            return "$"
+        elif self.has_potion:
+            return "!"
+        elif self.has_scroll:
+            return "?"
+        elif self.has_weapon:
+            return ")"
+        elif self.has_armor:
+            return "["
+        elif self.has_ring:
+            return "="
+        elif self.has_food:
+            return "%"
+        elif self.has_amulet:
+            return "&"
+        return "."
+
+class Wall(Tile):
+    """壁タイル"""
+    def __init__(self) -> None:
+        super().__init__(
+            walkable=False,
+            transparent=False,
+            dark=(0, 0, 100),
+            light=(130, 110, 50),
+            char="#"
+        )
+
+class Door(Tile):
+    """扉タイル"""
+    def __init__(self, state: str = "closed") -> None:
+        super().__init__(
+            walkable=False,
+            transparent=False,
+            dark=(139, 69, 19),
+            light=(139, 69, 19),
+            char="+"
+        )
+        self.door_state = state
+        self._update_state()
+
+    def _update_state(self) -> None:
+        """扉の状態に応じてタイルの属性を更新"""
+        if self.door_state == "open":
+            self.walkable = True
+            self.transparent = True
+            self.char = "/"
+        else:
+            self.walkable = False
+            self.transparent = False
+            self.char = "+"
+
+    def toggle(self) -> None:
+        """扉の開閉を切り替える"""
+        self.door_state = "open" if self.door_state == "closed" else "closed"
+        self._update_state()
+
+class SecretDoor(Door):
+    """隠し扉タイル"""
+    def __init__(self) -> None:
+        super().__init__(state="secret")
+        self.char = "#"  # 未発見時は壁として表示
+        self.walkable = False
+        self.transparent = False
+
+    def reveal(self) -> None:
+        """隠し扉を発見する"""
+        self.door_state = "closed"
+        self.char = "+"
+
+class Stairs(Tile):
+    """階段タイル"""
+    def __init__(self, down: bool = True) -> None:
+        super().__init__(
+            walkable=True,
+            transparent=True,
+            dark=(64, 64, 64),
+            light=(192, 192, 192),
+            char=">" if down else "<"
+        )
+        self.down = down  # 下り階段かどうかを保存
+
+class Water(Tile):
+    """水タイル"""
+    def __init__(self) -> None:
+        super().__init__(
+            walkable=False,
+            transparent=True,
+            dark=(0, 32, 64),
+            light=(0, 128, 255),
+            char="~"
+        )
+
+class Lava(Tile):
+    """溶岩タイル"""
+    def __init__(self) -> None:
+        super().__init__(
+            walkable=False,
+            transparent=True,
+            dark=(64, 16, 0),
+            light=(255, 64, 0),
+            char="^"
+        ) 
