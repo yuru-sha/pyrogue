@@ -10,6 +10,7 @@ from tcod import libtcodpy
 from pyrogue.utils import game_logger
 from pyrogue.map.dungeon import DungeonGenerator
 from pyrogue.map.tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, Water, Lava
+from pyrogue.entities.actors.monster_spawner import MonsterSpawner
 
 class GameScreen(object):
     """Game screen class."""
@@ -69,6 +70,9 @@ class GameScreen(object):
         self.fov_map = None
         self.visible = None
         self.explored = None
+        
+        # モンスター管理用のインスタンスを追加
+        self.monster_spawner = None
 
     def setup_new_game(self) -> None:
         """新しいゲームのセットアップ"""
@@ -86,6 +90,10 @@ class GameScreen(object):
         self.visible = np.full((self.dungeon_tiles.shape[0], self.dungeon_tiles.shape[1]), fill_value=False, dtype=bool)
         self.explored = np.full((self.dungeon_tiles.shape[0], self.dungeon_tiles.shape[1]), fill_value=False, dtype=bool)
         self._compute_fov()
+        
+        # モンスターの生成
+        self.monster_spawner = MonsterSpawner(self.current_floor)
+        self.monster_spawner.spawn_monsters(self.dungeon_tiles, self.dungeon_gen.rooms)
 
     def _update_fov_map(self) -> None:
         """FOVマップを更新"""
@@ -159,6 +167,13 @@ class GameScreen(object):
                     tile = self.dungeon_tiles[y, x]
                     char = tile.char
                     fg = tile.light
+                    
+                    # モンスターの描画
+                    monster = self.monster_spawner.get_monster_at(x, y)
+                    if monster:
+                        char = monster.char
+                        fg = monster.color
+                        
                 elif self.explored[y, x]:
                     # 探索済みだが現在は見えない
                     tile = self.dungeon_tiles[y, x]
@@ -195,6 +210,16 @@ class GameScreen(object):
         if key == tcod.event.KeySym.TAB:
             self.fov_enabled = not self.fov_enabled
             self.message_log.append("FOV " + ("enabled" if self.fov_enabled else "disabled"))
+            return
+        
+        # 扉を開ける
+        elif key == tcod.event.KeySym.o:
+            self._handle_door_open()
+            return
+        
+        # 扉を閉める
+        elif key == tcod.event.KeySym.c:
+            self._handle_door_close()
             return
         
         # 移動キーの処理
@@ -238,17 +263,18 @@ class GameScreen(object):
         elif key == tcod.event.KeySym.KP_5:  # 5: その場で待機
             moved = True  # 待機もターンを消費
         
-        # 移動が成功した場合、視界を更新
+        # 移動が成功した場合の処理
         if moved:
-            self._compute_fov()
+            # モンスターの更新
+            self.monster_spawner.update_monsters(
+                self.player_x,
+                self.player_y,
+                self.dungeon_tiles,
+                self.fov_map
+            )
             
-            # 階段の処理
-            current_tile = self.dungeon_tiles[self.player_y, self.player_x]
-            if isinstance(current_tile, Stairs):
-                if current_tile.down:
-                    self.message_log.append("There is a staircase leading down.")
-                else:
-                    self.message_log.append("There is a staircase leading up.")
+            # 視界の更新
+            self._compute_fov()
 
     def _can_move_to(self, x: int, y: int) -> bool:
         """指定の位置に移動できるかを判定"""
@@ -257,18 +283,105 @@ class GameScreen(object):
         
         tile = self.dungeon_tiles[y, x]
         
-        # ドアの場合は開ける
-        if isinstance(tile, Door) and tile.door_state == "closed":
-            tile.toggle()  # ドアを開ける
-            self._update_fov_map()  # FOVマップを更新
-            self.message_log.append("You open the door.")
-            return False  # このターンは移動せず、ドアを開けるだけ
+        # モンスターとの衝突判定
+        monster = self.monster_spawner.get_monster_at(x, y)
+        if monster:
+            # モンスターがいる場合は戦闘を開始
+            self._handle_combat(monster)
+            return False  # 移動は行わない
         
-        # 隠し扉の場合は発見
-        if isinstance(tile, SecretDoor) and tile.door_state == "secret":
-            tile.reveal()  # 隠し扉を発見
-            self._update_fov_map()  # FOVマップを更新
-            self.message_log.append("You found a secret door!")
-            return False  # このターンは移動せず、扉を発見するだけ
+        return tile.walkable
+
+    def _handle_combat(self, monster: Monster) -> None:
+        """モンスターとの戦闘処理"""
+        # プレイヤーの攻撃
+        damage = max(0, self.player_stats["attack"] - monster.defense)
+        monster.take_damage(damage)
         
-        return tile.walkable 
+        if monster.is_dead():
+            # モンスター撃破時の処理
+            self.message_log.append(f"You defeated the {monster.name}!")
+            self.player_stats["exp"] += monster.exp_value
+            # モンスターリストから削除（これにより次のターンの update_monsters で occupied_positions も更新される）
+            if monster in self.monster_spawner.monsters:
+                self.monster_spawner.monsters.remove(monster)
+            return
+        
+        # モンスターの反撃
+        damage = max(0, monster.attack - self.player_stats["defense"])
+        self.player_stats["hp"] = max(0, self.player_stats["hp"] - damage)
+        
+        # 戦闘ログ
+        self.message_log.append(
+            f"You hit the {monster.name} for {damage} damage. "
+            f"The {monster.name} hits you for {damage} damage."
+        )
+        
+        # プレイヤーの死亡判定
+        if self.player_stats["hp"] <= 0:
+            self.message_log.append("You died!")
+            self.engine.state = GameStates.PLAYER_DEAD 
+
+    def _handle_door_open(self) -> None:
+        """扉を開ける処理"""
+        # 隣接する8方向をチェック
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                
+                x = self.player_x + dx
+                y = self.player_y + dy
+                
+                # マップ範囲内かチェック
+                if not (0 <= x < self.dungeon_tiles.shape[1] and 0 <= y < self.dungeon_tiles.shape[0]):
+                    continue
+                
+                tile = self.dungeon_tiles[y, x]
+                
+                # 通常の扉が閉じている場合
+                if isinstance(tile, Door) and tile.door_state == "closed":
+                    tile.toggle()  # 扉を開ける
+                    self._update_fov_map()  # FOVマップを更新
+                    self.message_log.append("You open the door.")
+                    return
+                # 発見済みの隠し扉が閉じている場合
+                elif isinstance(tile, SecretDoor) and tile.door_state == "closed":
+                    tile.toggle()  # 扉を開ける
+                    self._update_fov_map()  # FOVマップを更新
+                    self.message_log.append("You open the door.")
+                    return
+        
+        self.message_log.append("There is no door to open.")
+
+    def _handle_door_close(self) -> None:
+        """扉を閉める処理"""
+        # 隣接する8方向をチェック
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                
+                x = self.player_x + dx
+                y = self.player_y + dy
+                
+                # マップ範囲内かチェック
+                if not (0 <= x < self.dungeon_tiles.shape[1] and 0 <= y < self.dungeon_tiles.shape[0]):
+                    continue
+                
+                tile = self.dungeon_tiles[y, x]
+                
+                # 開いた扉（通常の扉または発見済みの隠し扉）を見つけた場合
+                if (isinstance(tile, Door) or 
+                    (isinstance(tile, SecretDoor) and tile.door_state != "secret")) and tile.door_state == "open":
+                    # モンスターがいないか確認
+                    if self.monster_spawner.get_monster_at(x, y):
+                        self.message_log.append("There's a monster in the way!")
+                        return
+                    
+                    tile.toggle()  # 扉を閉める
+                    self._update_fov_map()  # FOVマップを更新
+                    self.message_log.append("You close the door.")
+                    return
+        
+        self.message_log.append("There is no door to close.") 
