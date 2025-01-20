@@ -4,14 +4,20 @@ from __future__ import annotations
 import tcod
 import tcod.console
 import tcod.event
+from typing import Optional, TYPE_CHECKING
 
 from pyrogue.utils import game_logger
+from pyrogue.core.game_states import GameStates
+
+if TYPE_CHECKING:
+    from pyrogue.core.engine import Engine
 
 class MenuScreen:
     """Menu screen class."""
 
-    def __init__(self, console: tcod.console.Console):
+    def __init__(self, console: tcod.console.Console, engine: 'Engine'):
         self.console = console
+        self.engine = engine
         self.menu_selection = 0
         self.menu_options = ["New Game", "Quit"]
 
@@ -42,23 +48,19 @@ class MenuScreen:
                 string=text
             )
 
-    def handle_keydown(self, event: tcod.event.KeyDown) -> bool:
-        """Handle keyboard input.
-        
-        Returns:
-            bool: False if the game should quit, True otherwise.
-        """
-        if event.sym == tcod.event.KeySym.UP:
+    def handle_input(self, key: tcod.event.KeyDown) -> Optional[GameStates]:
+        """入力処理"""
+        if key.sym == tcod.event.KeySym.UP:
             self.menu_selection = (self.menu_selection - 1) % len(self.menu_options)
-            game_logger.debug("Menu selection changed", extra={"selection": self.menu_options[self.menu_selection]})
-        elif event.sym == tcod.event.KeySym.DOWN:
+        elif key.sym == tcod.event.KeySym.DOWN:
             self.menu_selection = (self.menu_selection + 1) % len(self.menu_options)
-            game_logger.debug("Menu selection changed", extra={"selection": self.menu_options[self.menu_selection]})
-        elif event.sym == tcod.event.KeySym.RETURN:
-            if self.menu_selection == 0:  # New Game
-                game_logger.debug("New game selected")
-                return True
-            elif self.menu_selection == 1:  # Quit
-                game_logger.debug("Quit selected")
-                return False
-        return True 
+        elif key.sym == tcod.event.KeySym.RETURN:
+            if self.menu_options[self.menu_selection] == "New Game":
+                self.engine.new_game()
+                return GameStates.PLAYERS_TURN
+            elif self.menu_options[self.menu_selection] == "Continue":
+                return GameStates.PLAYERS_TURN
+            elif self.menu_options[self.menu_selection] == "Quit":
+                return GameStates.EXIT
+
+        return None 
