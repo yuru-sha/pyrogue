@@ -1,98 +1,148 @@
-"""Item types module."""
-from typing import Dict, List, Tuple
+"""Item types and spawn rules module."""
+from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
+import random
 
-# 武器の定義
-# (名前, 攻撃力ボーナス, 出現階層, レア度)
-WEAPONS: List[Tuple[str, int, int, int]] = [
-    ("Dagger", 2, 1, 100),
-    ("Short Sword", 3, 2, 80),
-    ("Long Sword", 5, 4, 60),
-    ("Great Sword", 7, 6, 40),
-    ("Battle Axe", 8, 8, 30),
-    ("Katana", 10, 10, 20),
+@dataclass
+class ItemType:
+    """Item type class."""
+    char: str  # Character representation
+    name: str  # Item name
+    min_floor: int  # Minimum floor level where this item appears
+    max_floor: int  # Maximum floor level where this item appears
+    spawn_weight: int  # Relative spawn weight (higher = more common)
+    value: int  # Gold value
+
+@dataclass
+class WeaponType(ItemType):
+    """Weapon type class."""
+    base_damage: int  # Base damage
+    bonus_range: Tuple[int, int]  # Range of possible bonuses (min, max)
+
+@dataclass
+class ArmorType(ItemType):
+    """Armor type class."""
+    base_defense: int  # Base defense
+    bonus_range: Tuple[int, int]  # Range of possible bonuses (min, max)
+
+@dataclass
+class RingType(ItemType):
+    """Ring type class."""
+    effect: str  # Ring effect type
+    power_range: Tuple[int, int]  # Range of effect power (min, max)
+
+@dataclass
+class ScrollType(ItemType):
+    """Scroll type class."""
+    effect: str  # Scroll effect type
+
+@dataclass
+class PotionType(ItemType):
+    """Potion type class."""
+    effect: str  # Potion effect type
+    power_range: Tuple[int, int]  # Range of effect power (min, max)
+
+@dataclass
+class FoodType(ItemType):
+    """Food type class."""
+    nutrition: int  # Nutrition value
+
+# Weapon definitions
+WEAPONS = [
+    WeaponType(')', 'Mace', 1, 26, 100, 8, 2, (-1, 3)),
+    WeaponType(')', 'Long Sword', 2, 26, 80, 15, 4, (-1, 4)),
+    WeaponType(')', 'Short Bow', 3, 26, 70, 15, 3, (0, 3)),
+    WeaponType(')', 'Battle Axe', 4, 26, 60, 25, 6, (-2, 5)),
+    WeaponType(')', 'Two-Handed Sword', 6, 26, 40, 40, 8, (-3, 6)),
 ]
 
-# 防具の定義
-# (名前, 防御力ボーナス, 出現階層, レア度)
-ARMORS: List[Tuple[str, int, int, int]] = [
-    ("Leather Armor", 2, 1, 100),
-    ("Studded Leather", 3, 2, 80),
-    ("Ring Mail", 4, 4, 60),
-    ("Chain Mail", 5, 6, 40),
-    ("Plate Mail", 7, 8, 30),
-    ("Dragon Scale", 10, 10, 20),
+# Armor definitions
+ARMORS = [
+    ArmorType('[', 'Leather Armor', 1, 26, 100, 20, 2, (0, 2)),
+    ArmorType('[', 'Studded Leather', 2, 26, 90, 25, 3, (0, 3)),
+    ArmorType('[', 'Ring Mail', 3, 26, 80, 30, 4, (-1, 3)),
+    ArmorType('[', 'Scale Mail', 4, 26, 70, 40, 5, (-2, 4)),
+    ArmorType('[', 'Chain Mail', 5, 26, 60, 50, 6, (-2, 4)),
+    ArmorType('[', 'Splint Mail', 6, 26, 50, 60, 7, (-3, 5)),
+    ArmorType('[', 'Banded Mail', 7, 26, 40, 70, 8, (-3, 5)),
+    ArmorType('[', 'Plate Mail', 8, 26, 30, 80, 9, (-4, 6)),
 ]
 
-# 指輪の定義
-# (名前, 効果, ボーナス値, 出現階層, レア度)
-RINGS: List[Tuple[str, str, int, int, int]] = [
-    ("Ring of Protection", "defense", 1, 3, 50),
-    ("Ring of Power", "attack", 1, 3, 50),
-    ("Ring of Health", "hp", 10, 5, 40),
-    ("Ring of Regeneration", "regeneration", 1, 7, 30),
-    ("Ring of Accuracy", "accuracy", 2, 9, 20),
+# Ring definitions
+RINGS = [
+    RingType('=', 'Ring of Protection', 3, 26, 50, 200, 'protection', (-2, 3)),
+    RingType('=', 'Ring of Add Strength', 3, 26, 50, 200, 'strength', (-1, 3)),
+    RingType('=', 'Ring of Sustain Strength', 3, 26, 40, 180, 'sustain', (0, 0)),
+    RingType('=', 'Ring of Searching', 3, 26, 40, 150, 'search', (1, 3)),
+    RingType('=', 'Ring of See Invisible', 3, 26, 40, 150, 'see_invisible', (0, 0)),
+    RingType('=', 'Ring of Regeneration', 5, 26, 30, 250, 'regeneration', (0, 0)),
 ]
 
-# 巻物の定義
-# (名前, 効果, 出現階層, レア度)
-SCROLLS: List[Tuple[str, str, int, int]] = [
-    ("Scroll of Identify", "identify", 1, 100),
-    ("Scroll of Teleport", "teleport", 2, 80),
-    ("Scroll of Remove Curse", "remove_curse", 3, 70),
-    ("Scroll of Enchant Weapon", "enchant_weapon", 4, 50),
-    ("Scroll of Enchant Armor", "enchant_armor", 4, 50),
-    ("Scroll of Magic Mapping", "magic_mapping", 5, 40),
+# Scroll definitions
+SCROLLS = [
+    ScrollType('?', 'Scroll of Identify', 1, 26, 100, 50, 'identify'),
+    ScrollType('?', 'Scroll of Light', 1, 26, 90, 50, 'light'),
+    ScrollType('?', 'Scroll of Remove Curse', 1, 26, 80, 60, 'remove_curse'),
+    ScrollType('?', 'Scroll of Enchant Weapon', 2, 26, 70, 80, 'enchant_weapon'),
+    ScrollType('?', 'Scroll of Enchant Armor', 2, 26, 70, 80, 'enchant_armor'),
+    ScrollType('?', 'Scroll of Teleport', 3, 26, 60, 100, 'teleport'),
+    ScrollType('?', 'Scroll of Magic Mapping', 4, 26, 50, 120, 'magic_mapping'),
 ]
 
-# 薬の定義
-# (名前, 効果, 効果値, 出現階層, レア度)
-POTIONS: List[Tuple[str, str, int, int, int]] = [
-    ("Potion of Healing", "heal", 20, 1, 100),
-    ("Potion of Extra Healing", "heal", 40, 3, 70),
-    ("Potion of Full Healing", "heal", 100, 5, 40),
-    ("Potion of Gain Level", "gain_level", 1, 7, 30),
-    ("Potion of Gain Strength", "gain_strength", 1, 9, 20),
+# Potion definitions
+POTIONS = [
+    PotionType('!', 'Potion of Healing', 1, 26, 100, 50, 'healing', (10, 15)),
+    PotionType('!', 'Potion of Extra Healing', 2, 26, 80, 100, 'extra_healing', (20, 30)),
+    PotionType('!', 'Potion of Strength', 2, 26, 70, 80, 'strength', (1, 2)),
+    PotionType('!', 'Potion of Restore Strength', 2, 26, 70, 80, 'restore_strength', (0, 0)),
+    PotionType('!', 'Potion of Haste Self', 3, 26, 60, 100, 'haste_self', (5, 10)),
+    PotionType('!', 'Potion of See Invisible', 3, 26, 50, 100, 'see_invisible', (0, 0)),
 ]
 
-# 食料の定義
-# (名前, 満腹度回復量, 出現階層, レア度)
-FOODS: List[Tuple[str, int, int, int]] = [
-    ("Ration", 50, 1, 100),
-    ("Apple", 20, 1, 80),
-    ("Meat", 70, 3, 60),
-    ("Royal Jelly", 100, 5, 40),
+# Food definitions
+FOODS = [
+    FoodType('%', 'Food Ration', 1, 26, 100, 30, 900),
+    FoodType('%', 'Slime Mold', 1, 26, 80, 20, 600),
 ]
 
-# 階層ごとの金貨生成量
-# (最小値, 最大値)
-GOLD_BY_FLOOR: Dict[int, Tuple[int, int]] = {
-    1: (10, 50),
-    2: (20, 70),
-    3: (30, 90),
-    4: (40, 110),
-    5: (50, 130),
-    6: (60, 150),
-    7: (70, 170),
-    8: (80, 190),
-    9: (90, 210),
-    10: (100, 230),
-    # 11階以降は10階と同じ
-}
+# Special item: Amulet of Yendor
+AMULET = ItemType('&', 'The Amulet of Yendor', 26, 26, 100, 1000)
 
-# 特別な部屋のアイテム生成ルール
-SPECIAL_ROOM_ITEMS = {
-    "treasure": {
-        "gold": (100, 250),  # 金貨の生成量（最小値、最大値）
-        "items": 3,  # 通常アイテムの生成数
-    },
-    "armory": {
-        "weapons": 2,  # 武器の生成数
-        "armors": 2,   # 防具の生成数
-    },
-    "library": {
-        "scrolls": 5,  # 巻物の生成数
-    },
-    "laboratory": {
-        "potions": 5,  # 薬の生成数
-    },
-} 
+# Gold generation by floor
+def get_gold_amount(floor: int) -> int:
+    """Calculate gold amount for the given floor."""
+    base = 2 + floor * 2  # Base amount increases with floor
+    variance = floor * 3  # Variance increases with floor
+    return base + random.randint(0, variance)
+
+# Item spawn rules
+def get_item_spawn_count(floor: int) -> int:
+    """Get number of items to spawn on the given floor."""
+    base_count = 2
+    additional = min((floor - 1) // 3, 4)  # Increases every 3 floors, max +4
+    return base_count + additional
+
+def get_available_items(floor: int, item_list: List[ItemType]) -> List[ItemType]:
+    """Get list of items that can appear on the given floor."""
+    return [i for i in item_list if i.min_floor <= floor <= i.max_floor]
+
+# Special room item generation
+def get_treasure_room_items(floor: int) -> List[ItemType]:
+    """Get items to spawn in a treasure room."""
+    items = []
+    # Gold (2-3 piles)
+    gold_count = random.randint(2, 3)
+    for _ in range(gold_count):
+        gold_amount = get_gold_amount(floor) * 2  # Double gold in treasure rooms
+        items.append(('$', gold_amount))
+    
+    # Valuable items (3-5 items)
+    item_count = random.randint(3, 5)
+    valuable_items = (
+        get_available_items(floor, WEAPONS) +
+        get_available_items(floor, ARMORS) +
+        get_available_items(floor, RINGS)
+    )
+    items.extend(random.choices(valuable_items, k=item_count))
+    
+    return items 

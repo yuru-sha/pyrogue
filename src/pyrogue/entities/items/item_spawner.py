@@ -7,326 +7,171 @@ import numpy as np
 
 from .item import Item, Weapon, Armor, Ring, Scroll, Potion, Food, Gold
 from .item_types import (
-    WEAPONS, ARMORS, RINGS, SCROLLS, POTIONS, FOODS,
-    GOLD_BY_FLOOR, SPECIAL_ROOM_ITEMS
+    WEAPONS, ARMORS, RINGS, SCROLLS, POTIONS, FOODS, AMULET,
+    get_gold_amount, get_item_spawn_count, get_available_items
 )
 from pyrogue.map.tile import Floor
+from pyrogue.map.dungeon import Room
 
 class ItemSpawner:
     """アイテムの生成と管理を行うクラス"""
     
-    def __init__(self, dungeon_level: int):
-        self.dungeon_level = dungeon_level
+    def __init__(self, floor: int):
+        """Initialize item spawner."""
+        self.floor = floor
         self.items: List[Item] = []
         self.occupied_positions: Set[Tuple[int, int]] = set()
     
-    def spawn_items(self, dungeon_tiles: np.ndarray, rooms: List[any]) -> None:
-        """アイテムを生成
-        
-        Args:
-            dungeon_tiles: ダンジョンのタイル配列
-            rooms: 部屋のリスト
-        """
-        # 通常の部屋にアイテムを配置
-        self._spawn_normal_room_items(dungeon_tiles, rooms)
-        
-        # 特別な部屋にアイテムを配置
-        self._spawn_special_room_items(dungeon_tiles, rooms)
-    
-    def _spawn_normal_room_items(self, dungeon_tiles: np.ndarray, rooms: List[any]) -> None:
-        """通常の部屋にアイテムを配置"""
-        # 階層に応じたアイテム数を決定（基本2-4個、階層が上がるごとに若干増加）
-        base_count = random.randint(2, 4)
-        level_bonus = min(3, self.dungeon_level // 4)  # 最大で3個まで追加
-        item_count = base_count + level_bonus
-        
-        # 通常の部屋にアイテムを配置
-        normal_rooms = [room for room in rooms if not room.is_special]
-        if not normal_rooms:
-            return
-        
-        for _ in range(item_count):
-            room = random.choice(normal_rooms)
-            
-            # 部屋の内部の座標から、まだアイテムがない場所を選択
-            available_positions = [
-                (x, y) for x, y in room.inner
-                if isinstance(dungeon_tiles[y, x], Floor) and
-                (x, y) not in self.occupied_positions
-            ]
-            
-            if not available_positions:
+    def spawn_items(self, dungeon_tiles: np.ndarray, rooms: List[Room]) -> None:
+        """Spawn items in the dungeon."""
+        self.items.clear()
+        self.occupied_positions.clear()  # 位置情報もクリア
+
+        # Get total number of items to spawn on this floor
+        total_items = get_item_spawn_count(self.floor)
+
+        # Spawn Amulet of Yendor on floor 26
+        if self.floor == 26:
+            room = random.choice(rooms)
+            x, y = self._find_valid_position(dungeon_tiles, room)
+            if x is not None and y is not None:
+                amulet = Item(x, y, AMULET.char, AMULET.name, (255, 215, 0))  # Gold color
+                self.items.append(amulet)
+                self.occupied_positions.add((x, y))  # 位置を追加
+
+        # Spawn regular items
+        for _ in range(total_items):
+            room = random.choice(rooms)
+            x, y = self._find_valid_position(dungeon_tiles, room)
+            if x is None or y is None:
                 continue
-            
-            pos = random.choice(available_positions)
-            item = self._create_random_item(pos[0], pos[1])
+
+            # Determine item type
+            item_type = random.choices(['weapon', 'armor', 'ring', 'scroll', 'potion', 'food', 'gold'], 
+                                    weights=[15, 15, 10, 25, 25, 10, 35], k=1)[0]
+
+            item = None
+            if item_type == 'weapon':
+                item = self._create_weapon()
+            elif item_type == 'armor':
+                item = self._create_armor()
+            elif item_type == 'ring':
+                item = self._create_ring()
+            elif item_type == 'scroll':
+                item = self._create_scroll()
+            elif item_type == 'potion':
+                item = self._create_potion()
+            elif item_type == 'food':
+                item = self._create_food()
+            else:  # gold
+                item = self._create_gold()
+
             if item:
+                item.x = x
+                item.y = y
                 self.items.append(item)
-                self.occupied_positions.add(pos)
+                self.occupied_positions.add((x, y))  # 位置を追加
     
-    def _spawn_special_room_items(self, dungeon_tiles: np.ndarray, rooms: List[any]) -> None:
-        """特別な部屋にアイテムを配置"""
-        for room in rooms:
-            if not room.is_special or not room.room_type:
-                continue
-            
-            # 部屋タイプに応じたアイテム生成ルールを取得
-            rules = SPECIAL_ROOM_ITEMS.get(room.room_type)
-            if not rules:
-                continue
-            
-            # 利用可能な位置を取得
-            available_positions = [
-                (x, y) for x, y in room.inner
-                if isinstance(dungeon_tiles[y, x], Floor) and
-                (x, y) not in self.occupied_positions
-            ]
-            
-            if not available_positions:
-                continue
-            
-            # ルールに従ってアイテムを生成
-            if room.room_type == "treasure":
-                # 金貨を生成
-                gold_min, gold_max = rules["gold"]
-                for _ in range(random.randint(3, 5)):
-                    if not available_positions:
-                        break
-                    pos = random.choice(available_positions)
-                    available_positions.remove(pos)
-                    amount = random.randint(gold_min, gold_max)
-                    gold = Gold(pos[0], pos[1], amount)
-                    self.items.append(gold)
-                    self.occupied_positions.add(pos)
-                
-                # その他のアイテム
-                for _ in range(rules["items"]):
-                    if not available_positions:
-                        break
-                    pos = random.choice(available_positions)
-                    available_positions.remove(pos)
-                    item = self._create_valuable_item(pos[0], pos[1])
-                    if item:
-                        self.items.append(item)
-                        self.occupied_positions.add(pos)
-            
-            elif room.room_type == "armory":
-                # 武器を生成
-                for _ in range(rules["weapons"]):
-                    if not available_positions:
-                        break
-                    pos = random.choice(available_positions)
-                    available_positions.remove(pos)
-                    weapon = self._create_weapon(pos[0], pos[1])
-                    if weapon:
-                        self.items.append(weapon)
-                        self.occupied_positions.add(pos)
-                
-                # 防具を生成
-                for _ in range(rules["armors"]):
-                    if not available_positions:
-                        break
-                    pos = random.choice(available_positions)
-                    available_positions.remove(pos)
-                    armor = self._create_armor(pos[0], pos[1])
-                    if armor:
-                        self.items.append(armor)
-                        self.occupied_positions.add(pos)
-            
-            elif room.room_type == "library":
-                # 巻物を生成
-                for _ in range(rules["scrolls"]):
-                    if not available_positions:
-                        break
-                    pos = random.choice(available_positions)
-                    available_positions.remove(pos)
-                    scroll = self._create_scroll(pos[0], pos[1])
-                    if scroll:
-                        self.items.append(scroll)
-                        self.occupied_positions.add(pos)
-            
-            elif room.room_type == "laboratory":
-                # 薬を生成
-                for _ in range(rules["potions"]):
-                    if not available_positions:
-                        break
-                    pos = random.choice(available_positions)
-                    available_positions.remove(pos)
-                    potion = self._create_potion(pos[0], pos[1])
-                    if potion:
-                        self.items.append(potion)
-                        self.occupied_positions.add(pos)
-    
-    def _create_random_item(self, x: int, y: int) -> Optional[Item]:
-        """ランダムなアイテムを生成"""
-        # アイテムの種類をランダムに選択
-        item_type = random.choices(
-            ["weapon", "armor", "ring", "scroll", "potion", "food", "gold"],
-            weights=[15, 15, 10, 20, 20, 10, 10]
-        )[0]
-        
-        if item_type == "weapon":
-            return self._create_weapon(x, y)
-        elif item_type == "armor":
-            return self._create_armor(x, y)
-        elif item_type == "ring":
-            return self._create_ring(x, y)
-        elif item_type == "scroll":
-            return self._create_scroll(x, y)
-        elif item_type == "potion":
-            return self._create_potion(x, y)
-        elif item_type == "food":
-            return self._create_food(x, y)
-        elif item_type == "gold":
-            return self._create_gold(x, y)
-        
-        return None
-    
-    def _create_valuable_item(self, x: int, y: int) -> Optional[Item]:
-        """価値の高いアイテムを生成（宝物庫用）"""
-        # 武器、防具、指輪のみを生成
-        item_type = random.choice(["weapon", "armor", "ring"])
-        
-        if item_type == "weapon":
-            return self._create_weapon(x, y, quality_bonus=2)
-        elif item_type == "armor":
-            return self._create_armor(x, y, quality_bonus=2)
-        else:
-            return self._create_ring(x, y)
-    
-    def _create_weapon(self, x: int, y: int, quality_bonus: int = 0) -> Optional[Weapon]:
-        """武器を生成"""
-        available_weapons = [
-            w for w in WEAPONS
-            if w[2] <= self.dungeon_level + quality_bonus
-        ]
-        if not available_weapons:
+    def _find_valid_position(
+        self,
+        dungeon_tiles: np.ndarray,
+        room: Room
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """Find a valid position for an item in the given room."""
+        # Get room dimensions
+        x1, y1 = room.x, room.y
+        width = room.width
+        height = room.height
+
+        # Try 10 times to find a valid position
+        for _ in range(10):
+            x = x1 + random.randint(1, width - 2)  # Avoid walls
+            y = y1 + random.randint(1, height - 2)  # Avoid walls
+
+            # Check if position is valid
+            if dungeon_tiles[y, x].walkable and not self._is_position_occupied(x, y):
+                return x, y
+
+        return None, None
+
+    def _is_position_occupied(self, x: int, y: int) -> bool:
+        """Check if a position is occupied by an item."""
+        return any(item.x == x and item.y == y for item in self.items)
+
+    def _create_weapon(self) -> Optional[Weapon]:
+        """Create a random weapon."""
+        available = get_available_items(self.floor, WEAPONS)
+        if not available:
             return None
-        
-        # レア度に基づいて選択
-        total_rarity = sum(w[3] for w in available_weapons)
-        r = random.randint(1, total_rarity)
-        cumulative = 0
-        
-        for name, attack, level, rarity in available_weapons:
-            cumulative += rarity
-            if r <= cumulative:
-                return Weapon(x, y, name, attack)
-        
-        return None
-    
-    def _create_armor(self, x: int, y: int, quality_bonus: int = 0) -> Optional[Armor]:
-        """防具を生成"""
-        available_armors = [
-            a for a in ARMORS
-            if a[2] <= self.dungeon_level + quality_bonus
-        ]
-        if not available_armors:
+
+        weapon_type = random.choices(available, 
+                                   weights=[w.spawn_weight for w in available],
+                                   k=1)[0]
+        bonus = random.randint(*weapon_type.bonus_range)
+        return Weapon(0, 0, weapon_type.name, bonus)
+
+    def _create_armor(self) -> Optional[Armor]:
+        """Create a random armor."""
+        available = get_available_items(self.floor, ARMORS)
+        if not available:
             return None
-        
-        # レア度に基づいて選択
-        total_rarity = sum(a[3] for a in available_armors)
-        r = random.randint(1, total_rarity)
-        cumulative = 0
-        
-        for name, defense, level, rarity in available_armors:
-            cumulative += rarity
-            if r <= cumulative:
-                return Armor(x, y, name, defense)
-        
-        return None
-    
-    def _create_ring(self, x: int, y: int) -> Optional[Ring]:
-        """指輪を生成"""
-        available_rings = [
-            r for r in RINGS
-            if r[3] <= self.dungeon_level
-        ]
-        if not available_rings:
+
+        armor_type = random.choices(available,
+                                  weights=[a.spawn_weight for a in available],
+                                  k=1)[0]
+        bonus = random.randint(*armor_type.bonus_range)
+        return Armor(0, 0, armor_type.name, bonus)
+
+    def _create_ring(self) -> Optional[Ring]:
+        """Create a random ring."""
+        available = get_available_items(self.floor, RINGS)
+        if not available:
             return None
-        
-        # レア度に基づいて選択
-        total_rarity = sum(r[4] for r in available_rings)
-        r = random.randint(1, total_rarity)
-        cumulative = 0
-        
-        for name, effect, bonus, level, rarity in available_rings:
-            cumulative += rarity
-            if r <= cumulative:
-                return Ring(x, y, name, effect, bonus)
-        
-        return None
-    
-    def _create_scroll(self, x: int, y: int) -> Optional[Scroll]:
-        """巻物を生成"""
-        available_scrolls = [
-            s for s in SCROLLS
-            if s[2] <= self.dungeon_level
-        ]
-        if not available_scrolls:
+
+        ring_type = random.choices(available,
+                                 weights=[r.spawn_weight for r in available],
+                                 k=1)[0]
+        power = random.randint(*ring_type.power_range)
+        return Ring(0, 0, ring_type.name, ring_type.effect, power)
+
+    def _create_scroll(self) -> Optional[Scroll]:
+        """Create a random scroll."""
+        available = get_available_items(self.floor, SCROLLS)
+        if not available:
             return None
-        
-        # レア度に基づいて選択
-        total_rarity = sum(s[3] for s in available_scrolls)
-        r = random.randint(1, total_rarity)
-        cumulative = 0
-        
-        for name, effect, level, rarity in available_scrolls:
-            cumulative += rarity
-            if r <= cumulative:
-                return Scroll(x, y, name, effect)
-        
-        return None
-    
-    def _create_potion(self, x: int, y: int) -> Optional[Potion]:
-        """薬を生成"""
-        available_potions = [
-            p for p in POTIONS
-            if p[3] <= self.dungeon_level
-        ]
-        if not available_potions:
+
+        scroll_type = random.choices(available,
+                                   weights=[s.spawn_weight for s in available],
+                                   k=1)[0]
+        return Scroll(0, 0, scroll_type.name, scroll_type.effect)
+
+    def _create_potion(self) -> Optional[Potion]:
+        """Create a random potion."""
+        available = get_available_items(self.floor, POTIONS)
+        if not available:
             return None
-        
-        # レア度に基づいて選択
-        total_rarity = sum(p[4] for p in available_potions)
-        r = random.randint(1, total_rarity)
-        cumulative = 0
-        
-        for name, effect, power, level, rarity in available_potions:
-            cumulative += rarity
-            if r <= cumulative:
-                return Potion(x, y, name, effect, power)
-        
-        return None
-    
-    def _create_food(self, x: int, y: int) -> Optional[Food]:
-        """食料を生成"""
-        available_foods = [
-            f for f in FOODS
-            if f[2] <= self.dungeon_level
-        ]
-        if not available_foods:
+
+        potion_type = random.choices(available,
+                                   weights=[p.spawn_weight for p in available],
+                                   k=1)[0]
+        power = random.randint(*potion_type.power_range)
+        return Potion(0, 0, potion_type.name, potion_type.effect, power)
+
+    def _create_food(self) -> Optional[Food]:
+        """Create a random food item."""
+        available = get_available_items(self.floor, FOODS)
+        if not available:
             return None
-        
-        # レア度に基づいて選択
-        total_rarity = sum(f[3] for f in available_foods)
-        r = random.randint(1, total_rarity)
-        cumulative = 0
-        
-        for name, nutrition, level, rarity in available_foods:
-            cumulative += rarity
-            if r <= cumulative:
-                return Food(x, y, name, nutrition)
-        
-        return None
-    
-    def _create_gold(self, x: int, y: int) -> Gold:
-        """金貨を生成"""
-        # 階層に応じた金貨量を決定
-        level = min(self.dungeon_level, 10)  # 10階以降は10階と同じ
-        min_gold, max_gold = GOLD_BY_FLOOR[level]
-        amount = random.randint(min_gold, max_gold)
-        return Gold(x, y, amount)
+
+        food_type = random.choices(available,
+                                 weights=[f.spawn_weight for f in available],
+                                 k=1)[0]
+        return Food(0, 0, food_type.name, food_type.nutrition)
+
+    def _create_gold(self) -> Gold:
+        """Create a gold pile."""
+        amount = get_gold_amount(self.floor)
+        return Gold(0, 0, amount)
     
     def get_item_at(self, x: int, y: int) -> Optional[Item]:
         """指定された位置にあるアイテムを取得"""
@@ -339,4 +184,6 @@ class ItemSpawner:
         """アイテムを削除"""
         if item in self.items:
             self.items.remove(item)
-            self.occupied_positions.remove((item.x, item.y)) 
+            pos = (item.x, item.y)
+            if pos in self.occupied_positions:  # 位置が存在する場合のみ削除
+                self.occupied_positions.remove(pos) 

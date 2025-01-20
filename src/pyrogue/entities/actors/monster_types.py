@@ -1,5 +1,52 @@
-"""Monster types module."""
-from typing import Dict, List, Tuple
+"""Monster types and spawn rules module."""
+from dataclasses import dataclass
+from typing import List, Dict, Tuple
+
+@dataclass
+class MonsterType:
+    """Monster type class."""
+    char: str  # Character representation (A-Z)
+    name: str  # Monster name
+    level: int  # Monster level
+    hp: int  # Hit points
+    attack: int  # Attack power
+    defense: int  # Defense power
+    exp: int  # Experience points
+    min_floor: int  # Minimum floor level where this monster appears
+    max_floor: int  # Maximum floor level where this monster appears
+    spawn_weight: int  # Relative spawn weight (higher = more common)
+
+# Monster definitions based on original Rogue
+MONSTER_TYPES = [
+    MonsterType('B', 'Bat', 1, 3, 2, 1, 2, 1, 8, 100),
+    MonsterType('R', 'Rat', 1, 3, 2, 1, 2, 1, 8, 100),
+    MonsterType('K', 'Kobold', 1, 4, 3, 1, 3, 1, 10, 80),
+    MonsterType('S', 'Snake', 2, 5, 3, 2, 4, 2, 12, 70),
+    MonsterType('G', 'Goblin', 2, 5, 4, 2, 4, 2, 12, 70),
+    MonsterType('H', 'Hobgoblin', 3, 7, 5, 3, 6, 3, 14, 60),
+    MonsterType('O', 'Orc', 4, 9, 6, 4, 8, 4, 16, 50),
+    MonsterType('Z', 'Zombie', 4, 10, 5, 5, 8, 4, 16, 50),
+    MonsterType('T', 'Troll', 6, 15, 8, 6, 15, 6, 20, 40),
+    MonsterType('Y', 'Yeti', 7, 18, 10, 7, 20, 7, 22, 35),
+    MonsterType('W', 'Wraith', 8, 20, 12, 8, 25, 8, 24, 30),
+    MonsterType('D', 'Dragon', 10, 30, 15, 10, 40, 10, 26, 20),
+]
+
+# Spawn rules by floor
+def get_spawn_count(floor: int) -> int:
+    """Get number of monsters to spawn on the given floor."""
+    base_count = 3
+    additional = min((floor - 1) // 2, 5)  # Increases every 2 floors, max +5
+    return base_count + additional
+
+def get_available_monsters(floor: int) -> List[MonsterType]:
+    """Get list of monsters that can appear on the given floor."""
+    return [m for m in MONSTER_TYPES if m.min_floor <= floor <= m.max_floor]
+
+# Maximum monsters per room (based on floor level)
+def get_max_monsters_per_room(floor: int) -> int:
+    """Get maximum number of monsters allowed in a single room."""
+    return min(2 + floor // 3, 6)  # Starts at 2, increases by 1 every 3 floors, max 6
 
 # モンスターの定義
 # (char, name, level, hp, attack, defense, exp_value, view_range, color)
