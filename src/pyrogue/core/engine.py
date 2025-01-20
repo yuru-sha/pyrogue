@@ -154,7 +154,7 @@ class Engine:
                 self.state = new_state
             return True
         elif self.state == GameStates.PLAYERS_TURN:
-            self.game_screen.handle_keydown(event)
+            self.game_screen.handle_key(event)
             return True
         return True
 

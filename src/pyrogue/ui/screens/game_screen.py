@@ -6,11 +6,16 @@ import tcod.console
 import tcod.event
 import numpy as np
 from tcod import libtcodpy
+from typing import Optional
+import random
 
 from pyrogue.utils import game_logger
 from pyrogue.map.dungeon import DungeonGenerator
 from pyrogue.map.tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, Water, Lava
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
+from pyrogue.entities.items.item_spawner import ItemSpawner
+from pyrogue.entities.items.item import Item
+from pyrogue.ui.screens.inventory_screen import InventoryScreen
 
 class GameScreen(object):
     """Game screen class."""
@@ -73,6 +78,9 @@ class GameScreen(object):
         
         # モンスター管理用のインスタンスを追加
         self.monster_spawner = None
+        
+        # アイテム管理用のインスタンスを追加
+        self.item_spawner = ItemSpawner(self.current_floor)
 
     def setup_new_game(self) -> None:
         """新しいゲームのセットアップ"""
@@ -94,6 +102,9 @@ class GameScreen(object):
         # モンスターの生成
         self.monster_spawner = MonsterSpawner(self.current_floor)
         self.monster_spawner.spawn_monsters(self.dungeon_tiles, self.dungeon_gen.rooms)
+        
+        # アイテムの生成
+        self.item_spawner.spawn_items(self.dungeon_tiles, self.dungeon_gen.rooms)
 
     def _update_fov_map(self) -> None:
         """FOVマップを更新"""
@@ -155,44 +166,43 @@ class GameScreen(object):
         self.engine.console.print(x=1, y=1, string=status_line2)
 
     def _render_map(self) -> None:
-        """マップを表示"""
-        # マップの表示範囲を設定
-        map_start_y = 2  # ステータス表示の下から
+        """マップの描画"""
+        # マップの描画開始位置（ステータス表示の下）
+        map_y_offset = 2
         
         # マップを描画
         for y in range(self.dungeon_tiles.shape[0]):
             for x in range(self.dungeon_tiles.shape[1]):
-                if not self.fov_enabled or self.visible[y, x]:
-                    # FOV無効時または可視範囲内
-                    tile = self.dungeon_tiles[y, x]
-                    char = tile.char
-                    fg = tile.light
-                    
-                    # モンスターの描画
-                    monster = self.monster_spawner.get_monster_at(x, y)
-                    if monster:
-                        char = monster.char
-                        fg = monster.color
-                        
-                elif self.explored[y, x]:
-                    # 探索済みだが現在は見えない
-                    tile = self.dungeon_tiles[y, x]
-                    char = tile.char
-                    fg = tile.dark
-                else:
-                    # 未探索
-                    char = " "
-                    fg = (0, 0, 0)
+                tile = self.dungeon_tiles[y, x]
                 
-                self.engine.console.print(x=x, y=y+map_start_y, string=char, fg=fg)
+                # 隠し扉の特別処理（未発見の場合は壁と同じ色を使用）
+                if isinstance(tile, SecretDoor) and tile.door_state == "secret":
+                    wall_tile = Wall()
+                    if not self.fov_enabled or self.visible[y, x]:
+                        self.engine.console.print(x, y + map_y_offset, tile.char, wall_tile.light)
+                    elif self.explored[y, x]:
+                        self.engine.console.print(x, y + map_y_offset, tile.char, wall_tile.dark)
+                    continue
+                
+                if not self.fov_enabled or self.visible[y, x]:
+                    # FOV無効時または視界内のタイル
+                    self.engine.console.print(x, y + map_y_offset, tile.char, tile.light)
+                elif self.explored[y, x]:
+                    # 既に探索済みのタイル
+                    self.engine.console.print(x, y + map_y_offset, tile.char, tile.dark)
+        
+        # アイテムを描画（FOV無効時または視界内のみ）
+        for item in self.item_spawner.items:
+            if not self.fov_enabled or self.visible[item.y, item.x]:
+                self.engine.console.print(item.x, item.y + map_y_offset, item.char, item.color)
+        
+        # モンスターを描画（FOV無効時または視界内のみ）
+        for monster in self.monster_spawner.monsters:
+            if not self.fov_enabled or self.visible[monster.y, monster.x]:
+                self.engine.console.print(monster.x, monster.y + map_y_offset, monster.char, monster.color)
         
         # プレイヤーを描画
-        self.engine.console.print(
-            x=self.player_x,
-            y=self.player_y + map_start_y,
-            string="@",
-            fg=(255, 255, 255)
-        )
+        self.engine.console.print(self.player_x, self.player_y + map_y_offset, "@", (255, 255, 255))
 
     def _render_messages(self) -> None:
         """メッセージログを表示"""
@@ -200,71 +210,68 @@ class GameScreen(object):
         for i, message in enumerate(self.message_log[-3:]):  # 最新の3メッセージを表示
             self.engine.console.print(x=1, y=message_start_y + i, string=message)
 
-    def handle_keydown(self, event: tcod.event.KeyDown) -> None:
+    def handle_key(self, event: tcod.event.KeyDown) -> Optional[Screen]:
         """キー入力の処理"""
-        key = event.sym
-        old_x, old_y = self.player_x, self.player_y
-        moved = False
-        
-        # FOVの切り替え
-        if key == tcod.event.KeySym.TAB:
+        # TABキーでFOVのトグル
+        if event.sym == tcod.event.K_TAB:
             self.fov_enabled = not self.fov_enabled
-            self.message_log.append("FOV " + ("enabled" if self.fov_enabled else "disabled"))
-            return
+            return None
+        
+        # アイテムを拾う
+        elif event.sym == tcod.event.K_g:
+            self._handle_get()
+            return None
+        
+        # 隠し扉を探す
+        elif event.sym == tcod.event.K_s:
+            self._handle_search()
+            return None
         
         # 扉を開ける
-        elif key == tcod.event.KeySym.o:
+        elif event.sym == tcod.event.K_o:
             self._handle_door_open()
-            return
+            return None
         
         # 扉を閉める
-        elif key == tcod.event.KeySym.c:
+        elif event.sym == tcod.event.K_c:
             self._handle_door_close()
-            return
+            return None
         
         # 移動キーの処理
-        if key in (tcod.event.KeySym.UP, tcod.event.KeySym.k, tcod.event.KeySym.KP_8):  # 8
+        if event.sym in (tcod.event.K_UP, tcod.event.K_k, tcod.event.K_KP_8):  # 8
             if self._can_move_to(self.player_x, self.player_y - 1):
                 self.player_y -= 1
-                moved = True
-        elif key in (tcod.event.KeySym.DOWN, tcod.event.KeySym.j, tcod.event.KeySym.KP_2):  # 2
+        elif event.sym in (tcod.event.K_DOWN, tcod.event.K_j, tcod.event.K_KP_2):  # 2
             if self._can_move_to(self.player_x, self.player_y + 1):
                 self.player_y += 1
-                moved = True
-        elif key in (tcod.event.KeySym.LEFT, tcod.event.KeySym.h, tcod.event.KeySym.KP_4):  # 4
+        elif event.sym in (tcod.event.K_LEFT, tcod.event.K_h, tcod.event.K_KP_4):  # 4
             if self._can_move_to(self.player_x - 1, self.player_y):
                 self.player_x -= 1
-                moved = True
-        elif key in (tcod.event.KeySym.RIGHT, tcod.event.KeySym.l, tcod.event.KeySym.KP_6):  # 6
+        elif event.sym in (tcod.event.K_RIGHT, tcod.event.K_l, tcod.event.K_KP_6):  # 6
             if self._can_move_to(self.player_x + 1, self.player_y):
                 self.player_x += 1
-                moved = True
         # 斜め移動
-        elif key in (tcod.event.KeySym.y, tcod.event.KeySym.KP_7):  # 7: 左上
+        elif event.sym in (tcod.event.K_y, tcod.event.K_KP_7):  # 7: 左上
             if self._can_move_to(self.player_x - 1, self.player_y - 1):
                 self.player_x -= 1
                 self.player_y -= 1
-                moved = True
-        elif key in (tcod.event.KeySym.u, tcod.event.KeySym.KP_9):  # 9: 右上
+        elif event.sym in (tcod.event.K_u, tcod.event.K_KP_9):  # 9: 右上
             if self._can_move_to(self.player_x + 1, self.player_y - 1):
                 self.player_x += 1
                 self.player_y -= 1
-                moved = True
-        elif key in (tcod.event.KeySym.b, tcod.event.KeySym.KP_1):  # 1: 左下
+        elif event.sym in (tcod.event.K_b, tcod.event.K_KP_1):  # 1: 左下
             if self._can_move_to(self.player_x - 1, self.player_y + 1):
                 self.player_x -= 1
                 self.player_y += 1
-                moved = True
-        elif key in (tcod.event.KeySym.n, tcod.event.KeySym.KP_3):  # 3: 右下
+        elif event.sym in (tcod.event.K_n, tcod.event.K_KP_3):  # 3: 右下
             if self._can_move_to(self.player_x + 1, self.player_y + 1):
                 self.player_x += 1
                 self.player_y += 1
-                moved = True
-        elif key == tcod.event.KeySym.KP_5:  # 5: その場で待機
-            moved = True  # 待機もターンを消費
+        elif event.sym == tcod.event.K_KP_5:  # 5: その場で待機
+            pass  # 待機もターンを消費
         
         # 移動が成功した場合の処理
-        if moved:
+        if event.sym in (tcod.event.K_UP, tcod.event.K_DOWN, tcod.event.K_LEFT, tcod.event.K_RIGHT, tcod.event.K_y, tcod.event.K_u, tcod.event.K_b, tcod.event.K_n):
             # モンスターの更新
             self.monster_spawner.update_monsters(
                 self.player_x,
@@ -275,6 +282,9 @@ class GameScreen(object):
             
             # 視界の更新
             self._compute_fov()
+            
+            # 隠し扉のヒントをチェック
+            self._check_secret_door_hints()
 
     def _can_move_to(self, x: int, y: int) -> bool:
         """指定の位置に移動できるかを判定"""
@@ -384,4 +394,73 @@ class GameScreen(object):
                     self.message_log.append("You close the door.")
                     return
         
-        self.message_log.append("There is no door to close.") 
+        self.message_log.append("There is no door to close.")
+
+    def _handle_search(self) -> None:
+        """隠し扉を探す処理"""
+        # 隣接する8方向をチェック
+        found = False
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                
+                x = self.player_x + dx
+                y = self.player_y + dy
+                
+                # マップ範囲内かチェック
+                if not (0 <= x < self.dungeon_tiles.shape[1] and 0 <= y < self.dungeon_tiles.shape[0]):
+                    continue
+                
+                tile = self.dungeon_tiles[y, x]
+                
+                # 隠し扉を見つけた場合
+                if isinstance(tile, SecretDoor) and tile.door_state == "secret":
+                    # 33%の確率で発見
+                    if random.random() < 0.33:
+                        tile.reveal()  # 隠し扉を発見
+                        self._update_fov_map()  # FOVマップを更新
+                        self.message_log.append("You found a secret door!")
+                        found = True
+        
+        if not found:
+            self.message_log.append("You search but find nothing.")
+
+    def _handle_get(self) -> None:
+        """アイテムを拾う"""
+        item = self.item_spawner.get_item_at(self.player_x, self.player_y)
+        if item:
+            self.message_log.append(f"You pick up the {item.name}.")
+            self.item_spawner.remove_item(item)
+        else:
+            self.message_log.append("There is nothing here to pick up.")
+
+    def _check_secret_door_hints(self) -> None:
+        """隠し扉の近くにいる場合、ヒントメッセージを表示"""
+        # ヒントメッセージのリスト
+        hint_messages = [
+            "You notice a faint light through a crack in the wall...",
+            "You feel a draft coming from somewhere...",
+            "You hear faint laughter through the wall..."
+        ]
+        
+        # 隣接する8方向をチェック
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                
+                x = self.player_x + dx
+                y = self.player_y + dy
+                
+                # マップ範囲内かチェック
+                if not (0 <= x < self.dungeon_tiles.shape[1] and 0 <= y < self.dungeon_tiles.shape[0]):
+                    continue
+                
+                tile = self.dungeon_tiles[y, x]
+                
+                # 隠し扉（未発見）を見つけた場合
+                if isinstance(tile, SecretDoor) and tile.door_state == "secret":
+                    # ランダムなヒントメッセージを表示
+                    self.message_log.append(random.choice(hint_messages))
+                    return  # 1つ見つかれば終了 
