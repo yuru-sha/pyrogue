@@ -131,16 +131,25 @@ class SecretDoor(Door):
         self.char = "+"
 
 class Stairs(Tile):
-    """階段タイル"""
-    def __init__(self, down: bool = True) -> None:
+    """階段の基底クラス"""
+    def __init__(self, char: str) -> None:
         super().__init__(
             walkable=True,
             transparent=True,
-            dark=(64, 64, 64),
-            light=(192, 192, 192),
-            char=">" if down else "<"
+            dark=(128, 128, 128),  # 暗い場所での色
+            light=(200, 200, 200),  # 明るい場所での色
+            char=char
         )
-        self.down = down  # 下り階段かどうかを保存
+
+class StairsUp(Stairs):
+    """上り階段"""
+    def __init__(self) -> None:
+        super().__init__(char="<")
+
+class StairsDown(Stairs):
+    """下り階段"""
+    def __init__(self) -> None:
+        super().__init__(char=">")
 
 class Water(Tile):
     """水タイル"""

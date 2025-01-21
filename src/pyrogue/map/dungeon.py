@@ -7,7 +7,7 @@ import random
 import numpy as np
 
 from pyrogue.utils import game_logger
-from .tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, Water, Lava
+from .tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, Water, Lava, StairsUp, StairsDown
 
 @dataclass
 class Room:
@@ -237,45 +237,26 @@ class DungeonGenerator:
 
     def _place_stairs(self) -> None:
         """階段を配置"""
-        # 上り階段用の部屋を選択（特別な部屋は除外）
-        normal_rooms = [room for room in self.rooms if not room.is_special]
-        if not normal_rooms:
-            return
+        # 上り階段を配置（1階の場合は配置しない - GameScreenで制御）
+        if self.floor > 1:
+            up_room = random.choice(self.rooms)
+            up_x = random.randint(up_room.x + 1, up_room.x + up_room.width - 2)
+            up_y = random.randint(up_room.y + 1, up_room.y + up_room.height - 2)
+            self.tiles[up_y, up_x] = StairsUp()
+            self.start_pos = (up_x, up_y)
+        else:
+            # 1階の場合は、上り階段の位置だけ記録（GameScreenで制御）
+            up_room = random.choice(self.rooms)
+            up_x = random.randint(up_room.x + 1, up_room.x + up_room.width - 2)
+            up_y = random.randint(up_room.y + 1, up_room.y + up_room.height - 2)
+            self.start_pos = (up_x, up_y)
 
-        up_room = random.choice(normal_rooms)
-        up_x, up_y = random.choice(up_room.inner)
-        self.tiles[up_y, up_x] = Stairs(down=False)
-        self.start_pos = (up_x, up_y)
-
-        # 下り階段用の部屋を選択
-        # - 上り階段とは別の部屋
-        # - 特別な部屋は除外
-        # - 上り階段の部屋から十分離れた部屋を選択
-        available_rooms = []
-        for room in normal_rooms:
-            if room == up_room:
-                continue
-            
-            # 部屋の中心点間の距離を計算
-            dx = room.center[0] - up_room.center[0]
-            dy = room.center[1] - up_room.center[1]
-            distance = (dx * dx + dy * dy) ** 0.5
-            
-            # 最低でも部屋3つ分は離す
-            min_separation = max(self.max_room_size) * 3
-            if distance >= min_separation:
-                available_rooms.append(room)
-
-        if not available_rooms:
-            # 十分離れた部屋がない場合は、上り階段以外の部屋から選択
-            available_rooms = [room for room in normal_rooms if room != up_room]
-            if not available_rooms:
-                return
-
-        # 利用可能な部屋の中から、最も遠い部屋を優先的に選択
-        down_room = random.choice(available_rooms[-3:])  # 最も遠い3部屋からランダムに選択
-        down_x, down_y = random.choice(down_room.inner)
-        self.tiles[down_y, down_x] = Stairs(down=True)
+        # 下り階段を配置（上り階段とは別の部屋に）
+        down_rooms = [room for room in self.rooms if room != up_room]
+        down_room = random.choice(down_rooms)
+        down_x = random.randint(down_room.x + 1, down_room.x + down_room.width - 2)
+        down_y = random.randint(down_room.y + 1, down_room.y + down_room.height - 2)
+        self.tiles[down_y, down_x] = StairsDown()
         self.end_pos = (down_x, down_y)
 
     def generate(self) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:

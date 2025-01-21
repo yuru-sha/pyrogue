@@ -7,7 +7,7 @@ import numpy as np
 
 from .monster import Monster
 from .monster_types import MONSTER_STATS, FLOOR_MONSTERS
-from pyrogue.map.tile import Floor
+from pyrogue.map.tile import Floor, Door, SecretDoor
 
 class MonsterSpawner:
     """モンスターの生成と管理を行うクラス"""
@@ -121,7 +121,8 @@ class MonsterSpawner:
             # 移動先が有効か確認
             if (0 <= new_x < dungeon_tiles.shape[1] and
                 0 <= new_y < dungeon_tiles.shape[0] and
-                isinstance(dungeon_tiles[new_y, new_x], Floor) and
+                (isinstance(dungeon_tiles[new_y, new_x], Floor) or
+                 (isinstance(dungeon_tiles[new_y, new_x], (Door, SecretDoor)) and dungeon_tiles[new_y, new_x].door_state == "open")) and
                 (new_x, new_y) not in self.occupied_positions and
                 (new_x != player_x or new_y != player_y)):
                 
