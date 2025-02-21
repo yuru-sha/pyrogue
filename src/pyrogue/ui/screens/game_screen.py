@@ -135,7 +135,7 @@ class GameScreen(object):
         
         # 階層データをロード
         floor_data = self.floor_data[floor_number]
-        self.tiles = floor_data['tiles']
+        self.dungeon_tiles = floor_data['tiles']
         self.up_pos = floor_data['up_pos']
         self.down_pos = floor_data['down_pos']
         self.monster_spawner = floor_data['monster_spawner']
@@ -163,21 +163,37 @@ class GameScreen(object):
         self._load_floor(self.current_floor)
 
     def _update_fov_map(self) -> None:
-        """FOVマップを更新"""
-        for y in range(len(self.dungeon_tiles)):
-            for x in range(len(self.dungeon_tiles[y])):
-                self.fov_map.transparent[y, x] = self.dungeon_tiles[y][x].transparent
-                self.fov_map.walkable[y, x] = self.dungeon_tiles[y][x].walkable
+        """FOV計算用のマップを更新"""
+        height, width = self.dungeon_tiles.shape
+        self.fov_map = tcod.map.Map(width, height)
+        
+        for y in range(height):
+            for x in range(width):
+                self.fov_map.transparent[y, x] = self.dungeon_tiles[y, x].transparent
+                self.fov_map.walkable[y, x] = self.dungeon_tiles[y, x].walkable
 
     def _compute_fov(self) -> None:
-        """視界を計算"""
-        self.visible = tcod.map.compute_fov(
-            transparency=self.fov_map.transparent,
-            pov=(self.player_y, self.player_x),
+        """FOVを計算"""
+        # FOVマップを更新
+        self.fov_map.compute_fov(
+            self.player_x,
+            self.player_y,
             radius=10,
-            algorithm=libtcodpy.FOV_RESTRICTIVE,
+            light_walls=True,
+            algorithm=tcod.FOV_RESTRICTIVE
         )
-        self.explored |= self.visible 
+        
+        # 可視領域を更新
+        height, width = self.dungeon_tiles.shape
+        self.visible = np.full((height, width), fill_value=False, dtype=bool)
+        for y in range(height):
+            for x in range(width):
+                self.visible[y, x] = self.fov_map.fov[y, x]
+        
+        # 探索済み領域を更新
+        if self.explored is None or self.explored.shape != self.visible.shape:
+            self.explored = np.full_like(self.visible, False)
+        self.explored |= self.visible
 
     def update_console(self, console: tcod.console.Console) -> None:
         """コンソールの更新"""

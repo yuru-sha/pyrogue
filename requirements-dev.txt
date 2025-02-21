@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest>=8.0.0
+black>=24.0.0
+isort>=5.13.2
+mypy>=1.14.0
+pylint>=3.0.0

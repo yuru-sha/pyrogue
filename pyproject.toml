@@ -1,27 +1,30 @@
-[tool.poetry]
+[project]
 name = "pyrogue"
 version = "0.1.0"
 description = "A roguelike game built with Python and TCOD"
-authors = ["Your Name <your.email@example.com>"]
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
 readme = "README.md"
-packages = [{include = "pyrogue", from = "src"}]
+requires-python = ">=3.12"
+dependencies = [
+    "tcod>=16.2.3",
+    "numpy>=1.26.3",
+    "typing-extensions>=4.12.2",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-tcod = "^16.2.3"
-numpy = "^1.26.3"
-typing-extensions = "^4.12.2"
+[project.scripts]
+game = "pyrogue.main:main"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
-black = "^24.0.0"
-isort = "^5.13.2"
-mypy = "^1.14.0"
-pylint = "^3.0.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "isort>=5.13.2",
+    "mypy>=1.14.0",
+    "pylint>=3.0.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-game = "pyrogue.main:main" 
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,11 +1,12 @@
-.PHONY: all install run clean format lint test help dev debug release
+.PHONY: all install run clean format lint test help dev debug release venv
 
 # デフォルトのPythonインタプリタ
 PYTHON = python3.12
+VENV = .venv
+VENV_BIN = $(VENV)/bin
 
-# Poetry関連のコマンド
-POETRY = poetry
-POETRY_RUN = $(POETRY) run
+# パッケージマネージャー
+UV = uv
 
 # ソースコードのディレクトリ
 SRC_DIR = src/pyrogue
@@ -24,18 +25,22 @@ help:  ## このヘルプメッセージを表示
 
 all: install format lint test  ## 全てのタスクを実行
 
-setup: ## プロジェクトの初期セットアップを実行
+venv: ## 仮想環境を作成
+	$(PYTHON) -m venv $(VENV)
+	$(VENV_BIN)/$(PYTHON) -m pip install uv
+
+setup: venv ## プロジェクトの初期セットアップを実行
 	mkdir -p $(DATA_DIR)/fonts $(LOGS_DIR)
-	$(POETRY) install
+	$(VENV_BIN)/$(UV) pip install -r requirements-dev.txt
 
 install: ## 依存関係をインストール
-	$(POETRY) install
+	$(VENV_BIN)/$(UV) pip install -r requirements-dev.txt
 
 run: ## ゲームを実行（リリースモード）
-	$(POETRY_RUN) python -m pyrogue.main
+	$(VENV_BIN)/$(PYTHON) -m pyrogue.main
 
 dev: ## 開発モードでゲームを実行（デバッグログ有効）
-	DEBUG=1 $(POETRY_RUN) python -m pyrogue.main
+	DEBUG=1 $(VENV_BIN)/$(PYTHON) -m pyrogue.main
 
 debug: dev ## devのエイリアス
 
@@ -57,17 +62,17 @@ clean-logs: ## ログファイルを削除
 	rm -f $(LOGS_DIR)/*.log*
 
 format: ## コードをフォーマット
-	$(POETRY_RUN) black $(SRC_DIR) $(TEST_DIR)
-	$(POETRY_RUN) isort $(SRC_DIR) $(TEST_DIR)
+	$(VENV_BIN)/black $(SRC_DIR) $(TEST_DIR)
+	$(VENV_BIN)/isort $(SRC_DIR) $(TEST_DIR)
 
 lint: ## リンターとタイプチェックを実行
-	$(POETRY_RUN) black --check $(SRC_DIR) $(TEST_DIR)
-	$(POETRY_RUN) isort --check-only $(SRC_DIR) $(TEST_DIR)
-	$(POETRY_RUN) pylint $(SRC_DIR)
-	$(POETRY_RUN) mypy $(SRC_DIR)
+	$(VENV_BIN)/black --check $(SRC_DIR) $(TEST_DIR)
+	$(VENV_BIN)/isort --check-only $(SRC_DIR) $(TEST_DIR)
+	$(VENV_BIN)/pylint $(SRC_DIR)
+	$(VENV_BIN)/mypy $(SRC_DIR)
 
 test: ## テストを実行
-	$(POETRY_RUN) pytest $(TEST_DIR) -v
+	$(VENV_BIN)/pytest $(TEST_DIR) -v
 
 watch-format: ## ファイル変更を監視してフォーマットを実行
 	find $(SRC_DIR) $(TEST_DIR) -name "*.py" | entr make format
@@ -79,4 +84,4 @@ watch-run: ## ファイル変更を監視してゲームを再起動
 	find $(SRC_DIR) -name "*.py" | entr -r make dev
 
 release: clean format lint test ## リリースビルドを作成（全てのチェックを実行）
-	$(POETRY) build 
+	$(VENV_BIN)/$(PYTHON) -m build
