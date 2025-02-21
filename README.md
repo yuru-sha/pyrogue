@@ -64,6 +64,8 @@ make watch-format
 make watch-run
 ```
 
+詳細な開発者向けガイドは[docs/development.md](docs/development.md)を参照してください。
+
 ## 操作方法
 
 - 移動: viキー (h,j,k,l,y,u,b,n) またはカーソルキー

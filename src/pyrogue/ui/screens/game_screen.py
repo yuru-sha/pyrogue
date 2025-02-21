@@ -180,7 +180,7 @@ class GameScreen(object):
             self.player_y,
             radius=10,
             light_walls=True,
-            algorithm=tcod.FOV_RESTRICTIVE
+            algorithm=libtcodpy.FOV_RESTRICTIVE
         )
         
         # 可視領域を更新
@@ -289,32 +289,32 @@ class GameScreen(object):
     def handle_key(self, event: tcod.event.KeyDown) -> Optional[Screen]:
         """キー入力の処理"""
         # TABキーでFOVのトグル
-        if event.sym == tcod.event.K_TAB:
+        if event.sym == tcod.event.KeySym.TAB:
             self.fov_enabled = not self.fov_enabled
             return None
         
         # アイテムを拾う
-        elif event.sym == tcod.event.K_g:
+        elif event.sym == tcod.event.KeySym.g:
             self._handle_get()
             return None
         
         # 隠し扉を探す
-        elif event.sym == tcod.event.K_s:
+        elif event.sym == tcod.event.KeySym.s:
             self._handle_search()
             return None
         
         # 扉を開ける
-        elif event.sym == tcod.event.K_o:
+        elif event.sym == tcod.event.KeySym.o:
             self._handle_door_open()
             return None
         
         # 扉を閉める
-        elif event.sym == tcod.event.K_c:
+        elif event.sym == tcod.event.KeySym.c:
             self._handle_door_close()
             return None
         
         # 階段の処理
-        if event.sym == tcod.event.K_GREATER or event.sym == tcod.event.K_PERIOD:  # > キーまたは . キー
+        if event.sym == tcod.event.KeySym.GREATER or event.sym == tcod.event.KeySym.PERIOD:  # > キーまたは . キー
             if isinstance(self.dungeon_tiles[self.player_y][self.player_x], StairsDown):
                 self._descend_stairs()
                 return None
@@ -322,7 +322,7 @@ class GameScreen(object):
                 self.message_log.append("There are no stairs down here.")
                 return None
 
-        elif event.sym == tcod.event.K_LESS or event.sym == tcod.event.K_COMMA:  # < キーまたは , キー
+        elif event.sym == tcod.event.KeySym.LESS or event.sym == tcod.event.KeySym.COMMA:  # < キーまたは , キー
             if isinstance(self.dungeon_tiles[self.player_y][self.player_x], StairsUp):
                 self._ascend_stairs()
                 return None
@@ -331,40 +331,40 @@ class GameScreen(object):
                 return None
         
         # 移動キーの処理
-        if event.sym in (tcod.event.K_UP, tcod.event.K_k, tcod.event.K_KP_8):  # 8
+        if event.sym in (tcod.event.KeySym.UP, tcod.event.KeySym.k, tcod.event.KeySym.KP_8):  # 8
             if self._can_move_to(self.player_x, self.player_y - 1):
                 self.player_y -= 1
-        elif event.sym in (tcod.event.K_DOWN, tcod.event.K_j, tcod.event.K_KP_2):  # 2
+        elif event.sym in (tcod.event.KeySym.DOWN, tcod.event.KeySym.j, tcod.event.KeySym.KP_2):  # 2
             if self._can_move_to(self.player_x, self.player_y + 1):
                 self.player_y += 1
-        elif event.sym in (tcod.event.K_LEFT, tcod.event.K_h, tcod.event.K_KP_4):  # 4
+        elif event.sym in (tcod.event.KeySym.LEFT, tcod.event.KeySym.h, tcod.event.KeySym.KP_4):  # 4
             if self._can_move_to(self.player_x - 1, self.player_y):
                 self.player_x -= 1
-        elif event.sym in (tcod.event.K_RIGHT, tcod.event.K_l, tcod.event.K_KP_6):  # 6
+        elif event.sym in (tcod.event.KeySym.RIGHT, tcod.event.KeySym.l, tcod.event.KeySym.KP_6):  # 6
             if self._can_move_to(self.player_x + 1, self.player_y):
                 self.player_x += 1
         # 斜め移動
-        elif event.sym in (tcod.event.K_y, tcod.event.K_KP_7):  # 7: 左上
+        elif event.sym in (tcod.event.KeySym.y, tcod.event.KeySym.KP_7):  # 7: 左上
             if self._can_move_to(self.player_x - 1, self.player_y - 1):
                 self.player_x -= 1
                 self.player_y -= 1
-        elif event.sym in (tcod.event.K_u, tcod.event.K_KP_9):  # 9: 右上
+        elif event.sym in (tcod.event.KeySym.u, tcod.event.KeySym.KP_9):  # 9: 右上
             if self._can_move_to(self.player_x + 1, self.player_y - 1):
                 self.player_x += 1
                 self.player_y -= 1
-        elif event.sym in (tcod.event.K_b, tcod.event.K_KP_1):  # 1: 左下
+        elif event.sym in (tcod.event.KeySym.b, tcod.event.KeySym.KP_1):  # 1: 左下
             if self._can_move_to(self.player_x - 1, self.player_y + 1):
                 self.player_x -= 1
                 self.player_y += 1
-        elif event.sym in (tcod.event.K_n, tcod.event.K_KP_3):  # 3: 右下
+        elif event.sym in (tcod.event.KeySym.n, tcod.event.KeySym.KP_3):  # 3: 右下
             if self._can_move_to(self.player_x + 1, self.player_y + 1):
                 self.player_x += 1
                 self.player_y += 1
-        elif event.sym == tcod.event.K_KP_5:  # 5: その場で待機
+        elif event.sym == tcod.event.KeySym.KP_5:  # 5: その場で待機
             pass  # 待機もターンを消費
         
         # 移動が成功した場合の処理
-        if event.sym in (tcod.event.K_UP, tcod.event.K_DOWN, tcod.event.K_LEFT, tcod.event.K_RIGHT, tcod.event.K_y, tcod.event.K_u, tcod.event.K_b, tcod.event.K_n):
+        if event.sym in (tcod.event.KeySym.UP, tcod.event.KeySym.DOWN, tcod.event.KeySym.LEFT, tcod.event.KeySym.RIGHT, tcod.event.KeySym.y, tcod.event.KeySym.u, tcod.event.KeySym.b, tcod.event.KeySym.n):
             # モンスターの更新
             self.monster_spawner.update_monsters(
                 self.player_x,

@@ -80,17 +80,17 @@ class InventoryScreen(Screen):
             Optional[Screen]: 次の画面（Noneの場合は現在の画面を維持）
         """
         # ESCでインベントリを閉じる
-        if key.sym == tcod.event.K_ESCAPE:
+        if key.sym == tcod.event.KeySym.ESCAPE:
             return self.game_screen
         
         # ?でヘルプの表示/非表示を切り替え
-        elif key.sym == tcod.event.K_QUESTION:
+        elif key.sym == tcod.event.KeySym.QUESTION:
             self.show_help = not self.show_help
             return None
         
         # アイテムの選択（a-z）
-        elif tcod.event.K_a <= key.sym <= tcod.event.K_z:
-            index = key.sym - tcod.event.K_a
+        elif tcod.event.KeySym.a <= key.sym <= tcod.event.KeySym.z:
+            index = key.sym - tcod.event.KeySym.a
             if index < len(self.game_screen.player.inventory.items):
                 self.selected_index = index
             return None
@@ -101,7 +101,7 @@ class InventoryScreen(Screen):
             return None
         
         # e: 装備
-        if key.sym == tcod.event.K_e:
+        if key.sym == tcod.event.KeySym.e:
             if isinstance(selected_item, (Weapon, Armor, Ring)):
                 old_item = self.game_screen.player.equip_item(selected_item)
                 if old_item:
@@ -118,7 +118,7 @@ class InventoryScreen(Screen):
                 )
         
         # u: 使用
-        elif key.sym == tcod.event.K_u:
+        elif key.sym == tcod.event.KeySym.u:
             if isinstance(selected_item, (Scroll, Potion, Food)):
                 if self.game_screen.player.use_item(selected_item):
                     self.game_screen.message_log.append(
@@ -150,7 +150,7 @@ class InventoryScreen(Screen):
                 self.selected_index = max(0, len(self.game_screen.player.inventory.items) - 1)
         
         # r: 装備を外す
-        elif key.sym == tcod.event.K_r:
+        elif key.sym == tcod.event.KeySym.r:
             # 装備スロットを選択するサブメニューを表示
             return EquipmentRemovalScreen(self)
         
@@ -194,17 +194,17 @@ class EquipmentRemovalScreen(Screen):
         Returns:
             Optional[Screen]: 次の画面（Noneの場合は現在の画面を維持）
         """
-        if key.sym == tcod.event.K_ESCAPE:
+        if key.sym == tcod.event.KeySym.ESCAPE:
             return self.inventory_screen
         
         slot = None
-        if key.sym == tcod.event.K_w:
+        if key.sym == tcod.event.KeySym.w:
             slot = "weapon"
-        elif key.sym == tcod.event.K_a:
+        elif key.sym == tcod.event.KeySym.a:
             slot = "armor"
-        elif key.sym == tcod.event.K_l:
+        elif key.sym == tcod.event.KeySym.l:
             slot = "ring_left"
-        elif key.sym == tcod.event.K_r:
+        elif key.sym == tcod.event.KeySym.r:
             slot = "ring_right"
         
         if slot:
