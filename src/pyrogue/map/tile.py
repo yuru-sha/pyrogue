@@ -2,19 +2,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+
 
 @dataclass
 class Tile:
     """タイルの基底クラス"""
+
     walkable: bool
     transparent: bool
-    dark: Tuple[int, int, int]  # RGB color when not in FOV
-    light: Tuple[int, int, int]  # RGB color when in FOV
+    dark: tuple[int, int, int]  # RGB color when not in FOV
+    light: tuple[int, int, int]  # RGB color when in FOV
     char: str
 
 class Floor(Tile):
     """床タイル"""
+
     def __init__(
         self,
         has_gold: bool = False,
@@ -61,24 +63,25 @@ class Floor(Tile):
         """アイテムの表示文字を返す"""
         if self.has_gold:
             return "$"
-        elif self.has_potion:
+        if self.has_potion:
             return "!"
-        elif self.has_scroll:
+        if self.has_scroll:
             return "?"
-        elif self.has_weapon:
+        if self.has_weapon:
             return ")"
-        elif self.has_armor:
+        if self.has_armor:
             return "["
-        elif self.has_ring:
+        if self.has_ring:
             return "="
-        elif self.has_food:
+        if self.has_food:
             return "%"
-        elif self.has_amulet:
+        if self.has_amulet:
             return "&"
         return "."
 
 class Wall(Tile):
     """壁タイル"""
+
     def __init__(self) -> None:
         super().__init__(
             walkable=False,
@@ -90,6 +93,7 @@ class Wall(Tile):
 
 class Door(Tile):
     """扉タイル"""
+
     def __init__(self, state: str = "closed") -> None:
         super().__init__(
             walkable=False,
@@ -119,6 +123,7 @@ class Door(Tile):
 
 class SecretDoor(Door):
     """隠し扉タイル"""
+
     def __init__(self) -> None:
         super().__init__(state="secret")
         self.char = "#"  # 未発見時は壁として表示
@@ -132,6 +137,7 @@ class SecretDoor(Door):
 
 class Stairs(Tile):
     """階段の基底クラス"""
+
     def __init__(self, char: str) -> None:
         super().__init__(
             walkable=True,
@@ -143,16 +149,19 @@ class Stairs(Tile):
 
 class StairsUp(Stairs):
     """上り階段"""
+
     def __init__(self) -> None:
         super().__init__(char="<")
 
 class StairsDown(Stairs):
     """下り階段"""
+
     def __init__(self) -> None:
         super().__init__(char=">")
 
 class Water(Tile):
     """水タイル"""
+
     def __init__(self) -> None:
         super().__init__(
             walkable=False,
@@ -164,6 +173,7 @@ class Water(Tile):
 
 class Lava(Tile):
     """溶岩タイル"""
+
     def __init__(self) -> None:
         super().__init__(
             walkable=False,
@@ -171,4 +181,4 @@ class Lava(Tile):
             dark=(64, 16, 0),
             light=(255, 64, 0),
             char="^"
-        ) 
+        )

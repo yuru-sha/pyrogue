@@ -1,8 +1,10 @@
 """Game states module."""
 from enum import Enum, auto
 
+
 class GameStates(Enum):
     """ゲームの状態を表すEnum"""
+
     MENU = auto()
     PLAYERS_TURN = auto()
     ENEMY_TURN = auto()
@@ -12,4 +14,4 @@ class GameStates(Enum):
     TARGETING = auto()
     LEVEL_UP = auto()
     CHARACTER_SCREEN = auto()
-    EXIT = auto() 
+    EXIT = auto()

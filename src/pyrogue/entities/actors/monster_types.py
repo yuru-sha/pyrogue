@@ -1,10 +1,11 @@
 """Monster types and spawn rules module."""
 from dataclasses import dataclass
-from typing import List, Dict, Tuple
+
 
 @dataclass
 class MonsterType:
     """Monster type class."""
+
     char: str  # Character representation (A-Z)
     name: str  # Monster name
     level: int  # Monster level
@@ -18,18 +19,18 @@ class MonsterType:
 
 # Monster definitions based on original Rogue
 MONSTER_TYPES = [
-    MonsterType('B', 'Bat', 1, 3, 2, 1, 2, 1, 8, 100),
-    MonsterType('R', 'Rat', 1, 3, 2, 1, 2, 1, 8, 100),
-    MonsterType('K', 'Kobold', 1, 4, 3, 1, 3, 1, 10, 80),
-    MonsterType('S', 'Snake', 2, 5, 3, 2, 4, 2, 12, 70),
-    MonsterType('G', 'Goblin', 2, 5, 4, 2, 4, 2, 12, 70),
-    MonsterType('H', 'Hobgoblin', 3, 7, 5, 3, 6, 3, 14, 60),
-    MonsterType('O', 'Orc', 4, 9, 6, 4, 8, 4, 16, 50),
-    MonsterType('Z', 'Zombie', 4, 10, 5, 5, 8, 4, 16, 50),
-    MonsterType('T', 'Troll', 6, 15, 8, 6, 15, 6, 20, 40),
-    MonsterType('Y', 'Yeti', 7, 18, 10, 7, 20, 7, 22, 35),
-    MonsterType('W', 'Wraith', 8, 20, 12, 8, 25, 8, 24, 30),
-    MonsterType('D', 'Dragon', 10, 30, 15, 10, 40, 10, 26, 20),
+    MonsterType("B", "Bat", 1, 3, 2, 1, 2, 1, 8, 100),
+    MonsterType("R", "Rat", 1, 3, 2, 1, 2, 1, 8, 100),
+    MonsterType("K", "Kobold", 1, 4, 3, 1, 3, 1, 10, 80),
+    MonsterType("S", "Snake", 2, 5, 3, 2, 4, 2, 12, 70),
+    MonsterType("G", "Goblin", 2, 5, 4, 2, 4, 2, 12, 70),
+    MonsterType("H", "Hobgoblin", 3, 7, 5, 3, 6, 3, 14, 60),
+    MonsterType("O", "Orc", 4, 9, 6, 4, 8, 4, 16, 50),
+    MonsterType("Z", "Zombie", 4, 10, 5, 5, 8, 4, 16, 50),
+    MonsterType("T", "Troll", 6, 15, 8, 6, 15, 6, 20, 40),
+    MonsterType("Y", "Yeti", 7, 18, 10, 7, 20, 7, 22, 35),
+    MonsterType("W", "Wraith", 8, 20, 12, 8, 25, 8, 24, 30),
+    MonsterType("D", "Dragon", 10, 30, 15, 10, 40, 10, 26, 20),
 ]
 
 # Spawn rules by floor
@@ -39,7 +40,7 @@ def get_spawn_count(floor: int) -> int:
     additional = min((floor - 1) // 2, 5)  # Increases every 2 floors, max +5
     return base_count + additional
 
-def get_available_monsters(floor: int) -> List[MonsterType]:
+def get_available_monsters(floor: int) -> list[MonsterType]:
     """Get list of monsters that can appear on the given floor."""
     return [m for m in MONSTER_TYPES if m.min_floor <= floor <= m.max_floor]
 
@@ -50,7 +51,7 @@ def get_max_monsters_per_room(floor: int) -> int:
 
 # モンスターの定義
 # (char, name, level, hp, attack, defense, exp_value, view_range, color)
-MONSTER_STATS: Dict[str, Tuple[str, str, int, int, int, int, int, int, Tuple[int, int, int]]] = {
+MONSTER_STATS: dict[str, tuple[str, str, int, int, int, int, int, int, tuple[int, int, int]]] = {
     # 弱いモンスター（レベル1-5）
     "BAT": ("B", "Bat", 1, 4, 2, 1, 2, 8, (150, 150, 150)),  # 視界は広いが弱い
     "RAT": ("R", "Rat", 1, 5, 3, 1, 3, 6, (139, 69, 19)),    # 標準的な弱モンスター
@@ -76,7 +77,7 @@ MONSTER_STATS: Dict[str, Tuple[str, str, int, int, int, int, int, int, Tuple[int
 
 # 階層ごとの出現モンスター定義
 # キー: 階層、値: (モンスター名, 出現確率%)のリスト
-FLOOR_MONSTERS: Dict[int, List[Tuple[str, int]]] = {
+FLOOR_MONSTERS: dict[int, list[tuple[str, int]]] = {
     1: [("BAT", 40), ("RAT", 60)],
     2: [("BAT", 30), ("RAT", 40), ("SNAKE", 30)],
     3: [("RAT", 30), ("SNAKE", 35), ("KOBOLD", 35)],
@@ -93,4 +94,4 @@ FLOOR_MONSTERS: Dict[int, List[Tuple[str, int]]] = {
     14: [("WRAITH", 30), ("DRAGON", 35), ("ETTIN", 35)],
     15: [("DRAGON", 30), ("ETTIN", 35), ("PHANTOM", 35)],
     # 16階以降は15階と同じ設定を使用
-} 
+}

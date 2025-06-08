@@ -1,12 +1,10 @@
-.PHONY: all install run clean format lint test help dev debug release venv
+.PHONY: all install run clean clean-pyc clean-build format lint test help dev debug release venv
 
 # デフォルトのPythonインタプリタ
-PYTHON = python3.12
-VENV = .venv
-VENV_BIN = $(VENV)/bin
-
-# パッケージマネージャー
-UV = uv
+PYTHON_INTERPRETER ?= python3.12
+VENV_DIR := .venv
+VENV_PYTHON := $(VENV_DIR)/bin/python
+UV_INTERPRETER ?= uv
 
 # ソースコードのディレクトリ
 SRC_DIR = src/pyrogue
@@ -25,63 +23,68 @@ help:  ## このヘルプメッセージを表示
 
 all: install format lint test  ## 全てのタスクを実行
 
-venv: ## 仮想環境を作成
-	$(PYTHON) -m venv $(VENV)
-	$(VENV_BIN)/$(PYTHON) -m pip install uv
+# Environment and Dependency Management
+setup: $(VENV_DIR)/.setup-check ## Create virtual environment and install base dependencies by creating a marker file
 
-setup: venv ## プロジェクトの初期セットアップを実行
-	mkdir -p $(DATA_DIR)/fonts $(LOGS_DIR)
-	$(VENV_BIN)/$(UV) pip install -r requirements-dev.txt
+$(VENV_DIR)/.setup-check:
+	@echo "Cleaning up existing virtual environment in $(VENV_DIR)..."
+	@rm -rf $(VENV_DIR)
+	@echo "Creating virtual environment and installing dependencies using uv..."
+	@$(UV_INTERPRETER) sync
+	@echo "Base setup complete. Marking with .setup-check"
+	@touch $(VENV_DIR)/.setup-check
 
-install: ## 依存関係をインストール
-	$(VENV_BIN)/$(UV) pip install -r requirements-dev.txt
+setup-dev: $(VENV_DIR)/.setup-dev-check ## Install development and optional dependencies by creating a marker file
+
+$(VENV_DIR)/.setup-dev-check: $(VENV_DIR)/.setup-check
+	@echo "Installing development dependencies..."
+	@$(UV_INTERPRETER) sync --extra dev
+	@echo "Development setup complete. Marking with .setup-dev-check"
+	@touch $(VENV_DIR)/.setup-dev-check
+
 
 run: ## ゲームを実行（リリースモード）
-	$(VENV_BIN)/$(PYTHON) -m pyrogue.main
+	$(VENV_PYTHON) -m pyrogue.main
 
 dev: ## 開発モードでゲームを実行（デバッグログ有効）
-	DEBUG=1 $(VENV_BIN)/$(PYTHON) -m pyrogue.main
+	DEBUG=1 $(VENV_PYTHON) -m pyrogue.main
 
 debug: dev ## devのエイリアス
 
-clean: ## 一時ファイルとキャッシュを削除
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.pyd" -delete
-	find . -type f -name ".coverage" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
-	find . -type d -name "*.egg" -exec rm -rf {} +
-	find . -type d -name ".tox" -exec rm -rf {} +
-	find . -type d -name "build" -exec rm -rf {} +
-	find . -type d -name "dist" -exec rm -rf {} +
+# クリーンアップ
+clean: clean-pyc clean-build
+	@echo "Cleaning complete."
+
+clean-pyc:
+	@find . -name '*.pyc' -exec rm -f {} +
+	@find . -name '*.pyo' -exec rm -f {} +
+	@find . -name '*~' -exec rm -f {} +
+	@find . -name '__pycache__' -exec rm -rf {} +
+
+clean-build:
+	@rm -rf build/
+	@rm -rf dist/
+	@rm -rf .eggs/
+	@rm -f .coverage
+	@rm -rf htmlcov/
+	@rm -rf .pytest_cache
+	@rm -rf .mypy_cache
 
 clean-logs: ## ログファイルを削除
 	rm -f $(LOGS_DIR)/*.log*
 
 format: ## コードをフォーマット
-	$(VENV_BIN)/black $(SRC_DIR) $(TEST_DIR)
-	$(VENV_BIN)/isort $(SRC_DIR) $(TEST_DIR)
+	$(UV_INTERPRETER) run black $(SRC_DIR) $(TEST_DIR)
+	$(UV_INTERPRETER) run isort $(SRC_DIR) $(TEST_DIR)
 
 lint: ## リンターとタイプチェックを実行
-	$(VENV_BIN)/black --check $(SRC_DIR) $(TEST_DIR)
-	$(VENV_BIN)/isort --check-only $(SRC_DIR) $(TEST_DIR)
-	$(VENV_BIN)/pylint $(SRC_DIR)
-	$(VENV_BIN)/mypy $(SRC_DIR)
+	$(UV_INTERPRETER) run black --check $(SRC_DIR) $(TEST_DIR)
+	$(UV_INTERPRETER) run isort --check-only $(SRC_DIR) $(TEST_DIR)
+	$(UV_INTERPRETER) run pylint $(SRC_DIR)
+	$(UV_INTERPRETER) run mypy $(SRC_DIR)
 
 test: ## テストを実行
-	$(VENV_BIN)/pytest $(TEST_DIR) -v
-
-watch-format: ## ファイル変更を監視してフォーマットを実行
-	find $(SRC_DIR) $(TEST_DIR) -name "*.py" | entr make format
-
-watch-test: ## ファイル変更を監視してテストを実行
-	find $(SRC_DIR) $(TEST_DIR) -name "*.py" | entr make test
-
-watch-run: ## ファイル変更を監視してゲームを再起動
-	find $(SRC_DIR) -name "*.py" | entr -r make dev
+	$(UV_INTERPRETER) run pytest $(TEST_DIR) -v
 
 release: clean format lint test ## リリースビルドを作成（全てのチェックを実行）
-	$(VENV_BIN)/$(PYTHON) -m build
+	$(VENV_PYTHON) -m build

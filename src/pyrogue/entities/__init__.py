@@ -1,1 +1,1 @@
-"""Entities package.""" 
+"""Entities package."""

@@ -1,4 +1,5 @@
-"""Game engine module.
+"""
+Game engine module.
 
 This module implements the core game engine, handling the main game loop,
 state management, and event processing.
@@ -10,12 +11,11 @@ import tcod.console
 import tcod.event
 import tcod.tileset
 
-from pyrogue.utils import game_logger
-from pyrogue.ui.screens.menu_screen import MenuScreen
-from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.core.game_states import GameStates
-from pyrogue.entities.actors.player import Player
-from pyrogue.map.dungeon import DungeonGenerator
+from pyrogue.ui.screens.game_screen import GameScreen
+from pyrogue.ui.screens.menu_screen import MenuScreen
+from pyrogue.utils import game_logger
+
 
 class Engine:
     """Main game engine class."""
@@ -30,11 +30,11 @@ class Engine:
         self.state = GameStates.MENU
         self.running = False
         self.message_log = []  # メッセージログを追加
-        
+
         # 画面の初期化
         self.menu_screen = MenuScreen(self.console, self)
         self.game_screen = GameScreen(self)
-        
+
         game_logger.debug(
             "Initializing game engine",
             extra={
@@ -52,7 +52,7 @@ class Engine:
             32, 8,  # 列数と行数
             tcod.tileset.CHARMAP_TCOD,  # 文字マップ
         )
-        
+
         # フォントサイズの設定
         self.font_width = 10
         self.font_height = 10
@@ -73,18 +73,18 @@ class Engine:
         # 新しいウィンドウサイズを取得
         pixel_width = event.width
         pixel_height = event.height
-        
+
         # ピクセルサイズから文字数を計算
         self.screen_width = max(80, pixel_width // self.font_width)  # 最小幅は80文字
         self.screen_height = max(50, pixel_height // self.font_height)  # 最小高さは50文字
-        
+
         # コンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
-        
+
         # 各画面のコンソールを更新
         self.menu_screen.update_console(self.console)
         self.game_screen.update_console(self.console)
-        
+
         game_logger.debug(
             "Window resized",
             extra={
@@ -101,21 +101,21 @@ class Engine:
         try:
             while self.running:
                 self.console.clear()
-                
+
                 # 現在の状態に応じて描画
                 if self.state == GameStates.MENU:
                     self.menu_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
                     self.game_screen.render()
-                
+
                 self.context.present(self.console)
-                
+
                 for event in tcod.event.wait():
                     if event.type == "QUIT":
                         game_logger.debug("Quit event received")
                         self.running = False
                         break
-                    elif event.type == "WINDOWRESIZED":
+                    if event.type == "WINDOWRESIZED":
                         self.handle_resize(event)
                     elif event.type == "KEYDOWN":
                         if not self.handle_input(event):
@@ -132,17 +132,19 @@ class Engine:
             self.cleanup()
 
     def handle_input(self, event: tcod.event.KeyDown) -> bool:
-        """キー入力の処理
+        """
+        キー入力の処理
         
         Returns:
             bool: ゲームを続行する場合はTrue、終了する場合はFalse
+
         """
         # ESCキーの処理
         if event.sym == tcod.event.KeySym.ESCAPE:
             if self.state == GameStates.PLAYERS_TURN:
                 self.state = GameStates.MENU
                 return True
-            elif self.state == GameStates.MENU:
+            if self.state == GameStates.MENU:
                 return False
 
         # 状態に応じたキー処理
@@ -153,16 +155,16 @@ class Engine:
                     return False
                 self.state = new_state
             return True
-        elif self.state == GameStates.PLAYERS_TURN:
+        if self.state == GameStates.PLAYERS_TURN:
             self.game_screen.handle_key(event)
             return True
         return True
 
     def cleanup(self) -> None:
         """Cleanup resources before exiting."""
-        game_logger.debug("Cleaning up resources") 
+        game_logger.debug("Cleaning up resources")
 
     def new_game(self) -> None:
         """新しいゲームを開始"""
         self.game_screen.setup_new_game()
-        self.state = GameStates.PLAYERS_TURN 
+        self.state = GameStates.PLAYERS_TURN

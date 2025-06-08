@@ -1,12 +1,12 @@
 """Menu screen module."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import tcod
 import tcod.console
 import tcod.event
-from typing import Optional, TYPE_CHECKING
 
-from pyrogue.utils import game_logger
 from pyrogue.core.game_states import GameStates
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class MenuScreen:
     """Menu screen class."""
 
-    def __init__(self, console: tcod.console.Console, engine: 'Engine'):
+    def __init__(self, console: tcod.console.Console, engine: Engine):
         self.console = console
         self.engine = engine
         self.menu_selection = 0
@@ -28,7 +28,7 @@ class MenuScreen:
     def render(self) -> None:
         """Render the menu screen."""
         self.console.clear()
-        
+
         # タイトルを表示
         title = "PyRogue"
         title_y = self.console.height // 4
@@ -48,7 +48,7 @@ class MenuScreen:
                 string=text
             )
 
-    def handle_input(self, key: tcod.event.KeyDown) -> Optional[GameStates]:
+    def handle_input(self, key: tcod.event.KeyDown) -> GameStates | None:
         """入力処理"""
         if key.sym == tcod.event.KeySym.UP:
             self.menu_selection = (self.menu_selection - 1) % len(self.menu_options)
@@ -58,9 +58,9 @@ class MenuScreen:
             if self.menu_options[self.menu_selection] == "New Game":
                 self.engine.new_game()
                 return GameStates.PLAYERS_TURN
-            elif self.menu_options[self.menu_selection] == "Continue":
+            if self.menu_options[self.menu_selection] == "Continue":
                 return GameStates.PLAYERS_TURN
-            elif self.menu_options[self.menu_selection] == "Quit":
+            if self.menu_options[self.menu_selection] == "Quit":
                 return GameStates.EXIT
 
-        return None 
+        return None

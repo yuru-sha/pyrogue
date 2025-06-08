@@ -1,17 +1,18 @@
 """Item module."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Tuple, Optional
+from dataclasses import dataclass
+
 
 @dataclass
 class Item:
     """アイテムの基本クラス"""
+
     x: int
     y: int
     name: str
     char: str
-    color: Tuple[int, int, int]
+    color: tuple[int, int, int]
     stackable: bool = False  # 重ね合わせ可能か
     identified: bool = True  # 識別済みか（このゲームでは常にTrue）
     stack_count: int = 1  # スタック数
@@ -22,6 +23,7 @@ class Item:
 
 class Weapon(Item):
     """武器クラス"""
+
     def __init__(self, x: int, y: int, name: str, attack_bonus: int):
         super().__init__(
             x=x,
@@ -36,6 +38,7 @@ class Weapon(Item):
 
 class Armor(Item):
     """防具クラス"""
+
     def __init__(self, x: int, y: int, name: str, defense_bonus: int):
         super().__init__(
             x=x,
@@ -50,6 +53,7 @@ class Armor(Item):
 
 class Ring(Item):
     """指輪クラス"""
+
     def __init__(self, x: int, y: int, name: str, effect: str, bonus: int):
         super().__init__(
             x=x,
@@ -65,6 +69,7 @@ class Ring(Item):
 
 class Scroll(Item):
     """巻物クラス"""
+
     def __init__(self, x: int, y: int, name: str, effect: str):
         super().__init__(
             x=x,
@@ -83,6 +88,7 @@ class Scroll(Item):
 
 class Potion(Item):
     """薬クラス"""
+
     def __init__(self, x: int, y: int, name: str, effect: str, power: int):
         super().__init__(
             x=x,
@@ -102,6 +108,7 @@ class Potion(Item):
 
 class Food(Item):
     """食料クラス"""
+
     def __init__(self, x: int, y: int, name: str, nutrition: int):
         super().__init__(
             x=x,
@@ -120,6 +127,7 @@ class Food(Item):
 
 class Gold(Item):
     """金貨クラス"""
+
     def __init__(self, x: int, y: int, amount: int):
         super().__init__(
             x=x,
@@ -133,4 +141,4 @@ class Gold(Item):
         self.amount = amount
 
     def pick_up(self) -> str:
-        return f"You pick up {self.amount} gold pieces." 
+        return f"You pick up {self.amount} gold pieces."

@@ -2,27 +2,36 @@
 from __future__ import annotations
 
 import random
-from typing import List, Optional, Dict, Set, Tuple
+
 import numpy as np
 
-from .item import Item, Weapon, Armor, Ring, Scroll, Potion, Food, Gold
-from .item_types import (
-    WEAPONS, ARMORS, RINGS, SCROLLS, POTIONS, FOODS, AMULET,
-    get_gold_amount, get_item_spawn_count, get_available_items
-)
-from pyrogue.map.tile import Floor
 from pyrogue.map.dungeon import Room
+
+from .item import Armor, Food, Gold, Item, Potion, Ring, Scroll, Weapon
+from .item_types import (
+    AMULET,
+    ARMORS,
+    FOODS,
+    POTIONS,
+    RINGS,
+    SCROLLS,
+    WEAPONS,
+    get_available_items,
+    get_gold_amount,
+    get_item_spawn_count,
+)
+
 
 class ItemSpawner:
     """アイテムの生成と管理を行うクラス"""
-    
+
     def __init__(self, floor: int):
         """Initialize item spawner."""
         self.floor = floor
-        self.items: List[Item] = []
-        self.occupied_positions: Set[Tuple[int, int]] = set()
-    
-    def spawn_items(self, dungeon_tiles: np.ndarray, rooms: List[Room]) -> None:
+        self.items: list[Item] = []
+        self.occupied_positions: set[tuple[int, int]] = set()
+
+    def spawn_items(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
         """Spawn items in the dungeon."""
         self.items.clear()
         self.occupied_positions.clear()  # 位置情報もクリア
@@ -47,21 +56,21 @@ class ItemSpawner:
                 continue
 
             # Determine item type
-            item_type = random.choices(['weapon', 'armor', 'ring', 'scroll', 'potion', 'food', 'gold'], 
+            item_type = random.choices(["weapon", "armor", "ring", "scroll", "potion", "food", "gold"],
                                     weights=[15, 15, 10, 25, 25, 10, 35], k=1)[0]
 
             item = None
-            if item_type == 'weapon':
+            if item_type == "weapon":
                 item = self._create_weapon()
-            elif item_type == 'armor':
+            elif item_type == "armor":
                 item = self._create_armor()
-            elif item_type == 'ring':
+            elif item_type == "ring":
                 item = self._create_ring()
-            elif item_type == 'scroll':
+            elif item_type == "scroll":
                 item = self._create_scroll()
-            elif item_type == 'potion':
+            elif item_type == "potion":
                 item = self._create_potion()
-            elif item_type == 'food':
+            elif item_type == "food":
                 item = self._create_food()
             else:  # gold
                 item = self._create_gold()
@@ -71,12 +80,12 @@ class ItemSpawner:
                 item.y = y
                 self.items.append(item)
                 self.occupied_positions.add((x, y))  # 位置を追加
-    
+
     def _find_valid_position(
         self,
         dungeon_tiles: np.ndarray,
         room: Room
-    ) -> Tuple[Optional[int], Optional[int]]:
+    ) -> tuple[int | None, int | None]:
         """Find a valid position for an item in the given room."""
         # Get room dimensions
         x1, y1 = room.x, room.y
@@ -98,19 +107,19 @@ class ItemSpawner:
         """Check if a position is occupied by an item."""
         return any(item.x == x and item.y == y for item in self.items)
 
-    def _create_weapon(self) -> Optional[Weapon]:
+    def _create_weapon(self) -> Weapon | None:
         """Create a random weapon."""
         available = get_available_items(self.floor, WEAPONS)
         if not available:
             return None
 
-        weapon_type = random.choices(available, 
+        weapon_type = random.choices(available,
                                    weights=[w.spawn_weight for w in available],
                                    k=1)[0]
         bonus = random.randint(*weapon_type.bonus_range)
         return Weapon(0, 0, weapon_type.name, bonus)
 
-    def _create_armor(self) -> Optional[Armor]:
+    def _create_armor(self) -> Armor | None:
         """Create a random armor."""
         available = get_available_items(self.floor, ARMORS)
         if not available:
@@ -122,7 +131,7 @@ class ItemSpawner:
         bonus = random.randint(*armor_type.bonus_range)
         return Armor(0, 0, armor_type.name, bonus)
 
-    def _create_ring(self) -> Optional[Ring]:
+    def _create_ring(self) -> Ring | None:
         """Create a random ring."""
         available = get_available_items(self.floor, RINGS)
         if not available:
@@ -134,7 +143,7 @@ class ItemSpawner:
         power = random.randint(*ring_type.power_range)
         return Ring(0, 0, ring_type.name, ring_type.effect, power)
 
-    def _create_scroll(self) -> Optional[Scroll]:
+    def _create_scroll(self) -> Scroll | None:
         """Create a random scroll."""
         available = get_available_items(self.floor, SCROLLS)
         if not available:
@@ -145,7 +154,7 @@ class ItemSpawner:
                                    k=1)[0]
         return Scroll(0, 0, scroll_type.name, scroll_type.effect)
 
-    def _create_potion(self) -> Optional[Potion]:
+    def _create_potion(self) -> Potion | None:
         """Create a random potion."""
         available = get_available_items(self.floor, POTIONS)
         if not available:
@@ -157,7 +166,7 @@ class ItemSpawner:
         power = random.randint(*potion_type.power_range)
         return Potion(0, 0, potion_type.name, potion_type.effect, power)
 
-    def _create_food(self) -> Optional[Food]:
+    def _create_food(self) -> Food | None:
         """Create a random food item."""
         available = get_available_items(self.floor, FOODS)
         if not available:
@@ -172,18 +181,18 @@ class ItemSpawner:
         """Create a gold pile."""
         amount = get_gold_amount(self.floor)
         return Gold(0, 0, amount)
-    
-    def get_item_at(self, x: int, y: int) -> Optional[Item]:
+
+    def get_item_at(self, x: int, y: int) -> Item | None:
         """指定された位置にあるアイテムを取得"""
         for item in self.items:
             if item.x == x and item.y == y:
                 return item
         return None
-    
+
     def remove_item(self, item: Item) -> None:
         """アイテムを削除"""
         if item in self.items:
             self.items.remove(item)
             pos = (item.x, item.y)
             if pos in self.occupied_positions:  # 位置が存在する場合のみ削除
-                self.occupied_positions.remove(pos) 
+                self.occupied_positions.remove(pos)

@@ -1,12 +1,23 @@
 """Player module."""
 from dataclasses import dataclass
+
 from pyrogue.entities.actors.inventory import Inventory
-from pyrogue.entities.items.item import Item, Weapon, Armor, Ring, Scroll, Potion, Food, Gold
-from typing import Optional
+from pyrogue.entities.items.item import (
+    Armor,
+    Food,
+    Gold,
+    Item,
+    Potion,
+    Ring,
+    Scroll,
+    Weapon,
+)
+
 
 @dataclass
 class Player:
     """プレイヤーを表すクラス"""
+
     x: int = 0
     y: int = 0
     hp: int = 20
@@ -38,10 +49,12 @@ class Player:
         self.hp = min(self.max_hp, self.hp + amount)
 
     def gain_exp(self, amount: int) -> bool:
-        """経験値を獲得
+        """
+        経験値を獲得
         
         Returns:
             bool: レベルアップした場合はTrue
+
         """
         self.exp += amount
         if self.exp >= self.level * 100:  # 簡単な経験値テーブル
@@ -67,33 +80,39 @@ class Player:
         self.hunger = min(100, self.hunger + amount)
 
     def get_attack(self) -> int:
-        """攻撃力を計算
+        """
+        攻撃力を計算
         
         Returns:
             int: 攻撃力
+
         """
         base_attack = 5  # 基本攻撃力
         bonus = self.inventory.get_attack_bonus()
         return base_attack + bonus
 
     def get_defense(self) -> int:
-        """防御力を計算
+        """
+        防御力を計算
         
         Returns:
             int: 防御力
+
         """
         base_defense = 2  # 基本防御力
         bonus = self.inventory.get_defense_bonus()
         return base_defense + bonus
 
-    def equip_item(self, item: Item) -> Optional[Item]:
-        """アイテムを装備
+    def equip_item(self, item: Item) -> Item | None:
+        """
+        アイテムを装備
         
         Args:
             item: 装備するアイテム
             
         Returns:
             Optional[Item]: 外したアイテム（ある場合）
+
         """
         if isinstance(item, (Weapon, Armor, Ring)):
             old_item = self.inventory.equip(item)
@@ -103,14 +122,16 @@ class Player:
             return old_item
         return None
 
-    def unequip_item(self, slot: str) -> Optional[Item]:
-        """装備を外す
+    def unequip_item(self, slot: str) -> Item | None:
+        """
+        装備を外す
         
         Args:
             slot: 装備スロット名
             
         Returns:
             Optional[Item]: 外したアイテム（ある場合）
+
         """
         item = self.inventory.unequip(slot)
         if item:
@@ -118,13 +139,15 @@ class Player:
         return item
 
     def use_item(self, item: Item) -> bool:
-        """アイテムを使用
+        """
+        アイテムを使用
         
         Args:
             item: 使用するアイテム
             
         Returns:
             bool: 使用に成功したかどうか
+
         """
         if isinstance(item, Scroll):
             # 巻物の効果を適用
@@ -132,42 +155,44 @@ class Player:
             if success:
                 self.inventory.remove_item(item)
             return success
-        
-        elif isinstance(item, Potion):
+
+        if isinstance(item, Potion):
             # 薬の効果を適用
             success = item.apply_effect(self)
             if success:
                 self.inventory.remove_item(item)
             return success
-        
-        elif isinstance(item, Food):
+
+        if isinstance(item, Food):
             # 食料を消費
             self.hunger = min(100, self.hunger + item.nutrition)
             self.inventory.remove_item(item)
             return True
-        
-        elif isinstance(item, Gold):
+
+        if isinstance(item, Gold):
             # 金貨を獲得
             self.gold += item.amount
             self.inventory.remove_item(item)
             return True
-        
+
         return False
 
     def get_status_text(self) -> str:
-        """ステータス表示用のテキストを取得
+        """
+        ステータス表示用のテキストを取得
         
         Returns:
             str: ステータステキスト
+
         """
         weapon = self.inventory.get_equipped_item_name("weapon")
         armor = self.inventory.get_equipped_item_name("armor")
         ring_l = self.inventory.get_equipped_item_name("ring_left")
         ring_r = self.inventory.get_equipped_item_name("ring_right")
-        
+
         return (
             f"Lv:{self.level} HP:{self.hp}/{self.max_hp} "
             f"Atk:{self.get_attack()} Def:{self.get_defense()} "
             f"Hunger:{self.hunger}% Exp:{self.exp} Gold:{self.gold}\n"
             f"Weap:{weapon} Armor:{armor} Ring(L):{ring_l} Ring(R):{ring_r}"
-        ) 
+        )

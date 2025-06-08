@@ -1,37 +1,45 @@
 """Dungeon generation module."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, List, Tuple, Dict, Set
 import random
+from dataclasses import dataclass, field
+
 import numpy as np
 
-from pyrogue.utils import game_logger
-from .tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, Water, Lava, StairsUp, StairsDown
+from .tile import (
+    Door,
+    Floor,
+    SecretDoor,
+    StairsDown,
+    StairsUp,
+    Wall,
+)
+
 
 @dataclass
 class Room:
     """部屋を表すクラス"""
+
     x: int
     y: int
     width: int
     height: int
     is_special: bool = False
-    room_type: Optional[str] = None
-    connected_rooms: Set[int] = field(default_factory=set)
-    doors: List[Tuple[int, int]] = field(default_factory=list)
+    room_type: str | None = None
+    connected_rooms: set[int] = field(default_factory=set)
+    doors: list[tuple[int, int]] = field(default_factory=list)
     id: int = field(default_factory=lambda: next(Room._id_counter))
 
     # IDカウンター
     _id_counter = iter(range(1000000))
 
     @property
-    def center(self) -> Tuple[int, int]:
+    def center(self) -> tuple[int, int]:
         """部屋の中心座標を返す"""
         return (self.x + self.width // 2, self.y + self.height // 2)
 
     @property
-    def inner(self) -> List[Tuple[int, int]]:
+    def inner(self) -> list[tuple[int, int]]:
         """部屋の内部の座標リストを返す（壁と扉を除く）"""
         return [
             (x, y)
@@ -39,20 +47,21 @@ class Room:
             for y in range(self.y + 1, self.y + self.height - 1)
         ]
 
-    def get_wall_center(self, direction: str) -> Tuple[int, int]:
+    def get_wall_center(self, direction: str) -> tuple[int, int]:
         """指定した方向の壁の中心座標を返す"""
         if direction == "north":
             return (self.x + self.width // 2, self.y)
-        elif direction == "south":
+        if direction == "south":
             return (self.x + self.width // 2, self.y + self.height - 1)
-        elif direction == "west":
+        if direction == "west":
             return (self.x, self.y + self.height // 2)
-        elif direction == "east":
+        if direction == "east":
             return (self.x + self.width - 1, self.y + self.height // 2)
         raise ValueError(f"Invalid direction: {direction}")
 
 class DungeonGenerator:
     """ダンジョン生成クラス"""
+
     SPECIAL_ROOM_TYPES = ["treasure", "armory", "food", "monster", "laboratory", "library"]
 
     def __init__(
@@ -60,18 +69,18 @@ class DungeonGenerator:
         width: int,
         height: int,
         floor: int = 1,
-        min_room_size: Tuple[int, int] = (6, 6),
-        max_room_size: Tuple[int, int] = (10, 10),
+        min_room_size: tuple[int, int] = (6, 6),
+        max_room_size: tuple[int, int] = (10, 10),
     ) -> None:
         self.width = width
         self.height = height
         self.floor = floor
         self.min_room_size = min_room_size
         self.max_room_size = max_room_size
-        self.rooms: List[Room] = []
+        self.rooms: list[Room] = []
         self.tiles = np.full((height, width), fill_value=Wall(), dtype=object)
-        self.start_pos: Optional[Tuple[int, int]] = None
-        self.end_pos: Optional[Tuple[int, int]] = None
+        self.start_pos: tuple[int, int] | None = None
+        self.end_pos: tuple[int, int] | None = None
 
     def _create_room(self, room: Room) -> None:
         """部屋を生成する"""
@@ -124,12 +133,12 @@ class DungeonGenerator:
             room_type = random.choice(self.SPECIAL_ROOM_TYPES)
             width = random.randint(self.min_room_size[0], min(self.max_room_size[0], 5))
             height = random.randint(self.min_room_size[1], min(self.max_room_size[1], 5))
-            
+
             # 部屋の配置位置を探す
             for _ in range(50):  # 最大50回試行
                 x = random.randint(1, self.width - width - 1)
                 y = random.randint(1, self.height - height - 1)
-                
+
                 # 既存の部屋と重なっていないか確認
                 overlaps = False
                 for room in self.rooms:
@@ -137,7 +146,7 @@ class DungeonGenerator:
                         y < room.y + room.height + 2 and y + height + 2 > room.y):
                         overlaps = True
                         break
-                
+
                 if not overlaps:
                     room = Room(x=x, y=y, width=width, height=height, is_special=True, room_type=room_type)
                     self._create_room(room)
@@ -147,12 +156,12 @@ class DungeonGenerator:
     def _connect_rooms(self) -> None:
         """部屋同士を接続"""
         # 最小全域木を使用して部屋を接続
-        edges: List[Tuple[float, int, int]] = []  # (distance, room1_id, room2_id)
+        edges: list[tuple[float, int, int]] = []  # (distance, room1_id, room2_id)
         room_dict = {room.id: room for room in self.rooms}
-        
+
         for i, room1 in enumerate(self.rooms):
             for room2 in self.rooms[i + 1:]:
-                distance = ((room1.center[0] - room2.center[0]) ** 2 + 
+                distance = ((room1.center[0] - room2.center[0]) ** 2 +
                           (room1.center[1] - room2.center[1]) ** 2) ** 0.5
                 edges.append((distance, room1.id, room2.id))
 
@@ -194,14 +203,13 @@ class DungeonGenerator:
             else:
                 door1_pos = room1.get_wall_center("west")
                 door2_pos = room2.get_wall_center("east")
+        # 垂直方向の接続
+        elif y1 < y2:
+            door1_pos = room1.get_wall_center("south")
+            door2_pos = room2.get_wall_center("north")
         else:
-            # 垂直方向の接続
-            if y1 < y2:
-                door1_pos = room1.get_wall_center("south")
-                door2_pos = room2.get_wall_center("north")
-            else:
-                door1_pos = room1.get_wall_center("north")
-                door2_pos = room2.get_wall_center("south")
+            door1_pos = room1.get_wall_center("north")
+            door2_pos = room2.get_wall_center("south")
 
         # 扉を配置
         is_special_room = room1.is_special or room2.is_special
@@ -259,7 +267,7 @@ class DungeonGenerator:
         self.tiles[down_y, down_x] = StairsDown()
         self.end_pos = (down_x, down_y)
 
-    def generate(self) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
+    def generate(self) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
         """ダンジョンを生成"""
         # 特別な部屋を生成
         self._create_special_rooms()
@@ -292,4 +300,4 @@ class DungeonGenerator:
         # 階段を配置
         self._place_stairs()
 
-        return self.tiles, self.start_pos, self.end_pos 
+        return self.tiles, self.start_pos, self.end_pos

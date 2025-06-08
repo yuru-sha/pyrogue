@@ -5,6 +5,7 @@ import traceback
 from pyrogue.core.engine import Engine
 from pyrogue.utils import game_logger
 
+
 def main() -> None:
     """Main function."""
     try:

@@ -1,37 +1,42 @@
 """Game screen module."""
 from __future__ import annotations
 
+import random
+
+import numpy as np
 import tcod
 import tcod.console
 import tcod.event
-import numpy as np
 from tcod import libtcodpy
-from typing import Optional
-import random
 
-from pyrogue.utils import game_logger
-from pyrogue.map.dungeon import DungeonGenerator
-from pyrogue.map.tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, StairsUp, StairsDown, Water, Lava
-from pyrogue.entities.actors.monster_spawner import MonsterSpawner
-from pyrogue.entities.items.item_spawner import ItemSpawner
-from pyrogue.entities.items.item import Item, Gold
-from pyrogue.ui.screens.inventory_screen import InventoryScreen
 from pyrogue.entities.actors.inventory import Inventory
+from pyrogue.entities.actors.monster_spawner import MonsterSpawner
+from pyrogue.entities.items.item import Gold, Item
+from pyrogue.entities.items.item_spawner import ItemSpawner
+from pyrogue.map.dungeon import DungeonGenerator
+from pyrogue.map.tile import (
+    Door,
+    SecretDoor,
+    StairsDown,
+    StairsUp,
+    Wall,
+)
 
-class GameScreen(object):
+
+class GameScreen:
     """Game screen class."""
 
     def __init__(self, engine: Engine) -> None:
         """初期化"""
         self.engine = engine
-        
+
         # 現在の階層と前の階層
         self.current_floor = 1
         self.previous_floor = 1
-        
+
         # 各階層のデータを保持する辞書
         self.floor_data = {}  # Dict[int, FloorData]
-        
+
         # ダンジョンの生成
         self.dungeon_width = 80
         self.dungeon_height = 45  # ステータス2行 + マップ + メッセージ3行
@@ -43,17 +48,17 @@ class GameScreen(object):
             max_room_size=(10, 10)
         )
         self.dungeon_tiles = None
-        
+
         # FOVの初期化
         self.fov_enabled = True
         self.fov_map = tcod.map.Map(width=self.dungeon_width, height=self.dungeon_height)
         self.visible = np.full((self.dungeon_height, self.dungeon_width), fill_value=False, dtype=bool)
         self.explored = np.full((self.dungeon_height, self.dungeon_width), fill_value=False, dtype=bool)
-        
+
         # プレイヤーの位置
         self.player_x = 0
         self.player_y = 0
-        
+
         # プレイヤーステータス
         self.player_stats = {
             "level": 1,
@@ -65,10 +70,10 @@ class GameScreen(object):
             "exp": 0,
             "gold": 0,
         }
-        
+
         # プレイヤーのインベントリ
         self.inventory = Inventory()
-        
+
         # 装備
         self.equipment = {
             "weapon": "Dagger",
@@ -76,29 +81,29 @@ class GameScreen(object):
             "ring_left": "None",
             "ring_right": "None",
         }
-        
+
         # メッセージログ
         self.message_log = [
             "Welcome to PyRogue!",
             "Use vi keys (hjklyubn), arrow keys, or numpad (1-9) to move.",
             "Press ESC to return to menu.",
         ]
-        
+
         # モンスター管理用のインスタンスを追加
         self.monster_spawner = None
-        
+
         # アイテム管理用のインスタンスを追加
         self.item_spawner = ItemSpawner(self.current_floor)
 
     def _save_current_floor(self) -> None:
         """現在のフロアの状態を保存"""
         self.floor_data[self.current_floor] = {
-            'dungeon_tiles': self.dungeon_tiles.copy(),
-            'monster_spawner': self.monster_spawner,
-            'item_spawner': self.item_spawner,
-            'explored': self.explored.copy(),
-            'up_pos': self.dungeon_gen.start_pos,
-            'down_pos': self.dungeon_gen.end_pos,
+            "dungeon_tiles": self.dungeon_tiles.copy(),
+            "monster_spawner": self.monster_spawner,
+            "item_spawner": self.item_spawner,
+            "explored": self.explored.copy(),
+            "up_pos": self.dungeon_gen.start_pos,
+            "down_pos": self.dungeon_gen.end_pos,
         }
 
     def _load_floor(self, floor_number: int) -> None:
@@ -107,7 +112,7 @@ class GameScreen(object):
         if (floor_number not in self.floor_data or  # 初めて訪れる階
             (floor_number > self.previous_floor) or  # 下の階に降りる場合
             (floor_number < self.previous_floor)):   # 上の階に戻る場合
-            
+
             # 新しい階層を生成
             dungeon = DungeonGenerator(
                 width=self.engine.map_width,
@@ -115,33 +120,33 @@ class GameScreen(object):
                 floor=floor_number
             )
             tiles, up_pos, down_pos = dungeon.generate()
-            
+
             # モンスターとアイテムを生成
             monster_spawner = MonsterSpawner(floor_number)
             monster_spawner.spawn_monsters(tiles, dungeon.rooms)
-            
+
             item_spawner = ItemSpawner(floor_number)
             item_spawner.spawn_items(tiles, dungeon.rooms)
-            
+
             # 階層データを保存
             self.floor_data[floor_number] = {
-                'tiles': tiles,
-                'up_pos': up_pos,
-                'down_pos': down_pos,
-                'monster_spawner': monster_spawner,
-                'item_spawner': item_spawner,
-                'explored': np.full((self.engine.map_height, self.engine.map_width), False, dtype=bool)
+                "tiles": tiles,
+                "up_pos": up_pos,
+                "down_pos": down_pos,
+                "monster_spawner": monster_spawner,
+                "item_spawner": item_spawner,
+                "explored": np.full((self.engine.map_height, self.engine.map_width), False, dtype=bool)
             }
-        
+
         # 階層データをロード
         floor_data = self.floor_data[floor_number]
-        self.dungeon_tiles = floor_data['tiles']
-        self.up_pos = floor_data['up_pos']
-        self.down_pos = floor_data['down_pos']
-        self.monster_spawner = floor_data['monster_spawner']
-        self.item_spawner = floor_data['item_spawner']
-        self.explored = floor_data['explored']
-        
+        self.dungeon_tiles = floor_data["tiles"]
+        self.up_pos = floor_data["up_pos"]
+        self.down_pos = floor_data["down_pos"]
+        self.monster_spawner = floor_data["monster_spawner"]
+        self.item_spawner = floor_data["item_spawner"]
+        self.explored = floor_data["explored"]
+
         # プレイヤーの位置を設定
         if floor_number < self.previous_floor:  # 上の階に戻る場合
             self.player_x = self.down_pos[0]
@@ -158,7 +163,7 @@ class GameScreen(object):
         """新しい階層に移動"""
         # 現在のフロアの状態を保存
         self._save_current_floor()
-        
+
         # 新しいフロアを読み込む
         self._load_floor(self.current_floor)
 
@@ -166,7 +171,7 @@ class GameScreen(object):
         """FOV計算用のマップを更新"""
         height, width = self.dungeon_tiles.shape
         self.fov_map = tcod.map.Map(width, height)
-        
+
         for y in range(height):
             for x in range(width):
                 self.fov_map.transparent[y, x] = self.dungeon_tiles[y, x].transparent
@@ -182,14 +187,14 @@ class GameScreen(object):
             light_walls=True,
             algorithm=libtcodpy.FOV_RESTRICTIVE
         )
-        
+
         # 可視領域を更新
         height, width = self.dungeon_tiles.shape
         self.visible = np.full((height, width), fill_value=False, dtype=bool)
         for y in range(height):
             for x in range(width):
                 self.visible[y, x] = self.fov_map.fov[y, x]
-        
+
         # 探索済み領域を更新
         if self.explored is None or self.explored.shape != self.visible.shape:
             self.explored = np.full_like(self.visible, False)
@@ -202,13 +207,13 @@ class GameScreen(object):
     def render(self) -> None:
         """画面の描画"""
         self.engine.console.clear()
-        
+
         # ステータス表示（上部2行）
         self._render_status()
-        
+
         # マップ表示（中央部分）
         self._render_map()
-        
+
         # メッセージログ（下部3行）
         self._render_messages()
 
@@ -224,7 +229,7 @@ class GameScreen(object):
             f"Exp:{self.player_stats['exp']} "
             f"Gold:{self.player_stats['gold']}"
         )
-        
+
         # 2行目: 装備情報
         status_line2 = (
             f"Weap:{self.equipment['weapon']} "
@@ -232,10 +237,10 @@ class GameScreen(object):
             f"Ring(L):{self.equipment['ring_left']} "
             f"Ring(R):{self.equipment['ring_right']}"
         )
-        
+
         # フロア番号を右上に表示
         floor_info = f"Floor: {self.current_floor}"
-        
+
         self.engine.console.print(x=1, y=0, string=status_line1)
         self.engine.console.print(x=1, y=1, string=status_line2)
         # フロア番号を右上に表示（コンソールの幅から文字列の長さを引いて位置を調整）
@@ -245,12 +250,12 @@ class GameScreen(object):
         """マップの描画"""
         # マップの描画開始位置（ステータス表示の下）
         map_y_offset = 2
-        
+
         # マップを描画
         for y in range(len(self.dungeon_tiles)):
             for x in range(len(self.dungeon_tiles[y])):
                 tile = self.dungeon_tiles[y][x]
-                
+
                 # 隠し扉の特別処理（未発見の場合は壁と同じ色を使用）
                 if isinstance(tile, SecretDoor) and tile.door_state == "secret":
                     wall_tile = Wall()
@@ -259,24 +264,24 @@ class GameScreen(object):
                     elif self.explored[y, x]:
                         self.engine.console.print(x, y + map_y_offset, tile.char, wall_tile.dark)
                     continue
-                
+
                 if not self.fov_enabled or self.visible[y, x]:
                     # FOV無効時または視界内のタイル
                     self.engine.console.print(x, y + map_y_offset, tile.char, tile.light)
                 elif self.explored[y, x]:
                     # 既に探索済みのタイル
                     self.engine.console.print(x, y + map_y_offset, tile.char, tile.dark)
-        
+
         # アイテムを描画（FOV無効時または視界内のみ）
         for item in self.item_spawner.items:
             if not self.fov_enabled or self.visible[item.y, item.x]:
                 self.engine.console.print(item.x, item.y + map_y_offset, item.char, item.color)
-        
+
         # モンスターを描画（FOV無効時または視界内のみ）
         for monster in self.monster_spawner.monsters:
             if not self.fov_enabled or self.visible[monster.y, monster.x]:
                 self.engine.console.print(monster.x, monster.y + map_y_offset, monster.char, monster.color)
-        
+
         # プレイヤーを描画
         self.engine.console.print(self.player_x, self.player_y + map_y_offset, "@", (255, 255, 255))
 
@@ -286,50 +291,48 @@ class GameScreen(object):
         for i, message in enumerate(self.message_log[-3:]):  # 最新の3メッセージを表示
             self.engine.console.print(x=1, y=message_start_y + i, string=message)
 
-    def handle_key(self, event: tcod.event.KeyDown) -> Optional[Screen]:
+    def handle_key(self, event: tcod.event.KeyDown) -> Screen | None:
         """キー入力の処理"""
         # TABキーでFOVのトグル
         if event.sym == tcod.event.KeySym.TAB:
             self.fov_enabled = not self.fov_enabled
             return None
-        
+
         # アイテムを拾う
-        elif event.sym == tcod.event.KeySym.g:
+        if event.sym == tcod.event.KeySym.g:
             self._handle_get()
             return None
-        
+
         # 隠し扉を探す
-        elif event.sym == tcod.event.KeySym.s:
+        if event.sym == tcod.event.KeySym.s:
             self._handle_search()
             return None
-        
+
         # 扉を開ける
-        elif event.sym == tcod.event.KeySym.o:
+        if event.sym == tcod.event.KeySym.o:
             self._handle_door_open()
             return None
-        
+
         # 扉を閉める
-        elif event.sym == tcod.event.KeySym.c:
+        if event.sym == tcod.event.KeySym.c:
             self._handle_door_close()
             return None
-        
+
         # 階段の処理
         if event.sym == tcod.event.KeySym.GREATER or event.sym == tcod.event.KeySym.PERIOD:  # > キーまたは . キー
             if isinstance(self.dungeon_tiles[self.player_y][self.player_x], StairsDown):
                 self._descend_stairs()
                 return None
-            else:
-                self.message_log.append("There are no stairs down here.")
-                return None
+            self.message_log.append("There are no stairs down here.")
+            return None
 
-        elif event.sym == tcod.event.KeySym.LESS or event.sym == tcod.event.KeySym.COMMA:  # < キーまたは , キー
+        if event.sym == tcod.event.KeySym.LESS or event.sym == tcod.event.KeySym.COMMA:  # < キーまたは , キー
             if isinstance(self.dungeon_tiles[self.player_y][self.player_x], StairsUp):
                 self._ascend_stairs()
                 return None
-            else:
-                self.message_log.append("There are no stairs up here.")
-                return None
-        
+            self.message_log.append("There are no stairs up here.")
+            return None
+
         # 移動キーの処理
         if event.sym in (tcod.event.KeySym.UP, tcod.event.KeySym.k, tcod.event.KeySym.KP_8):  # 8
             if self._can_move_to(self.player_x, self.player_y - 1):
@@ -362,7 +365,7 @@ class GameScreen(object):
                 self.player_y += 1
         elif event.sym == tcod.event.KeySym.KP_5:  # 5: その場で待機
             pass  # 待機もターンを消費
-        
+
         # 移動が成功した場合の処理
         if event.sym in (tcod.event.KeySym.UP, tcod.event.KeySym.DOWN, tcod.event.KeySym.LEFT, tcod.event.KeySym.RIGHT, tcod.event.KeySym.y, tcod.event.KeySym.u, tcod.event.KeySym.b, tcod.event.KeySym.n):
             # モンスターの更新
@@ -372,10 +375,10 @@ class GameScreen(object):
                 self.dungeon_tiles,
                 self.fov_map
             )
-            
+
             # 視界の更新
             self._compute_fov()
-            
+
             # 隠し扉のヒントをチェック
             self._check_secret_door_hints()
 
@@ -383,16 +386,16 @@ class GameScreen(object):
         """指定の位置に移動できるかを判定"""
         if not (0 <= x < len(self.dungeon_tiles[0]) and 0 <= y < len(self.dungeon_tiles)):
             return False
-        
+
         tile = self.dungeon_tiles[y][x]
-        
+
         # モンスターとの衝突判定
         monster = self.monster_spawner.get_monster_at(x, y)
         if monster:
             # モンスターがいる場合は戦闘を開始
             self._handle_combat(monster)
             return False  # 移動は行わない
-        
+
         return tile.walkable
 
     def _handle_combat(self, monster: Monster) -> None:
@@ -400,7 +403,7 @@ class GameScreen(object):
         # プレイヤーの攻撃
         damage = max(0, self.player_stats["attack"] - monster.defense)
         monster.take_damage(damage)
-        
+
         if monster.is_dead():
             # モンスター撃破時の処理
             self.message_log.append(f"You defeated the {monster.name}!")
@@ -409,21 +412,21 @@ class GameScreen(object):
             if monster in self.monster_spawner.monsters:
                 self.monster_spawner.monsters.remove(monster)
             return
-        
+
         # モンスターの反撃
         damage = max(0, monster.attack - self.player_stats["defense"])
         self.player_stats["hp"] = max(0, self.player_stats["hp"] - damage)
-        
+
         # 戦闘ログ
         self.message_log.append(
             f"You hit the {monster.name} for {damage} damage. "
             f"The {monster.name} hits you for {damage} damage."
         )
-        
+
         # プレイヤーの死亡判定
         if self.player_stats["hp"] <= 0:
             self.message_log.append("You died!")
-            self.engine.state = GameStates.PLAYER_DEAD 
+            self.engine.state = GameStates.PLAYER_DEAD
 
     def _handle_door_open(self) -> None:
         """扉を開ける処理"""
@@ -432,29 +435,23 @@ class GameScreen(object):
             for dx in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
                     continue
-                
+
                 x = self.player_x + dx
                 y = self.player_y + dy
-                
+
                 # マップ範囲内かチェック
                 if not (0 <= x < len(self.dungeon_tiles[0]) and 0 <= y < len(self.dungeon_tiles)):
                     continue
-                
+
                 tile = self.dungeon_tiles[y][x]
-                
+
                 # 通常の扉が閉じている場合
-                if isinstance(tile, Door) and tile.door_state == "closed":
+                if (isinstance(tile, Door) and tile.door_state == "closed") or (isinstance(tile, SecretDoor) and tile.door_state == "closed"):
                     tile.toggle()  # 扉を開ける
                     self._update_fov_map()  # FOVマップを更新
                     self.message_log.append("You open the door.")
                     return
-                # 発見済みの隠し扉が閉じている場合
-                elif isinstance(tile, SecretDoor) and tile.door_state == "closed":
-                    tile.toggle()  # 扉を開ける
-                    self._update_fov_map()  # FOVマップを更新
-                    self.message_log.append("You open the door.")
-                    return
-        
+
         self.message_log.append("There is no door to open.")
 
     def _handle_door_close(self) -> None:
@@ -464,29 +461,29 @@ class GameScreen(object):
             for dx in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
                     continue
-                
+
                 x = self.player_x + dx
                 y = self.player_y + dy
-                
+
                 # マップ範囲内かチェック
                 if not (0 <= x < len(self.dungeon_tiles[0]) and 0 <= y < len(self.dungeon_tiles)):
                     continue
-                
+
                 tile = self.dungeon_tiles[y][x]
-                
+
                 # 開いた扉（通常の扉または発見済みの隠し扉）を見つけた場合
-                if (isinstance(tile, Door) or 
+                if (isinstance(tile, Door) or
                     (isinstance(tile, SecretDoor) and tile.door_state != "secret")) and tile.door_state == "open":
                     # モンスターがいないか確認
                     if self.monster_spawner.get_monster_at(x, y):
                         self.message_log.append("There's a monster in the way!")
                         return
-                    
+
                     tile.toggle()  # 扉を閉める
                     self._update_fov_map()  # FOVマップを更新
                     self.message_log.append("You close the door.")
                     return
-        
+
         self.message_log.append("There is no door to close.")
 
     def _handle_search(self) -> None:
@@ -497,16 +494,16 @@ class GameScreen(object):
             for dx in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
                     continue
-                
+
                 x = self.player_x + dx
                 y = self.player_y + dy
-                
+
                 # マップ範囲内かチェック
                 if not (0 <= x < len(self.dungeon_tiles[0]) and 0 <= y < len(self.dungeon_tiles)):
                     continue
-                
+
                 tile = self.dungeon_tiles[y][x]
-                
+
                 # 隠し扉を見つけた場合
                 if isinstance(tile, SecretDoor) and tile.door_state == "secret":
                     # 33%の確率で発見
@@ -515,7 +512,7 @@ class GameScreen(object):
                         self._update_fov_map()  # FOVマップを更新
                         self.message_log.append("You found a secret door!")
                         found = True
-        
+
         if not found:
             self.message_log.append("You search but find nothing.")
 
@@ -541,27 +538,27 @@ class GameScreen(object):
             "You feel a draft coming from somewhere...",
             "You hear faint laughter through the wall..."
         ]
-        
+
         # 隣接する8方向をチェック
         for dy in [-1, 0, 1]:
             for dx in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
                     continue
-                
+
                 x = self.player_x + dx
                 y = self.player_y + dy
-                
+
                 # マップ範囲内かチェック
                 if not (0 <= x < len(self.dungeon_tiles[0]) and 0 <= y < len(self.dungeon_tiles)):
                     continue
-                
+
                 tile = self.dungeon_tiles[y][x]
-                
+
                 # 隠し扉（未発見）を見つけた場合
                 if isinstance(tile, SecretDoor) and tile.door_state == "secret":
                     # ランダムなヒントメッセージを表示
                     self.message_log.append(random.choice(hint_messages))
-                    return  # 1つ見つかれば終了 
+                    return  # 1つ見つかれば終了
 
     def _descend_stairs(self) -> None:
         """階段を下る"""
@@ -579,7 +576,7 @@ class GameScreen(object):
             self.current_floor -= 1
             # 移動元のフロアを previous_floor に設定
             self.previous_floor = temp_floor
-            
+
             self.message_log.append(f"You ascend to floor {self.current_floor}.")
             self._generate_new_floor()
         else:
@@ -602,7 +599,7 @@ class GameScreen(object):
         self.current_floor = 1
         self.previous_floor = 1
         self.floor_data.clear()  # 保存されているフロアデータをクリア
-        
+
         # プレイヤーステータスを初期化
         self.player_stats = {
             "level": 1,
@@ -614,10 +611,10 @@ class GameScreen(object):
             "exp": 0,
             "gold": 0,
         }
-        
+
         # インベントリを初期化
         self.inventory = Inventory()
-        
+
         # 装備を初期化
         self.equipment = {
             "weapon": "Dagger",
@@ -625,13 +622,13 @@ class GameScreen(object):
             "ring_left": "None",
             "ring_right": "None",
         }
-        
+
         # メッセージログを初期化
         self.message_log = [
             "Welcome to PyRogue!",
             "Use vi keys (hjklyubn), arrow keys, or numpad (1-9) to move.",
             "Press ESC to return to menu.",
         ]
-        
+
         # 最初のフロアを生成
-        self._load_floor(self.current_floor) 
+        self._load_floor(self.current_floor)
