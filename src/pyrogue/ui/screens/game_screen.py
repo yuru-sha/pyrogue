@@ -1,14 +1,27 @@
-"""Game screen module."""
+"""
+ゲームスクリーンモジュール。
+
+このモジュールは、メインゲームのプレイ画面を担当します。
+ダンジョンのレンダリング、プレイヤーの入力処理、
+モンスターとの戦闘、アイテム管理などを統合的に管理します。
+
+Example:
+    >>> engine = Engine()
+    >>> game_screen = GameScreen(engine)
+    >>> game_screen.render(console)
+
+"""
 
 from __future__ import annotations
 
 import random
+from typing import TYPE_CHECKING
 
 import numpy as np
 import tcod
 import tcod.console
-import tcod.event
 import tcod.constants
+import tcod.event
 
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
@@ -23,12 +36,41 @@ from pyrogue.map.tile import (
     Wall,
 )
 
+if TYPE_CHECKING:
+    from pyrogue.core.engine import Engine
+
 
 class GameScreen:
-    """Game screen class."""
+    """
+    メインゲームのスクリーンクラス。
+    
+    プレイヤーのゲームプレイ体験を管理し、ダンジョンの探索、戦闘、
+    アイテム管理、ステータス表示などを統合的に処理します。
+    
+    特徴:
+        - マルチフロアダンジョン管理
+        - FOV（Field of View）システム
+        - モンスターとアイテムのスポーン管理
+        - ゲーム状態の持続性
+        - ユーザー入力の処理
+    
+    Attributes:
+        engine: ゲームエンジンインスタンス
+        current_floor: 現在の階層
+        player_stats: プレイヤーのステータス
+        inventory: プレイヤーのインベントリ
+        floor_data: 各階層のデータを保持する辞書
+
+    """
 
     def __init__(self, engine: Engine) -> None:
-        """初期化"""
+        """
+        ゲームスクリーンを初期化。
+        
+        Args:
+            engine: メインゲームエンジンのインスタンス
+
+        """
         self.engine = engine
 
         # 現在の階層と前の階層

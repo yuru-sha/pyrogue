@@ -110,7 +110,7 @@ class GameOverScreen:
         elif key.sym == tcod.event.KeySym.RETURN:
             if self.menu_options[self.menu_selection] == "Return to Menu":
                 return GameStates.MENU
-            elif self.menu_options[self.menu_selection] == "Quit":
+            if self.menu_options[self.menu_selection] == "Quit":
                 return GameStates.EXIT
 
         return None

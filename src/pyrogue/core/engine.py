@@ -13,9 +13,9 @@ import tcod.event
 import tcod.tileset
 
 from pyrogue.core.game_states import GameStates
+from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
-from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.utils import game_logger
 
 
