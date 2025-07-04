@@ -1,4 +1,5 @@
 """Logging configuration for the game."""
+
 from __future__ import annotations
 
 import json
@@ -21,7 +22,7 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
             "level": record.levelname,
             "message": record.getMessage(),
-            "logger": record.name
+            "logger": record.name,
         }
 
         # Add extra fields if they exist
@@ -75,7 +76,7 @@ class GameLogger:
             filename=self.log_dir / "game.log",
             maxBytes=1024 * 1024,  # 1MB
             backupCount=5,  # Keep 5 backup files
-            encoding="utf-8"
+            encoding="utf-8",
         )
         game_handler.setFormatter(JsonFormatter())
         game_handler.setLevel(logging.DEBUG)
@@ -85,7 +86,7 @@ class GameLogger:
             filename=self.log_dir / "error.log",
             maxBytes=1024 * 1024,  # 1MB
             backupCount=5,  # Keep 5 backup files
-            encoding="utf-8"
+            encoding="utf-8",
         )
         error_handler.setFormatter(JsonFormatter())
         error_handler.setLevel(logging.ERROR)
@@ -103,7 +104,9 @@ class GameLogger:
         # Test log rotation
         self.info("Logger initialized", {"test": "rotation"})
 
-    def _log(self, level: int, message: str, extra: dict[str, Any] | None = None) -> None:
+    def _log(
+        self, level: int, message: str, extra: dict[str, Any] | None = None
+    ) -> None:
         """Log a message with the specified level."""
         self.logger.log(level, message, extra={"extra": extra} if extra else None)
 

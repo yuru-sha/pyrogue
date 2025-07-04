@@ -4,6 +4,7 @@ Game engine module.
 This module implements the core game engine, handling the main game loop,
 state management, and event processing.
 """
+
 from __future__ import annotations
 
 import tcod
@@ -14,6 +15,7 @@ import tcod.tileset
 from pyrogue.core.game_states import GameStates
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
+from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.utils import game_logger
 
 
@@ -24,7 +26,9 @@ class Engine:
         self.screen_width = 80
         self.screen_height = 50
         self.map_width = 80
-        self.map_height = 43  # 画面上部にステータス表示、下部にメッセージログ用の余白を確保
+        self.map_height = (
+            43  # 画面上部にステータス表示、下部にメッセージログ用の余白を確保
+        )
         self.title = "PyRogue"
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
         self.state = GameStates.MENU
@@ -34,6 +38,7 @@ class Engine:
         # 画面の初期化
         self.menu_screen = MenuScreen(self.console, self)
         self.game_screen = GameScreen(self)
+        self.game_over_screen = GameOverScreen(self.console, self)
 
         game_logger.debug(
             "Initializing game engine",
@@ -49,7 +54,8 @@ class Engine:
         # フォントの設定
         tileset = tcod.tileset.load_tilesheet(
             "data/assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
-            32, 8,  # 列数と行数
+            32,
+            8,  # 列数と行数
             tcod.tileset.CHARMAP_TCOD,  # 文字マップ
         )
 
@@ -76,7 +82,9 @@ class Engine:
 
         # ピクセルサイズから文字数を計算
         self.screen_width = max(80, pixel_width // self.font_width)  # 最小幅は80文字
-        self.screen_height = max(50, pixel_height // self.font_height)  # 最小高さは50文字
+        self.screen_height = max(
+            50, pixel_height // self.font_height
+        )  # 最小高さは50文字
 
         # コンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
@@ -84,6 +92,7 @@ class Engine:
         # 各画面のコンソールを更新
         self.menu_screen.update_console(self.console)
         self.game_screen.update_console(self.console)
+        self.game_over_screen.update_console(self.console)
 
         game_logger.debug(
             "Window resized",
@@ -107,6 +116,8 @@ class Engine:
                     self.menu_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
                     self.game_screen.render()
+                elif self.state == GameStates.GAME_OVER:
+                    self.game_over_screen.render()
 
                 self.context.present(self.console)
 
@@ -134,7 +145,7 @@ class Engine:
     def handle_input(self, event: tcod.event.KeyDown) -> bool:
         """
         キー入力の処理
-        
+
         Returns:
             bool: ゲームを続行する場合はTrue、終了する場合はFalse
 
@@ -146,6 +157,9 @@ class Engine:
                 return True
             if self.state == GameStates.MENU:
                 return False
+            if self.state == GameStates.GAME_OVER:
+                self.state = GameStates.MENU
+                return True
 
         # 状態に応じたキー処理
         if self.state == GameStates.MENU:
@@ -158,6 +172,13 @@ class Engine:
         if self.state == GameStates.PLAYERS_TURN:
             self.game_screen.handle_key(event)
             return True
+        if self.state == GameStates.GAME_OVER:
+            new_state = self.game_over_screen.handle_input(event)
+            if new_state:
+                if new_state == GameStates.EXIT:
+                    return False
+                self.state = new_state
+            return True
         return True
 
     def cleanup(self) -> None:
@@ -168,3 +189,12 @@ class Engine:
         """新しいゲームを開始"""
         self.game_screen.setup_new_game()
         self.state = GameStates.PLAYERS_TURN
+
+    def game_over(
+        self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown"
+    ) -> None:
+        """ゲームオーバー処理"""
+        self.game_over_screen.set_game_over_data(
+            player_stats, final_floor, cause_of_death
+        )
+        self.state = GameStates.GAME_OVER

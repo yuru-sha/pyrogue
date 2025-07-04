@@ -1,4 +1,5 @@
 """Item module."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ class Item:
         """アイテムを拾った時のメッセージを返す"""
         return f"You pick up {self.name}."
 
+
 class Weapon(Item):
     """武器クラス"""
 
@@ -32,9 +34,10 @@ class Weapon(Item):
             char=")",
             color=(192, 192, 192),  # 銀色
             stackable=False,
-            identified=True
+            identified=True,
         )
         self.attack_bonus = attack_bonus
+
 
 class Armor(Item):
     """防具クラス"""
@@ -47,9 +50,10 @@ class Armor(Item):
             char="[",
             color=(192, 192, 192),  # 銀色
             stackable=False,
-            identified=True
+            identified=True,
         )
         self.defense_bonus = defense_bonus
+
 
 class Ring(Item):
     """指輪クラス"""
@@ -62,10 +66,11 @@ class Ring(Item):
             char="=",
             color=(255, 215, 0),  # 金色
             stackable=False,
-            identified=True
+            identified=True,
         )
         self.effect = effect
         self.bonus = bonus
+
 
 class Scroll(Item):
     """巻物クラス"""
@@ -78,13 +83,14 @@ class Scroll(Item):
             char="?",
             color=(255, 255, 255),  # 白色
             stackable=True,
-            identified=True
+            identified=True,
         )
         self.effect = effect
 
     def use(self) -> str:
         """巻物を使用した時のメッセージを返す"""
         return f"You read {self.name}."
+
 
 class Potion(Item):
     """薬クラス"""
@@ -97,7 +103,7 @@ class Potion(Item):
             char="!",
             color=(255, 0, 255),  # マゼンタ
             stackable=True,
-            identified=True
+            identified=True,
         )
         self.effect = effect
         self.power = power
@@ -105,6 +111,7 @@ class Potion(Item):
     def use(self) -> str:
         """薬を使用した時のメッセージを返す"""
         return f"You drink {self.name}."
+
 
 class Food(Item):
     """食料クラス"""
@@ -117,13 +124,14 @@ class Food(Item):
             char="%",
             color=(139, 69, 19),  # 茶色
             stackable=True,
-            identified=True
+            identified=True,
         )
         self.nutrition = nutrition
 
     def use(self) -> str:
         """食料を使用した時のメッセージを返す"""
         return f"You eat {self.name}."
+
 
 class Gold(Item):
     """金貨クラス"""
@@ -136,7 +144,7 @@ class Gold(Item):
             char="$",
             color=(255, 215, 0),  # 金色
             stackable=True,
-            identified=True
+            identified=True,
         )
         self.amount = amount
 

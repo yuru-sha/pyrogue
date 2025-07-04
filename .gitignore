@@ -180,3 +180,6 @@ data/logs/
 
 # windsurf rules
 .windsurfrules
+
+# Claude Code settings
+.claude/settings.local.json

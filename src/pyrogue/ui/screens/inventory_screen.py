@@ -1,4 +1,5 @@
 """Inventory screen module."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from pyrogue.ui.screens.screen import Screen
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
 
+
 class InventoryScreen(Screen):
     """インベントリ画面"""
 
@@ -24,7 +26,7 @@ class InventoryScreen(Screen):
     def render(self, console: Console) -> None:
         """
         画面を描画
-        
+
         Args:
             console: 描画対象のコンソール
 
@@ -52,10 +54,24 @@ class InventoryScreen(Screen):
         # 装備情報を表示
         equipped = self.game_screen.player.inventory.equipped
         console.print(40, 3, "Equipment:", tcod.yellow)
-        console.print(42, 5, f"Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}")
-        console.print(42, 6, f"Armor: {equipped['armor'].name if equipped['armor'] else 'None'}")
-        console.print(42, 7, f"Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}")
-        console.print(42, 8, f"Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}")
+        console.print(
+            42,
+            5,
+            f"Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}",
+        )
+        console.print(
+            42, 6, f"Armor: {equipped['armor'].name if equipped['armor'] else 'None'}"
+        )
+        console.print(
+            42,
+            7,
+            f"Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}",
+        )
+        console.print(
+            42,
+            8,
+            f"Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}",
+        )
 
         # ヘルプを表示
         if self.show_help:
@@ -67,7 +83,7 @@ class InventoryScreen(Screen):
                 "[d] Drop selected item",
                 "[r] Remove equipment",
                 "[ESC] Close inventory",
-                "[?] Toggle help"
+                "[?] Toggle help",
             ]
             for i, text in enumerate(help_text):
                 console.print(2, console.height - 10 + i, text, tcod.gray)
@@ -75,10 +91,10 @@ class InventoryScreen(Screen):
     def handle_key(self, key: tcod.event.KeyDown) -> Screen | None:
         """
         キー入力を処理
-        
+
         Args:
             key: キー入力イベント
-            
+
         Returns:
             Optional[Screen]: 次の画面（Noneの場合は現在の画面を維持）
 
@@ -138,20 +154,22 @@ class InventoryScreen(Screen):
                 )
 
         # d: ドロップ
-        elif key.sym == tcod.event.K_d:
+        elif key.sym == tcod.event.KeySym.d:
             # プレイヤーの位置にアイテムを配置
             selected_item.x = self.game_screen.player.x
             selected_item.y = self.game_screen.player.y
             self.game_screen.item_spawner.items.append(selected_item)
-            self.game_screen.item_spawner.occupied_positions.add((selected_item.x, selected_item.y))
-            self.game_screen.player.inventory.remove_item(selected_item)
-            self.game_screen.message_log.append(
-                f"You drop the {selected_item.name}."
+            self.game_screen.item_spawner.occupied_positions.add(
+                (selected_item.x, selected_item.y)
             )
+            self.game_screen.player.inventory.remove_item(selected_item)
+            self.game_screen.message_log.append(f"You drop the {selected_item.name}.")
 
             # 選択インデックスを調整
             if self.selected_index >= len(self.game_screen.player.inventory.items):
-                self.selected_index = max(0, len(self.game_screen.player.inventory.items) - 1)
+                self.selected_index = max(
+                    0, len(self.game_screen.player.inventory.items) - 1
+                )
 
         # r: 装備を外す
         elif key.sym == tcod.event.KeySym.r:
@@ -159,6 +177,7 @@ class InventoryScreen(Screen):
             return EquipmentRemovalScreen(self)
 
         return None
+
 
 class EquipmentRemovalScreen(Screen):
     """装備解除画面"""
@@ -170,7 +189,7 @@ class EquipmentRemovalScreen(Screen):
     def render(self, console: Console) -> None:
         """
         画面を描画
-        
+
         Args:
             console: 描画対象のコンソール
 
@@ -185,7 +204,7 @@ class EquipmentRemovalScreen(Screen):
             "[a] Armor",
             "[l] Left ring",
             "[r] Right ring",
-            "[ESC] Cancel"
+            "[ESC] Cancel",
         ]
 
         for i, text in enumerate(menu_text):
@@ -194,10 +213,10 @@ class EquipmentRemovalScreen(Screen):
     def handle_key(self, key: tcod.event.KeyDown) -> Screen | None:
         """
         キー入力を処理
-        
+
         Args:
             key: キー入力イベント
-            
+
         Returns:
             Optional[Screen]: 次の画面（Noneの場合は現在の画面を維持）
 
@@ -218,9 +237,7 @@ class EquipmentRemovalScreen(Screen):
         if slot:
             item = self.game_screen.player.unequip_item(slot)
             if item:
-                self.game_screen.message_log.append(
-                    f"You unequip the {item.name}."
-                )
+                self.game_screen.message_log.append(f"You unequip the {item.name}.")
             else:
                 self.game_screen.message_log.append(
                     "You have nothing equipped in that slot."

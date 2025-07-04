@@ -1,4 +1,5 @@
 """Main module."""
+
 import sys
 import traceback
 
@@ -14,15 +15,12 @@ def main() -> None:
         engine.run()
     except Exception as e:
         game_logger.error(
-            "Fatal error",
-            extra={
-                "error": str(e),
-                "traceback": traceback.format_exc()
-            }
+            "Fatal error", extra={"error": str(e), "traceback": traceback.format_exc()}
         )
         print(f"Error: {e}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

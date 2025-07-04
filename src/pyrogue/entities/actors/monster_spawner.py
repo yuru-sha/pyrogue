@@ -1,4 +1,5 @@
 """Monster spawner module."""
+
 from __future__ import annotations
 
 import random
@@ -22,7 +23,7 @@ class MonsterSpawner:
     def spawn_monsters(self, dungeon_tiles: np.ndarray, rooms: list[any]) -> None:
         """
         モンスターを生成
-        
+
         Args:
             dungeon_tiles: ダンジョンのタイル配列
             rooms: 部屋のリスト
@@ -44,9 +45,10 @@ class MonsterSpawner:
 
             # 部屋の内部の座標から、まだモンスターがいない場所を選択
             available_positions = [
-                (x, y) for x, y in room.inner
-                if isinstance(dungeon_tiles[y, x], Floor) and
-                (x, y) not in self.occupied_positions
+                (x, y)
+                for x, y in room.inner
+                if isinstance(dungeon_tiles[y, x], Floor)
+                and (x, y) not in self.occupied_positions
             ]
 
             if not available_positions:
@@ -86,15 +88,17 @@ class MonsterSpawner:
                     defense=stats[5],
                     exp_value=stats[6],
                     view_range=stats[7],
-                    color=stats[8]
+                    color=stats[8],
                 )
 
         return None
 
-    def update_monsters(self, player_x: int, player_y: int, dungeon_tiles: np.ndarray, fov_map: any) -> None:
+    def update_monsters(
+        self, player_x: int, player_y: int, dungeon_tiles: np.ndarray, fov_map: any
+    ) -> None:
         """
         全モンスターの更新処理
-        
+
         Args:
             player_x: プレイヤーのX座標
             player_y: プレイヤーのY座標
@@ -124,13 +128,19 @@ class MonsterSpawner:
             new_y = monster.y + dy
 
             # 移動先が有効か確認
-            if (0 <= new_x < dungeon_tiles.shape[1] and
-                0 <= new_y < dungeon_tiles.shape[0] and
-                (isinstance(dungeon_tiles[new_y, new_x], Floor) or
-                 (isinstance(dungeon_tiles[new_y, new_x], (Door, SecretDoor)) and dungeon_tiles[new_y, new_x].door_state == "open")) and
-                (new_x, new_y) not in self.occupied_positions and
-                (new_x != player_x or new_y != player_y)):
-
+            if (
+                0 <= new_x < dungeon_tiles.shape[1]
+                and 0 <= new_y < dungeon_tiles.shape[0]
+                and (
+                    isinstance(dungeon_tiles[new_y, new_x], Floor)
+                    or (
+                        isinstance(dungeon_tiles[new_y, new_x], (Door, SecretDoor))
+                        and dungeon_tiles[new_y, new_x].door_state == "open"
+                    )
+                )
+                and (new_x, new_y) not in self.occupied_positions
+                and (new_x != player_x or new_y != player_y)
+            ):
                 # 現在位置を解放
                 self.occupied_positions.remove((monster.x, monster.y))
 

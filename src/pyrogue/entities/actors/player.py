@@ -1,4 +1,5 @@
 """Player module."""
+
 from dataclasses import dataclass
 
 from pyrogue.entities.actors.inventory import Inventory
@@ -51,7 +52,7 @@ class Player:
     def gain_exp(self, amount: int) -> bool:
         """
         経験値を獲得
-        
+
         Returns:
             bool: レベルアップした場合はTrue
 
@@ -82,7 +83,7 @@ class Player:
     def get_attack(self) -> int:
         """
         攻撃力を計算
-        
+
         Returns:
             int: 攻撃力
 
@@ -94,7 +95,7 @@ class Player:
     def get_defense(self) -> int:
         """
         防御力を計算
-        
+
         Returns:
             int: 防御力
 
@@ -106,10 +107,10 @@ class Player:
     def equip_item(self, item: Item) -> Item | None:
         """
         アイテムを装備
-        
+
         Args:
             item: 装備するアイテム
-            
+
         Returns:
             Optional[Item]: 外したアイテム（ある場合）
 
@@ -125,10 +126,10 @@ class Player:
     def unequip_item(self, slot: str) -> Item | None:
         """
         装備を外す
-        
+
         Args:
             slot: 装備スロット名
-            
+
         Returns:
             Optional[Item]: 外したアイテム（ある場合）
 
@@ -141,10 +142,10 @@ class Player:
     def use_item(self, item: Item) -> bool:
         """
         アイテムを使用
-        
+
         Args:
             item: 使用するアイテム
-            
+
         Returns:
             bool: 使用に成功したかどうか
 
@@ -180,7 +181,7 @@ class Player:
     def get_status_text(self) -> str:
         """
         ステータス表示用のテキストを取得
-        
+
         Returns:
             str: ステータステキスト
 

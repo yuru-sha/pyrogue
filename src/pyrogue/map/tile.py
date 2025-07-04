@@ -1,4 +1,5 @@
 """Tile module."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ class Tile:
     dark: tuple[int, int, int]  # RGB color when not in FOV
     light: tuple[int, int, int]  # RGB color when in FOV
     char: str
+
 
 class Floor(Tile):
     """床タイル"""
@@ -33,7 +35,7 @@ class Floor(Tile):
             transparent=True,
             dark=(64, 64, 64),
             light=(192, 192, 192),
-            char="."
+            char=".",
         )
         self.has_gold = has_gold
         self.has_potion = has_potion
@@ -47,16 +49,18 @@ class Floor(Tile):
     @property
     def has_item(self) -> bool:
         """アイテムを持っているかどうか"""
-        return any([
-            self.has_gold,
-            self.has_potion,
-            self.has_scroll,
-            self.has_weapon,
-            self.has_armor,
-            self.has_ring,
-            self.has_food,
-            self.has_amulet,
-        ])
+        return any(
+            [
+                self.has_gold,
+                self.has_potion,
+                self.has_scroll,
+                self.has_weapon,
+                self.has_armor,
+                self.has_ring,
+                self.has_food,
+                self.has_amulet,
+            ]
+        )
 
     @property
     def item_char(self) -> str:
@@ -79,6 +83,7 @@ class Floor(Tile):
             return "&"
         return "."
 
+
 class Wall(Tile):
     """壁タイル"""
 
@@ -88,8 +93,9 @@ class Wall(Tile):
             transparent=False,
             dark=(0, 0, 100),
             light=(130, 110, 50),
-            char="#"
+            char="#",
         )
+
 
 class Door(Tile):
     """扉タイル"""
@@ -100,7 +106,7 @@ class Door(Tile):
             transparent=False,
             dark=(139, 69, 19),
             light=(139, 69, 19),
-            char="+"
+            char="+",
         )
         self.door_state = state
         self._update_state()
@@ -121,6 +127,7 @@ class Door(Tile):
         self.door_state = "open" if self.door_state == "closed" else "closed"
         self._update_state()
 
+
 class SecretDoor(Door):
     """隠し扉タイル"""
 
@@ -135,6 +142,7 @@ class SecretDoor(Door):
         self.door_state = "closed"
         self.char = "+"
 
+
 class Stairs(Tile):
     """階段の基底クラス"""
 
@@ -144,8 +152,9 @@ class Stairs(Tile):
             transparent=True,
             dark=(128, 128, 128),  # 暗い場所での色
             light=(200, 200, 200),  # 明るい場所での色
-            char=char
+            char=char,
         )
+
 
 class StairsUp(Stairs):
     """上り階段"""
@@ -153,11 +162,13 @@ class StairsUp(Stairs):
     def __init__(self) -> None:
         super().__init__(char="<")
 
+
 class StairsDown(Stairs):
     """下り階段"""
 
     def __init__(self) -> None:
         super().__init__(char=">")
+
 
 class Water(Tile):
     """水タイル"""
@@ -168,8 +179,9 @@ class Water(Tile):
             transparent=True,
             dark=(0, 32, 64),
             light=(0, 128, 255),
-            char="~"
+            char="~",
         )
+
 
 class Lava(Tile):
     """溶岩タイル"""
@@ -180,5 +192,5 @@ class Lava(Tile):
             transparent=True,
             dark=(64, 16, 0),
             light=(255, 64, 0),
-            char="^"
+            char="^",
         )

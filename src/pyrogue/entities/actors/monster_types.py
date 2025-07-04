@@ -1,4 +1,5 @@
 """Monster types and spawn rules module."""
+
 from dataclasses import dataclass
 
 
@@ -17,6 +18,7 @@ class MonsterType:
     max_floor: int  # Maximum floor level where this monster appears
     spawn_weight: int  # Relative spawn weight (higher = more common)
 
+
 # Monster definitions based on original Rogue
 MONSTER_TYPES = [
     MonsterType("B", "Bat", 1, 3, 2, 1, 2, 1, 8, 100),
@@ -33,6 +35,7 @@ MONSTER_TYPES = [
     MonsterType("D", "Dragon", 10, 30, 15, 10, 40, 10, 26, 20),
 ]
 
+
 # Spawn rules by floor
 def get_spawn_count(floor: int) -> int:
     """Get number of monsters to spawn on the given floor."""
@@ -40,39 +43,42 @@ def get_spawn_count(floor: int) -> int:
     additional = min((floor - 1) // 2, 5)  # Increases every 2 floors, max +5
     return base_count + additional
 
+
 def get_available_monsters(floor: int) -> list[MonsterType]:
     """Get list of monsters that can appear on the given floor."""
     return [m for m in MONSTER_TYPES if m.min_floor <= floor <= m.max_floor]
+
 
 # Maximum monsters per room (based on floor level)
 def get_max_monsters_per_room(floor: int) -> int:
     """Get maximum number of monsters allowed in a single room."""
     return min(2 + floor // 3, 6)  # Starts at 2, increases by 1 every 3 floors, max 6
 
+
 # モンスターの定義
 # (char, name, level, hp, attack, defense, exp_value, view_range, color)
-MONSTER_STATS: dict[str, tuple[str, str, int, int, int, int, int, int, tuple[int, int, int]]] = {
+MONSTER_STATS: dict[
+    str, tuple[str, str, int, int, int, int, int, int, tuple[int, int, int]]
+] = {
     # 弱いモンスター（レベル1-5）
     "BAT": ("B", "Bat", 1, 4, 2, 1, 2, 8, (150, 150, 150)),  # 視界は広いが弱い
-    "RAT": ("R", "Rat", 1, 5, 3, 1, 3, 6, (139, 69, 19)),    # 標準的な弱モンスター
+    "RAT": ("R", "Rat", 1, 5, 3, 1, 3, 6, (139, 69, 19)),  # 標準的な弱モンスター
     "SNAKE": ("S", "Snake", 2, 6, 4, 1, 4, 5, (0, 255, 0)),  # 攻撃力が高め
     "KOBOLD": ("K", "Kobold", 3, 8, 4, 2, 5, 7, (150, 75, 0)),  # バランス型
     "GOBLIN": ("G", "Goblin", 4, 10, 5, 2, 6, 6, (0, 255, 0)),  # バランス型
-    "ORC": ("O", "Orc", 5, 12, 6, 3, 8, 5, (0, 200, 0)),     # 攻撃力と防御力が高め
-
+    "ORC": ("O", "Orc", 5, 12, 6, 3, 8, 5, (0, 200, 0)),  # 攻撃力と防御力が高め
     # 中級モンスター（レベル6-10）
     "TROLL": ("T", "Troll", 6, 20, 8, 4, 12, 4, (200, 200, 0)),  # 高HP、高攻撃
     "HOBGOBLIN": ("H", "Hobgoblin", 7, 15, 7, 5, 10, 6, (200, 100, 0)),  # バランス型
     "WORM": ("W", "Worm", 8, 25, 6, 6, 11, 3, (255, 150, 150)),  # 高HP、低視界
-    "IMP": ("I", "Imp", 9, 12, 9, 3, 13, 7, (255, 0, 0)),    # 高攻撃、低防御
+    "IMP": ("I", "Imp", 9, 12, 9, 3, 13, 7, (255, 0, 0)),  # 高攻撃、低防御
     "NYMPH": ("N", "Nymph", 10, 14, 8, 4, 14, 6, (255, 192, 203)),  # バランス型
-
     # 強いモンスター（レベル11-15）
     "VAMPIRE": ("V", "Vampire", 11, 30, 12, 6, 20, 8, (200, 0, 0)),  # 全体的に高性能
     "WRAITH": ("W", "Wraith", 12, 25, 14, 5, 22, 7, (128, 128, 128)),  # 高攻撃
     "DRAGON": ("D", "Dragon", 13, 40, 15, 8, 25, 10, (255, 0, 0)),  # 最強クラス
     "ETTIN": ("E", "Ettin", 14, 35, 13, 7, 23, 6, (200, 200, 200)),  # 高HP、高攻撃
-    "PHANTOM": ("P", "Phantom", 15, 28, 11, 9, 21, 9, (128, 128, 255))  # 高防御
+    "PHANTOM": ("P", "Phantom", 15, 28, 11, 9, 21, 9, (128, 128, 255)),  # 高防御
 }
 
 # 階層ごとの出現モンスター定義

@@ -1,4 +1,5 @@
 """Item spawner module."""
+
 from __future__ import annotations
 
 import random
@@ -44,7 +45,9 @@ class ItemSpawner:
             room = random.choice(rooms)
             x, y = self._find_valid_position(dungeon_tiles, room)
             if x is not None and y is not None:
-                amulet = Item(x, y, AMULET.char, AMULET.name, (255, 215, 0))  # Gold color
+                amulet = Item(
+                    x, y, AMULET.char, AMULET.name, (255, 215, 0)
+                )  # Gold color
                 self.items.append(amulet)
                 self.occupied_positions.add((x, y))  # 位置を追加
 
@@ -56,8 +59,11 @@ class ItemSpawner:
                 continue
 
             # Determine item type
-            item_type = random.choices(["weapon", "armor", "ring", "scroll", "potion", "food", "gold"],
-                                    weights=[15, 15, 10, 25, 25, 10, 35], k=1)[0]
+            item_type = random.choices(
+                ["weapon", "armor", "ring", "scroll", "potion", "food", "gold"],
+                weights=[15, 15, 10, 25, 25, 10, 35],
+                k=1,
+            )[0]
 
             item = None
             if item_type == "weapon":
@@ -82,9 +88,7 @@ class ItemSpawner:
                 self.occupied_positions.add((x, y))  # 位置を追加
 
     def _find_valid_position(
-        self,
-        dungeon_tiles: np.ndarray,
-        room: Room
+        self, dungeon_tiles: np.ndarray, room: Room
     ) -> tuple[int | None, int | None]:
         """Find a valid position for an item in the given room."""
         # Get room dimensions
@@ -113,9 +117,9 @@ class ItemSpawner:
         if not available:
             return None
 
-        weapon_type = random.choices(available,
-                                   weights=[w.spawn_weight for w in available],
-                                   k=1)[0]
+        weapon_type = random.choices(
+            available, weights=[w.spawn_weight for w in available], k=1
+        )[0]
         bonus = random.randint(*weapon_type.bonus_range)
         return Weapon(0, 0, weapon_type.name, bonus)
 
@@ -125,9 +129,9 @@ class ItemSpawner:
         if not available:
             return None
 
-        armor_type = random.choices(available,
-                                  weights=[a.spawn_weight for a in available],
-                                  k=1)[0]
+        armor_type = random.choices(
+            available, weights=[a.spawn_weight for a in available], k=1
+        )[0]
         bonus = random.randint(*armor_type.bonus_range)
         return Armor(0, 0, armor_type.name, bonus)
 
@@ -137,9 +141,9 @@ class ItemSpawner:
         if not available:
             return None
 
-        ring_type = random.choices(available,
-                                 weights=[r.spawn_weight for r in available],
-                                 k=1)[0]
+        ring_type = random.choices(
+            available, weights=[r.spawn_weight for r in available], k=1
+        )[0]
         power = random.randint(*ring_type.power_range)
         return Ring(0, 0, ring_type.name, ring_type.effect, power)
 
@@ -149,9 +153,9 @@ class ItemSpawner:
         if not available:
             return None
 
-        scroll_type = random.choices(available,
-                                   weights=[s.spawn_weight for s in available],
-                                   k=1)[0]
+        scroll_type = random.choices(
+            available, weights=[s.spawn_weight for s in available], k=1
+        )[0]
         return Scroll(0, 0, scroll_type.name, scroll_type.effect)
 
     def _create_potion(self) -> Potion | None:
@@ -160,9 +164,9 @@ class ItemSpawner:
         if not available:
             return None
 
-        potion_type = random.choices(available,
-                                   weights=[p.spawn_weight for p in available],
-                                   k=1)[0]
+        potion_type = random.choices(
+            available, weights=[p.spawn_weight for p in available], k=1
+        )[0]
         power = random.randint(*potion_type.power_range)
         return Potion(0, 0, potion_type.name, potion_type.effect, power)
 
@@ -172,9 +176,9 @@ class ItemSpawner:
         if not available:
             return None
 
-        food_type = random.choices(available,
-                                 weights=[f.spawn_weight for f in available],
-                                 k=1)[0]
+        food_type = random.choices(
+            available, weights=[f.spawn_weight for f in available], k=1
+        )[0]
         return Food(0, 0, food_type.name, food_type.nutrition)
 
     def _create_gold(self) -> Gold:

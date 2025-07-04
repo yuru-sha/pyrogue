@@ -525,7 +525,7 @@ requires-dist = [
     { name = "pytest-httpx", marker = "extra == 'dev'" },
     { name = "pytest-mock", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "tcod", specifier = ">=16.2.3" },
+    { name = "tcod", specifier = ">=19.0.0" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
 provides-extras = ["dev"]
@@ -672,20 +672,20 @@ wheels = [
 
 [[package]]
 name = "tcod"
-version = "18.1.0"
+version = "19.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cffi" },
     { name = "numpy", marker = "implementation_name != 'pypy'" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/02/cff80d7bc3ba5c8fc833639a5bbe117a295847f4c22a8b5de9c7ef70aca2/tcod-18.1.0.tar.gz", hash = "sha256:52f6e41a539ac4d7abe966ab6fa380954f3883068a4aa7fed89662cdc79f0ecf", size = 774686 }
+sdist = { url = "https://files.pythonhosted.org/packages/14/23/0bedd5d58006292b55dc58fdb302d9f0f7471244e6df5ed64d1a94a570ab/tcod-19.0.0.tar.gz", hash = "sha256:c690ff2b6a36334695d2e67116779fb439f396657880d040b4cb6ff6f3c16a69", size = 845581 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/2b/9bf5fc6cf1b673c3d199eae656bbf8047d161e953b1cead0614d2a6c0358/tcod-18.1.0-cp38-abi3-macosx_10_11_universal2.whl", hash = "sha256:a1d8ae452bb10175839a959caee40e12b36e2e10821bdd1f781923ec48a07d80", size = 3048564 },
-    { url = "https://files.pythonhosted.org/packages/c0/07/87a8696f48cfc2901a4053b23734d66771ae6a41efed3a8c555ac6b0eeed/tcod-18.1.0-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c939370228122d177dfd28eb8192f4baea2764ab7d9d5867092443d10a65f5c4", size = 3223957 },
-    { url = "https://files.pythonhosted.org/packages/a3/5d/1e32f5b75bd5bba89e90219c27533e7095518be52ddc01ee46e4162888dc/tcod-18.1.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:96d41292e0f61d11838e466a9f787f87e28aab5b6aced8d525d4078a57f1c048", size = 3473736 },
-    { url = "https://files.pythonhosted.org/packages/19/4a/4a3cae79b05eed23c1eede408fac907a3123ed32b921105707d162d08ba5/tcod-18.1.0-cp38-abi3-win32.whl", hash = "sha256:58ad3bc309386223c57f68a65fe5920a621f18b8a166dfd04f1c53db4dc4e9e6", size = 1332506 },
-    { url = "https://files.pythonhosted.org/packages/fa/aa/7022db9314febc860b669b577003216f3a3815c5268e41a0cf15612378f5/tcod-18.1.0-cp38-abi3-win_amd64.whl", hash = "sha256:acb9798687cc404e15ebdc07a9d474b9a7edaec9e43eb6dfa5227c015d364e23", size = 1559434 },
+    { url = "https://files.pythonhosted.org/packages/41/57/64dcb511b349ce4d694ac6251721baf803322c1d6e4e81c64f1c2424a4c6/tcod-19.0.0-cp310-abi3-macosx_10_13_universal2.whl", hash = "sha256:631672deb7453e1cdbfdb80051a9055f1c6f31f1d5d8e3bda0462f4b763169c0", size = 3872849 },
+    { url = "https://files.pythonhosted.org/packages/c4/9d/864b7691462250f94dfd724860b09f2f2ef921973b1c909ebceb72d949fa/tcod-19.0.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a1c103d258e39b3b4fe4c9d69e46e40905c41cf3945da2385cc262d6b915e22c", size = 8758583 },
+    { url = "https://files.pythonhosted.org/packages/9c/2d/bf19d35b44b3a63e737582baa536c1b99cc3e88c8e3a90bbe85670dd12bc/tcod-19.0.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7f3be7ab11b234990056c5826c929dd5b5cdae3376c3647c285e834f3040afb3", size = 9115708 },
+    { url = "https://files.pythonhosted.org/packages/72/2f/dacb4bcf23afd4eddac10721c6cae6130295fd1a65814d08e7d25536bde5/tcod-19.0.0-cp310-abi3-win32.whl", hash = "sha256:58bf5d11042dcfff71afc5d84434da947a6d11e4c92b955220abcec4fff41098", size = 1602475 },
+    { url = "https://files.pythonhosted.org/packages/b8/05/70844ed97a1d3fcf180ee928fc0681194183e9b487fb7412eae9b219d3a4/tcod-19.0.0-cp310-abi3-win_amd64.whl", hash = "sha256:a849aa42fc5ba91604bafb4b36badee7147fceed16a771f4abff1575fe3b0a8c", size = 1896747 },
 ]
 
 [[package]]

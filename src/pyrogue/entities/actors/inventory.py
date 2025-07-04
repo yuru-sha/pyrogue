@@ -1,4 +1,5 @@
 """Inventory management module."""
+
 from __future__ import annotations
 
 from pyrogue.entities.items.item import Armor, Item, Ring, Weapon
@@ -16,16 +17,16 @@ class Inventory:
             "weapon": None,
             "armor": None,
             "ring_left": None,
-            "ring_right": None
+            "ring_right": None,
         }
 
     def add_item(self, item: Item) -> bool:
         """
         アイテムを追加
-        
+
         Args:
             item: 追加するアイテム
-            
+
         Returns:
             bool: 追加に成功したかどうか
 
@@ -36,9 +37,11 @@ class Inventory:
         # スタック可能なアイテムの場合、既存のスタックに追加を試みる
         if item.stackable:
             for existing_item in self.items:
-                if (existing_item.name == item.name and
-                    existing_item.stackable and
-                    isinstance(existing_item, type(item))):
+                if (
+                    existing_item.name == item.name
+                    and existing_item.stackable
+                    and isinstance(existing_item, type(item))
+                ):
                     existing_item.stack_count += item.stack_count
                     return True
 
@@ -48,7 +51,7 @@ class Inventory:
     def remove_item(self, item: Item) -> None:
         """
         アイテムを削除
-        
+
         Args:
             item: 削除するアイテム
 
@@ -59,10 +62,10 @@ class Inventory:
     def get_item(self, index: int) -> Item | None:
         """
         指定されたインデックスのアイテムを取得
-        
+
         Args:
             index: アイテムのインデックス
-            
+
         Returns:
             Optional[Item]: アイテム（存在しない場合はNone）
 
@@ -74,10 +77,10 @@ class Inventory:
     def equip(self, item: Item) -> Item | None:
         """
         アイテムを装備
-        
+
         Args:
             item: 装備するアイテム
-            
+
         Returns:
             Optional[Item]: 外したアイテム（ある場合）
 
@@ -107,10 +110,10 @@ class Inventory:
     def unequip(self, slot: str) -> Item | None:
         """
         装備を外す
-        
+
         Args:
             slot: 装備スロット名
-            
+
         Returns:
             Optional[Item]: 外したアイテム（ある場合）
 
@@ -124,7 +127,7 @@ class Inventory:
     def get_attack_bonus(self) -> int:
         """
         装備による攻撃力ボーナスを計算
-        
+
         Returns:
             int: 攻撃力ボーナス
 
@@ -146,7 +149,7 @@ class Inventory:
     def get_defense_bonus(self) -> int:
         """
         装備による防御力ボーナスを計算
-        
+
         Returns:
             int: 防御力ボーナス
 
@@ -168,10 +171,10 @@ class Inventory:
     def get_equipped_item_name(self, slot: str) -> str:
         """
         装備スロットのアイテム名を取得
-        
+
         Args:
             slot: 装備スロット名
-            
+
         Returns:
             str: アイテム名（装備なしの場合は "None"）
 

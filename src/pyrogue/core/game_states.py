@@ -1,4 +1,5 @@
 """Game states module."""
+
 from enum import Enum, auto
 
 
@@ -9,6 +10,7 @@ class GameStates(Enum):
     PLAYERS_TURN = auto()
     ENEMY_TURN = auto()
     PLAYER_DEAD = auto()
+    GAME_OVER = auto()
     SHOW_INVENTORY = auto()
     DROP_INVENTORY = auto()
     TARGETING = auto()

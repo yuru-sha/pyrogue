@@ -1,4 +1,5 @@
 """Monster module."""
+
 from __future__ import annotations
 
 import random
@@ -46,8 +47,7 @@ class Monster:
         distance = ((self.x - player_x) ** 2 + (self.y - player_y) ** 2) ** 0.5
 
         # 視界範囲内かつ、壁などで遮られていないか確認
-        return (distance <= self.view_range and
-                fov_map.transparent[player_y, player_x])
+        return distance <= self.view_range and fov_map.transparent[player_y, player_x]
 
     def get_move_towards_player(self, player_x: int, player_y: int) -> tuple[int, int]:
         """プレイヤーに向かう移動方向を取得"""
@@ -66,8 +66,13 @@ class Monster:
         """ランダムな移動方向を取得"""
         # 8方向のいずれかにランダムに移動
         directions = [
-            (-1, -1), (0, -1), (1, -1),
-            (-1, 0),           (1, 0),
-            (-1, 1),  (0, 1),  (1, 1)
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+            (-1, 0),
+            (1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
         ]
         return random.choice(directions)
