@@ -14,7 +14,9 @@ Example:
 
 from dataclasses import dataclass
 
+from pyrogue.config import CONFIG
 from pyrogue.entities.actors.inventory import Inventory
+from pyrogue.entities.actors.player_status import PlayerStatusFormatter
 from pyrogue.entities.items.item import (
     Armor,
     Food,
@@ -59,13 +61,13 @@ class Player:
 
     x: int = 0
     y: int = 0
-    hp: int = 20
-    max_hp: int = 20
-    attack: int = 5
-    defense: int = 3
+    hp: int = CONFIG.player.INITIAL_HP
+    max_hp: int = CONFIG.player.INITIAL_HP
+    attack: int = CONFIG.player.INITIAL_ATTACK
+    defense: int = CONFIG.player.INITIAL_DEFENSE
     level: int = 1
     exp: int = 0
-    hunger: int = 100  # 満腹度（100が最大）
+    hunger: int = CONFIG.player.MAX_HUNGER
     gold: int = 0
 
     def __init__(self, x: int, y: int) -> None:
@@ -137,7 +139,7 @@ class Player:
 
         """
         self.exp += amount
-        if self.exp >= self.level * 100:  # 簡単な経験値テーブル（レベル×100）
+        if self.exp >= self.level * CONFIG.player.EXPERIENCE_MULTIPLIER:
             self.level_up()
             return True
         return False
@@ -150,11 +152,11 @@ class Player:
         HPを全回復し、経験値をリセットします。
         """
         self.level += 1
-        self.max_hp += 5
+        self.max_hp += CONFIG.player.LEVEL_UP_HP_BONUS
         self.hp = self.max_hp
-        self.attack += 2
-        self.defense += 1
-        self.exp = 0  # 経験値をリセットして次のレベルへ
+        self.attack += CONFIG.player.LEVEL_UP_ATTACK_BONUS
+        self.defense += CONFIG.player.LEVEL_UP_DEFENSE_BONUS
+        self.exp = 0
 
     def consume_food(self, amount: int = 1) -> None:
         """
@@ -179,7 +181,7 @@ class Player:
             amount: 回復する満腹度
 
         """
-        self.hunger = min(100, self.hunger + amount)
+        self.hunger = min(CONFIG.player.MAX_HUNGER, self.hunger + amount)
 
     def get_attack(self) -> int:
         """
@@ -192,7 +194,7 @@ class Player:
             装備ボーナスを含む総攻撃力
 
         """
-        base_attack = 5  # プレイヤーの基本攻撃力
+        base_attack = CONFIG.player.INITIAL_ATTACK
         bonus = self.inventory.get_attack_bonus()
         return base_attack + bonus
 
@@ -207,7 +209,7 @@ class Player:
             装備ボーナスを含む総防御力
 
         """
-        base_defense = 2  # プレイヤーの基本防御力
+        base_defense = CONFIG.player.INITIAL_DEFENSE
         bonus = self.inventory.get_defense_bonus()
         return base_defense + bonus
 
@@ -281,7 +283,7 @@ class Player:
 
         if isinstance(item, Food):
             # 食料を食べて満腹度を回復
-            self.hunger = min(100, self.hunger + item.nutrition)
+            self.hunger = min(CONFIG.player.MAX_HUNGER, self.hunger + item.nutrition)
             self.inventory.remove_item(item)
             return True
 
@@ -304,14 +306,16 @@ class Player:
             プレイヤーのステータスと装備情報を含む文字列
 
         """
-        weapon = self.inventory.get_equipped_item_name("weapon")
-        armor = self.inventory.get_equipped_item_name("armor")
-        ring_l = self.inventory.get_equipped_item_name("ring_left")
-        ring_r = self.inventory.get_equipped_item_name("ring_right")
-
-        return (
-            f"Lv:{self.level} HP:{self.hp}/{self.max_hp} "
-            f"Atk:{self.get_attack()} Def:{self.get_defense()} "
-            f"Hunger:{self.hunger}% Exp:{self.exp} Gold:{self.gold}\n"
-            f"Weap:{weapon} Armor:{armor} Ring(L):{ring_l} Ring(R):{ring_r}"
-        )
+        return PlayerStatusFormatter.format_status(self)
+    
+    def get_stats_dict(self) -> dict:
+        """
+        ステータス辞書を取得。
+        
+        ゲームオーバー画面や勝利画面で使用する
+        ステータス情報を辞書形式で返します。
+        
+        Returns:
+            プレイヤーのステータス情報を含む辞書
+        """
+        return PlayerStatusFormatter.format_stats_dict(self)

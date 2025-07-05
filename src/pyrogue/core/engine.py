@@ -20,12 +20,16 @@ Example:
 
 from __future__ import annotations
 
+from typing import Optional
+
 import tcod
 import tcod.console
 import tcod.event
 import tcod.tileset
 
+from pyrogue.config import CONFIG
 from pyrogue.core.game_states import GameStates
+from pyrogue.core.input_handlers import StateManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
@@ -66,17 +70,16 @@ class Engine:
         画面サイズの設定、コンソールの作成、各画面インスタンスの初期化を行います。
         ゲーム状態はメニューから開始し、ログ機能を有効化します。
         """
-        self.screen_width = 80
-        self.screen_height = 50
-        self.map_width = 80
-        self.map_height = (
-            43  # 画面上部にステータス表示、下部にメッセージログ用の余白を確保
-        )
+        self.screen_width = CONFIG.display.SCREEN_WIDTH
+        self.screen_height = CONFIG.display.SCREEN_HEIGHT
+        self.map_width = CONFIG.display.MAP_WIDTH
+        self.map_height = CONFIG.display.MAP_HEIGHT
         self.title = "PyRogue"
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
         self.state = GameStates.MENU
         self.running = False
         self.message_log: list[str] = []  # メッセージログを追加
+        self.state_manager = StateManager()
 
         # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
@@ -109,8 +112,8 @@ class Engine:
         )
 
         # フォントサイズをピクセル単位で設定
-        self.font_width = 10
-        self.font_height = 10
+        self.font_width = CONFIG.display.FONT_WIDTH
+        self.font_height = CONFIG.display.FONT_HEIGHT
 
         # リサイズ可能なウィンドウでコンテキストを作成
         self.context = tcod.context.new(
@@ -140,11 +143,11 @@ class Engine:
 
         # ピクセルサイズをフォントサイズで割って文字数を計算
         self.screen_width = max(
-            80, pixel_width // self.font_width
-        )  # 最小幅80文字を保証
+            CONFIG.display.MIN_SCREEN_WIDTH, pixel_width // self.font_width
+        )  # 最小幅を保証
         self.screen_height = max(
-            50, pixel_height // self.font_height
-        )  # 最小高さ50文字を保証
+            CONFIG.display.MIN_SCREEN_HEIGHT, pixel_height // self.font_height
+        )  # 最小高さを保証
 
         # 新しいサイズでコンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
@@ -197,9 +200,13 @@ class Engine:
                         break
                     if event.type == "WINDOWRESIZED":
                         self.handle_resize(event)
-                    elif event.type == "KEYDOWN" and not self.handle_input(event):
-                        self.running = False
-                        break
+                    elif event.type == "KEYDOWN":
+                        continue_game, new_state = self._handle_input(event)
+                        if not continue_game:
+                            self.running = False
+                            break
+                        if new_state:
+                            self.state = new_state
 
         except Exception as e:
             game_logger.error(
@@ -210,60 +217,34 @@ class Engine:
         finally:
             self.cleanup()
 
-    def handle_input(self, event: tcod.event.KeyDown) -> bool:
+    def _handle_input(self, event: tcod.event.KeyDown) -> tuple[bool, Optional[GameStates]]:
         """
         キー入力イベントを処理。
 
-        ESCキーによる状態遷移と、現在の状態に応じた
-        入力ハンドリングを行います。
+        StateManagerを使用してクリーンな状態管理を行います。
 
         Args:
             event: キーボード入力イベント
 
         Returns:
-            ゲームを続行する場合はTrue、終了する場合はFalse
+            Tuple of (continue_game, new_state)
 
         """
-        # ESCキーによる状態遷移の処理
-        if event.sym == tcod.event.KeySym.ESCAPE:
-            if self.state == GameStates.PLAYERS_TURN:
-                self.state = GameStates.MENU
-                return True
-            if self.state == GameStates.MENU:
-                return False
-            if self.state == GameStates.GAME_OVER:
-                self.state = GameStates.MENU
-                return True
-            if self.state == GameStates.VICTORY:
-                self.state = GameStates.MENU
-                return True
-
-        # 現在の状態に応じた入力処理をルーティング
+        # Get appropriate screen context for current state
+        context = self._get_current_screen()
+        return self.state_manager.handle_input(event, self.state, context)
+    
+    def _get_current_screen(self):
+        """Get the current screen instance based on state."""
         if self.state == GameStates.MENU:
-            new_state = self.menu_screen.handle_input(event)
-            if new_state:
-                if new_state == GameStates.EXIT:
-                    return False
-                self.state = new_state
-            return True
-        if self.state == GameStates.PLAYERS_TURN:
-            self.game_screen.handle_key(event)
-            return True
-        if self.state == GameStates.GAME_OVER:
-            new_state = self.game_over_screen.handle_input(event)
-            if new_state:
-                if new_state == GameStates.EXIT:
-                    return False
-                self.state = new_state
-            return True
-        if self.state == GameStates.VICTORY:
-            new_state = self.victory_screen.handle_input(event)
-            if new_state:
-                if new_state == GameStates.EXIT:
-                    return False
-                self.state = new_state
-            return True
-        return True
+            return self.menu_screen
+        elif self.state == GameStates.PLAYERS_TURN:
+            return self.game_screen
+        elif self.state == GameStates.GAME_OVER:
+            return self.game_over_screen
+        elif self.state == GameStates.VICTORY:
+            return self.victory_screen
+        return None
 
     def cleanup(self) -> None:
         """

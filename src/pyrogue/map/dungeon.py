@@ -27,6 +27,12 @@ from .tile import (
     Wall,
 )
 
+# Import after class definitions to avoid circular imports
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .dungeon_builder import CorridorBuilder, RoomConnector, StairsManager
+
 
 @dataclass
 class Room:
@@ -240,6 +246,35 @@ class DungeonGenerator:
         self.gone_rooms: set[tuple[int, int]] = set()
         # 通路の位置を追跡するセット（テスト互換性のために維持）
         self.corridors: set[tuple[int, int]] = set()
+        
+        # Initialize builder components (lazy initialization)
+        self._room_connector = None
+        self._corridor_builder = None
+        self._stairs_manager = None
+    
+    @property
+    def room_connector(self):
+        """Lazy initialization of room connector."""
+        if self._room_connector is None:
+            from .dungeon_builder import RoomConnector
+            self._room_connector = RoomConnector(self)
+        return self._room_connector
+    
+    @property
+    def corridor_builder(self):
+        """Lazy initialization of corridor builder."""
+        if self._corridor_builder is None:
+            from .dungeon_builder import CorridorBuilder
+            self._corridor_builder = CorridorBuilder(self)
+        return self._corridor_builder
+    
+    @property
+    def stairs_manager(self):
+        """Lazy initialization of stairs manager."""
+        if self._stairs_manager is None:
+            from .dungeon_builder import StairsManager
+            self._stairs_manager = StairsManager(self)
+        return self._stairs_manager
 
     def _create_room(self, room: Room) -> None:
         """
@@ -514,24 +549,7 @@ class DungeonGenerator:
         self, pos1: tuple[int, int], pos2: tuple[int, int]
     ) -> None:
         """グリッドセル間の通路を作成（オリジナルRogue式）"""
-        x1, y1 = pos1
-        x2, y2 = pos2
-
-        # グリッドセルの中心点を計算
-        center1_x = x1 * self.cell_width + self.cell_width // 2
-        center1_y = y1 * self.cell_height + self.cell_height // 2
-        center2_x = x2 * self.cell_width + self.cell_width // 2
-        center2_y = y2 * self.cell_height + self.cell_height // 2
-
-        # オリジナルRogue式：中心から中心への直線通路を作成
-        if random.random() < 0.5:
-            # 横→縦のL字型
-            self._create_line(center1_x, center1_y, center2_x, center1_y)  # 横線
-            self._create_line(center2_x, center1_y, center2_x, center2_y)  # 縦線
-        else:
-            # 縦→横のL字型
-            self._create_line(center1_x, center1_y, center1_x, center2_y)  # 縦線
-            self._create_line(center1_x, center2_y, center2_x, center2_y)  # 横線
+        self.corridor_builder.create_corridor_between_grid_cells(pos1, pos2)
 
     def _create_gone_room_corridor(
         self, connected_pos: tuple[int, int], gone_pos: tuple[int, int]
@@ -918,7 +936,10 @@ class DungeonGenerator:
         self._create_rooms_in_grid()
 
         # 部屋を接続（オリジナルRogue式）
-        self._connect_rooms_rogue_style()
+        self.room_connector.connect_rooms_rogue_style()
+        
+        # 階段を配置
+        self.stairs_manager.place_stairs()
 
         # ドアを配置
         self._place_doors()
