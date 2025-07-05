@@ -1,5 +1,5 @@
 """
-Configuration constants for the PyRogue game.
+PyRogueゲームの設定定数。
 """
 
 from dataclasses import dataclass, field
@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class DisplayConfig:
-    """Display and rendering configuration."""
+    """表示およびレンダリングの設定。"""
     SCREEN_WIDTH: int = 80
     SCREEN_HEIGHT: int = 50
     MAP_WIDTH: int = 80
@@ -20,7 +20,7 @@ class DisplayConfig:
 
 @dataclass
 class PlayerConfig:
-    """Player character configuration."""
+    """プレイヤーキャラクターの設定。"""
     INITIAL_HP: int = 20
     INITIAL_ATTACK: int = 5
     INITIAL_DEFENSE: int = 3
@@ -33,26 +33,26 @@ class PlayerConfig:
 
 @dataclass
 class MonsterConfig:
-    """Monster configuration."""
+    """モンスターの設定。"""
     SPAWN_CHANCE: float = 0.8
     MAX_MONSTERS_PER_ROOM: int = 3
 
 
 @dataclass
 class ItemConfig:
-    """Item configuration."""
+    """アイテムの設定。"""
     SPAWN_CHANCE: float = 0.7
     MAX_ITEMS_PER_ROOM: int = 2
 
 
 @dataclass
 class GameConfig:
-    """Main game configuration."""
+    """メインゲーム設定。"""
     display: DisplayConfig = field(default_factory=DisplayConfig)
     player: PlayerConfig = field(default_factory=PlayerConfig)
     monster: MonsterConfig = field(default_factory=MonsterConfig)
     item: ItemConfig = field(default_factory=ItemConfig)
 
 
-# Global configuration instance
+# グローバル設定インスタンス
 CONFIG = GameConfig()

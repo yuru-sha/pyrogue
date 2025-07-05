@@ -307,14 +307,14 @@ class Player:
 
         """
         return PlayerStatusFormatter.format_status(self)
-    
+
     def get_stats_dict(self) -> dict:
         """
         ステータス辞書を取得。
-        
+
         ゲームオーバー画面や勝利画面で使用する
         ステータス情報を辞書形式で返します。
-        
+
         Returns:
             プレイヤーのステータス情報を含む辞書
         """

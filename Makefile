@@ -24,7 +24,7 @@ help:
 setup: $(VENV_DIR)/.setup-check ## Create virtual environment and install base dependencies by creating a marker file
 
 $(VENV_DIR)/.setup-check:
-	@echo "Cleaning up existing virtual environment in $(VENV_DIR)..."make 
+	@echo "Cleaning up existing virtual environment in $(VENV_DIR)..."make
 	@rm -rf $(VENV_DIR)
 	@echo "Creating virtual environment and installing dependencies using uv..."
 	@$(UV_INTERPRETER) sync

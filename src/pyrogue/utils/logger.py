@@ -24,24 +24,24 @@ from pathlib import Path
 def setup_game_logger() -> logging.Logger:
     """
     シンプルなゲームロガーを設定。
-    
+
     Returns:
         設定されたロガーインスタンス
     """
     logger = logging.getLogger("pyrogue")
-    
+
     # Avoid duplicate handlers
     if logger.handlers:
         return logger
-    
+
     # Set debug mode based on environment variable
     debug_mode = os.getenv("DEBUG", "0") == "1"
     logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
-    
+
     # Create logs directory
     log_dir = Path("data/logs")
     log_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Simple file handler
     handler = logging.FileHandler(log_dir / "game.log", encoding="utf-8")
     formatter = logging.Formatter(
@@ -49,23 +49,23 @@ def setup_game_logger() -> logging.Logger:
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    
+
     # Add console handler for debug mode
     if debug_mode:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
-    
+
     return logger
 
 
 class GameLogger:
     """
     簡素化されたゲームロガークラス。
-    
+
     標準のloggingライブラリをベースにしたシンプルなインターフェースです。
     """
-    
+
     def __init__(self) -> None:
         self.logger = setup_game_logger()
 

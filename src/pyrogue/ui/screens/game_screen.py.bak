@@ -15,10 +15,10 @@ class GameScreen:
 
     def __init__(self, console: tcod.console.Console):
         self.console = console
-        
+
         # 現在の階層
         self.current_floor = 1
-        
+
         # ダンジョンの生成
         self.dungeon_width = 80
         self.dungeon_height = 45  # ステータス2行 + マップ + メッセージ3行
@@ -35,10 +35,10 @@ class GameScreen:
             big_room_chance=0.15
         )
         self.dungeon_tiles, self.start_pos, self.end_pos = self.dungeon_gen.generate()
-        
+
         # プレイヤーの初期位置を設定
         self.player_x, self.player_y = self.start_pos
-        
+
         # プレイヤーステータス
         self.player_stats = {
             "level": 1,
@@ -50,7 +50,7 @@ class GameScreen:
             "exp": 0,
             "gold": 0,
         }
-        
+
         # 装備
         self.equipment = {
             "weapon": "Dagger",
@@ -58,7 +58,7 @@ class GameScreen:
             "ring_left": "None",
             "ring_right": "None",
         }
-        
+
         # メッセージログ
         self.messages = [
             "Welcome to PyRogue!",
@@ -67,7 +67,7 @@ class GameScreen:
             "Press 5 on numpad to wait a turn.",
             "Press TAB to toggle FOV.",
         ]
-        
+
         # 視界の計算用
         self.fov_enabled = True  # FOVの有効/無効フラグ
         self.fov_map = tcod.map.Map(width=self.dungeon_width, height=self.dungeon_height)
@@ -102,13 +102,13 @@ class GameScreen:
     def render(self) -> None:
         """Render the game screen."""
         self.console.clear()
-        
+
         # ステータス表示（上部2行）
         self._render_status()
-        
+
         # マップ表示（中央部分）
         self._render_map()
-        
+
         # メッセージログ（下部3行）
         self._render_messages()
 
@@ -124,7 +124,7 @@ class GameScreen:
             f"Exp:{self.player_stats['exp']} "
             f"Gold:{self.player_stats['gold']}"
         )
-        
+
         # 2行目: 装備情報
         status_line2 = (
             f"Weap:{self.equipment['weapon']} "
@@ -132,7 +132,7 @@ class GameScreen:
             f"Ring(L):{self.equipment['ring_left']} "
             f"Ring(R):{self.equipment['ring_right']}"
         )
-        
+
         self.console.print(x=1, y=0, string=status_line1)
         self.console.print(x=1, y=1, string=status_line2)
 
@@ -140,7 +140,7 @@ class GameScreen:
         """マップを表示"""
         # マップの表示範囲を設定
         map_start_y = 2  # ステータス表示の下から
-        
+
         # マップを描画
         for y in range(self.dungeon_height):
             for x in range(self.dungeon_width):
@@ -158,9 +158,9 @@ class GameScreen:
                     # 未探索
                     char = " "
                     fg = (0, 0, 0)
-                
+
                 self.console.print(x=x, y=y+map_start_y, string=char, fg=fg)
-        
+
         # プレイヤーを描画
         self.console.print(
             x=self.player_x,
@@ -183,23 +183,23 @@ class GameScreen:
         """指定の位置に移動できるかを判定"""
         if not (0 <= x < self.dungeon_width and 0 <= y < self.dungeon_height):
             return False
-        
+
         tile = self.dungeon_tiles[y, x]
-        
+
         # ドアの場合は開ける
         if isinstance(tile, Door) and tile.door_state == "closed":
             tile.toggle()  # ドアを開ける
             self._update_fov_map()  # FOVマップを更新
             self.messages.append("You open the door.")
             return False  # このターンは移動せず、ドアを開けるだけ
-        
+
         # 隠し扉の場合は発見
         if isinstance(tile, SecretDoor) and tile.door_state == "secret":
             tile.reveal()  # 隠し扉を発見
             self._update_fov_map()  # FOVマップを更新
             self.messages.append("You found a secret door!")
             return False  # このターンは移動せず、扉を発見するだけ
-        
+
         return tile.walkable
 
     def handle_keydown(self, event: tcod.event.KeyDown) -> None:
@@ -207,13 +207,13 @@ class GameScreen:
         key = event.sym
         old_x, old_y = self.player_x, self.player_y
         moved = False
-        
+
         # FOVの切り替え
         if key == tcod.event.KeySym.TAB:
             self.fov_enabled = not self.fov_enabled
             self.messages.append("FOV " + ("enabled" if self.fov_enabled else "disabled"))
             return
-        
+
         # Movement keys
         if key in (tcod.event.KeySym.UP, tcod.event.KeySym.k, tcod.event.KeySym.KP_8):  # 8
             if self._can_move_to(self.player_x, self.player_y - 1):
@@ -254,15 +254,15 @@ class GameScreen:
                 moved = True
         elif key == tcod.event.KeySym.KP_5:  # 5: その場で待機
             moved = True  # 待機もターンを消費
-        
+
         # 移動が成功した場合、視界を更新
         if moved:
             self._compute_fov()
-            
+
             # 階段の処理
             current_tile = self.dungeon_tiles[self.player_y, self.player_x]
             if isinstance(current_tile, Stairs):
                 if current_tile.char == ">":
                     self.messages.append("There is a staircase leading down.")
                 else:
-                    self.messages.append("There is a staircase leading up.") 
+                    self.messages.append("There is a staircase leading up.")

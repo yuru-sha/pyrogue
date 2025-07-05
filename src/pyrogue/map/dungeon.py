@@ -246,12 +246,12 @@ class DungeonGenerator:
         self.gone_rooms: set[tuple[int, int]] = set()
         # 通路の位置を追跡するセット（テスト互換性のために維持）
         self.corridors: set[tuple[int, int]] = set()
-        
+
         # Initialize builder components (lazy initialization)
         self._room_connector = None
         self._corridor_builder = None
         self._stairs_manager = None
-    
+
     @property
     def room_connector(self):
         """Lazy initialization of room connector."""
@@ -259,7 +259,7 @@ class DungeonGenerator:
             from .dungeon_builder import RoomConnector
             self._room_connector = RoomConnector(self)
         return self._room_connector
-    
+
     @property
     def corridor_builder(self):
         """Lazy initialization of corridor builder."""
@@ -267,7 +267,7 @@ class DungeonGenerator:
             from .dungeon_builder import CorridorBuilder
             self._corridor_builder = CorridorBuilder(self)
         return self._corridor_builder
-    
+
     @property
     def stairs_manager(self):
         """Lazy initialization of stairs manager."""
@@ -937,7 +937,7 @@ class DungeonGenerator:
 
         # 部屋を接続（オリジナルRogue式）
         self.room_connector.connect_rooms_rogue_style()
-        
+
         # 階段を配置
         self.stairs_manager.place_stairs()
 

@@ -9,18 +9,18 @@ if TYPE_CHECKING:
 
 
 class PlayerStatusFormatter:
-    """Handles formatting of player status information."""
-    
+    """プレイヤーステータス情報のフォーマットを処理。"""
+
     @staticmethod
     def format_status(player: "Player") -> str:
         """
-        Format player status for display.
-        
+        表示用のプレイヤーステータスをフォーマット。
+
         Args:
-            player: Player instance
-            
+            player: プレイヤーインスタンス
+
         Returns:
-            Formatted status string
+            フォーマットされたステータス文字列
         """
         weapon = player.inventory.get_equipped_item_name("weapon")
         armor = player.inventory.get_equipped_item_name("armor")
@@ -33,15 +33,15 @@ class PlayerStatusFormatter:
             f"Hunger:{player.hunger}% Exp:{player.exp} Gold:{player.gold}\n"
             f"Weap:{weapon} Armor:{armor} Ring(L):{ring_l} Ring(R):{ring_r}"
         )
-    
+
     @staticmethod
     def format_stats_dict(player: "Player") -> dict:
         """
         Format player stats as dictionary for game over/victory screens.
-        
+
         Args:
             player: Player instance
-            
+
         Returns:
             Dictionary containing player stats
         """

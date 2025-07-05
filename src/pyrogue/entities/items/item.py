@@ -110,10 +110,10 @@ class Scroll(Item):
     def apply_effect(self, target: object) -> bool:
         """巻物の効果を適用する"""
         from pyrogue.entities.actors.player import Player
-        
+
         if not isinstance(target, Player):
             return False
-            
+
         if self.effect == "identify":
             # 現在は常に識別済みなので効果なし
             return True
@@ -143,7 +143,7 @@ class Scroll(Item):
         elif self.effect == "magic_mapping":
             # マップ表示はゲームエンジンで処理する必要がある
             return True
-        
+
         return False
 
 
@@ -170,10 +170,10 @@ class Potion(Item):
     def apply_effect(self, target: object) -> bool:
         """薬の効果を適用する"""
         from pyrogue.entities.actors.player import Player
-        
+
         if not isinstance(target, Player):
             return False
-            
+
         if self.effect == "healing":
             target.heal(self.power)
             return True
@@ -198,7 +198,7 @@ class Potion(Item):
             # 毒ポーション（ダメージを与える）
             target.take_damage(self.power)
             return True
-        
+
         return False
 
 
@@ -224,17 +224,17 @@ class Food(Item):
     def apply_effect(self, target: object) -> bool:
         """食料の効果を適用する"""
         from pyrogue.entities.actors.player import Player
-        
+
         if not isinstance(target, Player):
             return False
-            
+
         # 満腹度を回復
         target.eat_food(self.nutrition // 36)  # 900 -> 25, 600 -> 16
-        
+
         # 食料によってはHPも少し回復
         if self.nutrition >= 900:  # Food Ration
             target.heal(1)
-        
+
         return True
 
 

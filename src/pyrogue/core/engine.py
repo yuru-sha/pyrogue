@@ -233,7 +233,7 @@ class Engine:
         # Get appropriate screen context for current state
         context = self._get_current_screen()
         return self.state_manager.handle_input(event, self.state, context)
-    
+
     def _get_current_screen(self):
         """Get the current screen instance based on state."""
         if self.state == GameStates.MENU:
@@ -315,5 +315,5 @@ class Engine:
         gold_bonus = player_stats.get('gold', 0) * 2
         floor_bonus = final_floor * 50
         hp_bonus = player_stats.get('hp', 0) * 10
-        
+
         return level_bonus + gold_bonus + floor_bonus + hp_bonus
