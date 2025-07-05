@@ -116,6 +116,7 @@ POTIONS = [
     ),
     PotionType("!", "Potion of Haste Self", 3, 26, 60, 100, "haste_self", (5, 10)),
     PotionType("!", "Potion of See Invisible", 3, 26, 50, 100, "see_invisible", (0, 0)),
+    PotionType("!", "Potion of Poison", 1, 26, 60, 30, "poison", (5, 10)),
 ]
 
 # Food definitions

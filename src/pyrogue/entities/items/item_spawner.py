@@ -1,4 +1,16 @@
-"""Item spawner module."""
+"""
+アイテム生成モジュール。
+
+このモジュールは、ダンジョン内のアイテムの配置と生成を管理します。
+階層に応じたアイテムの種類、数量、品質を調整し、
+ゲームバランスと探索の楽しさを両立させます。
+
+Example:
+    >>> spawner = ItemSpawner(floor=1)
+    >>> spawner.spawn_items(dungeon_tiles, rooms)
+    >>> item = spawner.get_item_at(10, 5)
+
+"""
 
 from __future__ import annotations
 
@@ -24,16 +36,44 @@ from .item_types import (
 
 
 class ItemSpawner:
-    """アイテムの生成と管理を行うクラス"""
+    """
+    アイテムの生成と管理を行うクラス。
 
-    def __init__(self, floor: int):
-        """Initialize item spawner."""
+    ダンジョンの各階層に適切なアイテムを配置し、
+    アイテムの重複配置を防ぎ、階層に応じた品質調整を行います。
+    イェンダーのアミュレットなどの特別なアイテムも管理します。
+
+    Attributes:
+        floor: 現在の階層
+        items: 配置されたアイテムのリスト
+        occupied_positions: アイテムが配置されている座標のセット
+
+    """
+
+    def __init__(self, floor: int) -> None:
+        """
+        アイテムスポナーを初期化。
+
+        Args:
+            floor: 対象となる階層
+
+        """
         self.floor = floor
         self.items: list[Item] = []
         self.occupied_positions: set[tuple[int, int]] = set()
 
     def spawn_items(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
-        """Spawn items in the dungeon."""
+        """
+        ダンジョン内にアイテムを配置。
+
+        階層に応じたアイテム数とタイプを決定し、部屋内の適切な位置に配置します。
+        26階層では特別にイェンダーのアミュレットを配置します。
+
+        Args:
+            dungeon_tiles: ダンジョンのタイル配列
+            rooms: ダンジョンの部屋リスト
+
+        """
         self.items.clear()
         self.occupied_positions.clear()  # 位置情報もクリア
 
@@ -90,7 +130,19 @@ class ItemSpawner:
     def _find_valid_position(
         self, dungeon_tiles: np.ndarray, room: Room
     ) -> tuple[int | None, int | None]:
-        """Find a valid position for an item in the given room."""
+        """
+        指定された部屋内でアイテムの有効な配置位置を検索。
+
+        壁を避け、他のアイテムと重複しない位置を最大10回試行して見つけます。
+
+        Args:
+            dungeon_tiles: ダンジョンのタイル配列
+            room: 対象の部屋
+
+        Returns:
+            有効な位置の(x, y)座標。見つからない場合は(None, None)
+
+        """
         # Get room dimensions
         x1, y1 = room.x, room.y
         width = room.width
@@ -108,11 +160,30 @@ class ItemSpawner:
         return None, None
 
     def _is_position_occupied(self, x: int, y: int) -> bool:
-        """Check if a position is occupied by an item."""
+        """
+        指定された位置がアイテムによって占有されているかチェック。
+
+        Args:
+            x: X座標
+            y: Y座標
+
+        Returns:
+            占有されている場合True
+
+        """
         return any(item.x == x and item.y == y for item in self.items)
 
     def _create_weapon(self) -> Weapon | None:
-        """Create a random weapon."""
+        """
+        ランダムな武器を生成。
+
+        現在の階層で利用可能な武器タイプから重み付き抽選で選択し、
+        ボーナス値もランダムに決定します。
+
+        Returns:
+            生成された武器。利用可能な武器がない場合はNone
+
+        """
         available = get_available_items(self.floor, WEAPONS)
         if not available:
             return None
@@ -124,7 +195,16 @@ class ItemSpawner:
         return Weapon(0, 0, weapon_type.name, bonus)
 
     def _create_armor(self) -> Armor | None:
-        """Create a random armor."""
+        """
+        ランダムな防具を生成。
+
+        現在の階層で利用可能な防具タイプから重み付き抽選で選択し、
+        ボーナス値もランダムに決定します。
+
+        Returns:
+            生成された防具。利用可能な防具がない場合はNone
+
+        """
         available = get_available_items(self.floor, ARMORS)
         if not available:
             return None
@@ -136,7 +216,16 @@ class ItemSpawner:
         return Armor(0, 0, armor_type.name, bonus)
 
     def _create_ring(self) -> Ring | None:
-        """Create a random ring."""
+        """
+        ランダムな指輪を生成。
+
+        現在の階層で利用可能な指輪タイプから重み付き抽選で選択し、
+        効果の強度もランダムに決定します。
+
+        Returns:
+            生成された指輪。利用可能な指輪がない場合はNone
+
+        """
         available = get_available_items(self.floor, RINGS)
         if not available:
             return None
@@ -148,7 +237,15 @@ class ItemSpawner:
         return Ring(0, 0, ring_type.name, ring_type.effect, power)
 
     def _create_scroll(self) -> Scroll | None:
-        """Create a random scroll."""
+        """
+        ランダムな巻物を生成。
+
+        現在の階層で利用可能な巻物タイプから重み付き抽選で選択します。
+
+        Returns:
+            生成された巻物。利用可能な巻物がない場合はNone
+
+        """
         available = get_available_items(self.floor, SCROLLS)
         if not available:
             return None
@@ -159,7 +256,16 @@ class ItemSpawner:
         return Scroll(0, 0, scroll_type.name, scroll_type.effect)
 
     def _create_potion(self) -> Potion | None:
-        """Create a random potion."""
+        """
+        ランダムなポーションを生成。
+
+        現在の階層で利用可能なポーションタイプから重み付き抽選で選択し、
+        効果の強度もランダムに決定します。
+
+        Returns:
+            生成されたポーション。利用可能なポーションがない場合はNone
+
+        """
         available = get_available_items(self.floor, POTIONS)
         if not available:
             return None
@@ -171,7 +277,15 @@ class ItemSpawner:
         return Potion(0, 0, potion_type.name, potion_type.effect, power)
 
     def _create_food(self) -> Food | None:
-        """Create a random food item."""
+        """
+        ランダムな食料を生成。
+
+        現在の階層で利用可能な食料タイプから重み付き抽選で選択します。
+
+        Returns:
+            生成された食料。利用可能な食料がない場合はNone
+
+        """
         available = get_available_items(self.floor, FOODS)
         if not available:
             return None
@@ -182,21 +296,68 @@ class ItemSpawner:
         return Food(0, 0, food_type.name, food_type.nutrition)
 
     def _create_gold(self) -> Gold:
-        """Create a gold pile."""
+        """
+        金貨の山を生成。
+
+        現在の階層に応じた金額を決定します。
+
+        Returns:
+            生成された金貨
+
+        """
         amount = get_gold_amount(self.floor)
         return Gold(0, 0, amount)
 
     def get_item_at(self, x: int, y: int) -> Item | None:
-        """指定された位置にあるアイテムを取得"""
+        """
+        指定された位置にあるアイテムを取得。
+
+        Args:
+            x: X座標
+            y: Y座標
+
+        Returns:
+            該当位置のアイテム。存在しない場合はNone
+
+        """
         for item in self.items:
             if item.x == x and item.y == y:
                 return item
         return None
 
     def remove_item(self, item: Item) -> None:
-        """アイテムを削除"""
+        """
+        アイテムを削除。
+
+        アイテムリストと占有位置セットの両方から削除します。
+
+        Args:
+            item: 削除するアイテム
+
+        """
         if item in self.items:
             self.items.remove(item)
             pos = (item.x, item.y)
             if pos in self.occupied_positions:  # 位置が存在する場合のみ削除
                 self.occupied_positions.remove(pos)
+
+    def add_item(self, item: Item) -> bool:
+        """
+        アイテムを追加。
+
+        Args:
+            item: 追加するアイテム
+
+        Returns:
+            bool: 追加に成功した場合はTrue
+
+        """
+        pos = (item.x, item.y)
+
+        # 既に同じ位置にアイテムがある場合は追加しない
+        if pos in self.occupied_positions:
+            return False
+
+        self.items.append(item)
+        self.occupied_positions.add(pos)
+        return True

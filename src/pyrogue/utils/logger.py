@@ -1,4 +1,16 @@
-"""Logging configuration for the game."""
+"""
+ゲーム用ログ設定モジュール。
+
+このモジュールは、PyRogueゲームの包括的なログシステムを提供します。
+JSON形式のログ、ファイルローテーション、カスタムログレベル、
+NumPyオブジェクトのシリアル化などの機能を提供します。
+
+Example:
+    >>> from pyrogue.utils import game_logger
+    >>> game_logger.info("Game started", {"player": "test"})
+    >>> game_logger.error("Critical error", {"error_code": 500})
+
+"""
 
 from __future__ import annotations
 
@@ -13,10 +25,25 @@ import numpy as np
 
 
 class JsonFormatter(logging.Formatter):
-    """JSON format for log messages."""
+    """
+    ログメッセージ用JSONフォーマッター。
+
+    ログメッセージを構造化されたJSON形式に変換し、
+    タイムスタンプ、ログレベル、メッセージ、追加情報、例外情報を
+    適切に可読性の高い形式で出力します。
+    """
 
     def format(self, record: logging.LogRecord) -> str:
-        """Format the record as JSON."""
+        """
+        ログレコードをJSON形式にフォーマット。
+
+        Args:
+            record: フォーマットするログレコード
+
+        Returns:
+            JSON形式のログ文字列
+
+        """
         # Basic log data
         log_data = {
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
@@ -36,7 +63,19 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log_data, ensure_ascii=False)
 
     def _convert_numpy(self, obj: Any) -> Any:
-        """Convert numpy types to Python native types."""
+        """
+        NumPy型をPythonネイティブ型に変換。
+
+        JSONシリアル化のため、NumPyの数値型や配列を
+        標準のPython型に再帰的に変換します。
+
+        Args:
+            obj: 変換するオブジェクト
+
+        Returns:
+            変換されたオブジェクト
+
+        """
         if isinstance(obj, np.integer):
             return int(obj)
         if isinstance(obj, np.floating):
@@ -51,14 +90,32 @@ class JsonFormatter(logging.Formatter):
 
 
 class GameLogger:
-    """Game logger class."""
+    """
+    ゲームロガークラス。
+
+    ゲーム全体のログ管理を担当し、カスタムログレベル、
+    ファイルローテーション、JSONフォーマットをサポートします。
+    ゲームログとエラーログを別々に管理し、デバッグと分析を容易にします。
+
+    Attributes:
+        TRACE: 詳細なトレーシング用ログレベル (5)
+        FATAL: 重大なエラー用ログレベル (60)
+        logger: ログインスタンス
+        log_dir: ログファイルの保存先ディレクトリ
+
+    """
 
     # Custom log levels
     TRACE = 5
     FATAL = 60
 
-    def __init__(self):
-        """Initialize the logger."""
+    def __init__(self) -> None:
+        """
+        ロガーを初期化。
+
+        カスタムログレベルの登録、ファイルハンドラーの設定、
+        ログディレクトリの作成、ローテーションの初期化を行います。
+        """
         # Register custom log levels
         logging.addLevelName(self.TRACE, "TRACE")
         logging.addLevelName(self.FATAL, "FATAL")
@@ -107,31 +164,81 @@ class GameLogger:
     def _log(
         self, level: int, message: str, extra: dict[str, Any] | None = None
     ) -> None:
-        """Log a message with the specified level."""
+        """
+        指定されたレベルでメッセージをログ出力。
+
+        Args:
+            level: ログレベル
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self.logger.log(level, message, extra={"extra": extra} if extra else None)
 
     def trace(self, message: str, extra: dict[str, Any] | None = None) -> None:
-        """Log a TRACE level message."""
+        """
+        TRACEレベルのメッセージをログ出力。
+
+        Args:
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self._log(self.TRACE, message, extra)
 
     def debug(self, message: str, extra: dict[str, Any] | None = None) -> None:
-        """Log a DEBUG level message."""
+        """
+        DEBUGレベルのメッセージをログ出力。
+
+        Args:
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self._log(logging.DEBUG, message, extra)
 
     def info(self, message: str, extra: dict[str, Any] | None = None) -> None:
-        """Log an INFO level message."""
+        """
+        INFOレベルのメッセージをログ出力。
+
+        Args:
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self._log(logging.INFO, message, extra)
 
     def warning(self, message: str, extra: dict[str, Any] | None = None) -> None:
-        """Log a WARNING level message."""
+        """
+        WARNINGレベルのメッセージをログ出力。
+
+        Args:
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self._log(logging.WARNING, message, extra)
 
     def error(self, message: str, extra: dict[str, Any] | None = None) -> None:
-        """Log an ERROR level message."""
+        """
+        ERRORレベルのメッセージをログ出力。
+
+        Args:
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self._log(logging.ERROR, message, extra)
 
     def fatal(self, message: str, extra: dict[str, Any] | None = None) -> None:
-        """Log a FATAL level message."""
+        """
+        FATALレベルのメッセージをログ出力。
+
+        Args:
+            message: ログメッセージ
+            extra: 追加情報の辞書
+
+        """
         self._log(self.FATAL, message, extra)
 
 

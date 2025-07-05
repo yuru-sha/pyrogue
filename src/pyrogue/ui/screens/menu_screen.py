@@ -1,4 +1,8 @@
-"""Menu screen module."""
+"""
+メニュースクリーンモジュール。
+
+このモジュールはメインメニューの表示とユーザー入力を管理します。
+"""
 
 from __future__ import annotations
 
@@ -15,23 +19,50 @@ if TYPE_CHECKING:
 
 
 class MenuScreen:
-    """Menu screen class."""
+    """
+    メインメニュースクリーンクラス。
 
-    def __init__(self, console: tcod.console.Console, engine: Engine):
+    ゲームのメインメニューを表示し、ユーザーの入力を処理します。
+    アスキーアートタイトルやメニューオプションの表示、
+    ナビゲーション機能を提供します。
+    """
+
+    def __init__(self, console: tcod.console.Console, engine: Engine) -> None:
+        """
+        メニュースクリーンを初期化。
+
+        Args:
+            console: TCODコンソールオブジェクト
+            engine: メインゲームエンジンのインスタンス
+
+        """
         self.console = console
         self.engine = engine
         self.menu_selection = 0
         self.menu_options = ["New Game", "Quit"]
 
     def update_console(self, console: tcod.console.Console) -> None:
-        """コンソールの更新"""
+        """
+        コンソールの更新。
+
+        ウィンドウサイズ変更時にコンソール参照を更新します。
+
+        Args:
+            console: 新しいTCODコンソールオブジェクト
+
+        """
         self.console = console
 
     def render(self) -> None:
-        """Render the menu screen."""
+        """
+        メニュースクリーンを描画。
+
+        アスキーアートタイトル、メニューオプション、
+        操作説明を表示します。
+        """
         self.console.clear()
 
-        # ASCII アートタイトル
+        # ASCIIアートタイトルの表示
         title_art = [
             "██████╗ ██╗   ██╗██████╗  ██████╗  ██████╗ ██╗   ██╗███████╗",
             "██╔══██╗╚██╗ ██╔╝██╔══██╗██╔═══██╗██╔════╝ ██║   ██║██╔════╝",
@@ -63,7 +94,7 @@ class MenuScreen:
                 fg=(255, 215, 0),  # 金色
             )
 
-        # サブタイトル
+        # サブタイトルの表示
         subtitle = "A Python Roguelike Adventure"
         subtitle_y = title_y + (len(title_art) if self.console.width >= 60 else 2)
         self.console.print(
@@ -73,7 +104,7 @@ class MenuScreen:
             fg=(150, 150, 150),
         )
 
-        # メニューオプションを表示
+        # メニューオプションの表示
         menu_start_y = subtitle_y + 3
         for i, option in enumerate(self.menu_options):
             text = f"> {option}" if i == self.menu_selection else f"  {option}"
@@ -85,7 +116,7 @@ class MenuScreen:
                 fg=color,
             )
 
-        # 操作説明
+        # 操作説明の表示
         help_text = "Use UP/DOWN arrows to navigate, ENTER to select, ESC to quit"
         self.console.print(
             (self.console.width - len(help_text)) // 2,
@@ -95,17 +126,34 @@ class MenuScreen:
         )
 
     def handle_input(self, key: tcod.event.KeyDown) -> GameStates | None:
-        """入力処理"""
+        """
+        ユーザー入力の処理。
+
+        メニューナビゲーションとオプション選択を処理します。
+
+        Args:
+            key: キーボード入力イベント
+
+        Returns:
+            選択されたゲーム状態、またはNone
+
+        """
+        # 上矢印キーで上のオプションへ移動
         if key.sym == tcod.event.KeySym.UP:
             self.menu_selection = (self.menu_selection - 1) % len(self.menu_options)
+        # 下矢印キーで下のオプションへ移動
         elif key.sym == tcod.event.KeySym.DOWN:
             self.menu_selection = (self.menu_selection + 1) % len(self.menu_options)
+        # Enterキーで選択されたオプションを実行
         elif key.sym == tcod.event.KeySym.RETURN:
+            # 新しいゲームを開始
             if self.menu_options[self.menu_selection] == "New Game":
                 self.engine.new_game()
                 return GameStates.PLAYERS_TURN
+            # ゲームを継続
             if self.menu_options[self.menu_selection] == "Continue":
                 return GameStates.PLAYERS_TURN
+            # ゲームを終了
             if self.menu_options[self.menu_selection] == "Quit":
                 return GameStates.EXIT
 

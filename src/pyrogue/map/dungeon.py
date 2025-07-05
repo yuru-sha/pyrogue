@@ -32,10 +32,10 @@ from .tile import (
 class Room:
     """
     ダンジョンの部屋を表すクラス。
-    
+
     部屋は矩形の形状を持ち、特別な部屋タイプを持つ場合があります。
     各部屋は他の部屋との接続関係を管理し、ドアの配置情報も保持します。
-    
+
     Attributes:
         x: 部屋の左上隅のX座標
         y: 部屋の左上隅のY座標
@@ -65,7 +65,7 @@ class Room:
     def __hash__(self) -> int:
         """
         Roomオブジェクトをハッシュ可能にする。
-        
+
         Returns:
             部屋のIDに基づくハッシュ値
 
@@ -76,7 +76,7 @@ class Room:
     def _id(self) -> int:
         """
         テスト互換性のため_id属性を提供。
-        
+
         Returns:
             部屋のID
 
@@ -87,7 +87,7 @@ class Room:
     def center(self) -> tuple[int, int]:
         """
         部屋の中心座標を返す。
-        
+
         Returns:
             (x, y)形式の部屋の中心座標
 
@@ -98,7 +98,7 @@ class Room:
     def inner(self) -> list[tuple[int, int]]:
         """
         部屋の内部の座標リストを返す（壁と扉を除く）。
-        
+
         Returns:
             部屋の内部の座標リスト
 
@@ -112,13 +112,13 @@ class Room:
     def get_wall_center(self, direction: str) -> tuple[int, int]:
         """
         指定した方向の壁の中心座標を返す。
-        
+
         Args:
             direction: 方向（"north", "south", "west", "east"）
-            
+
         Returns:
             指定方向の壁の中心座標
-            
+
         Raises:
             ValueError: 無効な方向が指定された場合
 
@@ -136,7 +136,7 @@ class Room:
     def get_special_room_message(self) -> str:
         """
         特別な部屋のメッセージを返す。
-        
+
         Returns:
             部屋のタイプに応じたメッセージ文字列
 
@@ -158,10 +158,10 @@ class Room:
     def is_connected_to(self, other_room: Room) -> bool:
         """
         他の部屋に接続されているかどうかを確認。
-        
+
         Args:
             other_room: 接続を確認する対象の部屋
-            
+
         Returns:
             接続されている場合True、そうでなければFalse
 
@@ -172,17 +172,17 @@ class Room:
 class DungeonGenerator:
     """
     ダンジョン生成クラス（オリジナルRogue式）。
-    
+
     3x3グリッドに部屋を配置し、通路で接続することで、
     伝統的なローグライクゲームのダンジョン構造を再現します。
-    
+
     特徴:
         - 3x3グリッドでの部屋配置
         - gone room（通路のみ）の概念
         - 特別な部屋タイプ（宝物庫、実験室等）
         - 秘密のドアの配置
         - 階段の自動配置
-    
+
     Attributes:
         width: ダンジョンの幅
         height: ダンジョンの高さ
@@ -212,7 +212,7 @@ class DungeonGenerator:
     ) -> None:
         """
         ダンジョン生成器を初期化。
-        
+
         Args:
             width: ダンジョンの幅
             height: ダンジョンの高さ
@@ -231,7 +231,9 @@ class DungeonGenerator:
         self.start_pos: tuple[int, int] | None = None
         self.end_pos: tuple[int, int] | None = None
         # 3x3グリッドでの部屋配置情報を管理
-        self.room_grid: list[list[Room | None]] = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+        self.room_grid: list[list[Room | None]] = [
+            [None for _ in range(self.grid_width)] for _ in range(self.grid_height)
+        ]
         # 部屋の接続状態を追跡するためのグリッド座標セット
         self.connected_rooms: set[tuple[int, int]] = set()
         # "gone room"（通路のみのグリッドセル）の位置を記録
@@ -242,10 +244,10 @@ class DungeonGenerator:
     def _create_room(self, room: Room) -> None:
         """
         部屋を生成する。
-        
+
         部屋の外周を壁で囲み、内部を床にします。
         特別な部屋の場合、タイプに応じたアイテムを配置します。
-        
+
         Args:
             room: 生成する部屋オブジェクト
 
@@ -270,9 +272,9 @@ class DungeonGenerator:
     def _decorate_special_room(self, room: Room) -> None:
         """
         特別な部屋を装飾する。
-        
+
         部屋のタイプに応じて適切なアイテムを配置します。
-        
+
         Args:
             room: 装飾する特別な部屋
 
@@ -310,8 +312,9 @@ class DungeonGenerator:
             for grid_x in range(self.grid_width):
                 # 特別な部屋の判定（テストで指定された階層に1つ生成）
                 special_floors = [1, 5, 10, 15, 20, 25]
-                is_special = (self.floor in special_floors and
-                             grid_x == 1 and grid_y == 1)
+                is_special = (
+                    self.floor in special_floors and grid_x == 1 and grid_y == 1
+                )
 
                 # 特別な部屋でない場合、25%の確率で"gone room"（通路のみ）にする
                 if not is_special and random.random() < 0.25:
@@ -325,8 +328,12 @@ class DungeonGenerator:
 
                 if is_special:
                     # 特別な部屋は大きめ
-                    room_width = random.randint(max(6, base_width - 1), min(10, base_width))
-                    room_height = random.randint(max(6, base_height - 1), min(10, base_height))
+                    room_width = random.randint(
+                        max(6, base_width - 1), min(10, base_width)
+                    )
+                    room_height = random.randint(
+                        max(6, base_height - 1), min(10, base_height)
+                    )
                 else:
                     # 通常の部屋はサイズにバリエーション
                     size_variation = random.choice(["small", "medium", "large"])
@@ -334,8 +341,12 @@ class DungeonGenerator:
                         room_width = random.randint(6, min(8, base_width - 1))
                         room_height = random.randint(6, min(8, base_height - 1))
                     elif size_variation == "large":
-                        room_width = random.randint(max(7, base_width - 2), min(10, base_width))
-                        room_height = random.randint(max(7, base_height - 2), min(10, base_height))
+                        room_width = random.randint(
+                            max(7, base_width - 2), min(10, base_width)
+                        )
+                        room_height = random.randint(
+                            max(7, base_height - 2), min(10, base_height)
+                        )
                     else:  # medium
                         room_width = random.randint(6, min(9, base_width - 1))
                         room_height = random.randint(6, min(9, base_height - 1))
@@ -357,7 +368,9 @@ class DungeonGenerator:
                 if room_y + room_height >= self.height:
                     room_y = self.height - room_height - 1
 
-                room_type = random.choice(self.SPECIAL_ROOM_TYPES) if is_special else None
+                room_type = (
+                    random.choice(self.SPECIAL_ROOM_TYPES) if is_special else None
+                )
 
                 room = Room(
                     x=room_x,
@@ -409,11 +422,17 @@ class DungeonGenerator:
                             self._create_gone_room_corridor(connected_pos, neighbor_pos)
                         else:
                             # 通常の部屋の場合
-                            neighbor_room = self.room_grid[neighbor_pos[1]][neighbor_pos[0]]
+                            neighbor_room = self.room_grid[neighbor_pos[1]][
+                                neighbor_pos[0]
+                            ]
                             if neighbor_room:
-                                self._create_corridor_between_grid_cells(connected_pos, neighbor_pos)
+                                self._create_corridor_between_grid_cells(
+                                    connected_pos, neighbor_pos
+                                )
                                 # 部屋の接続関係を記録
-                                connected_room = self.room_grid[connected_pos[1]][connected_pos[0]]
+                                connected_room = self.room_grid[connected_pos[1]][
+                                    connected_pos[0]
+                                ]
                                 if connected_room:
                                     connected_room.connected_rooms.add(neighbor_room.id)
                                     neighbor_room.connected_rooms.add(connected_room.id)
@@ -438,12 +457,19 @@ class DungeonGenerator:
                     # 最も近い未接続の部屋を選択
                     target_pos = random.choice(unconnected_rooms)
                     # 最も近い接続済み部屋を見つけて接続
-                    closest_connected = min(self.connected_rooms,
-                                          key=lambda pos: abs(pos[0] - target_pos[0]) + abs(pos[1] - target_pos[1]))
-                    self._create_corridor_between_grid_cells(closest_connected, target_pos)
+                    closest_connected = min(
+                        self.connected_rooms,
+                        key=lambda pos: abs(pos[0] - target_pos[0])
+                        + abs(pos[1] - target_pos[1]),
+                    )
+                    self._create_corridor_between_grid_cells(
+                        closest_connected, target_pos
+                    )
                     # 部屋の接続関係を記録
                     target_room = self.room_grid[target_pos[1]][target_pos[0]]
-                    connected_room = self.room_grid[closest_connected[1]][closest_connected[0]]
+                    connected_room = self.room_grid[closest_connected[1]][
+                        closest_connected[0]
+                    ]
                     if target_room and connected_room:
                         target_room.connected_rooms.add(connected_room.id)
                         connected_room.connected_rooms.add(target_room.id)
@@ -469,7 +495,9 @@ class DungeonGenerator:
                     return (x, y)
         return None
 
-    def _get_adjacent_grid_positions(self, grid_pos: tuple[int, int]) -> list[tuple[int, int]]:
+    def _get_adjacent_grid_positions(
+        self, grid_pos: tuple[int, int]
+    ) -> list[tuple[int, int]]:
         """隣接するグリッド位置のリストを取得"""
         x, y = grid_pos
         adjacent = []
@@ -482,7 +510,9 @@ class DungeonGenerator:
 
         return adjacent
 
-    def _create_corridor_between_grid_cells(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> None:
+    def _create_corridor_between_grid_cells(
+        self, pos1: tuple[int, int], pos2: tuple[int, int]
+    ) -> None:
         """グリッドセル間の通路を作成（オリジナルRogue式）"""
         x1, y1 = pos1
         x2, y2 = pos2
@@ -503,7 +533,9 @@ class DungeonGenerator:
             self._create_line(center1_x, center1_y, center1_x, center2_y)  # 縦線
             self._create_line(center1_x, center2_y, center2_x, center2_y)  # 横線
 
-    def _create_gone_room_corridor(self, connected_pos: tuple[int, int], gone_pos: tuple[int, int]) -> None:
+    def _create_gone_room_corridor(
+        self, connected_pos: tuple[int, int], gone_pos: tuple[int, int]
+    ) -> None:
         """Gone room（通路のみ）への接続を作成"""
         # gone roomの中心に通路を作成
         gone_x, gone_y = gone_pos
@@ -538,7 +570,9 @@ class DungeonGenerator:
                                 door = Door()
                             else:
                                 # 通常の部屋は15%の確率で秘密のドア
-                                door = SecretDoor() if random.random() < 0.15 else Door()
+                                door = (
+                                    SecretDoor() if random.random() < 0.15 else Door()
+                                )
                             self.tiles[y, x1] = door
                             # どの部屋の壁かを特定してドアリストに追加
                             if room:
@@ -559,7 +593,9 @@ class DungeonGenerator:
                                 door = Door()
                             else:
                                 # 通常の部屋は15%の確率で秘密のドア
-                                door = SecretDoor() if random.random() < 0.15 else Door()
+                                door = (
+                                    SecretDoor() if random.random() < 0.15 else Door()
+                                )
                             self.tiles[y1, x] = door
                             # どの部屋の壁かを特定してドアリストに追加
                             if room:
@@ -573,9 +609,11 @@ class DungeonGenerator:
         for room in self.rooms:
             # 部屋の境界上かどうかをチェック
             is_on_boundary = (
-                (x == room.x or x == room.x + room.width - 1) and room.y <= y <= room.y + room.height - 1
+                (x == room.x or x == room.x + room.width - 1)
+                and room.y <= y <= room.y + room.height - 1
             ) or (
-                (y == room.y or y == room.y + room.height - 1) and room.x <= x <= room.x + room.width - 1
+                (y == room.y or y == room.y + room.height - 1)
+                and room.x <= x <= room.x + room.width - 1
             )
             if is_on_boundary:
                 return True
@@ -586,9 +624,11 @@ class DungeonGenerator:
         for room in self.rooms:
             # 部屋の境界上かどうかをチェック
             is_on_boundary = (
-                (x == room.x or x == room.x + room.width - 1) and room.y <= y <= room.y + room.height - 1
+                (x == room.x or x == room.x + room.width - 1)
+                and room.y <= y <= room.y + room.height - 1
             ) or (
-                (y == room.y or y == room.y + room.height - 1) and room.x <= x <= room.x + room.width - 1
+                (y == room.y or y == room.y + room.height - 1)
+                and room.x <= x <= room.x + room.width - 1
             )
             if is_on_boundary:
                 return room
@@ -607,12 +647,18 @@ class DungeonGenerator:
             for x in range(room.x, room.x + room.width):
                 # 部屋の境界（壁）かどうかをチェック
                 is_wall_position = (
-                    (x == room.x or x == room.x + room.width - 1 or
-                     y == room.y or y == room.y + room.height - 1) and
-                    not (x == room.x and y == room.y) and  # 角は除外
-                    not (x == room.x and y == room.y + room.height - 1) and
-                    not (x == room.x + room.width - 1 and y == room.y) and
-                    not (x == room.x + room.width - 1 and y == room.y + room.height - 1)
+                    (
+                        x == room.x
+                        or x == room.x + room.width - 1
+                        or y == room.y
+                        or y == room.y + room.height - 1
+                    )
+                    and not (x == room.x and y == room.y)  # 角は除外
+                    and not (x == room.x and y == room.y + room.height - 1)
+                    and not (x == room.x + room.width - 1 and y == room.y)
+                    and not (
+                        x == room.x + room.width - 1 and y == room.y + room.height - 1
+                    )
                 )
 
                 if is_wall_position and isinstance(self.tiles[y, x], Wall):
@@ -629,8 +675,12 @@ class DungeonGenerator:
             nx, ny = x + dx, y + dy
             if 0 <= nx < self.width and 0 <= ny < self.height:
                 # 部屋の外側で通路がある場合
-                is_outside_room = (nx < room.x or nx >= room.x + room.width or
-                                 ny < room.y or ny >= room.y + room.height)
+                is_outside_room = (
+                    nx < room.x
+                    or nx >= room.x + room.width
+                    or ny < room.y
+                    or ny >= room.y + room.height
+                )
 
                 if is_outside_room and isinstance(self.tiles[ny, nx], Floor):
                     # さらにその隣が通路の続きか、もう一つの部屋への入口かチェック
@@ -649,8 +699,10 @@ class DungeonGenerator:
                     # 他の部屋の内部かチェック
                     for room in self.rooms:
                         if room != origin_room:
-                            if (room.x < nx < room.x + room.width - 1 and
-                                room.y < ny < room.y + room.height - 1):
+                            if (
+                                room.x < nx < room.x + room.width - 1
+                                and room.y < ny < room.y + room.height - 1
+                            ):
                                 return True
 
                     # 通路システムの一部かチェック
@@ -663,7 +715,9 @@ class DungeonGenerator:
         """指定された位置がドアの配置位置かどうかを判定（後方互換性）"""
         return self._is_corridor_connection_point(room, x, y)
 
-    def _can_create_corridor(self, start: tuple[int, int], end: tuple[int, int]) -> bool:
+    def _can_create_corridor(
+        self, start: tuple[int, int], end: tuple[int, int]
+    ) -> bool:
         """通路を作成できるかどうかを判定"""
         x1, y1 = start
         x2, y2 = end
@@ -708,15 +762,22 @@ class DungeonGenerator:
             # 水平方向が主
             if dx > 0:  # 右方向
                 # Y座標を部屋の範囲内に制限
-                y = max(from_room.y + 1, min(from_room.y + from_room.height - 2, from_center[1]))
+                y = max(
+                    from_room.y + 1,
+                    min(from_room.y + from_room.height - 2, from_center[1]),
+                )
                 return (from_room.x + from_room.width - 1, y)
             # 左方向
-            y = max(from_room.y + 1, min(from_room.y + from_room.height - 2, from_center[1]))
+            y = max(
+                from_room.y + 1, min(from_room.y + from_room.height - 2, from_center[1])
+            )
             return (from_room.x, y)
         # 垂直方向が主
         if dy > 0:  # 下方向
             # X座標を部屋の範囲内に制限
-            x = max(from_room.x + 1, min(from_room.x + from_room.width - 2, from_center[0]))
+            x = max(
+                from_room.x + 1, min(from_room.x + from_room.width - 2, from_center[0])
+            )
             return (x, from_room.y + from_room.height - 1)
         # 上方向
         x = max(from_room.x + 1, min(from_room.x + from_room.width - 2, from_center[0]))
@@ -765,7 +826,9 @@ class DungeonGenerator:
                         self.tiles[y, x1] = Floor()
                         self.corridors.add((x1, y))
                     # ドアがある場合はそのまま保持し、通路として記録
-                    elif isinstance(current_tile, (Door, SecretDoor)) or isinstance(current_tile, Floor):
+                    elif isinstance(current_tile, (Door, SecretDoor)) or isinstance(
+                        current_tile, Floor
+                    ):
                         self.corridors.add((x1, y))
         else:  # 水平線
             for x in range(min(x1, x2), max(x1, x2) + 1):
@@ -781,7 +844,9 @@ class DungeonGenerator:
                         self.tiles[y1, x] = Floor()
                         self.corridors.add((x, y1))
                     # ドアがある場合はそのまま保持し、通路として記録
-                    elif isinstance(current_tile, (Door, SecretDoor)) or isinstance(current_tile, Floor):
+                    elif isinstance(current_tile, (Door, SecretDoor)) or isinstance(
+                        current_tile, Floor
+                    ):
                         self.corridors.add((x, y1))
 
     def _place_door_safe(self, position: tuple[int, int], room: Room) -> None:

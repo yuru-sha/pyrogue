@@ -8,7 +8,7 @@ from pyrogue.entities.items.item import Armor, Item, Ring, Weapon
 class Inventory:
     """インベントリ管理クラス"""
 
-    def __init__(self, capacity: int = 26):  # a-zの26文字分
+    def __init__(self, capacity: int = 26) -> None:  # a-zの26文字分
         self.capacity = capacity
         self.items: list[Item] = []
 
@@ -181,3 +181,25 @@ class Inventory:
         """
         item = self.equipped.get(slot)
         return item.name if item else "None"
+
+    def get_equipped_weapon(self) -> Weapon | None:
+        """
+        装備中の武器を取得
+
+        Returns:
+            Optional[Weapon]: 装備中の武器（ない場合はNone）
+
+        """
+        weapon = self.equipped.get("weapon")
+        return weapon if isinstance(weapon, Weapon) else None
+
+    def get_equipped_armor(self) -> Armor | None:
+        """
+        装備中の防具を取得
+
+        Returns:
+            Optional[Armor]: 装備中の防具（ない場合はNone）
+
+        """
+        armor = self.equipped.get("armor")
+        return armor if isinstance(armor, Armor) else None

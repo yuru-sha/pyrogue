@@ -1,8 +1,21 @@
 """
-Game engine module.
+ゲームエンジンモジュール。
 
-This module implements the core game engine, handling the main game loop,
-state management, and event processing.
+このモジュールは、コアゲームエンジンを実装し、メインゲームループ、
+状態管理、イベント処理を担当します。
+
+主要機能:
+    - ゲームの主要ループ制御
+    - 画面状態（メニュー、ゲーム、ゲームオーバー）の管理
+    - ユーザー入力の処理とルーティング
+    - ウィンドウリサイズの対応
+    - TCODライブラリとの統合
+
+Example:
+    >>> engine = Engine()
+    >>> engine.initialize()
+    >>> engine.run()
+
 """
 
 from __future__ import annotations
@@ -16,13 +29,43 @@ from pyrogue.core.game_states import GameStates
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
+from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
 
 
 class Engine:
-    """Main game engine class."""
+    """
+    メインゲームエンジンクラス。
 
-    def __init__(self):
+    ゲーム全体のライフサイクルを管理し、各画面間の状態遷移、
+    ユーザー入力の処理、レンダリングを統合的に制御します。
+
+    特徴:
+        - 状態ベースの画面管理
+        - リサイズ可能なウィンドウサポート
+        - イベント駆動型アーキテクチャ
+        - 統合されたログ機能
+        - エラー処理とリソース管理
+
+    Attributes:
+        screen_width: スクリーンの幅（文字数）
+        screen_height: スクリーンの高さ（文字数）
+        console: TCODコンソールオブジェクト
+        state: 現在のゲーム状態
+        running: ゲームループ実行フラグ
+        menu_screen: メニュー画面インスタンス
+        game_screen: ゲーム画面インスタンス
+        game_over_screen: ゲームオーバー画面インスタンス
+
+    """
+
+    def __init__(self) -> None:
+        """
+        ゲームエンジンを初期化。
+
+        画面サイズの設定、コンソールの作成、各画面インスタンスの初期化を行います。
+        ゲーム状態はメニューから開始し、ログ機能を有効化します。
+        """
         self.screen_width = 80
         self.screen_height = 50
         self.map_width = 80
@@ -33,12 +76,13 @@ class Engine:
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
         self.state = GameStates.MENU
         self.running = False
-        self.message_log = []  # メッセージログを追加
+        self.message_log: list[str] = []  # メッセージログを追加
 
-        # 画面の初期化
+        # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
         self.game_screen = GameScreen(self)
         self.game_over_screen = GameOverScreen(self.console, self)
+        self.victory_screen = VictoryScreen(self.console, self)
 
         game_logger.debug(
             "Initializing game engine",
@@ -50,8 +94,13 @@ class Engine:
         )
 
     def initialize(self) -> None:
-        """Initialize the game engine and TCOD console."""
-        # フォントの設定
+        """
+        ゲームエンジンとTCODコンソールを初期化。
+
+        フォントの読み込み、ウィンドウコンテキストの作成、
+        リサイズ可能なウィンドウの設定を行います。
+        """
+        # デフォルトフォントファイルの読み込みと設定
         tileset = tcod.tileset.load_tilesheet(
             "data/assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
             32,
@@ -59,11 +108,11 @@ class Engine:
             tcod.tileset.CHARMAP_TCOD,  # 文字マップ
         )
 
-        # フォントサイズの設定
+        # フォントサイズをピクセル単位で設定
         self.font_width = 10
         self.font_height = 10
 
-        # Create the context with resizable window
+        # リサイズ可能なウィンドウでコンテキストを作成
         self.context = tcod.context.new(
             columns=self.screen_width,
             rows=self.screen_height,
@@ -75,24 +124,36 @@ class Engine:
         game_logger.debug("Game engine initialized")
 
     def handle_resize(self, event: tcod.event.WindowEvent) -> None:
-        """ウィンドウリサイズ時の処理"""
-        # 新しいウィンドウサイズを取得
-        pixel_width = event.width
-        pixel_height = event.height
+        """
+        ウィンドウリサイズ時の処理。
 
-        # ピクセルサイズから文字数を計算
-        self.screen_width = max(80, pixel_width // self.font_width)  # 最小幅は80文字
+        新しいウィンドウサイズに基づいて画面サイズを再計算し、
+        コンソールと各画面を更新します。最小サイズ制限も適用します。
+
+        Args:
+            event: ウィンドウリサイズイベント
+
+        """
+        # ピクセル単位での新しいウィンドウサイズを取得
+        pixel_width = getattr(event, "width", 800)
+        pixel_height = getattr(event, "height", 600)
+
+        # ピクセルサイズをフォントサイズで割って文字数を計算
+        self.screen_width = max(
+            80, pixel_width // self.font_width
+        )  # 最小幅80文字を保証
         self.screen_height = max(
             50, pixel_height // self.font_height
-        )  # 最小高さは50文字
+        )  # 最小高さ50文字を保証
 
-        # コンソールを再作成
+        # 新しいサイズでコンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
 
-        # 各画面のコンソールを更新
+        # 各画面インスタンスのコンソール参照を更新
         self.menu_screen.update_console(self.console)
         self.game_screen.update_console(self.console)
         self.game_over_screen.update_console(self.console)
+        self.victory_screen.update_console(self.console)
 
         game_logger.debug(
             "Window resized",
@@ -103,7 +164,13 @@ class Engine:
         )
 
     def run(self) -> None:
-        """Run the main game loop."""
+        """
+        メインゲームループを実行。
+
+        ゲームが終了するまでレンダリング、イベント処理、
+        状態更新のサイクルを継続します。例外処理とリソース
+        クリーンアップも含まれます。
+        """
         self.running = True
         game_logger.debug("Starting game loop")
 
@@ -111,13 +178,15 @@ class Engine:
             while self.running:
                 self.console.clear()
 
-                # 現在の状態に応じて描画
+                # 現在のゲーム状態に応じた画面を描画
                 if self.state == GameStates.MENU:
                     self.menu_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
                     self.game_screen.render()
                 elif self.state == GameStates.GAME_OVER:
                     self.game_over_screen.render()
+                elif self.state == GameStates.VICTORY:
+                    self.victory_screen.render()
 
                 self.context.present(self.console)
 
@@ -128,10 +197,9 @@ class Engine:
                         break
                     if event.type == "WINDOWRESIZED":
                         self.handle_resize(event)
-                    elif event.type == "KEYDOWN":
-                        if not self.handle_input(event):
-                            self.running = False
-                            break
+                    elif event.type == "KEYDOWN" and not self.handle_input(event):
+                        self.running = False
+                        break
 
         except Exception as e:
             game_logger.error(
@@ -144,13 +212,19 @@ class Engine:
 
     def handle_input(self, event: tcod.event.KeyDown) -> bool:
         """
-        キー入力の処理
+        キー入力イベントを処理。
+
+        ESCキーによる状態遷移と、現在の状態に応じた
+        入力ハンドリングを行います。
+
+        Args:
+            event: キーボード入力イベント
 
         Returns:
-            bool: ゲームを続行する場合はTrue、終了する場合はFalse
+            ゲームを続行する場合はTrue、終了する場合はFalse
 
         """
-        # ESCキーの処理
+        # ESCキーによる状態遷移の処理
         if event.sym == tcod.event.KeySym.ESCAPE:
             if self.state == GameStates.PLAYERS_TURN:
                 self.state = GameStates.MENU
@@ -160,8 +234,11 @@ class Engine:
             if self.state == GameStates.GAME_OVER:
                 self.state = GameStates.MENU
                 return True
+            if self.state == GameStates.VICTORY:
+                self.state = GameStates.MENU
+                return True
 
-        # 状態に応じたキー処理
+        # 現在の状態に応じた入力処理をルーティング
         if self.state == GameStates.MENU:
             new_state = self.menu_screen.handle_input(event)
             if new_state:
@@ -179,22 +256,83 @@ class Engine:
                     return False
                 self.state = new_state
             return True
+        if self.state == GameStates.VICTORY:
+            new_state = self.victory_screen.handle_input(event)
+            if new_state:
+                if new_state == GameStates.EXIT:
+                    return False
+                self.state = new_state
+            return True
         return True
 
     def cleanup(self) -> None:
-        """Cleanup resources before exiting."""
+        """
+        終了前のリソースクリーンアップ。
+
+        ゲーム終了時に必要なリソースの解放処理を行います。
+        """
         game_logger.debug("Cleaning up resources")
 
     def new_game(self) -> None:
-        """新しいゲームを開始"""
+        """
+        新しいゲームを開始。
+
+        ゲーム画面を初期化し、プレイヤーターン状態に遷移します。
+        """
         self.game_screen.setup_new_game()
         self.state = GameStates.PLAYERS_TURN
 
     def game_over(
         self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown"
     ) -> None:
-        """ゲームオーバー処理"""
+        """
+        ゲームオーバー処理。
+
+        プレイヤーの最終ステータスと死因を記録し、
+        ゲームオーバー画面に遷移します。
+
+        Args:
+            player_stats: プレイヤーの最終ステータス
+            final_floor: 到達した最終階層
+            cause_of_death: 死因の説明文
+
+        """
         self.game_over_screen.set_game_over_data(
             player_stats, final_floor, cause_of_death
         )
         self.state = GameStates.GAME_OVER
+
+    def victory(self, player_stats: dict, final_floor: int) -> None:
+        """
+        ゲーム勝利処理。
+
+        プレイヤーの最終ステータスを記録し、
+        勝利画面に遷移します。
+
+        Args:
+            player_stats: プレイヤーの最終ステータス
+            final_floor: 到達した最終階層
+
+        """
+        final_score = self.calculate_final_score(player_stats, final_floor)
+        self.victory_screen.set_victory_data(player_stats, final_floor, final_score)
+        self.state = GameStates.VICTORY
+
+    def calculate_final_score(self, player_stats: dict, final_floor: int) -> int:
+        """
+        最終スコアを計算。
+
+        Args:
+            player_stats: プレイヤーの最終ステータス
+            final_floor: 到達した最終階層
+
+        Returns:
+            計算された最終スコア
+
+        """
+        level_bonus = player_stats.get('level', 1) * 100
+        gold_bonus = player_stats.get('gold', 0) * 2
+        floor_bonus = final_floor * 50
+        hp_bonus = player_stats.get('hp', 0) * 10
+        
+        return level_bonus + gold_bonus + floor_bonus + hp_bonus
