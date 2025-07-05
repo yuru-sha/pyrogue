@@ -171,6 +171,19 @@ class Player:
         """
         self.hunger = max(0, self.hunger - amount)
 
+        # 飢餓状態をチェック
+        if self.hunger <= 0:
+            # 飢餓状態: ダメージを受ける
+            self.take_damage(1)
+
+    def is_starving(self) -> bool:
+        """飢餓状態かどうかを判定。"""
+        return self.hunger <= 0
+
+    def is_hungry(self) -> bool:
+        """空腹状態かどうかを判定。"""
+        return self.hunger < CONFIG.player.MAX_HUNGER * 0.1
+
     def eat_food(self, amount: int = 25) -> None:
         """
         食料を食べて満腹度を回復。
@@ -194,7 +207,7 @@ class Player:
             装備ボーナスを含む総攻撃力
 
         """
-        base_attack = CONFIG.player.INITIAL_ATTACK
+        base_attack = self.attack
         bonus = self.inventory.get_attack_bonus()
         return base_attack + bonus
 
@@ -209,7 +222,7 @@ class Player:
             装備ボーナスを含む総防御力
 
         """
-        base_defense = CONFIG.player.INITIAL_DEFENSE
+        base_defense = self.defense
         bonus = self.inventory.get_defense_bonus()
         return base_defense + bonus
 
@@ -253,7 +266,7 @@ class Player:
             self.inventory.add_item(item)
         return item
 
-    def use_item(self, item: Item) -> bool:
+    def use_item(self, item: Item, context=None) -> bool:
         """
         アイテムを使用して効果を適用。
 
@@ -262,30 +275,20 @@ class Player:
 
         Args:
             item: 使用するアイテム
+            context: 効果適用のためのコンテキスト（ゲーム画面など）
 
         Returns:
             使用に成功した場合はTrue、失敗した場合はFalse
 
         """
-        if isinstance(item, Scroll):
-            # 巻物の効果をプレイヤーに適用
-            success = item.apply_effect(self)
+        if isinstance(item, (Scroll, Potion, Food)):
+            if context is None:
+                return False
+            # 新しいeffectシステムを使用
+            success = item.apply_effect(context)
             if success:
                 self.inventory.remove_item(item)
             return success
-
-        if isinstance(item, Potion):
-            # ポーションの効果をプレイヤーに適用
-            success = item.apply_effect(self)
-            if success:
-                self.inventory.remove_item(item)
-            return success
-
-        if isinstance(item, Food):
-            # 食料を食べて満腹度を回復
-            self.hunger = min(CONFIG.player.MAX_HUNGER, self.hunger + item.nutrition)
-            self.inventory.remove_item(item)
-            return True
 
         if isinstance(item, Gold):
             # 金貨を所持金に加算

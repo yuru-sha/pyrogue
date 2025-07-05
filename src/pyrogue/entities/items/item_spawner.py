@@ -33,6 +33,19 @@ from .item_types import (
     get_gold_amount,
     get_item_spawn_count,
 )
+from .effects import (
+    HEAL_LIGHT,
+    HEAL_MEDIUM,
+    HEAL_FULL,
+    TELEPORT,
+    MAGIC_MAPPING,
+    IDENTIFY,
+    FOOD_RATION,
+    FOOD_BREAD,
+    FOOD_APPLE,
+    HealingEffect,
+    Effect,
+)
 
 
 class ItemSpawner:
@@ -86,7 +99,7 @@ class ItemSpawner:
             x, y = self._find_valid_position(dungeon_tiles, room)
             if x is not None and y is not None:
                 amulet = Item(
-                    x, y, AMULET.char, AMULET.name, (255, 215, 0)
+                    x=x, y=y, name=AMULET.name, char=AMULET.char, color=(255, 215, 0)
                 )  # Gold color
                 self.items.append(amulet)
                 self.occupied_positions.add((x, y))  # 位置を追加
@@ -253,7 +266,8 @@ class ItemSpawner:
         scroll_type = random.choices(
             available, weights=[s.spawn_weight for s in available], k=1
         )[0]
-        return Scroll(0, 0, scroll_type.name, scroll_type.effect)
+        effect = self._get_scroll_effect(scroll_type.effect)
+        return Scroll(0, 0, scroll_type.name, effect)
 
     def _create_potion(self) -> Potion | None:
         """
@@ -273,8 +287,8 @@ class ItemSpawner:
         potion_type = random.choices(
             available, weights=[p.spawn_weight for p in available], k=1
         )[0]
-        power = random.randint(*potion_type.power_range)
-        return Potion(0, 0, potion_type.name, potion_type.effect, power)
+        effect = self._get_potion_effect(potion_type.effect, potion_type.power_range)
+        return Potion(0, 0, potion_type.name, effect)
 
     def _create_food(self) -> Food | None:
         """
@@ -293,7 +307,8 @@ class ItemSpawner:
         food_type = random.choices(
             available, weights=[f.spawn_weight for f in available], k=1
         )[0]
-        return Food(0, 0, food_type.name, food_type.nutrition)
+        effect = self._get_food_effect(food_type.nutrition)
+        return Food(0, 0, food_type.name, effect)
 
     def _create_gold(self) -> Gold:
         """
@@ -361,3 +376,38 @@ class ItemSpawner:
         self.items.append(item)
         self.occupied_positions.add(pos)
         return True
+
+    def _get_scroll_effect(self, effect_name: str) -> Effect:
+        """Map effect name to Effect object for scrolls."""
+        effect_map = {
+            "identify": IDENTIFY,
+            "light": IDENTIFY,  # Placeholder for now
+            "remove_curse": IDENTIFY,  # Placeholder for now
+            "enchant_weapon": IDENTIFY,  # Placeholder for now
+            "enchant_armor": IDENTIFY,  # Placeholder for now
+            "teleport": TELEPORT,
+            "magic_mapping": MAGIC_MAPPING,
+        }
+        return effect_map.get(effect_name, IDENTIFY)
+
+    def _get_potion_effect(self, effect_name: str, power_range: tuple[int, int]) -> Effect:
+        """Map effect name to Effect object for potions."""
+        power = random.randint(*power_range)
+
+        if effect_name == "healing":
+            return HealingEffect(power)
+        elif effect_name == "extra_healing":
+            return HealingEffect(power)
+        elif effect_name in ["strength", "restore_strength", "haste_self", "see_invisible", "poison"]:
+            # These need special handling or are placeholders
+            return HealingEffect(power)  # Temporary fallback
+
+        return HealingEffect(power)
+
+    def _get_food_effect(self, nutrition: int) -> Effect:
+        """Map nutrition value to Effect object for food."""
+        from .effects import NutritionEffect
+
+        # Convert nutrition to hunger restoration value
+        hunger_value = nutrition // 36  # 900 -> 25, 600 -> 16
+        return NutritionEffect(hunger_value)

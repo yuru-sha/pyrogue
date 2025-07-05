@@ -140,7 +140,7 @@ class InventoryScreen(Screen):
         # u: 使用
         elif key.sym == tcod.event.KeySym.U:
             if isinstance(selected_item, (Scroll, Potion, Food)):
-                if self.game_screen.player.use_item(selected_item):
+                if self.game_screen.player.use_item(selected_item, context=self.game_screen):
                     self.game_screen.message_log.append(
                         f"You use the {selected_item.name}."
                     )

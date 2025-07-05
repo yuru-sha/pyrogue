@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from pyrogue.entities.items.effects import Effect, EffectContext
 
 
 @dataclass
@@ -91,7 +95,7 @@ class Ring(Item):
 class Scroll(Item):
     """巻物クラス"""
 
-    def __init__(self, x: int, y: int, name: str, effect: str):
+    def __init__(self, x: int, y: int, name: str, effect: "Effect"):
         super().__init__(
             x=x,
             y=y,
@@ -107,50 +111,15 @@ class Scroll(Item):
         """巻物を使用した時のメッセージを返す"""
         return f"You read {self.name}."
 
-    def apply_effect(self, target: object) -> bool:
+    def apply_effect(self, context: "EffectContext") -> bool:
         """巻物の効果を適用する"""
-        from pyrogue.entities.actors.player import Player
-
-        if not isinstance(target, Player):
-            return False
-
-        if self.effect == "identify":
-            # 現在は常に識別済みなので効果なし
-            return True
-        elif self.effect == "light":
-            # 現在は視界システムがないので効果なし
-            return True
-        elif self.effect == "remove_curse":
-            # 呪いシステムがないので効果なし
-            return True
-        elif self.effect == "enchant_weapon":
-            # 武器を強化
-            weapon = target.inventory.get_equipped_weapon()
-            if weapon:
-                weapon.attack += 1
-                return True
-            return False
-        elif self.effect == "enchant_armor":
-            # 防具を強化
-            armor = target.inventory.get_equipped_armor()
-            if armor:
-                armor.defense += 1
-                return True
-            return False
-        elif self.effect == "teleport":
-            # テレポートはゲームエンジンで処理する必要がある
-            return True
-        elif self.effect == "magic_mapping":
-            # マップ表示はゲームエンジンで処理する必要がある
-            return True
-
-        return False
+        return self.effect.apply(context)
 
 
 class Potion(Item):
     """薬クラス"""
 
-    def __init__(self, x: int, y: int, name: str, effect: str, power: int):
+    def __init__(self, x: int, y: int, name: str, effect: "Effect"):
         super().__init__(
             x=x,
             y=y,
@@ -161,51 +130,20 @@ class Potion(Item):
             identified=True,
         )
         self.effect = effect
-        self.power = power
 
     def use(self) -> str:
         """薬を使用した時のメッセージを返す"""
         return f"You drink {self.name}."
 
-    def apply_effect(self, target: object) -> bool:
+    def apply_effect(self, context: "EffectContext") -> bool:
         """薬の効果を適用する"""
-        from pyrogue.entities.actors.player import Player
-
-        if not isinstance(target, Player):
-            return False
-
-        if self.effect == "healing":
-            target.heal(self.power)
-            return True
-        elif self.effect == "extra_healing":
-            target.heal(self.power)
-            return True
-        elif self.effect == "strength":
-            # 一時的な攻撃力上昇は現在未実装なので、基本攻撃力を上げる
-            target.attack += self.power
-            return True
-        elif self.effect == "restore_strength":
-            # 攻撃力を初期値に戻す（レベルボーナス含む）
-            target.attack = max(5 + (target.level - 1) * 2, target.attack)
-            return True
-        elif self.effect == "haste_self":
-            # 現在はメッセージのみ（実装は後で）
-            return True
-        elif self.effect == "see_invisible":
-            # 現在はメッセージのみ（実装は後で）
-            return True
-        elif self.effect == "poison":
-            # 毒ポーション（ダメージを与える）
-            target.take_damage(self.power)
-            return True
-
-        return False
+        return self.effect.apply(context)
 
 
 class Food(Item):
     """食料クラス"""
 
-    def __init__(self, x: int, y: int, name: str, nutrition: int):
+    def __init__(self, x: int, y: int, name: str, effect: "Effect"):
         super().__init__(
             x=x,
             y=y,
@@ -215,27 +153,15 @@ class Food(Item):
             stackable=True,
             identified=True,
         )
-        self.nutrition = nutrition
+        self.effect = effect
 
     def use(self) -> str:
         """食料を使用した時のメッセージを返す"""
         return f"You eat {self.name}."
 
-    def apply_effect(self, target: object) -> bool:
+    def apply_effect(self, context: "EffectContext") -> bool:
         """食料の効果を適用する"""
-        from pyrogue.entities.actors.player import Player
-
-        if not isinstance(target, Player):
-            return False
-
-        # 満腹度を回復
-        target.eat_food(self.nutrition // 36)  # 900 -> 25, 600 -> 16
-
-        # 食料によってはHPも少し回復
-        if self.nutrition >= 900:  # Food Ration
-            target.heal(1)
-
-        return True
+        return self.effect.apply(context)
 
 
 class Gold(Item):

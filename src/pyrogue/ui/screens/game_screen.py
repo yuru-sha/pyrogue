@@ -29,6 +29,7 @@ from pyrogue.entities.actors.monster import Monster
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
 from pyrogue.entities.items.item import Gold, Item
 from pyrogue.entities.items.item_spawner import ItemSpawner
+from pyrogue.entities.items.effects import EffectContext
 from pyrogue.map.dungeon import DungeonGenerator
 from pyrogue.map.tile import (
     Door,
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
 
 
 class GameScreen:
+    """Game Screen that implements EffectContext protocol."""
     """
     メインゲームのスクリーンクラス。
 
@@ -74,6 +76,7 @@ class GameScreen:
 
         """
         self.engine = engine
+        self.message_log = []  # メッセージログを初期化
 
         # 現在の階層と前の階層
         self.current_floor = 1
@@ -215,6 +218,57 @@ class GameScreen:
                 return True
 
         return PlayerProxy(self)
+
+    # EffectContextプロトコルの実装
+    @property
+    def player(self):
+        """プレイヤーオブジェクトへのアクセス。"""
+        return self._create_player_object()
+
+    @property
+    def dungeon(self):
+        """ダンジョンオブジェクトへのアクセス。"""
+        return self._create_dungeon_object()
+
+    @property
+    def game_screen(self):
+        """ゲームスクリーン自身へのアクセス。"""
+        return self
+
+    def _create_dungeon_object(self):
+        """ダンジョンオブジェクトのプロキシを作成。"""
+        class DungeonProxy:
+            def __init__(self, game_screen):
+                self.game_screen = game_screen
+
+            @property
+            def current_floor(self):
+                return self.game_screen.current_floor
+
+            @property
+            def tiles(self):
+                return self.game_screen.dungeon_tiles
+
+            @property
+            def width(self):
+                return self.game_screen.dungeon_width
+
+            @property
+            def height(self):
+                return self.game_screen.dungeon_height
+
+            @property
+            def explored(self):
+                return self.game_screen.explored
+
+            def get_blocking_entity_at(self, x, y):
+                # モンスターがその位置にいるかチェック
+                for monster in self.game_screen.monsters:
+                    if monster.x == x and monster.y == y:
+                        return monster
+                return None
+
+        return DungeonProxy(self)
 
     def _save_current_floor(self) -> None:
         """現在のフロアの状態を保存"""
@@ -1252,10 +1306,9 @@ class GameScreen:
         # インベントリから該当するアイテムを検索
         for item in self.inventory.items:
             if item.name.lower() == item_name.lower():
-                # アイテムの使用処理
-                if hasattr(item, 'use'):
-                    item.use(self.player)
-                    self.inventory.remove_item(item)
+                # 新しいeffectシステムを使用
+                success = self.player.use_item(item, context=self)
+                if success:
                     self.message_log.append(f"You used {item.name}.")
                     return True
                 else:
