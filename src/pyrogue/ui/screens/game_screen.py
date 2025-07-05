@@ -65,12 +65,12 @@ class GameScreen:
 
     """
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine | None) -> None:
         """
         ゲームスクリーンを初期化。
 
         Args:
-            engine: メインゲームエンジンのインスタンス
+            engine: メインゲームエンジンのインスタンス（CLIモードの場合はNone）
 
         """
         self.engine = engine
@@ -131,8 +131,7 @@ class GameScreen:
             "ring_right": "None",
         }
 
-        # Player object for compatibility with InventoryScreen
-        self.player = self._create_player_object()
+        # Player object will be created as needed via property
 
         # メッセージログ
         self.message_log = [
@@ -160,6 +159,52 @@ class GameScreen:
             @property
             def inventory(self):
                 return self.game_screen.inventory
+
+            @property
+            def x(self):
+                return self.game_screen.player_x
+
+            @property
+            def y(self):
+                return self.game_screen.player_y
+
+            @property
+            def hp(self):
+                return self.game_screen.player_stats["hp"]
+
+            @property
+            def max_hp(self):
+                return self.game_screen.player_stats["hp_max"]
+
+            @property
+            def level(self):
+                return self.game_screen.player_stats["level"]
+
+            @property
+            def gold(self):
+                return self.game_screen.player_stats["gold"]
+
+            @property
+            def exp(self):
+                return self.game_screen.player_stats["exp"]
+
+            @property
+            def hunger(self):
+                return self.game_screen.player_stats["hunger"]
+
+            @property
+            def attack(self):
+                return self.game_screen.player_stats["attack"]
+
+            @property
+            def defense(self):
+                return self.game_screen.player_stats["defense"]
+
+            def get_attack(self):
+                return self.game_screen.player_stats["attack"]
+
+            def get_defense(self):
+                return self.game_screen.player_stats["defense"]
 
             def equip_item(self, item):
                 # Simple equipment logic
@@ -191,9 +236,17 @@ class GameScreen:
             or (floor_number < self.previous_floor)
         ):  # 上の階に戻る場合
             # 新しい階層を生成
+            if self.engine:
+                dungeon_width = self.engine.map_width
+                dungeon_height = self.engine.map_height
+            else:
+                # CLIモードでは固定値を使用
+                dungeon_width = 80
+                dungeon_height = 45
+
             dungeon = DungeonGenerator(
-                width=self.engine.map_width,
-                height=self.engine.map_height,
+                width=dungeon_width,
+                height=dungeon_height,
                 floor=floor_number,
             )
             tiles, up_pos, down_pos = dungeon.generate()
@@ -213,7 +266,7 @@ class GameScreen:
                 "monster_spawner": monster_spawner,
                 "item_spawner": item_spawner,
                 "explored": np.full(
-                    (self.engine.map_height, self.engine.map_width), False, dtype=bool
+                    (dungeon_height, dungeon_width), False, dtype=bool
                 ),
             }
 
@@ -281,10 +334,13 @@ class GameScreen:
 
     def update_console(self, console: tcod.console.Console) -> None:
         """コンソールの更新"""
-        self.engine.console = console
+        if self.engine:  # CLIモードでは engine が None の場合がある
+            self.engine.console = console
 
     def render(self) -> None:
         """画面の描画"""
+        if not self.engine:  # CLIモードでは engine が None
+            return
         self.engine.console.clear()
 
         # ステータス表示（上部2行）
@@ -594,9 +650,10 @@ class GameScreen:
         if self.player_stats["hp"] <= 0:
             self.message_log.append("You died!")
             self.check_player_death()  # パーマデスを発動
-            self.engine.game_over(
-                self.player_stats, self.current_floor, f"Killed by {monster.name}"
-            )
+            if self.engine:  # CLIモードでは engine が None の場合がある
+                self.engine.game_over(
+                    self.player_stats, self.current_floor, f"Killed by {monster.name}"
+                )
 
     def _handle_door_open(self) -> None:
         """扉を開ける処理"""
@@ -1065,17 +1122,18 @@ class GameScreen:
                     "You escaped with the Amulet of Yendor! You win!"
                 )
                 # ゲームクリア処理
-                player_stats = {
-                    "level": self.player.level,
-                    "hp": self.player.hp,
-                    "max_hp": self.player.max_hp,
-                    "exp": self.player.exp,
-                    "gold": self.player.gold,
-                    "attack": self.player.get_attack(),
-                    "defense": self.player.get_defense(),
-                    "hunger": self.player.hunger,
-                }
-                self.engine.victory(player_stats, self.current_floor)
+                if self.engine:  # CLIモードでは engine が None の場合がある
+                    player_stats = {
+                        "level": self.player.level,
+                        "hp": self.player.hp,
+                        "max_hp": self.player.max_hp,
+                        "exp": self.player.exp,
+                        "gold": self.player.gold,
+                        "attack": self.player.get_attack(),
+                        "defense": self.player.get_defense(),
+                        "hunger": self.player.hunger,
+                    }
+                    self.engine.victory(player_stats, self.current_floor)
             else:
                 self.message_log.append(
                     "You need the Amulet of Yendor to leave the dungeon."
@@ -1120,3 +1178,172 @@ class GameScreen:
 
         # 最初のフロアを生成
         self._load_floor(self.current_floor)
+
+    # CLI用のメソッドを追加
+    def try_move_player(self, dx: int, dy: int) -> bool:
+        """
+        プレイヤーの移動を試行（CLI用）。
+
+        Args:
+            dx: X方向の移動量
+            dy: Y方向の移動量
+
+        Returns:
+            移動が成功したかどうか
+        """
+        new_x = self.player_x + dx
+        new_y = self.player_y + dy
+
+        if self._can_move_to(new_x, new_y):
+            # 移動先にモンスターがいる場合は戦闘
+            if self.monster_spawner:
+                monster = self.monster_spawner.get_monster_at(new_x, new_y)
+            else:
+                monster = None
+            if monster:
+                self._handle_combat(monster)
+                return True
+            else:
+                # 移動を実行
+                self.player_x = new_x
+                self.player_y = new_y
+                self._auto_pickup()
+                self._compute_fov()
+                return True
+
+        return False
+
+    def try_attack_adjacent_enemy(self) -> bool:
+        """
+        隣接する敵を攻撃（CLI用）。
+
+        Returns:
+            攻撃が成功したかどうか
+        """
+        # 隣接する8方向をチェック
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                x = self.player_x + dx
+                y = self.player_y + dy
+
+                if self.monster_spawner:
+                    monster = self.monster_spawner.get_monster_at(x, y)
+                else:
+                    monster = None
+                if monster:
+                    self._handle_combat(monster)
+                    return True
+
+        return False
+
+    def try_use_item(self, item_name: str) -> bool:
+        """
+        アイテムを使用（CLI用）。
+
+        Args:
+            item_name: 使用するアイテム名
+
+        Returns:
+            使用が成功したかどうか
+        """
+        # インベントリから該当するアイテムを検索
+        for item in self.inventory.items:
+            if item.name.lower() == item_name.lower():
+                # アイテムの使用処理
+                if hasattr(item, 'use'):
+                    item.use(self.player)
+                    self.inventory.remove_item(item)
+                    self.message_log.append(f"You used {item.name}.")
+                    return True
+                else:
+                    self.message_log.append(f"You cannot use {item.name}.")
+                    return False
+
+        self.message_log.append(f"You don't have {item_name}.")
+        return False
+
+    def get_nearby_enemies(self) -> list:
+        """
+        周囲の敵を取得（CLI用）。
+
+        Returns:
+            周囲にいる敵のリスト
+        """
+        enemies = []
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                x = self.player_x + dx
+                y = self.player_y + dy
+
+                if self.monster_spawner:
+                    monster = self.monster_spawner.get_monster_at(x, y)
+                else:
+                    monster = None
+                if monster:
+                    enemies.append(monster)
+
+        return enemies
+
+    def check_game_over(self) -> bool:
+        """
+        ゲームオーバー状態をチェック（CLI用）。
+
+        Returns:
+            ゲームオーバーかどうか
+        """
+        return self.player.hp <= 0
+
+    def check_victory(self) -> bool:
+        """
+        勝利条件をチェック（CLI用）。
+
+        Returns:
+            勝利しているかどうか
+        """
+        # イェンダーの魔除けを持っているかチェック
+        for item in self.inventory.items:
+            if isinstance(item, Item) and item.name == "The Amulet of Yendor":
+                return True
+        return False
+
+    def process_enemy_turns(self) -> None:
+        """
+        敵のターンを処理（CLI用）。
+        """
+        # 全ての敵のターンを処理
+        if self.monster_spawner:
+            for monster in self.monster_spawner.monsters:
+                if monster.hp > 0:  # 生きている敵のみ
+                    monster.take_turn(self.player_x, self.player_y, self.dungeon_tiles)
+
+    @property
+    def player(self):
+        """プレイヤーオブジェクトを返す（CLI用）。"""
+        return self._create_player_object()
+
+    @property
+    def dungeon(self):
+        """ダンジョンオブジェクトを返す（CLI用）。"""
+        return self._create_dungeon_object()
+
+    def _create_dungeon_object(self):
+        """ダンジョンオブジェクトを作成（CLI用）。"""
+        class DungeonProxy:
+            def __init__(self, game_screen):
+                self.game_screen = game_screen
+
+            @property
+            def current_floor(self):
+                return self.game_screen.current_floor
+
+            @property
+            def tiles(self):
+                return self.game_screen.dungeon_tiles
+
+        return DungeonProxy(self)

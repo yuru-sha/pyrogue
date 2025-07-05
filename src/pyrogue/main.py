@@ -10,10 +10,12 @@ Example:
 
 """
 
+import argparse
 import sys
 import traceback
 
 from pyrogue.core.engine import Engine
+from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.utils import game_logger
 
 
@@ -21,14 +23,27 @@ def main() -> None:
     """
     メイン関数。
 
+    コマンドライン引数を解析し、CLIモードまたはGUIモードで
     ゲームエンジンを初期化し、メインゲームループを開始します。
     例外が発生した場合は適切にログ記録し、エラーメッセージを
     標準エラー出力に表示してプログラムを終了します。
     """
+    parser = argparse.ArgumentParser(description="PyRogue - A Python Roguelike Game")
+    parser.add_argument(
+        "--cli",
+        action="store_true",
+        help="Run in CLI mode for automated testing"
+    )
+    args = parser.parse_args()
+
     try:
-        engine = Engine()
-        engine.initialize()
-        engine.run()
+        if args.cli:
+            engine = CLIEngine()
+            engine.run()
+        else:
+            engine = Engine()
+            engine.initialize()
+            engine.run()
     except Exception as e:
         game_logger.error(
             "Fatal error", extra={"error": str(e), "traceback": traceback.format_exc()}
