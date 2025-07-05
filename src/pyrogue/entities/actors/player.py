@@ -69,6 +69,9 @@ class Player:
     exp: int = 0
     hunger: int = CONFIG.player.MAX_HUNGER
     gold: int = 0
+    light_duration: int = 0  # Light効果の残りターン数
+    base_light_radius: int = 10  # 基本視野範囲
+    light_radius: int = 10  # 現在の視野範囲
 
     def __init__(self, x: int, y: int) -> None:
         """
@@ -175,6 +178,19 @@ class Player:
         if self.hunger <= 0:
             # 飢餓状態: ダメージを受ける
             self.take_damage(1)
+
+    def update_light_effect(self) -> None:
+        """Light効果のターン経過処理"""
+        if self.light_duration > 0:
+            self.light_duration -= 1
+            if self.light_duration <= 0:
+                # 効果終了：視野範囲を基本値に戻す
+                self.light_radius = self.base_light_radius
+
+    def apply_light_effect(self, duration: int = 50, radius: int = 15) -> None:
+        """Light効果を適用"""
+        self.light_duration = duration
+        self.light_radius = radius
 
     def is_starving(self) -> bool:
         """飢餓状態かどうかを判定。"""

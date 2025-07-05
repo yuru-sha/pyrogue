@@ -120,6 +120,9 @@ class Inventory:
         """
         if slot in self.equipped:
             item = self.equipped[slot]
+            # 呪われたアイテムは外せない
+            if item and item.cursed:
+                return None
             self.equipped[slot] = None
             return item
         return None
@@ -134,9 +137,10 @@ class Inventory:
         """
         bonus = 0
 
-        # 武器のボーナス
+        # 武器のボーナス（基本攻撃力＋強化値）
         if isinstance(self.equipped["weapon"], Weapon):
-            bonus += self.equipped["weapon"].attack
+            weapon = self.equipped["weapon"]
+            bonus += weapon.attack + weapon.enchantment
 
         # 指輪のボーナス
         for ring_slot in ["ring_left", "ring_right"]:
@@ -156,9 +160,10 @@ class Inventory:
         """
         bonus = 0
 
-        # 防具のボーナス
+        # 防具のボーナス（基本防御力＋強化値）
         if isinstance(self.equipped["armor"], Armor):
-            bonus += self.equipped["armor"].defense
+            armor = self.equipped["armor"]
+            bonus += armor.defense + armor.enchantment
 
         # 指輪のボーナス
         for ring_slot in ["ring_left", "ring_right"]:

@@ -40,6 +40,10 @@ from .effects import (
     TELEPORT,
     MAGIC_MAPPING,
     IDENTIFY,
+    REMOVE_CURSE,
+    ENCHANT_WEAPON,
+    ENCHANT_ARMOR,
+    LIGHT,
     FOOD_RATION,
     FOOD_BREAD,
     FOOD_APPLE,
@@ -381,10 +385,10 @@ class ItemSpawner:
         """Map effect name to Effect object for scrolls."""
         effect_map = {
             "identify": IDENTIFY,
-            "light": IDENTIFY,  # Placeholder for now
-            "remove_curse": IDENTIFY,  # Placeholder for now
-            "enchant_weapon": IDENTIFY,  # Placeholder for now
-            "enchant_armor": IDENTIFY,  # Placeholder for now
+            "light": LIGHT,
+            "remove_curse": REMOVE_CURSE,
+            "enchant_weapon": ENCHANT_WEAPON,
+            "enchant_armor": ENCHANT_ARMOR,
             "teleport": TELEPORT,
             "magic_mapping": MAGIC_MAPPING,
         }

@@ -21,6 +21,7 @@ class Item:
     stackable: bool = False  # 重ね合わせ可能か
     identified: bool = True  # 識別済みか（このゲームでは常にTrue）
     stack_count: int = 1  # スタック数
+    cursed: bool = False  # 呪いフラグ
 
     def pick_up(self) -> str:
         """アイテムを拾った時のメッセージを返す"""
@@ -49,6 +50,7 @@ class Weapon(Item):
             identified=True,
         )
         self.attack = attack_bonus
+        self.enchantment = 0  # 強化レベル
 
     def pick_up(self) -> str:
         """武器を拾った時のメッセージ"""
@@ -69,6 +71,7 @@ class Armor(Item):
             identified=True,
         )
         self.defense = defense_bonus
+        self.enchantment = 0  # 強化レベル
 
     def pick_up(self) -> str:
         """防具を拾った時のメッセージ"""

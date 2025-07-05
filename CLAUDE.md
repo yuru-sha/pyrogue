@@ -108,24 +108,12 @@ make setup-dev
 ```bash
 # Run the game (release mode)
 make run
-
-# Run in development mode (debug logging enabled)
-make dev
 ```
 
 ### Development Workflow
 ```bash
-# Format code
-make format
-
-# Run linting and type checking
-make lint
-
-# Run tests
-make test
-
-# Full release build (clean, format, lint, test)
-make release
+# Run ci check
+make ci-checks
 ```
 
 Note: The project uses `uv` as the package manager. All development commands are run through `uv run`.

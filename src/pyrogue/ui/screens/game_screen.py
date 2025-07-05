@@ -365,11 +365,14 @@ class GameScreen:
 
     def _compute_fov(self) -> None:
         """FOVを計算"""
+        # プレイヤーの現在の視野範囲を使用
+        radius = self.engine.player.light_radius
+
         # FOVマップを更新
         self.fov_map.compute_fov(
             self.player_x,
             self.player_y,
-            radius=10,
+            radius=radius,
             light_walls=True,
             algorithm=tcod.constants.FOV_RESTRICTIVE,
         )

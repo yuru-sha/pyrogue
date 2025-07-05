@@ -189,6 +189,132 @@ class NutritionEffect(InstantEffect):
             return False
 
 
+class RemoveCurseEffect(InstantEffect):
+    """Removes curse from all items in the player's inventory."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            name="Remove Curse",
+            description="Removes the curse from all your items"
+        )
+
+    def apply(self, context: EffectContext) -> bool:
+        player = context.player
+        cursed_count = 0
+
+        # Remove curse from all items in inventory
+        for item in player.inventory.items:
+            if item.cursed:
+                item.cursed = False
+                cursed_count += 1
+
+        # Remove curse from all equipped items
+        for slot_item in player.inventory.equipped.values():
+            if slot_item and slot_item.cursed:
+                slot_item.cursed = False
+                cursed_count += 1
+
+        if cursed_count > 0:
+            context.game_screen.message_log.append(
+                f"You feel the curse lift from {cursed_count} item(s)!"
+            )
+        else:
+            context.game_screen.message_log.append(
+                "You don't feel any curses upon your belongings."
+            )
+
+        return True
+
+
+class EnchantWeaponEffect(InstantEffect):
+    """Enchants the currently equipped weapon."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            name="Enchant Weapon",
+            description="Magically enhances your weapon"
+        )
+
+    def apply(self, context: EffectContext) -> bool:
+        player = context.player
+        weapon = player.inventory.get_equipped_weapon()
+
+        if not weapon:
+            context.game_screen.message_log.append(
+                "You need to be wielding a weapon to enchant it!"
+            )
+            return False
+
+        # Check enchantment limit (max +9)
+        if weapon.enchantment >= 9:
+            context.game_screen.message_log.append(
+                "Your weapon glows briefly, but nothing happens."
+            )
+            return False
+
+        weapon.enchantment += 1
+        enchant_text = f"+{weapon.enchantment}" if weapon.enchantment > 0 else ""
+        context.game_screen.message_log.append(
+            f"Your {weapon.name} glows with magical energy! (now {enchant_text} {weapon.name})"
+        )
+        return True
+
+
+class EnchantArmorEffect(InstantEffect):
+    """Enchants the currently equipped armor."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            name="Enchant Armor",
+            description="Magically enhances your armor"
+        )
+
+    def apply(self, context: EffectContext) -> bool:
+        player = context.player
+        armor = player.inventory.get_equipped_armor()
+
+        if not armor:
+            context.game_screen.message_log.append(
+                "You need to be wearing armor to enchant it!"
+            )
+            return False
+
+        # Check enchantment limit (max +9)
+        if armor.enchantment >= 9:
+            context.game_screen.message_log.append(
+                "Your armor gleams briefly, but nothing happens."
+            )
+            return False
+
+        armor.enchantment += 1
+        enchant_text = f"+{armor.enchantment}" if armor.enchantment > 0 else ""
+        context.game_screen.message_log.append(
+            f"Your {armor.name} shimmers with protective magic! (now {enchant_text} {armor.name})"
+        )
+        return True
+
+
+class LightEffect(InstantEffect):
+    """Creates a magical light that expands the player's vision for a limited time."""
+
+    def __init__(self, duration: int = 50, radius: int = 15) -> None:
+        super().__init__(
+            name="Light",
+            description=f"Illuminates a wide area for {duration} turns"
+        )
+        self.duration = duration
+        self.radius = radius
+
+    def apply(self, context: EffectContext) -> bool:
+        player = context.player
+        player.apply_light_effect(self.duration, self.radius)
+
+        context.game_screen.message_log.append(
+            "A brilliant light surrounds you, expanding your vision!"
+        )
+        return True
+
+
 # Pre-defined common effects
 HEAL_LIGHT = HealingEffect(25)
 HEAL_MEDIUM = HealingEffect(50)
@@ -196,6 +322,10 @@ HEAL_FULL = HealingEffect(999)
 TELEPORT = TeleportEffect()
 MAGIC_MAPPING = MagicMappingEffect()
 IDENTIFY = IdentifyEffect()
+REMOVE_CURSE = RemoveCurseEffect()
+ENCHANT_WEAPON = EnchantWeaponEffect()
+ENCHANT_ARMOR = EnchantArmorEffect()
+LIGHT = LightEffect()
 FOOD_RATION = NutritionEffect(200)
 FOOD_BREAD = NutritionEffect(100)
 FOOD_APPLE = NutritionEffect(50)
