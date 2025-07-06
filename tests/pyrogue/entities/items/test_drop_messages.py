@@ -3,11 +3,6 @@
 アイテムドロップメッセージのテスト
 """
 
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
 from pyrogue.entities.items.item import Weapon, Armor, Scroll, Food, Gold
 
 

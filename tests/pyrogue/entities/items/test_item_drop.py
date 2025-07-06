@@ -3,11 +3,6 @@
 アイテムドロップ機能のテストスクリプト
 """
 
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.items.item import Weapon, Armor, Scroll, Food
