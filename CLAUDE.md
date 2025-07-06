@@ -7,12 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 PyRogue is a traditional roguelike game built with Python and TCOD (The Coding of Doryen). It features procedurally generated dungeons, turn-based combat, permadeath mechanics, and classic roguelike exploration elements. The game follows traditional roguelike conventions where monsters are represented by A-Z letters and all items are pre-identified.
 
 ### Key Features
-- Procedural dungeon generation with rooms and corridors
+- Procedural dungeon generation with rooms and corridors (26 floors, matching original Rogue)
 - Turn-based tactical combat system
 - Permadeath (permanent death) mechanics
 - Exploration-focused gameplay
 - Vi-key movement controls (hjkl + diagonals)
-- Inventory and equipment system
+- Comprehensive inventory and equipment system
+- Status effect system (poison, paralysis, confusion)
+- Trap system (pit traps, poison needles, teleport traps)
+- Magic system with MP management and spell casting
 - Save/load functionality
 - Both GUI and CLI modes for testing
 
@@ -47,17 +50,23 @@ pyrogue/
 │   │
 │   ├── entities/         # Game entities (actors and items)
 │   │   ├── actors/       # Player and monsters
-│   │   │   ├── player.py        # Player character
+│   │   │   ├── player.py        # Player character with MP and status effects
 │   │   │   ├── monster.py       # Monster entities
 │   │   │   ├── monster_spawner.py # Monster generation
 │   │   │   ├── monster_types.py   # Monster definitions
 │   │   │   ├── inventory.py     # Inventory system
-│   │   │   └── player_status.py # Player stats and status
-│   │   └── items/        # Items and equipment
-│   │       ├── item.py          # Base item class
-│   │       ├── item_spawner.py  # Item generation
-│   │       ├── item_types.py    # Item definitions
-│   │       └── effects.py       # Item effects
+│   │   │   ├── player_status.py # Player stats and status
+│   │   │   └── status_effects.py # Status effect system
+│   │   ├── items/        # Items and equipment
+│   │   │   ├── item.py          # Base item class
+│   │   │   ├── item_spawner.py  # Item generation
+│   │   │   ├── item_types.py    # Item definitions
+│   │   │   └── effects.py       # Item effects
+│   │   ├── magic/        # Magic system
+│   │   │   ├── __init__.py      # Magic module
+│   │   │   └── spells.py        # Spell definitions and Spellbook
+│   │   └── traps/        # Trap system
+│   │       └── trap.py          # Trap definitions and TrapManager
 │   │
 │   ├── map/              # Dungeon generation and tiles
 │   │   ├── dungeon.py           # Main dungeon class
@@ -71,6 +80,7 @@ pyrogue/
 │   │       ├── menu_screen.py      # Main menu
 │   │       ├── game_screen.py      # Main gameplay screen
 │   │       ├── inventory_screen.py # Inventory management
+│   │       ├── magic_screen.py     # Magic casting menu
 │   │       ├── game_over_screen.py # Game over screen
 │   │       └── victory_screen.py   # Victory screen
 │   │
@@ -133,10 +143,13 @@ Note: The project uses `uv` as the package manager. All development commands are
 - Coordinates state transitions between menu, gameplay, and game over
 
 #### Entity System
-- **Player (`entities/actors/player.py`)**: Player character with stats, inventory, and positioning
-- **Monsters (`entities/actors/monster.py`)**: Enemy entities with AI behavior
+- **Player (`entities/actors/player.py`)**: Player character with stats, inventory, MP management, and status effects
+- **Monsters (`entities/actors/monster.py`)**: Enemy entities with AI behavior and status effect support
 - **Items (`entities/items/`)**: Equipment, consumables, and treasure with type-based categorization
 - **Inventory (`entities/actors/inventory.py`)**: Container system for items
+- **Status Effects (`entities/actors/status_effects.py`)**: Poison, paralysis, confusion system
+- **Magic System (`entities/magic/spells.py`)**: Spell casting, MP management, and Spellbook
+- **Trap System (`entities/traps/trap.py`)**: Various traps with detection and disarm mechanics
 
 #### Map System
 - **Dungeon (`map/dungeon.py`)**: Procedural dungeon generation with rooms and corridors
@@ -145,8 +158,9 @@ Note: The project uses `uv` as the package manager. All development commands are
 
 #### UI System
 - Screen-based architecture with base Screen class
-- Separate screens for different game states
+- Separate screens for different game states (menu, game, inventory, magic casting)
 - Console-based rendering with TCOD
+- Magic casting UI with spell selection and targeting
 
 ### Technical Details
 
@@ -200,6 +214,34 @@ refactor(database): optimize query performance in repository
 - Supports window resizing
 - Map area: 80x43 (reserves space for UI elements)
 
+## Game Controls
+
+### Basic Movement
+- **Vi-keys**: hjkl + diagonals (yubn)
+- **Arrow keys**: Standard directional movement
+- **Numpad**: 1-9 for movement and diagonals
+
+### Actions
+- **g**: Get/pick up items
+- **i**: Open inventory
+- **o**: Open doors
+- **c**: Close doors
+- **s**: Search for hidden doors
+- **d**: Disarm traps
+- **z**: Open magic casting menu (spellbook)
+- **Tab**: Toggle FOV display
+
+### Magic System
+- **Z key**: Opens spellbook for spell casting
+- **Arrow keys**: Navigate spell list in magic menu
+- **Enter**: Cast selected spell
+- **Letter keys (a-z)**: Quick cast spells by letter
+- **Targeting mode**: Enter to confirm target for offensive spells
+
+### Save/Load
+- **Ctrl+S**: Save game
+- **Ctrl+L**: Load game
+
 ## Testing
 
 Run tests with:
@@ -212,6 +254,45 @@ Test files are located in the `tests/` directory. The project uses pytest with c
 ## Logging
 
 The game uses a custom logger (`utils/logger.py`) with debug mode enabled via `DEBUG=1` environment variable.
+
+## Game Systems
+
+### Status Effect System
+Located in `src/pyrogue/entities/actors/status_effects.py`:
+- **Poison**: Deals damage over time, naturally recovers
+- **Paralysis**: Prevents movement, recovered over time
+- **Confusion**: Randomizes movement direction
+- **StatusEffectManager**: Manages multiple status effects per actor
+- Integration with both player and monster entities
+
+### Trap System
+Located in `src/pyrogue/entities/traps/trap.py`:
+- **PitTrap**: Deals falling damage
+- **PoisonNeedleTrap**: Inflicts poison status effect
+- **TeleportTrap**: Randomly relocates the player
+- **Hidden/Visible states**: Traps start hidden and can be discovered
+- **Disarm mechanics**: Success rate based on player level
+- **TrapManager**: Handles trap placement and management per floor
+
+### Magic System
+Located in `src/pyrogue/entities/magic/spells.py`:
+- **MP Management**: Players have MP that increases with level
+- **Spellbook**: Manages known spells and casting
+- **Spell Types**:
+  - **Magic Missile**: Offensive spell, guaranteed hit
+  - **Heal**: Restores HP
+  - **Cure Poison**: Removes poison status effect
+  - **Poison Bolt**: Inflicts poison on enemies
+- **Targeting System**: Separate targeting mode for offensive spells
+- **MP Recovery**: Natural recovery over time when not starving
+
+### Dungeon Generation
+Following original Rogue specifications:
+- **26 floors total** (matching original Rogue depth)
+- **3x3 room grid** per floor
+- **Procedural generation** with rooms and corridors
+- **The Amulet of Yendor** appears on floor 26
+- **Escape requirement**: Must return to surface with amulet
 
 ## Gemini CLI 連携ガイド
 
@@ -264,6 +345,33 @@ EOF
 8. **技術選定**: ライブラリ・手法の比較検討 （例: `このライブラリは他と比べてどうか？`）
 9. **実装前リスク評価**: 複雑な実装着手前の事前リスク確認・落とし穴の事前把握（例: `ReactとD3.jsの組み合わせでよくある問題は？`）
 10. **設計判断の事前検証**: アーキテクチャ決定前の多角的検証・技術的負債の予防（例: `マイクロサービス化の判断は適切か？`）
+
+## 開発状況
+
+### 完成済み機能
+PyRogueは現在、**本格的なローグライクゲームとして完全に機能する状態**になっています：
+
+- ✅ **コアゲームループ**: メニュー、ゲームプレイ、ゲームオーバー、勝利画面
+- ✅ **ダンジョン探索**: 26階の手続き生成ダンジョン、部屋と通路システム
+- ✅ **戦闘システム**: ターンベース戦闘、装備ボーナス、経験値システム
+- ✅ **包括的アイテムシステム**: 武器、防具、ポーション、巻物、食料、指輪
+- ✅ **ステータス異常システム**: 毒、麻痺、混乱の実装
+- ✅ **トラップシステム**: 落とし穴、毒の針、テレポートトラップ
+- ✅ **魔法システム**: MP管理、呪文詠唱、ターゲティング
+- ✅ **UI/UX**: 完全なメニューシステム、インベントリ、魔法画面
+- ✅ **セーブ/ロードシステム**: 完全なゲーム状態永続化
+
+### 残りタスク
+- NPCシステム（商人、会話、売買）
+- コード品質向上とテストカバレッジ
+- ドキュメント更新
+
+### アーキテクチャの特徴
+- **分離されたビジネスロジック**: UIから完全に分離されたGameLogic
+- **コマンド/戦略パターン**: 効果システム、魔法システム、トラップシステム
+- **プロトコルベース設計**: EffectContextによる統一インターフェース
+- **状態管理**: Enumベースのゲーム状態管理
+- **テスト可能設計**: CLIモードとGUIモードの両方対応
 
 ## トラブルシューティング
 
