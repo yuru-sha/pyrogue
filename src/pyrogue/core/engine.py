@@ -221,7 +221,9 @@ class Engine:
         finally:
             self.cleanup()
 
-    def _handle_input(self, event: tcod.event.KeyDown) -> tuple[bool, Optional[GameStates]]:
+    def _handle_input(
+        self, event: tcod.event.KeyDown
+    ) -> tuple[bool, Optional[GameStates]]:
         """
         キー入力イベントを処理。
 
@@ -317,9 +319,9 @@ class Engine:
             計算された最終スコア
 
         """
-        level_bonus = player_stats.get('level', 1) * 100
-        gold_bonus = player_stats.get('gold', 0) * 2
+        level_bonus = player_stats.get("level", 1) * 100
+        gold_bonus = player_stats.get("gold", 0) * 2
         floor_bonus = final_floor * 50
-        hp_bonus = player_stats.get('hp', 0) * 10
+        hp_bonus = player_stats.get("hp", 0) * 10
 
         return level_bonus + gold_bonus + floor_bonus + hp_bonus

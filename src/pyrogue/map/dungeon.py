@@ -16,6 +16,9 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+# Import after class definitions to avoid circular imports
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from .tile import (
@@ -26,9 +29,6 @@ from .tile import (
     StairsUp,
     Wall,
 )
-
-# Import after class definitions to avoid circular imports
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .dungeon_builder import CorridorBuilder, RoomConnector, StairsManager
@@ -257,6 +257,7 @@ class DungeonGenerator:
         """Lazy initialization of room connector."""
         if self._room_connector is None:
             from .dungeon_builder import RoomConnector
+
             self._room_connector = RoomConnector(self)
         return self._room_connector
 
@@ -265,6 +266,7 @@ class DungeonGenerator:
         """Lazy initialization of corridor builder."""
         if self._corridor_builder is None:
             from .dungeon_builder import CorridorBuilder
+
             self._corridor_builder = CorridorBuilder(self)
         return self._corridor_builder
 
@@ -273,6 +275,7 @@ class DungeonGenerator:
         """Lazy initialization of stairs manager."""
         if self._stairs_manager is None:
             from .dungeon_builder import StairsManager
+
             self._stairs_manager = StairsManager(self)
         return self._stairs_manager
 

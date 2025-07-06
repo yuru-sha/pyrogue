@@ -3,12 +3,14 @@
 GameScreenのセーブ/ロード機能のテスト
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from pyrogue.core.engine import Engine
 from pyrogue.ui.screens.game_screen import GameScreen
+
 
 def test_game_screen_save_load():
     """GameScreenのセーブ/ロード機能をテスト"""
@@ -66,11 +68,11 @@ def test_game_screen_save_load():
 
             # 復元確認
             restored_correctly = (
-                game_screen.player_x == original_x and
-                game_screen.player_y == original_y and
-                game_screen.current_floor == original_floor and
-                game_screen.player_stats["hp"] == original_hp and
-                game_screen.player_stats["gold"] == original_gold
+                game_screen.player_x == original_x
+                and game_screen.player_y == original_y
+                and game_screen.current_floor == original_floor
+                and game_screen.player_stats["hp"] == original_hp
+                and game_screen.player_stats["gold"] == original_gold
             )
             print(f"\n復元確認: {'正常' if restored_correctly else '異常'}")
 
@@ -81,14 +83,18 @@ def test_game_screen_save_load():
 
         # 死亡後のロード試行
         load_after_death = game_screen.load_game()
-        print(f"   死亡後のロード結果: {'成功' if load_after_death else '失敗（正常）'}")
+        print(
+            f"   死亡後のロード結果: {'成功' if load_after_death else '失敗（正常）'}"
+        )
 
         print("\n=== テスト完了 ===")
 
     except Exception as e:
         print(f"テスト中にエラーが発生: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     test_game_screen_save_load()

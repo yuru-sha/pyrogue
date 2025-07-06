@@ -117,32 +117,45 @@ class InventoryScreen(Screen):
 
         # 選択中のアイテムに対する操作
         if len(self.game_screen.game_logic.inventory.items) > 0:
-            selected_item = self.game_screen.game_logic.inventory.items[self.selected_index]
+            selected_item = self.game_screen.game_logic.inventory.items[
+                self.selected_index
+            ]
 
             # e: 装備
             if event.sym == tcod.event.KeySym.E:
                 if isinstance(selected_item, (Weapon, Armor, Ring)):
                     if self.game_screen.game_logic.inventory.equip(selected_item):
-                        self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
+                        self.game_screen.game_logic.add_message(
+                            f"You equip the {selected_item.name}."
+                        )
                     else:
-                        self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
+                        self.game_screen.game_logic.add_message(
+                            f"You cannot equip the {selected_item.name}."
+                        )
                 else:
-                    self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
+                    self.game_screen.game_logic.add_message(
+                        f"You cannot equip the {selected_item.name}."
+                    )
                 return
 
             # u: 使用
             elif event.sym == tcod.event.KeySym.U:
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # TODO: Implement item use functionality
-                    self.game_screen.game_logic.add_message(f"You use the {selected_item.name}.")
+                    self.game_screen.game_logic.add_message(
+                        f"You use the {selected_item.name}."
+                    )
                 else:
-                    self.game_screen.game_logic.add_message(f"You cannot use the {selected_item.name}.")
+                    self.game_screen.game_logic.add_message(
+                        f"You cannot use the {selected_item.name}."
+                    )
                 return
 
             # d: ドロップ
             elif event.sym == tcod.event.KeySym.D:
                 if self.game_screen.game_logic.can_drop_item_at(
-                    self.game_screen.game_logic.player.x, self.game_screen.game_logic.player.y
+                    self.game_screen.game_logic.player.x,
+                    self.game_screen.game_logic.player.y,
                 ):
                     # アイテムをプレイヤーの位置に配置
                     selected_item.x = self.game_screen.game_logic.player.x
@@ -152,10 +165,14 @@ class InventoryScreen(Screen):
                     current_floor = self.game_screen.game_logic.get_current_floor_data()
                     if current_floor.item_spawner.add_item(selected_item):
                         self.game_screen.game_logic.inventory.remove_item(selected_item)
-                        self.game_screen.game_logic.add_message(f"You drop the {selected_item.name}.")
+                        self.game_screen.game_logic.add_message(
+                            f"You drop the {selected_item.name}."
+                        )
 
                         # 選択インデックスを調整
-                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
+                        if self.selected_index >= len(
+                            self.game_screen.game_logic.inventory.items
+                        ):
                             self.selected_index = max(
                                 0, len(self.game_screen.game_logic.inventory.items) - 1
                             )

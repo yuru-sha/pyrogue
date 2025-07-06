@@ -14,8 +14,8 @@ import argparse
 import sys
 import traceback
 
-from pyrogue.core.engine import Engine
 from pyrogue.core.cli_engine import CLIEngine
+from pyrogue.core.engine import Engine
 from pyrogue.utils import game_logger
 
 
@@ -30,9 +30,7 @@ def main() -> None:
     """
     parser = argparse.ArgumentParser(description="PyRogue - A Python Roguelike Game")
     parser.add_argument(
-        "--cli",
-        action="store_true",
-        help="Run in CLI mode for automated testing"
+        "--cli", action="store_true", help="Run in CLI mode for automated testing"
     )
     args = parser.parse_args()
 

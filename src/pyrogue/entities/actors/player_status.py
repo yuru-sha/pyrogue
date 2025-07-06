@@ -46,12 +46,12 @@ class PlayerStatusFormatter:
             Dictionary containing player stats
         """
         return {
-            'level': player.level,
-            'hp': player.hp,
-            'max_hp': player.max_hp,
-            'attack': player.get_attack(),
-            'defense': player.get_defense(),
-            'exp': player.exp,
-            'gold': player.gold,
-            'hunger': player.hunger,
+            "level": player.level,
+            "hp": player.hp,
+            "max_hp": player.max_hp,
+            "attack": player.get_attack(),
+            "defense": player.get_defense(),
+            "exp": player.exp,
+            "gold": player.gold,
+            "hunger": player.hunger,
         }

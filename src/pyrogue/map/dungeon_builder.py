@@ -44,14 +44,18 @@ class RoomConnector:
                         return True
         return False
 
-    def _connect_to_neighbor(self, connected_pos: tuple[int, int], neighbor_pos: tuple[int, int]) -> bool:
+    def _connect_to_neighbor(
+        self, connected_pos: tuple[int, int], neighbor_pos: tuple[int, int]
+    ) -> bool:
         """Connect to a specific neighbor position."""
         if neighbor_pos in self.generator.gone_rooms:
             self.generator._create_gone_room_corridor(connected_pos, neighbor_pos)
         else:
             neighbor_room = self.generator.room_grid[neighbor_pos[1]][neighbor_pos[0]]
             if neighbor_room:
-                self.generator._create_corridor_between_grid_cells(connected_pos, neighbor_pos)
+                self.generator._create_corridor_between_grid_cells(
+                    connected_pos, neighbor_pos
+                )
                 self._record_room_connection(connected_pos, neighbor_pos)
 
         self.generator.connected_rooms.add(neighbor_pos)
@@ -65,7 +69,9 @@ class RoomConnector:
             target_pos = random.choice(unconnected_rooms)
             closest_connected = self._find_closest_connected_room(target_pos)
 
-            self.generator._create_corridor_between_grid_cells(closest_connected, target_pos)
+            self.generator._create_corridor_between_grid_cells(
+                closest_connected, target_pos
+            )
             self._record_room_connection(closest_connected, target_pos)
             self.generator.connected_rooms.add(target_pos)
 
@@ -75,18 +81,27 @@ class RoomConnector:
         for y in range(self.generator.grid_height):
             for x in range(self.generator.grid_width):
                 if (x, y) not in self.generator.connected_rooms:
-                    if (x, y) not in self.generator.gone_rooms and self.generator.room_grid[y][x]:
+                    if (
+                        x,
+                        y,
+                    ) not in self.generator.gone_rooms and self.generator.room_grid[y][
+                        x
+                    ]:
                         unconnected.append((x, y))
         return unconnected
 
-    def _find_closest_connected_room(self, target_pos: tuple[int, int]) -> tuple[int, int]:
+    def _find_closest_connected_room(
+        self, target_pos: tuple[int, int]
+    ) -> tuple[int, int]:
         """Find the closest connected room to the target position."""
         return min(
             self.generator.connected_rooms,
-            key=lambda pos: abs(pos[0] - target_pos[0]) + abs(pos[1] - target_pos[1])
+            key=lambda pos: abs(pos[0] - target_pos[0]) + abs(pos[1] - target_pos[1]),
         )
 
-    def _record_room_connection(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> None:
+    def _record_room_connection(
+        self, pos1: tuple[int, int], pos2: tuple[int, int]
+    ) -> None:
         """Record the connection between two rooms."""
         room1 = self.generator.room_grid[pos1[1]][pos1[0]]
         room2 = self.generator.room_grid[pos2[1]][pos2[0]]
@@ -102,7 +117,9 @@ class CorridorBuilder:
     def __init__(self, generator: DungeonGenerator):
         self.generator = generator
 
-    def create_corridor_between_grid_cells(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> None:
+    def create_corridor_between_grid_cells(
+        self, pos1: tuple[int, int], pos2: tuple[int, int]
+    ) -> None:
         """Create corridor between two grid cells using original Rogue style."""
         x1, y1 = pos1
         x2, y2 = pos2
@@ -198,7 +215,9 @@ class StairsManager:
         if self.generator.connected_rooms:
             last_connected = list(self.generator.connected_rooms)[-1]
             if last_connected not in self.generator.gone_rooms:
-                last_room = self.generator.room_grid[last_connected[1]][last_connected[0]]
+                last_room = self.generator.room_grid[last_connected[1]][
+                    last_connected[0]
+                ]
                 if last_room:
                     center_x, center_y = last_room.center
                     self.generator.tiles[center_y, center_x] = StairsDown()

@@ -270,7 +270,9 @@ class DungeonManager:
                     "floor_number": data.floor_number,
                     "up_pos": data.up_pos,
                     "down_pos": data.down_pos,
-                    "explored": data.explored.tolist() if data.explored is not None else None,
+                    "explored": data.explored.tolist()
+                    if data.explored is not None
+                    else None,
                 }
                 for floor_num, data in self.floors.items()
             },

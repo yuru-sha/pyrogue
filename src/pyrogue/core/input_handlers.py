@@ -14,13 +14,19 @@ class InputHandler(ABC):
     """入力ハンドラーの基底クラス。"""
 
     @abstractmethod
-    def handle_input(self, event: tcod.event.KeyDown, context: Any) -> Optional[GameStates]:
+    def handle_input(
+        self, event: tcod.event.KeyDown, context: Any
+    ) -> Optional[GameStates]:
         """特定の状態における入力を処理。"""
         pass
 
     def handle_escape(self, current_state: GameStates) -> Optional[GameStates]:
         """Handle escape key press - default behavior."""
-        if current_state in (GameStates.PLAYERS_TURN, GameStates.GAME_OVER, GameStates.VICTORY):
+        if current_state in (
+            GameStates.PLAYERS_TURN,
+            GameStates.GAME_OVER,
+            GameStates.VICTORY,
+        ):
             return GameStates.MENU
         if current_state == GameStates.MENU:
             return GameStates.EXIT
@@ -34,7 +40,9 @@ class StateManager:
         # We don't need to instantiate InputHandler since we handle each state directly
         pass
 
-    def handle_input(self, event: tcod.event.KeyDown, current_state: GameStates, context: Any) -> tuple[bool, Optional[GameStates]]:
+    def handle_input(
+        self, event: tcod.event.KeyDown, current_state: GameStates, context: Any
+    ) -> tuple[bool, Optional[GameStates]]:
         """
         Handle input based on current state.
 
@@ -84,7 +92,11 @@ class StateManager:
 
     def _handle_escape(self, current_state: GameStates) -> Optional[GameStates]:
         """Handle escape key press - default behavior."""
-        if current_state in (GameStates.PLAYERS_TURN, GameStates.GAME_OVER, GameStates.VICTORY):
+        if current_state in (
+            GameStates.PLAYERS_TURN,
+            GameStates.GAME_OVER,
+            GameStates.VICTORY,
+        ):
             return GameStates.MENU
         if current_state == GameStates.MENU:
             return GameStates.EXIT

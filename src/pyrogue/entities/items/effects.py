@@ -48,6 +48,7 @@ class Effect(ABC):
 
 class InstantEffect(Effect):
     """Base class for effects that apply immediately."""
+
     pass
 
 
@@ -55,10 +56,7 @@ class HealingEffect(InstantEffect):
     """Heals the player for a specified amount."""
 
     def __init__(self, heal_amount: int) -> None:
-        super().__init__(
-            name="Healing",
-            description=f"Restores {heal_amount} HP"
-        )
+        super().__init__(name="Healing", description=f"Restores {heal_amount} HP")
         self.heal_amount = heal_amount
 
     def apply(self, context: EffectContext) -> bool:
@@ -82,8 +80,7 @@ class TeleportEffect(InstantEffect):
 
     def __init__(self) -> None:
         super().__init__(
-            name="Teleport",
-            description="Instantly moves you to a random location"
+            name="Teleport", description="Instantly moves you to a random location"
         )
 
     def apply(self, context: EffectContext) -> bool:
@@ -96,7 +93,9 @@ class TeleportEffect(InstantEffect):
             x = random.randint(0, dungeon.width - 1)
             y = random.randint(0, dungeon.height - 1)
 
-            if dungeon.tiles[y][x].walkable and not dungeon.get_blocking_entity_at(x, y):
+            if dungeon.tiles[y][x].walkable and not dungeon.get_blocking_entity_at(
+                x, y
+            ):
                 old_x, old_y = player.x, player.y
                 player.x, player.y = x, y
 
@@ -114,8 +113,7 @@ class MagicMappingEffect(InstantEffect):
 
     def __init__(self) -> None:
         super().__init__(
-            name="Magic Mapping",
-            description="Reveals the entire dungeon layout"
+            name="Magic Mapping", description="Reveals the entire dungeon layout"
         )
 
     def apply(self, context: EffectContext) -> bool:
@@ -137,8 +135,7 @@ class IdentifyEffect(InstantEffect):
 
     def __init__(self) -> None:
         super().__init__(
-            name="Identify",
-            description="Reveals the true nature of your items"
+            name="Identify", description="Reveals the true nature of your items"
         )
 
     def apply(self, context: EffectContext) -> bool:
@@ -147,7 +144,7 @@ class IdentifyEffect(InstantEffect):
 
         # Mark all items as identified (if we add identification system later)
         for item in player.inventory.items:
-            if hasattr(item, 'identified') and not item.identified:
+            if hasattr(item, "identified") and not item.identified:
                 item.identified = True
                 unidentified_count += 1
 
@@ -168,8 +165,7 @@ class NutritionEffect(InstantEffect):
 
     def __init__(self, nutrition_value: int) -> None:
         super().__init__(
-            name="Nutrition",
-            description=f"Restores {nutrition_value} hunger"
+            name="Nutrition", description=f"Restores {nutrition_value} hunger"
         )
         self.nutrition_value = nutrition_value
 
@@ -194,8 +190,7 @@ class RemoveCurseEffect(InstantEffect):
 
     def __init__(self) -> None:
         super().__init__(
-            name="Remove Curse",
-            description="Removes the curse from all your items"
+            name="Remove Curse", description="Removes the curse from all your items"
         )
 
     def apply(self, context: EffectContext) -> bool:
@@ -231,8 +226,7 @@ class EnchantWeaponEffect(InstantEffect):
 
     def __init__(self) -> None:
         super().__init__(
-            name="Enchant Weapon",
-            description="Magically enhances your weapon"
+            name="Enchant Weapon", description="Magically enhances your weapon"
         )
 
     def apply(self, context: EffectContext) -> bool:
@@ -265,8 +259,7 @@ class EnchantArmorEffect(InstantEffect):
 
     def __init__(self) -> None:
         super().__init__(
-            name="Enchant Armor",
-            description="Magically enhances your armor"
+            name="Enchant Armor", description="Magically enhances your armor"
         )
 
     def apply(self, context: EffectContext) -> bool:
@@ -299,8 +292,7 @@ class LightEffect(InstantEffect):
 
     def __init__(self, duration: int = 50, radius: int = 15) -> None:
         super().__init__(
-            name="Light",
-            description=f"Illuminates a wide area for {duration} turns"
+            name="Light", description=f"Illuminates a wide area for {duration} turns"
         )
         self.duration = duration
         self.radius = radius

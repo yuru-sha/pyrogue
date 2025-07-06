@@ -23,8 +23,8 @@ from __future__ import annotations
 import sys
 from typing import Optional
 
-from pyrogue.core.game_states import GameStates
 from pyrogue.core.game_logic import GameLogic
+from pyrogue.core.game_states import GameStates
 from pyrogue.utils import game_logger
 
 
@@ -173,7 +173,7 @@ class CLIEngine:
             "n": (0, -1),
             "s": (0, 1),
             "e": (1, 0),
-            "w": (-1, 0)
+            "w": (-1, 0),
         }
 
         if direction not in direction_map:
@@ -209,13 +209,27 @@ class CLIEngine:
         """
         try:
             # 隣接する敵を攻撃
-            success = self.game_screen.try_attack_adjacent_enemy()
-            if success:
-                print("Attacked enemy!")
-                self.display_game_state()
-            else:
-                print("No enemy to attack")
-            return success
+            player = self.game_logic.player
+            current_floor = self.game_logic.get_current_floor_data()
+
+            # 隣接する8方向をチェック
+            for dy in [-1, 0, 1]:
+                for dx in [-1, 0, 1]:
+                    if dx == 0 and dy == 0:
+                        continue
+
+                    x = player.x + dx
+                    y = player.y + dy
+
+                    monster = current_floor.monster_spawner.get_monster_at(x, y)
+                    if monster:
+                        self.game_logic.handle_combat(monster)
+                        print(f"Attacked {monster.name}!")
+                        self.display_game_state()
+                        return True
+
+            print("No enemy to attack")
+            return False
         except Exception as e:
             print(f"Error attacking: {e}")
             return False
@@ -232,13 +246,29 @@ class CLIEngine:
         """
         try:
             # アイテム使用処理
-            success = self.game_screen.try_use_item(item_name)
-            if success:
-                print(f"Used {item_name}")
-                self.display_game_state()
-            else:
-                print(f"Cannot use {item_name}")
-            return success
+            inventory = self.game_logic.inventory
+
+            # インベントリから該当するアイテムを検索
+            for item in inventory.items:
+                if item.name.lower() == item_name.lower():
+                    # 新しいeffectシステムを使用
+                    context = type('EffectContext', (), {
+                        'player': self.game_logic.player,
+                        'dungeon': self.game_logic.get_current_floor_data(),
+                        'game_screen': self
+                    })()
+
+                    success = self.game_logic.player.use_item(item, context=context)
+                    if success:
+                        print(f"Used {item.name}")
+                        self.display_game_state()
+                        return True
+                    else:
+                        print(f"Cannot use {item.name}")
+                        return False
+
+            print(f"You don't have {item_name}")
+            return False
         except Exception as e:
             print(f"Error using item: {e}")
             return False
@@ -314,7 +344,7 @@ class CLIEngine:
             player = self.game_logic.player
             floor_data = self.game_logic.get_current_floor_data()
 
-            print("\n" + "="*50)
+            print("\n" + "=" * 50)
             print(f"Floor: B{self.game_logic.dungeon_manager.current_floor}F")
             print(f"Player: ({player.x}, {player.y})")
             print(f"HP: {player.hp}/{player.max_hp}")
@@ -346,10 +376,13 @@ class CLIEngine:
                         continue
 
                     x, y = player.x + dx, player.y + dy
-                    if 0 <= y < floor_data.tiles.shape[0] and 0 <= x < floor_data.tiles.shape[1]:
+                    if (
+                        0 <= y < floor_data.tiles.shape[0]
+                        and 0 <= x < floor_data.tiles.shape[1]
+                    ):
                         tile = floor_data.tiles[y, x]
                         direction = self.get_direction_name(dx, dy)
-                        tile_name = getattr(tile, 'name', tile.__class__.__name__)
+                        tile_name = getattr(tile, "name", tile.__class__.__name__)
                         print(f"  {direction}: {tile_name}")
 
             # 周囲の敵を表示
@@ -362,7 +395,9 @@ class CLIEngine:
             if nearby_enemies:
                 print("\nNearby enemies:")
                 for enemy in nearby_enemies:
-                    print(f"  {enemy.name} at ({enemy.x}, {enemy.y}) - HP: {enemy.hp}/{enemy.max_hp}")
+                    print(
+                        f"  {enemy.name} at ({enemy.x}, {enemy.y}) - HP: {enemy.hp}/{enemy.max_hp}"
+                    )
 
             # 周囲のアイテムを表示
             nearby_items = []
@@ -412,9 +447,9 @@ class CLIEngine:
 
             player = self.game_logic.player
 
-            print("\n" + "="*30)
+            print("\n" + "=" * 30)
             print("PLAYER STATUS")
-            print("="*30)
+            print("=" * 30)
             print(f"Level: {player.level}")
             print(f"HP: {player.hp}/{player.max_hp}")
             print(f"Attack: {player.get_attack()}")
@@ -436,27 +471,33 @@ class CLIEngine:
 
             inventory = self.game_logic.inventory
 
-            print("\n" + "="*30)
+            print("\n" + "=" * 30)
             print("INVENTORY")
-            print("="*30)
+            print("=" * 30)
 
             if not inventory.items:
                 print("Inventory is empty")
             else:
                 for i, item in enumerate(inventory.items):
                     equipped_str = ""
-                    if hasattr(item, 'item_type'):
+                    if hasattr(item, "item_type"):
                         if inventory.is_equipped(item):
                             equipped_str = " (equipped)"
-                    print(f"{i+1}. {item.name}{equipped_str}")
+                    print(f"{i + 1}. {item.name}{equipped_str}")
 
             # 装備情報を表示
             equipped = inventory.equipped
             print("\nEquipment:")
-            print(f"  Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}")
+            print(
+                f"  Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}"
+            )
             print(f"  Armor: {equipped['armor'].name if equipped['armor'] else 'None'}")
-            print(f"  Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}")
-            print(f"  Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}")
+            print(
+                f"  Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}"
+            )
+            print(
+                f"  Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}"
+            )
 
         except Exception as e:
             print(f"Error displaying inventory: {e}")
@@ -467,7 +508,9 @@ class CLIEngine:
             # ゲームオーバー・勝利条件をチェック
             if self.game_logic.check_player_death():
                 print("\nGAME OVER!")
-                print(f"You died on floor B{self.game_logic.dungeon_manager.current_floor}F.")
+                print(
+                    f"You died on floor B{self.game_logic.dungeon_manager.current_floor}F."
+                )
                 self.running = False
             elif self.game_logic.check_victory():
                 print("\nVICTORY!")

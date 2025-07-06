@@ -19,8 +19,6 @@ import os
 from pathlib import Path
 
 
-
-
 def setup_game_logger() -> logging.Logger:
     """
     シンプルなゲームロガーを設定。
@@ -45,7 +43,7 @@ def setup_game_logger() -> logging.Logger:
     # Simple file handler
     handler = logging.FileHandler(log_dir / "game.log", encoding="utf-8")
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)

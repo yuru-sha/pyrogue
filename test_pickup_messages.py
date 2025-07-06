@@ -3,11 +3,13 @@
 改善されたアイテムピックアップメッセージのテスト
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from pyrogue.entities.items.item import Weapon, Armor, Scroll, Food, Gold
+
 
 def test_pickup_messages():
     """改善されたピックアップメッセージをテスト"""
@@ -35,6 +37,7 @@ def test_pickup_messages():
     print(f"金貨: {gold.pick_up()}")
 
     print("\n=== メッセージテスト完了 ===")
+
 
 if __name__ == "__main__":
     test_pickup_messages()

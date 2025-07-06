@@ -23,14 +23,14 @@ import tcod.console
 import tcod.constants
 import tcod.event
 
-from pyrogue.core.save_manager import SaveManager
 from pyrogue.core.game_logic import GameLogic
-from pyrogue.entities.actors.player import Player
+from pyrogue.core.save_manager import SaveManager
 from pyrogue.entities.actors.monster import Monster
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
+from pyrogue.entities.actors.player import Player
+from pyrogue.entities.items.effects import EffectContext
 from pyrogue.entities.items.item import Gold, Item
 from pyrogue.entities.items.item_spawner import ItemSpawner
-from pyrogue.entities.items.effects import EffectContext
 from pyrogue.map.dungeon import DungeonGenerator
 from pyrogue.map.tile import (
     Door,
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
 class GameScreen:
     """Game Screen that implements EffectContext protocol."""
+
     """
     メインゲームのビュークラス。
 
@@ -80,8 +81,8 @@ class GameScreen:
 
         # ダンジョンサイズ（エンジンから取得、またはデフォルト値）
         if engine:
-            self.dungeon_width = getattr(engine, 'map_width', 80)
-            self.dungeon_height = getattr(engine, 'map_height', 45)
+            self.dungeon_width = getattr(engine, "map_width", 80)
+            self.dungeon_height = getattr(engine, "map_height", 45)
         else:
             # CLIモードでは固定値を使用
             self.dungeon_width = 80
@@ -105,7 +106,6 @@ class GameScreen:
         # 互換性のためにGameLogicに自身への参照を設定
         self.game_logic.set_game_screen_reference(self)
 
-
     # EffectContextプロトコルの実装（GameLogicからの委譲）
     @property
     def player(self) -> Player:
@@ -124,6 +124,7 @@ class GameScreen:
 
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
+
         class DungeonProxy:
             def __init__(self, game_screen):
                 self.game_screen = game_screen
@@ -163,7 +164,9 @@ class GameScreen:
         player = self.game_logic.player
 
         # FOVマップを更新
-        self.fov_map = tcod.map.Map(width=self.dungeon_width, height=self.dungeon_height)
+        self.fov_map = tcod.map.Map(
+            width=self.dungeon_width, height=self.dungeon_height
+        )
         for y in range(current_floor.tiles.shape[0]):
             for x in range(current_floor.tiles.shape[1]):
                 tile = current_floor.tiles[y, x]
@@ -180,7 +183,9 @@ class GameScreen:
         )
 
         # 可視領域を更新
-        self.visible = np.full((self.dungeon_height, self.dungeon_width), fill_value=False, dtype=bool)
+        self.visible = np.full(
+            (self.dungeon_height, self.dungeon_width), fill_value=False, dtype=bool
+        )
         for y in range(current_floor.tiles.shape[0]):
             for x in range(current_floor.tiles.shape[1]):
                 self.visible[y, x] = self.fov_map.fov[y, x]
@@ -191,12 +196,14 @@ class GameScreen:
     def _save_current_floor(self) -> None:
         """現在のフロアの状態を保存"""
         self.floor_data[self.current_floor] = {
-            "dungeon_tiles": self.game_logic.get_current_floor_data().tiles.copy() if self.game_logic.get_current_floor_data().tiles is not None else None,
+            "dungeon_tiles": self.game_logic.get_current_floor_data().tiles.copy()
+            if self.game_logic.get_current_floor_data().tiles is not None
+            else None,
             "monster_spawner": self.monster_spawner,
             "item_spawner": self.item_spawner,
             "explored": self.explored.copy() if self.explored is not None else None,
-            "up_pos": getattr(self.dungeon_gen, 'start_pos', None),
-            "down_pos": getattr(self.dungeon_gen, 'end_pos', None),
+            "up_pos": getattr(self.dungeon_gen, "start_pos", None),
+            "down_pos": getattr(self.dungeon_gen, "end_pos", None),
         }
 
     def _load_floor(self, floor_number: int) -> None:
@@ -237,9 +244,7 @@ class GameScreen:
                 "down_pos": down_pos,
                 "monster_spawner": monster_spawner,
                 "item_spawner": item_spawner,
-                "explored": np.full(
-                    (dungeon_height, dungeon_width), False, dtype=bool
-                ),
+                "explored": np.full((dungeon_height, dungeon_width), False, dtype=bool),
             }
 
         # 階層データをロード
@@ -278,8 +283,12 @@ class GameScreen:
 
         for y in range(height):
             for x in range(width):
-                self.fov_map.transparent[y, x] = self.game_logic.get_current_floor_data().tiles[y, x].transparent
-                self.fov_map.walkable[y, x] = self.game_logic.get_current_floor_data().tiles[y, x].walkable
+                self.fov_map.transparent[y, x] = (
+                    self.game_logic.get_current_floor_data().tiles[y, x].transparent
+                )
+                self.fov_map.walkable[y, x] = (
+                    self.game_logic.get_current_floor_data().tiles[y, x].walkable
+                )
 
     def _compute_fov(self) -> None:
         """FOVを計算"""
@@ -359,7 +368,9 @@ class GameScreen:
             self.engine.console.print(x=1, y=1, string=status_line2)
             # 地下階層番号を右上に表示
             self.engine.console.print(
-                x=self.engine.console.width - len(floor_info) - 1, y=0, string=floor_info
+                x=self.engine.console.width - len(floor_info) - 1,
+                y=0,
+                string=floor_info,
             )
 
     def _render_map(self) -> None:
@@ -469,12 +480,7 @@ class GameScreen:
             self._update_fov()
             return
 
-        # アイテムを取得（,キー）
-        if event.sym == tcod.event.KeySym.COMMA:
-            message = self.game_logic.handle_get_item()
-            if message:
-                self.game_logic.add_message(message)
-            return
+        # アイテムを取得（,キー）の処理を削除（階段の上り処理と重複するため）
 
         # アイテムをドロップ
         if event.sym == tcod.event.KeySym.D:
@@ -508,7 +514,12 @@ class GameScreen:
             event.sym == tcod.event.KeySym.GREATER
             or event.sym == tcod.event.KeySym.PERIOD
         ):  # > キーまたは . キー
-            if isinstance(self.game_logic.get_current_floor_data().tiles[self.game_logic.player.y][self.game_logic.player.x], StairsDown):
+            if isinstance(
+                self.game_logic.get_current_floor_data().tiles[
+                    self.game_logic.player.y
+                ][self.game_logic.player.x],
+                StairsDown,
+            ):
                 success = self.game_logic.descend_stairs()
                 if success:
                     self._update_fov()  # FOVを更新
@@ -516,8 +527,16 @@ class GameScreen:
             self.game_logic.add_message("There are no stairs down here.")
             return
 
-        if event.sym == tcod.event.KeySym.LESS:  # < キーのみ（上り階段）
-            if isinstance(self.game_logic.get_current_floor_data().tiles[self.game_logic.player.y][self.game_logic.player.x], StairsUp):
+        if (
+            event.sym == tcod.event.KeySym.LESS
+            or event.sym == tcod.event.KeySym.COMMA
+        ):  # < キーまたは , キー
+            if isinstance(
+                self.game_logic.get_current_floor_data().tiles[
+                    self.game_logic.player.y
+                ][self.game_logic.player.x],
+                StairsUp,
+            ):
                 success = self.game_logic.ascend_stairs()
                 if success:
                     self._update_fov()  # FOVを更新
@@ -574,7 +593,8 @@ class GameScreen:
     def _can_move_to(self, x: int, y: int) -> bool:
         """指定の位置に移動できるかを判定"""
         if not (
-            0 <= x < len(self.game_logic.get_current_floor_data().tiles[0]) and 0 <= y < len(self.game_logic.get_current_floor_data().tiles)
+            0 <= x < len(self.game_logic.get_current_floor_data().tiles[0])
+            and 0 <= y < len(self.game_logic.get_current_floor_data().tiles)
         ):
             return False
 
@@ -588,11 +608,6 @@ class GameScreen:
             return False  # 移動は行わない
 
         return tile.walkable
-
-
-
-
-
 
     def save_game(self) -> bool:
         """
@@ -731,7 +746,15 @@ class GameScreen:
             作成されたアイテムインスタンス
 
         """
-        from pyrogue.entities.items.item import Armor, Food, Gold, Potion, Ring, Scroll, Weapon
+        from pyrogue.entities.items.item import (
+            Armor,
+            Food,
+            Gold,
+            Potion,
+            Ring,
+            Scroll,
+            Weapon,
+        )
 
         class_name = item_data["class_name"]
         x, y = item_data["x"], item_data["y"]
@@ -742,11 +765,15 @@ class GameScreen:
         elif class_name == "Armor":
             item = Armor(x, y, name, item_data.get("defense", 0))
         elif class_name == "Ring":
-            item = Ring(x, y, name, item_data.get("effect", ""), item_data.get("bonus", 0))
+            item = Ring(
+                x, y, name, item_data.get("effect", ""), item_data.get("bonus", 0)
+            )
         elif class_name == "Scroll":
             item = Scroll(x, y, name, item_data.get("effect", ""))
         elif class_name == "Potion":
-            item = Potion(x, y, name, item_data.get("effect", ""), item_data.get("power", 0))
+            item = Potion(
+                x, y, name, item_data.get("effect", ""), item_data.get("power", 0)
+            )
         elif class_name == "Food":
             item = Food(x, y, name, item_data.get("nutrition", 0))
         elif class_name == "Gold":
@@ -768,7 +795,9 @@ class GameScreen:
         # 簡易実装 - 基本的なフロアデータのみ保存
         return {
             floor_num: {
-                "explored": data.get("explored", []).tolist() if hasattr(data.get("explored", []), 'tolist') else data.get("explored", []),
+                "explored": data.get("explored", []).tolist()
+                if hasattr(data.get("explored", []), "tolist")
+                else data.get("explored", []),
                 "up_pos": data.get("up_pos"),
                 "down_pos": data.get("down_pos"),
             }
@@ -810,12 +839,16 @@ class GameScreen:
                 "player_stats": self.player_stats,
             }
             self.save_manager.trigger_permadeath_on_death(game_data)
-            self.game_logic.add_message("You have died. Your save data has been deleted.")
+            self.game_logic.add_message(
+                "You have died. Your save data has been deleted."
+            )
 
     def _auto_pickup(self) -> None:
         """プレイヤーの現在位置でアイテムを自動でピックアップ"""
         current_floor = self.game_logic.get_current_floor_data()
-        item = current_floor.item_spawner.get_item_at(self.game_logic.player.x, self.game_logic.player.y)
+        item = current_floor.item_spawner.get_item_at(
+            self.game_logic.player.x, self.game_logic.player.y
+        )
         if item:
             if isinstance(item, Gold):
                 # 金貨は常に自動でピックアップ
@@ -939,7 +972,6 @@ class GameScreen:
         """
         # このメソッドはCLIモード用の互換性のため、GameLogicに委譲
         return self.game_logic.handle_player_move(dx, dy)
-
 
     def try_attack_adjacent_enemy(self) -> bool:
         """

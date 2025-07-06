@@ -24,10 +24,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
+    from pyrogue.core.engine import Engine
     from pyrogue.entities.actors.monster import Monster
     from pyrogue.entities.actors.player import Player
     from pyrogue.ui.screens.game_screen import GameScreen
-    from pyrogue.core.engine import Engine
 
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player import Player
@@ -58,7 +58,12 @@ class GameLogic:
 
     """
 
-    def __init__(self, engine: Optional["Engine"] = None, dungeon_width: int = 80, dungeon_height: int = 45) -> None:
+    def __init__(
+        self,
+        engine: Optional["Engine"] = None,
+        dungeon_width: int = 80,
+        dungeon_height: int = 45,
+    ) -> None:
         """
         ゲームロジックを初期化。
 
@@ -152,7 +157,10 @@ class GameLogic:
         current_floor = self.dungeon_manager.get_current_floor_data()
 
         # 境界チェック
-        if not (0 <= x < current_floor.tiles.shape[1] and 0 <= y < current_floor.tiles.shape[0]):
+        if not (
+            0 <= x < current_floor.tiles.shape[1]
+            and 0 <= y < current_floor.tiles.shape[0]
+        ):
             return False
 
         tile = current_floor.tiles[y][x]
@@ -201,7 +209,9 @@ class GameLogic:
 
             # レベルアップチェック
             if self.player.gain_exp(0):  # exp は既に加算済みなので0を渡す
-                self.add_message(f"You gained a level! You are now level {self.player.level}.")
+                self.add_message(
+                    f"You gained a level! You are now level {self.player.level}."
+                )
 
             # モンスターリストから削除
             current_floor = self.dungeon_manager.get_current_floor_data()
@@ -224,7 +234,9 @@ class GameLogic:
             self.add_message("You died!")
             if self.engine:  # CLIモードでは engine が None の場合がある
                 self.engine.game_over(
-                    self.player.get_stats_dict(), self.dungeon_manager.current_floor, f"Killed by {monster.name}"
+                    self.player.get_stats_dict(),
+                    self.dungeon_manager.current_floor,
+                    f"Killed by {monster.name}",
                 )
 
     def handle_item_use(self, item_index: int) -> bool:
@@ -347,6 +359,7 @@ class GameLogic:
 
         # 地面がフロアタイルかチェック（壁や扉には置けない）
         from pyrogue.map.tile import Floor
+
         if (
             0 <= y < current_floor.tiles.shape[0]
             and 0 <= x < current_floor.tiles.shape[1]
@@ -547,16 +560,18 @@ class GameLogic:
 
         # 初期武器: ダガー
         dagger = Weapon(
-            x=0, y=0,  # インベントリ内なので位置は無関係
+            x=0,
+            y=0,  # インベントリ内なので位置は無関係
             name="Dagger",
-            attack_bonus=2
+            attack_bonus=2,
         )
 
         # 初期防具: レザーアーマー
         leather_armor = Armor(
-            x=0, y=0,  # インベントリ内なので位置は無関係
+            x=0,
+            y=0,  # インベントリ内なので位置は無関係
             name="Leather Armor",
-            defense_bonus=1
+            defense_bonus=1,
         )
 
         # インベントリに追加して装備
@@ -578,6 +593,7 @@ class GameLogic:
 
         # プレイヤーが下り階段の上にいるかチェック
         from pyrogue.map.tile import StairsDown
+
         if isinstance(current_floor.tiles[self.player.y][self.player.x], StairsDown):
             next_floor = self.dungeon_manager.descend_stairs()
             spawn_pos = self.dungeon_manager.get_player_spawn_position(next_floor)
@@ -600,14 +616,19 @@ class GameLogic:
 
         # プレイヤーが上り階段の上にいるかチェック
         from pyrogue.map.tile import StairsUp
+
         if isinstance(current_floor.tiles[self.player.y][self.player.x], StairsUp):
             if self.dungeon_manager.current_floor > 1:
                 next_floor = self.dungeon_manager.ascend_stairs()
                 if next_floor:
-                    spawn_pos = self.dungeon_manager.get_player_spawn_position(next_floor)
+                    spawn_pos = self.dungeon_manager.get_player_spawn_position(
+                        next_floor
+                    )
                     self.player.x, self.player.y = spawn_pos
 
-                    self.add_message(f"You ascend to B{self.dungeon_manager.current_floor}F.")
+                    self.add_message(
+                        f"You ascend to B{self.dungeon_manager.current_floor}F."
+                    )
                     return True
             else:
                 # 地上への脱出チェック
@@ -635,7 +656,9 @@ class GameLogic:
         if has_amulet:
             self.add_message("You escaped with the Amulet of Yendor! You win!")
             if self.engine:
-                self.engine.victory(self.player.get_stats_dict(), self.dungeon_manager.current_floor)
+                self.engine.victory(
+                    self.player.get_stats_dict(), self.dungeon_manager.current_floor
+                )
             return True
         else:
             self.add_message("You need the Amulet of Yendor to leave the dungeon.")
@@ -717,7 +740,9 @@ class GameLogic:
             プレイヤーが視界内にいる場合True
         """
         # ユークリッド距離でチェック
-        distance = ((monster.x - self.player.x) ** 2 + (monster.y - self.player.y) ** 2) ** 0.5
+        distance = (
+            (monster.x - self.player.x) ** 2 + (monster.y - self.player.y) ** 2
+        ) ** 0.5
         return distance <= monster.view_range
 
     def _monster_chase_player(self, monster, current_floor) -> None:
@@ -770,7 +795,10 @@ class GameLogic:
             移動可能な場合True
         """
         # 境界チェック
-        if not (0 <= x < current_floor.tiles.shape[1] and 0 <= y < current_floor.tiles.shape[0]):
+        if not (
+            0 <= x < current_floor.tiles.shape[1]
+            and 0 <= y < current_floor.tiles.shape[0]
+        ):
             return False
 
         # タイルが移動可能かチェック
@@ -807,5 +835,5 @@ class GameLogic:
                 self.engine.game_over(
                     self.player.get_stats_dict(),
                     self.dungeon_manager.current_floor,
-                    f"Killed by {monster.name}"
+                    f"Killed by {monster.name}",
                 )

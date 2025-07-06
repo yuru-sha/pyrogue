@@ -20,6 +20,23 @@ import numpy as np
 
 from pyrogue.map.dungeon import Room
 
+from .effects import (
+    ENCHANT_ARMOR,
+    ENCHANT_WEAPON,
+    FOOD_APPLE,
+    FOOD_BREAD,
+    FOOD_RATION,
+    HEAL_FULL,
+    HEAL_LIGHT,
+    HEAL_MEDIUM,
+    IDENTIFY,
+    LIGHT,
+    MAGIC_MAPPING,
+    REMOVE_CURSE,
+    TELEPORT,
+    Effect,
+    HealingEffect,
+)
 from .item import Armor, Food, Gold, Item, Potion, Ring, Scroll, Weapon
 from .item_types import (
     AMULET,
@@ -32,23 +49,6 @@ from .item_types import (
     get_available_items,
     get_gold_amount,
     get_item_spawn_count,
-)
-from .effects import (
-    HEAL_LIGHT,
-    HEAL_MEDIUM,
-    HEAL_FULL,
-    TELEPORT,
-    MAGIC_MAPPING,
-    IDENTIFY,
-    REMOVE_CURSE,
-    ENCHANT_WEAPON,
-    ENCHANT_ARMOR,
-    LIGHT,
-    FOOD_RATION,
-    FOOD_BREAD,
-    FOOD_APPLE,
-    HealingEffect,
-    Effect,
 )
 
 
@@ -394,7 +394,9 @@ class ItemSpawner:
         }
         return effect_map.get(effect_name, IDENTIFY)
 
-    def _get_potion_effect(self, effect_name: str, power_range: tuple[int, int]) -> Effect:
+    def _get_potion_effect(
+        self, effect_name: str, power_range: tuple[int, int]
+    ) -> Effect:
         """Map effect name to Effect object for potions."""
         power = random.randint(*power_range)
 
@@ -402,7 +404,13 @@ class ItemSpawner:
             return HealingEffect(power)
         elif effect_name == "extra_healing":
             return HealingEffect(power)
-        elif effect_name in ["strength", "restore_strength", "haste_self", "see_invisible", "poison"]:
+        elif effect_name in [
+            "strength",
+            "restore_strength",
+            "haste_self",
+            "see_invisible",
+            "poison",
+        ]:
             # These need special handling or are placeholders
             return HealingEffect(power)  # Temporary fallback
 

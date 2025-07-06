@@ -3,13 +3,15 @@
 アイテム拾い機能のテストスクリプト
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.items.item import Weapon, Gold
+
 
 def test_item_pickup():
     """アイテム拾い機能をテスト"""
@@ -67,6 +69,7 @@ def test_item_pickup():
     print(f"最終インベントリサイズ: {len(inventory.items)}")
 
     print("\n=== テスト完了 ===")
+
 
 if __name__ == "__main__":
     test_item_pickup()
