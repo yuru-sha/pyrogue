@@ -161,7 +161,7 @@ class Player:
         self.defense += CONFIG.player.LEVEL_UP_DEFENSE_BONUS
         self.exp = 0
 
-    def consume_food(self, amount: int = 1) -> None:
+    def consume_food(self, amount: int = 1) -> str | None:
         """
         食料を消費して満腹度を減少。
 
@@ -171,13 +171,29 @@ class Player:
         Args:
             amount: 消費する満腹度
 
+        Returns:
+            飢餓メッセージ。飢餓状態でない場合はNone
+
         """
+        old_hunger = self.hunger
         self.hunger = max(0, self.hunger - amount)
 
         # 飢餓状態をチェック
         if self.hunger <= 0:
-            # 飢餓状態: ダメージを受ける
-            self.take_damage(1)
+            # 飢餓状態: 防御力を無視した直接ダメージ
+            self.hp = max(0, self.hp - 1)
+
+            if old_hunger > 0:
+                # 初めて飢餓状態になった場合
+                return "You are starving! You feel weak from hunger."
+            else:
+                # 継続して飢餓状態
+                return "You are still starving and losing health!"
+        elif self.hunger < 10:  # 空腹状態
+            if old_hunger >= 10:
+                return "You are getting hungry."
+
+        return None
 
     def update_light_effect(self) -> None:
         """Light効果のターン経過処理"""

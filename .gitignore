@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -27,8 +28,7 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+# -*- link options: -*-
 *.manifest
 *.spec
 
@@ -50,6 +50,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.openmeteo_cache.sqlite
+test_repo.db
 
 # Translations
 *.mo
@@ -57,6 +59,7 @@ cover/
 
 # Django stuff:
 *.log
+logs/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -72,7 +75,6 @@ instance/
 docs/_build/
 
 # PyBuilder
-.pybuilder/
 target/
 
 # Jupyter Notebook
@@ -83,41 +85,19 @@ profile_default/
 ipython_config.py
 
 # pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
+.python-version
 
 # pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# UV
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#uv.lock
+# Pipfile.lock
 
 # poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
+# poetry.lock
 
 # pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
-.pdm.toml
-.pdm-python
-.pdm-build/
+# pdm.lock
+# .pdm.toml
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+# PEP 582; used by PDM, Flit, and potentially other tools
 __pypackages__/
 
 # Celery stuff
@@ -143,43 +123,60 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
 # Pyre type checker
 .pyre/
 
-# pytype static type analyzer
+# pytype static analysis results
 .pytype/
 
 # Cython debug symbols
 cython_debug/
 
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+# PyCharm files
+.idea/
 
-# PyPI configuration file
-.pypirc
+# VSCode files
+.vscode/
 
-data/logs/
+# uv cache
+.uv_cache/
 
-# SpecStory(cursor extension)
+# dotenv environment variables file
+.env.local
+.env.docker
+
+# Docker
+docker-compose.override.yml
+
+# Ignore SpecStory derived-cursor-rules.mdc backup files
 .specstory/
+.cursor/rules/derived-cursor-rules.mdc
 
-# cursor rules
-.cursorrules
+# Ruff cache
+.ruff_cache/
 
-# windsurf rules
-.windsurfrules
+# Jupyter Notebook cache
+.cache.sqlite
+
+# Alembic
+alembic.ini
+
+# Model files
+*.pth
+*.joblib
+
+# SpecStory explanation file
+.specstory/.what-is-this.md
+
+# Node modules
+node_modules/
+
+# APP directory
+data/
+logs/
+
+# macOS
+.DS_Store
 
 # Claude Code settings
 .claude/settings.local.json

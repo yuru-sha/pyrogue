@@ -38,7 +38,7 @@ class InventoryScreen(Screen):
         console.print(1, 1, "Inventory", tcod.yellow)
 
         # インベントリの内容を描画
-        for i, item in enumerate(self.game_screen.player.inventory.items):
+        for i, item in enumerate(self.game_screen.game_logic.inventory.items):
             # インデックスを文字に変換（0=a, 1=b, ...）
             index_char = chr(ord("a") + i)
 
@@ -52,7 +52,7 @@ class InventoryScreen(Screen):
             console.print(2, 3 + i, item_text, fg)
 
         # 装備情報を表示
-        equipped = self.game_screen.player.inventory.equipped
+        equipped = self.game_screen.game_logic.inventory.equipped
         console.print(40, 3, "Equipment:", tcod.yellow)
         console.print(
             42,
@@ -88,201 +88,83 @@ class InventoryScreen(Screen):
             for i, text in enumerate(help_text):
                 console.print(2, console.height - 10 + i, text, tcod.gray)
 
-    def handle_key(self, key: tcod.event.KeyDown) -> Screen | None:
+    def handle_input(self, event: tcod.event.KeyDown) -> None:
         """
-        キー入力を処理
+        インベントリ画面のキー入力を処理。
 
         Args:
-            key: キー入力イベント
-
-        Returns:
-            Optional[Screen]: 次の画面（Noneの場合は現在の画面を維持）
-
+            event: キーボードイベント
         """
+        from pyrogue.core.game_states import GameStates
+
         # ESCでインベントリを閉じる
-        if key.sym == tcod.event.KeySym.ESCAPE:
-            return self.game_screen
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            if self.game_screen.engine:
+                self.game_screen.engine.state = GameStates.PLAYERS_TURN
+            return
 
         # ?でヘルプの表示/非表示を切り替え
-        if key.sym == tcod.event.KeySym.QUESTION:
+        if event.sym == tcod.event.KeySym.QUESTION:
             self.show_help = not self.show_help
-            return None
+            return
 
         # アイテムの選択（a-z）
-        if tcod.event.KeySym.A <= key.sym <= tcod.event.KeySym.Z:
-            index = key.sym - tcod.event.KeySym.A
-            if index < len(self.game_screen.player.inventory.items):
+        if tcod.event.KeySym.A <= event.sym <= tcod.event.KeySym.Z:
+            index = event.sym - tcod.event.KeySym.A
+            if index < len(self.game_screen.game_logic.inventory.items):
                 self.selected_index = index
-            return None
+            return
 
         # 選択中のアイテムに対する操作
-        selected_item = self.game_screen.player.inventory.get_item(self.selected_index)
-        if not selected_item:
-            return None
+        if len(self.game_screen.game_logic.inventory.items) > 0:
+            selected_item = self.game_screen.game_logic.inventory.items[self.selected_index]
 
-        # e: 装備
-        if key.sym == tcod.event.KeySym.E:
-            if isinstance(selected_item, (Weapon, Armor, Ring)):
-                old_item = self.game_screen.player.equip_item(selected_item)
-                if old_item:
-                    self.game_screen.message_log.append(
-                        f"You unequip the {old_item.name} and equip the {selected_item.name}."
-                    )
+            # e: 装備
+            if event.sym == tcod.event.KeySym.E:
+                if isinstance(selected_item, (Weapon, Armor, Ring)):
+                    if self.game_screen.game_logic.inventory.equip(selected_item):
+                        self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
+                    else:
+                        self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
                 else:
-                    self.game_screen.message_log.append(
-                        f"You equip the {selected_item.name}."
-                    )
-            else:
-                self.game_screen.message_log.append(
-                    f"You cannot equip the {selected_item.name}."
-                )
+                    self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
+                return
 
-        # u: 使用
-        elif key.sym == tcod.event.KeySym.U:
-            if isinstance(selected_item, (Scroll, Potion, Food)):
-                if self.game_screen.player.use_item(selected_item, context=self.game_screen):
-                    self.game_screen.message_log.append(
-                        f"You use the {selected_item.name}."
-                    )
+            # u: 使用
+            elif event.sym == tcod.event.KeySym.U:
+                if isinstance(selected_item, (Scroll, Potion, Food)):
+                    # TODO: Implement item use functionality
+                    self.game_screen.game_logic.add_message(f"You use the {selected_item.name}.")
                 else:
-                    self.game_screen.message_log.append(
-                        f"You cannot use the {selected_item.name}."
-                    )
-            else:
-                self.game_screen.message_log.append(
-                    f"You cannot use the {selected_item.name}."
-                )
+                    self.game_screen.game_logic.add_message(f"You cannot use the {selected_item.name}.")
+                return
 
-        # d: ドロップ
-        elif key.sym == tcod.event.KeySym.D:
-            # ドロップできるかチェック
-            if self._can_drop_item_at(
-                self.game_screen.player_x, self.game_screen.player_y
-            ):
-                # プレイヤーの位置にアイテムを配置
-                selected_item.x = self.game_screen.player_x
-                selected_item.y = self.game_screen.player_y
+            # d: ドロップ
+            elif event.sym == tcod.event.KeySym.D:
+                if self.game_screen.game_logic.can_drop_item_at(
+                    self.game_screen.game_logic.player.x, self.game_screen.game_logic.player.y
+                ):
+                    # アイテムをプレイヤーの位置に配置
+                    selected_item.x = self.game_screen.game_logic.player.x
+                    selected_item.y = self.game_screen.game_logic.player.y
 
-                # アイテムを地面に追加
-                if self.game_screen.item_spawner.add_item(selected_item):
-                    self.game_screen.inventory.remove_item(selected_item)
-                    drop_message = selected_item.drop()
-                    self.game_screen.message_log.append(drop_message)
+                    # アイテムを地面に追加
+                    current_floor = self.game_screen.game_logic.get_current_floor_data()
+                    if current_floor.item_spawner.add_item(selected_item):
+                        self.game_screen.game_logic.inventory.remove_item(selected_item)
+                        self.game_screen.game_logic.add_message(f"You drop the {selected_item.name}.")
 
-                    # 選択インデックスを調整
-                    if self.selected_index >= len(self.game_screen.inventory.items):
-                        self.selected_index = max(
-                            0, len(self.game_screen.inventory.items) - 1
+                        # 選択インデックスを調整
+                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
+                            self.selected_index = max(
+                                0, len(self.game_screen.game_logic.inventory.items) - 1
+                            )
+                    else:
+                        self.game_screen.game_logic.add_message(
+                            "You cannot drop items here. Something is blocking the way."
                         )
                 else:
-                    self.game_screen.message_log.append(
-                        "You cannot drop items here. Something is blocking the way."
+                    self.game_screen.game_logic.add_message(
+                        "You cannot drop items here. There is already an item or obstacle."
                     )
-            else:
-                self.game_screen.message_log.append(
-                    "You cannot drop items here. There is already an item or obstacle."
-                )
-
-        # r: 装備を外す
-        elif key.sym == tcod.event.KeySym.R:
-            # 装備スロットを選択するサブメニューを表示
-            return EquipmentRemovalScreen(self)
-
-        return None
-
-    def _can_drop_item_at(self, x: int, y: int) -> bool:
-        """
-        指定された位置にアイテムをドロップできるかチェック
-
-        Args:
-            x: X座標
-            y: Y座標
-
-        Returns:
-            bool: ドロップ可能な場合はTrue
-
-        """
-        # 既にアイテムが存在するかチェック
-        if self.game_screen.item_spawner.get_item_at(x, y) is not None:
-            return False
-
-        # 地面がフロアタイルかチェック（壁や扉には置けない）
-        if (
-            self.game_screen.dungeon_tiles
-            and 0 <= y < len(self.game_screen.dungeon_tiles)
-            and 0 <= x < len(self.game_screen.dungeon_tiles[0])
-        ):
-            from pyrogue.map.tile import Floor
-
-            tile = self.game_screen.dungeon_tiles[y][x]
-            return isinstance(tile, Floor)
-
-        return False
-
-
-class EquipmentRemovalScreen(Screen):
-    """装備解除画面"""
-
-    def __init__(self, inventory_screen: InventoryScreen) -> None:
-        self.inventory_screen = inventory_screen
-        self.game_screen = inventory_screen.game_screen
-
-    def render(self, console: Console) -> None:
-        """
-        画面を描画
-
-        Args:
-            console: 描画対象のコンソール
-
-        """
-        # インベントリ画面を描画
-        self.inventory_screen.render(console)
-
-        # 装備解除メニューを描画
-        menu_text = [
-            "Remove which equipment?",
-            "[w] Weapon",
-            "[a] Armor",
-            "[l] Left ring",
-            "[r] Right ring",
-            "[ESC] Cancel",
-        ]
-
-        for i, text in enumerate(menu_text):
-            console.print(30, 15 + i, text, tcod.white)
-
-    def handle_key(self, key: tcod.event.KeyDown) -> Screen | None:
-        """
-        キー入力を処理
-
-        Args:
-            key: キー入力イベント
-
-        Returns:
-            Optional[Screen]: 次の画面（Noneの場合は現在の画面を維持）
-
-        """
-        if key.sym == tcod.event.KeySym.ESCAPE:
-            return self.inventory_screen
-
-        slot = None
-        if key.sym == tcod.event.KeySym.W:
-            slot = "weapon"
-        elif key.sym == tcod.event.KeySym.A:
-            slot = "armor"
-        elif key.sym == tcod.event.KeySym.L:
-            slot = "ring_left"
-        elif key.sym == tcod.event.KeySym.R:
-            slot = "ring_right"
-
-        if slot:
-            item = self.game_screen.player.unequip_item(slot)
-            if item:
-                self.game_screen.message_log.append(f"You unequip the {item.name}.")
-            else:
-                self.game_screen.message_log.append(
-                    "You have nothing equipped in that slot."
-                )
-            return self.inventory_screen
-
-        return None
+                return

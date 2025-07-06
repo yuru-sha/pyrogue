@@ -64,6 +64,10 @@ class StateManager:
             context.handle_key(event)
             return True, None
 
+        elif current_state == GameStates.SHOW_INVENTORY:
+            context.handle_input(event)
+            return True, None
+
         elif current_state == GameStates.GAME_OVER:
             new_state = context.handle_input(event)
             if new_state == GameStates.EXIT:

@@ -32,6 +32,7 @@ from pyrogue.core.game_states import GameStates
 from pyrogue.core.input_handlers import StateManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
+from pyrogue.ui.screens.inventory_screen import InventoryScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
 from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
@@ -84,6 +85,7 @@ class Engine:
         # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
         self.game_screen = GameScreen(self)
+        self.inventory_screen = InventoryScreen(self.game_screen)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
 
@@ -186,6 +188,8 @@ class Engine:
                     self.menu_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
                     self.game_screen.render()
+                elif self.state == GameStates.SHOW_INVENTORY:
+                    self.inventory_screen.render(self.console)
                 elif self.state == GameStates.GAME_OVER:
                     self.game_over_screen.render()
                 elif self.state == GameStates.VICTORY:
@@ -240,6 +244,8 @@ class Engine:
             return self.menu_screen
         elif self.state == GameStates.PLAYERS_TURN:
             return self.game_screen
+        elif self.state == GameStates.SHOW_INVENTORY:
+            return self.inventory_screen
         elif self.state == GameStates.GAME_OVER:
             return self.game_over_screen
         elif self.state == GameStates.VICTORY:
