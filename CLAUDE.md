@@ -27,7 +27,6 @@ PyRogue is a traditional roguelike game built with Python and TCOD (The Coding o
 ```
 pyrogue/
 ├── CLAUDE.md              # Claude Code guidance (this file)
-├── GEMINI.md              # Gemini CLI integration guide
 ├── README.md              # Project documentation
 ├── LICENSE                # MIT license
 ├── Makefile               # Development commands
@@ -157,11 +156,43 @@ Note: The project uses `uv` as the package manager. All development commands are
 - Configured with strict linting (ruff, mypy, black, isort)
 - Test coverage with pytest
 
-#### Code Style
-- Line length: 88 characters
-- Type hints required (mypy strict mode)
-- Docstrings for public functions
-- Import sorting with isort
+### コーディング規約
+
+- PEP 8準拠（ruffで自動チェック）
+- 型ヒント必須（`ruff`チェック通過が必要）
+- Google形式のdocstring（日本語で記述）
+- 実装コメントは日本語で統一
+- ドキュメント（README、docs/配下）は日本語で統一
+
+### コミットメッセージ規約
+
+**英語で統一し、Conventional Commits形式を使用：**
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**Type一覧：**
+- `feat`: 新機能追加
+- `fix`: バグ修正
+- `docs`: ドキュメント変更のみ
+- `style`: コードの意味に影響しない変更（フォーマット等）
+- `refactor`: バグ修正でも機能追加でもないコード変更
+- `perf`: パフォーマンス改善
+- `test`: テストの追加や修正
+- `chore`: ビルドプロセスや補助ツールの変更
+
+**例：**
+```bash
+feat(ml): add unkai detection CNN model
+fix(dashboard): resolve Streamlit page reload issue
+docs(api): update weather data collection documentation
+refactor(database): optimize query performance in repository
+```
 
 #### Font and Display
 - Uses dejavu10x10_gs_tc.png font (located in `data/assets/fonts/`)
@@ -233,3 +264,9 @@ EOF
 8. **技術選定**: ライブラリ・手法の比較検討 （例: `このライブラリは他と比べてどうか？`）
 9. **実装前リスク評価**: 複雑な実装着手前の事前リスク確認・落とし穴の事前把握（例: `ReactとD3.jsの組み合わせでよくある問題は？`）
 10. **設計判断の事前検証**: アーキテクチャ決定前の多角的検証・技術的負債の予防（例: `マイクロサービス化の判断は適切か？`）
+
+## トラブルシューティング
+
+### よくある問題
+
+1. **依存関係エラー**: `make setup-dev`を再実行

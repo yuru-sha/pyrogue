@@ -2,12 +2,18 @@
 
 import random
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from pyrogue.entities.actors.player import Player
     from pyrogue.map.dungeon import Dungeon
     from pyrogue.ui.screens.game_screen import GameScreen
+
+from pyrogue.entities.actors.status_effects import (
+    ConfusionEffect,
+    ParalysisEffect,
+    PoisonEffect,
+)
 
 
 class EffectContext(Protocol):
@@ -39,7 +45,6 @@ class Effect(ABC):
     @abstractmethod
     def apply(self, context: EffectContext) -> bool:
         """Apply the effect. Returns True if successful, False otherwise."""
-        pass
 
     def can_apply(self, context: EffectContext) -> bool:
         """Check if the effect can be applied in current context."""
@@ -49,7 +54,6 @@ class Effect(ABC):
 class InstantEffect(Effect):
     """Base class for effects that apply immediately."""
 
-    pass
 
 
 class HealingEffect(InstantEffect):
@@ -70,9 +74,8 @@ class HealingEffect(InstantEffect):
                 f"You feel better! (+{actual_heal} HP)"
             )
             return True
-        else:
-            context.game_screen.message_log.append("You are already at full health.")
-            return False
+        context.game_screen.message_log.append("You are already at full health.")
+        return False
 
 
 class TeleportEffect(InstantEffect):
@@ -180,9 +183,8 @@ class NutritionEffect(InstantEffect):
                 f"You feel satisfied. (+{hunger_gained} hunger)"
             )
             return True
-        else:
-            context.game_screen.message_log.append("You are already full.")
-            return False
+        context.game_screen.message_log.append("You are already full.")
+        return False
 
 
 class RemoveCurseEffect(InstantEffect):
@@ -307,6 +309,63 @@ class LightEffect(InstantEffect):
         return True
 
 
+class StatusEffectApplication(InstantEffect):
+    """Applies a status effect to the player."""
+
+    def __init__(self, status_effect_class, name: str, description: str, **kwargs) -> None:
+        super().__init__(name=name, description=description)
+        self.status_effect_class = status_effect_class
+        self.kwargs = kwargs
+
+    def apply(self, context: EffectContext) -> bool:
+        player = context.player
+        status_effect = self.status_effect_class(**self.kwargs)
+
+        player.status_effects.add_effect(status_effect)
+
+        context.game_screen.message_log.append(
+            f"You are affected by {status_effect.name}!"
+        )
+        return True
+
+
+class PoisonPotionEffect(StatusEffectApplication):
+    """Poisons the player."""
+
+    def __init__(self, duration: int = 5, damage: int = 2) -> None:
+        super().__init__(
+            status_effect_class=PoisonEffect,
+            name="Poison",
+            description=f"Poisons you for {duration} turns",
+            duration=duration,
+            damage=damage
+        )
+
+
+class ParalysisPotionEffect(StatusEffectApplication):
+    """Paralyzes the player."""
+
+    def __init__(self, duration: int = 3) -> None:
+        super().__init__(
+            status_effect_class=ParalysisEffect,
+            name="Paralysis",
+            description=f"Paralyzes you for {duration} turns",
+            duration=duration
+        )
+
+
+class ConfusionPotionEffect(StatusEffectApplication):
+    """Confuses the player."""
+
+    def __init__(self, duration: int = 4) -> None:
+        super().__init__(
+            status_effect_class=ConfusionEffect,
+            name="Confusion",
+            description=f"Confuses you for {duration} turns",
+            duration=duration
+        )
+
+
 # Pre-defined common effects
 HEAL_LIGHT = HealingEffect(25)
 HEAL_MEDIUM = HealingEffect(50)
@@ -321,3 +380,6 @@ LIGHT = LightEffect()
 FOOD_RATION = NutritionEffect(200)
 FOOD_BREAD = NutritionEffect(100)
 FOOD_APPLE = NutritionEffect(50)
+POISON_POTION = PoisonPotionEffect()
+PARALYSIS_POTION = ParalysisPotionEffect()
+CONFUSION_POTION = ConfusionPotionEffect()

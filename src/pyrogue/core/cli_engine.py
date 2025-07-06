@@ -21,7 +21,6 @@ Example:
 from __future__ import annotations
 
 import sys
-from typing import Optional
 
 from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.game_states import GameStates
@@ -102,7 +101,7 @@ class CLIEngine:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
 
-    def process_command(self, command: str) -> Optional[bool]:
+    def process_command(self, command: str) -> bool | None:
         """
         コマンドを処理し、適切なアクションを実行。
 
@@ -111,6 +110,7 @@ class CLIEngine:
 
         Returns:
             False if game should quit, True if game should continue, None for invalid commands
+
         """
         parts = command.lower().split()
         if not parts:
@@ -164,6 +164,7 @@ class CLIEngine:
 
         Returns:
             コマンドが成功したかどうか
+
         """
         direction_map = {
             "north": (0, -1),
@@ -197,7 +198,7 @@ class CLIEngine:
             print(f"Error moving: {e}")
             return False
 
-    def handle_attack(self, target: Optional[str]) -> bool:
+    def handle_attack(self, target: str | None) -> bool:
         """
         攻撃コマンドを処理。
 
@@ -206,6 +207,7 @@ class CLIEngine:
 
         Returns:
             コマンドが成功したかどうか
+
         """
         try:
             # 隣接する敵を攻撃
@@ -243,6 +245,7 @@ class CLIEngine:
 
         Returns:
             コマンドが成功したかどうか
+
         """
         try:
             # アイテム使用処理
@@ -252,10 +255,10 @@ class CLIEngine:
             for item in inventory.items:
                 if item.name.lower() == item_name.lower():
                     # 新しいeffectシステムを使用
-                    context = type('EffectContext', (), {
-                        'player': self.game_logic.player,
-                        'dungeon': self.game_logic.get_current_floor_data(),
-                        'game_screen': self
+                    context = type("EffectContext", (), {
+                        "player": self.game_logic.player,
+                        "dungeon": self.game_logic.get_current_floor_data(),
+                        "game_screen": self
                     })()
 
                     success = self.game_logic.player.use_item(item, context=context)
@@ -263,9 +266,8 @@ class CLIEngine:
                         print(f"Used {item.name}")
                         self.display_game_state()
                         return True
-                    else:
-                        print(f"Cannot use {item.name}")
-                        return False
+                    print(f"Cannot use {item.name}")
+                    return False
 
             print(f"You don't have {item_name}")
             return False
@@ -279,6 +281,7 @@ class CLIEngine:
 
         Returns:
             コマンドが成功したかどうか
+
         """
         try:
             message = self.game_logic.handle_get_item()
@@ -301,6 +304,7 @@ class CLIEngine:
 
         Returns:
             コマンドが成功したかどうか
+
         """
         try:
             if direction.lower() in ["up", "u"]:
@@ -421,22 +425,21 @@ class CLIEngine:
         """座標の差から方向名を取得。"""
         if dx == 0 and dy == -1:
             return "North"
-        elif dx == 0 and dy == 1:
+        if dx == 0 and dy == 1:
             return "South"
-        elif dx == 1 and dy == 0:
+        if dx == 1 and dy == 0:
             return "East"
-        elif dx == -1 and dy == 0:
+        if dx == -1 and dy == 0:
             return "West"
-        elif dx == -1 and dy == -1:
+        if dx == -1 and dy == -1:
             return "Northwest"
-        elif dx == 1 and dy == -1:
+        if dx == 1 and dy == -1:
             return "Northeast"
-        elif dx == -1 and dy == 1:
+        if dx == -1 and dy == 1:
             return "Southwest"
-        elif dx == 1 and dy == 1:
+        if dx == 1 and dy == 1:
             return "Southeast"
-        else:
-            return "Unknown"
+        return "Unknown"
 
     def display_player_status(self) -> None:
         """プレイヤーの詳細ステータスを表示。"""

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from pyrogue.map.tile import Door, Floor, SecretDoor, Wall
 
 if TYPE_CHECKING:
-    from pyrogue.map.dungeon import DungeonGenerator, Room
+    from pyrogue.map.dungeon import DungeonGenerator
 
 
 class RoomConnector:
@@ -209,7 +209,7 @@ class StairsManager:
 
     def _place_down_stairs(self) -> None:
         """Place down stairs in a connected room."""
-        from pyrogue.map.tile import StairsDown, Floor
+        from pyrogue.map.tile import Floor, StairsDown
 
         # Try to place stairs in the last connected room first
         if self.generator.connected_rooms:

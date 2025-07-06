@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pyrogue.config import CONFIG
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player_status import PlayerStatusFormatter
+from pyrogue.entities.actors.status_effects import StatusEffectManager
+from pyrogue.entities.magic.spells import Spellbook
 from pyrogue.entities.items.item import (
     Armor,
     Food,
@@ -63,6 +65,8 @@ class Player:
     y: int = 0
     hp: int = CONFIG.player.INITIAL_HP
     max_hp: int = CONFIG.player.INITIAL_HP
+    mp: int = 10  # 初期MP
+    max_mp: int = 10  # 最大MP
     attack: int = CONFIG.player.INITIAL_ATTACK
     defense: int = CONFIG.player.INITIAL_DEFENSE
     level: int = 1
@@ -89,6 +93,8 @@ class Player:
         self.y = y
         self.inventory = Inventory()
         self.gold = 0
+        self.status_effects = StatusEffectManager()
+        self.spellbook = Spellbook()
 
     def move(self, dx: int, dy: int) -> None:
         """
@@ -151,19 +157,22 @@ class Player:
         """
         レベルアップ時の処理。
 
-        レベル、最大HP、攻撃力、防御力を上昇させ、
-        HPを全回復し、経験値をリセットします。
+        レベル、最大HP、最大MP、攻撃力、防御力を上昇させ、
+        HPとMPを全回復し、経験値をリセットします。
         """
         self.level += 1
         self.max_hp += CONFIG.player.LEVEL_UP_HP_BONUS
         self.hp = self.max_hp
+        # MPを5ずつ増加（レベルアップ時）
+        self.max_mp += 5
+        self.mp = self.max_mp
         self.attack += CONFIG.player.LEVEL_UP_ATTACK_BONUS
         self.defense += CONFIG.player.LEVEL_UP_DEFENSE_BONUS
         self.exp = 0
 
     def consume_food(self, amount: int = 1) -> str | None:
         """
-        食料を消費して満腹度を減少。
+        食料を消費して満腹度を減少し、MPの自然回復を行う。
 
         時間経過やアクションによる満腹度の減少を表現します。
         満腹度は0未満にはなりません。
@@ -178,6 +187,13 @@ class Player:
         old_hunger = self.hunger
         self.hunger = max(0, self.hunger - amount)
 
+        # MPの自然回復（満腹状態でない場合）
+        if self.hunger > 0 and self.mp < self.max_mp:
+            # 10%の確率でMP+1回復
+            import random
+            if random.random() < 0.1:
+                self.mp = min(self.max_mp, self.mp + 1)
+
         # 飢餓状態をチェック
         if self.hunger <= 0:
             # 飢餓状態: 防御力を無視した直接ダメージ
@@ -186,10 +202,9 @@ class Player:
             if old_hunger > 0:
                 # 初めて飢餓状態になった場合
                 return "You are starving! You feel weak from hunger."
-            else:
-                # 継続して飢餓状態
-                return "You are still starving and losing health!"
-        elif self.hunger < 10:  # 空腹状態
+            # 継続して飢餓状態
+            return "You are still starving and losing health!"
+        if self.hunger < 10:  # 空腹状態
             if old_hunger >= 10:
                 return "You are getting hungry."
 
@@ -207,6 +222,88 @@ class Player:
         """Light効果を適用"""
         self.light_duration = duration
         self.light_radius = radius
+
+    def update_status_effects(self, context) -> None:
+        """
+        状態異常のターン経過処理。
+
+        すべての状態異常の効果を適用し、継続ターン数を更新します。
+        効果が切れた状態異常は自動的に削除されます。
+
+        Args:
+            context: 効果適用のためのコンテキスト
+
+        """
+        self.status_effects.update_effects(context)
+
+    def has_status_effect(self, name: str) -> bool:
+        """
+        指定された状態異常があるかどうかを判定。
+
+        Args:
+            name: 判定する状態異常の名前
+
+        Returns:
+            状態異常が存在する場合はTrue、そうでなければFalse
+
+        """
+        return self.status_effects.has_effect(name)
+
+    def is_paralyzed(self) -> bool:
+        """麻痺状態かどうかを判定。"""
+        return self.has_status_effect("Paralysis")
+
+    def is_confused(self) -> bool:
+        """混乱状態かどうかを判定。"""
+        return self.has_status_effect("Confusion")
+
+    def is_poisoned(self) -> bool:
+        """毒状態かどうかを判定。"""
+        return self.has_status_effect("Poison")
+
+    def spend_mp(self, amount: int) -> bool:
+        """
+        MPを消費する。
+
+        Args:
+            amount: 消費するMP量
+
+        Returns:
+            消費に成功した場合はTrue、MPが不足している場合はFalse
+
+        """
+        if self.mp >= amount:
+            self.mp -= amount
+            return True
+        return False
+
+    def restore_mp(self, amount: int) -> int:
+        """
+        MPを回復する。
+
+        Args:
+            amount: 回復するMP量
+
+        Returns:
+            実際に回復したMP量
+
+        """
+        old_mp = self.mp
+        self.mp = min(self.max_mp, self.mp + amount)
+        return self.mp - old_mp
+
+    def has_enough_mp(self, amount: int) -> bool:
+        """
+        指定されたMP量があるかどうかを判定。
+
+        Args:
+            amount: 必要なMP量
+
+        Returns:
+            MP量が十分な場合はTrue、不足している場合はFalse
+
+        """
+        return self.mp >= amount
 
     def is_starving(self) -> bool:
         """飢餓状態かどうかを判定。"""
@@ -352,5 +449,6 @@ class Player:
 
         Returns:
             プレイヤーのステータス情報を含む辞書
+
         """
         return PlayerStatusFormatter.format_stats_dict(self)

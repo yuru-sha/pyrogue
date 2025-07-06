@@ -25,15 +25,12 @@ import tcod.event
 
 from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.save_manager import SaveManager
-from pyrogue.entities.actors.monster import Monster
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
 from pyrogue.entities.actors.player import Player
-from pyrogue.entities.items.effects import EffectContext
 from pyrogue.entities.items.item import Gold, Item
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.map.dungeon import DungeonGenerator
 from pyrogue.map.tile import (
-    Door,
     SecretDoor,
     StairsDown,
     StairsUp,
@@ -426,6 +423,13 @@ class GameScreen:
                     monster.x, monster.y + map_y_offset, monster.char, monster.color
                 )
 
+        # 発見済みトラップを描画
+        for trap in current_floor.trap_manager.get_visible_traps():
+            if not self.fov_enabled or self.visible[trap.y, trap.x]:
+                self.engine.console.print(
+                    trap.x, trap.y + map_y_offset, trap.char, trap.color
+                )
+
         # プレイヤーを描画
         self.engine.console.print(
             player.x, player.y + map_y_offset, "@", (255, 255, 255)
@@ -480,6 +484,13 @@ class GameScreen:
             self._update_fov()
             return
 
+        # トラップ解除（Dキー）
+        if event.sym == tcod.event.KeySym.D:
+            message = self.game_logic.handle_disarm_trap()
+            if message:
+                self.game_logic.add_message(message)
+            return
+
         # アイテムを取得（,キー）の処理を削除（階段の上り処理と重複するため）
 
         # アイテムをドロップ
@@ -494,6 +505,14 @@ class GameScreen:
 
             if self.engine:
                 self.engine.state = GameStates.SHOW_INVENTORY
+            return
+
+        # 魔法を詠唱する
+        if event.sym == tcod.event.KeySym.Z:
+            from pyrogue.core.game_states import GameStates
+
+            if self.engine:
+                self.engine.state = GameStates.SHOW_MAGIC
             return
 
         # ゲームを保存
@@ -590,6 +609,38 @@ class GameScreen:
             # 隠し扉のヒントをチェック
             self._check_secret_door_hints()
 
+    def handle_targeting(self, event: tcod.event.KeyDown) -> None:
+        """ターゲット選択モードでのキー入力処理"""
+        # ESCキーでキャンセル
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            if self.engine:
+                self.engine.state = GameStates.PLAYERS_TURN
+            return
+
+        # ENTERキーでターゲット確定
+        if event.sym == tcod.event.KeySym.RETURN:
+            if self.engine and hasattr(self.engine, 'magic_screen'):
+                selected_spell = self.engine.magic_screen.get_selected_spell()
+                if selected_spell:
+                    # プレイヤーの位置をターゲットとして魔法を詠唱
+                    player = self.game_logic.player
+                    # 簡単な実装：プレイヤーの前方1マスをターゲットとする
+                    target_x = player.x + 1
+                    target_y = player.y
+
+                    success = selected_spell.cast(self.game_logic, target_pos=(target_x, target_y))
+                    if success:
+                        self.engine.state = GameStates.PLAYERS_TURN
+                        # ターンを経過させる
+                        self.game_logic.process_turn()
+                        return
+
+            self.engine.state = GameStates.PLAYERS_TURN
+            return
+
+        # 方向キーでターゲット位置を変更（今回は簡単な実装）
+        # 将来的にはカーソルを動かすなどの機能を追加可能
+
     def _can_move_to(self, x: int, y: int) -> bool:
         """指定の位置に移動できるかを判定"""
         if not (
@@ -636,9 +687,8 @@ class GameScreen:
         if self.save_manager.save_game_state(game_data):
             self.game_logic.add_message("Game saved successfully.")
             return True
-        else:
-            self.game_logic.add_message("Failed to save game.")
-            return False
+        self.game_logic.add_message("Failed to save game.")
+        return False
 
     def load_game(self) -> bool:
         """
@@ -855,17 +905,16 @@ class GameScreen:
                 self.game_logic.player.gold += item.amount
                 self.game_logic.add_message(f"You pick up {item.amount} gold pieces.")
                 current_floor.item_spawner.remove_item(item)
+            # その他のアイテムも自動でピックアップを試行
+            elif self.game_logic.inventory.add_item(item):
+                pickup_message = item.pick_up()
+                self.game_logic.add_message(pickup_message)
+                current_floor.item_spawner.remove_item(item)
             else:
-                # その他のアイテムも自動でピックアップを試行
-                if self.game_logic.inventory.add_item(item):
-                    pickup_message = item.pick_up()
-                    self.game_logic.add_message(pickup_message)
-                    current_floor.item_spawner.remove_item(item)
-                else:
-                    # インベントリが満杯の場合はメッセージのみ
-                    self.game_logic.add_message(
-                        f"There is {item.name} here, but your pack is full."
-                    )
+                # インベントリが満杯の場合はメッセージのみ
+                self.game_logic.add_message(
+                    f"There is {item.name} here, but your pack is full."
+                )
 
     def _check_secret_door_hints(self) -> None:
         """隠し扉の近くにいる場合、ヒントメッセージを表示"""
@@ -969,6 +1018,7 @@ class GameScreen:
 
         Returns:
             移動が成功したかどうか
+
         """
         # このメソッドはCLIモード用の互換性のため、GameLogicに委譲
         return self.game_logic.handle_player_move(dx, dy)
@@ -979,6 +1029,7 @@ class GameScreen:
 
         Returns:
             攻撃が成功したかどうか
+
         """
         # 隣接する8方向をチェック
         for dy in [-1, 0, 1]:
@@ -1006,6 +1057,7 @@ class GameScreen:
 
         Returns:
             使用が成功したかどうか
+
         """
         # インベントリから該当するアイテムを検索
         for item in self.game_logic.inventory.items:
@@ -1015,9 +1067,8 @@ class GameScreen:
                 if success:
                     self.game_logic.add_message(f"You used {item.name}.")
                     return True
-                else:
-                    self.game_logic.add_message(f"You cannot use {item.name}.")
-                    return False
+                self.game_logic.add_message(f"You cannot use {item.name}.")
+                return False
 
         self.game_logic.add_message(f"You don't have {item_name}.")
         return False
@@ -1028,6 +1079,7 @@ class GameScreen:
 
         Returns:
             周囲にいる敵のリスト
+
         """
         enemies = []
         for dy in [-1, 0, 1]:
@@ -1051,6 +1103,7 @@ class GameScreen:
 
         Returns:
             ゲームオーバーかどうか
+
         """
         return self.game_logic.player.hp <= 0
 
@@ -1060,6 +1113,7 @@ class GameScreen:
 
         Returns:
             勝利しているかどうか
+
         """
         # イェンダーの魔除けを持っているかチェック
         for item in self.game_logic.inventory.items:
@@ -1074,4 +1128,3 @@ class GameScreen:
         現在はモンスターAIのTODOとしてある。
         """
         # TODO: モンスターAIの実装
-        pass

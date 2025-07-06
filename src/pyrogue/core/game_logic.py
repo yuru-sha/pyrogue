@@ -21,7 +21,7 @@ Example:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyrogue.core.engine import Engine
@@ -60,7 +60,7 @@ class GameLogic:
 
     def __init__(
         self,
-        engine: Optional["Engine"] = None,
+        engine: Engine | None = None,
         dungeon_width: int = 80,
         dungeon_height: int = 45,
     ) -> None:
@@ -78,7 +78,7 @@ class GameLogic:
         # ゲーム状態を直接管理
         self.player = Player(x=0, y=0)
         self.inventory = Inventory()
-        self.message_log: List[str] = [
+        self.message_log: list[str] = [
             "Welcome to PyRogue!",
             "Use vi keys (hjklyubn), arrow keys, or numpad (1-9) to move.",
             "Press ESC to return to menu.",
@@ -88,14 +88,20 @@ class GameLogic:
         self.dungeon_manager = DungeonManager(dungeon_width, dungeon_height)
 
         # 互換性のための一時的な参照（段階的移行用）
-        self.game_screen: Optional["GameScreen"] = None
+        self.game_screen: GameScreen | None = None
 
-    def set_game_screen_reference(self, game_screen: "GameScreen") -> None:
+    @property
+    def dungeon(self):
+        """EffectContext用のダンジョンプロパティ。"""
+        return self.dungeon_manager.get_current_floor_data().dungeon
+
+    def set_game_screen_reference(self, game_screen: GameScreen) -> None:
         """
         GameScreenへの参照を設定（段階的移行用）。
 
         Args:
             game_screen: GameScreenインスタンス
+
         """
         self.game_screen = game_screen
 
@@ -114,6 +120,23 @@ class GameLogic:
             移動が成功した場合True、失敗した場合False
 
         """
+        # 麻痺状態では移動できない
+        if self.player.is_paralyzed():
+            self.add_message("You cannot move while paralyzed!")
+            self.process_turn()  # ターンは消費される
+            return False
+
+        # 混乱状態では移動方向がランダム化される
+        if self.player.is_confused():
+            import random
+            directions = [
+                (-1, -1), (0, -1), (1, -1),
+                (-1, 0),           (1, 0),
+                (-1, 1),  (0, 1),  (1, 1),
+            ]
+            dx, dy = random.choice(directions)
+            self.add_message("You stumble around in confusion!")
+
         target_x = self.player.x + dx
         target_y = self.player.y + dy
 
@@ -137,6 +160,9 @@ class GameLogic:
             # 金貨のみ自動ピックアップ（オリジナルRogue仕様）
             self._auto_pickup_gold_only()
 
+            # トラップチェック
+            self._check_traps()
+
             # ターン処理（モンスターの行動など）
             self.process_turn()
 
@@ -153,6 +179,7 @@ class GameLogic:
 
         Returns:
             移動可能な場合True
+
         """
         current_floor = self.dungeon_manager.get_current_floor_data()
 
@@ -290,6 +317,9 @@ class GameLogic:
 
         # ライト効果の更新
         self.player.update_light_effect()
+
+        # 状態異常の更新
+        self.player.update_status_effects(context=self)
 
     def handle_get_item(self) -> str | None:
         """
@@ -556,7 +586,7 @@ class GameLogic:
 
         オリジナルRogueのように基本的な装備を与えます。
         """
-        from pyrogue.entities.items.item import Weapon, Armor
+        from pyrogue.entities.items.item import Armor, Weapon
 
         # 初期武器: ダガー
         dagger = Weapon(
@@ -588,6 +618,7 @@ class GameLogic:
 
         Returns:
             階段を下りることができた場合True
+
         """
         current_floor = self.dungeon_manager.get_current_floor_data()
 
@@ -611,6 +642,7 @@ class GameLogic:
 
         Returns:
             階段を上ることができた場合True
+
         """
         current_floor = self.dungeon_manager.get_current_floor_data()
 
@@ -643,6 +675,7 @@ class GameLogic:
 
         Returns:
             ゲームが完了した場合True
+
         """
         # イェンダーの魔除けを持っているかチェック
         from pyrogue.entities.items.item import Item
@@ -660,9 +693,8 @@ class GameLogic:
                     self.player.get_stats_dict(), self.dungeon_manager.current_floor
                 )
             return True
-        else:
-            self.add_message("You need the Amulet of Yendor to leave the dungeon.")
-            return False
+        self.add_message("You need the Amulet of Yendor to leave the dungeon.")
+        return False
 
     def check_player_death(self) -> bool:
         """
@@ -670,8 +702,130 @@ class GameLogic:
 
         Returns:
             プレイヤーが死亡している場合True
+
         """
         return self.player.hp <= 0
+
+    def _check_traps(self) -> None:
+        """
+        プレイヤーの現在位置にあるトラップをチェックし、発動処理を行う。
+
+        隠れているトラップがある場合、それを発動させ、
+        隣接位置に隠れているトラップがある場合は発見判定を行います。
+
+        """
+        current_floor = self.dungeon_manager.get_current_floor_data()
+        player_x, player_y = self.player.x, self.player.y
+
+        # 現在位置のトラップをチェック
+        trap = current_floor.trap_manager.get_trap_at(player_x, player_y)
+        if trap and trap.is_hidden:
+            # 隠れているトラップを踏んだ場合、発動
+            trap.activate(context=self)
+
+        # 隣接位置のトラップ発見判定
+        self._detect_nearby_traps()
+
+    def _detect_nearby_traps(self) -> None:
+        """
+        プレイヤーの隣接位置にある隠れたトラップの発見判定を行う。
+
+        プレイヤーのレベルや運に基づいて、隣接するトラップを
+        発見する可能性があります。
+
+        """
+        import random
+
+        current_floor = self.dungeon_manager.get_current_floor_data()
+        player_x, player_y = self.player.x, self.player.y
+
+        # 隣接する8方向をチェック
+        directions = [
+            (-1, -1), (0, -1), (1, -1),
+            (-1,  0),          (1,  0),
+            (-1,  1), (0,  1), (1,  1),
+        ]
+
+        for dx, dy in directions:
+            x, y = player_x + dx, player_y + dy
+
+            # 境界チェック
+            if not (0 <= x < current_floor.tiles.shape[1] and
+                    0 <= y < current_floor.tiles.shape[0]):
+                continue
+
+            # 隠れたトラップがあるかチェック
+            trap = current_floor.trap_manager.get_trap_at(x, y)
+            if trap and trap.is_hidden:
+                # レベルベースの発見確率（レベル1で5%、レベル10で50%）
+                detection_chance = min(0.5, 0.05 + (self.player.level - 1) * 0.05)
+
+                if random.random() < detection_chance:
+                    trap.reveal(context=self)
+                    self.add_message(f"You notice something suspicious at ({x}, {y})...")
+                    break  # 1ターンに1つまで
+
+    def handle_disarm_trap(self) -> str | None:
+        """
+        プレイヤーの現在位置または隣接位置にあるトラップの解除を試行。
+
+        Returns:
+            解除処理の結果メッセージ。処理しなかった場合はNone
+
+        """
+        current_floor = self.dungeon_manager.get_current_floor_data()
+        player_x, player_y = self.player.x, self.player.y
+
+        # まず現在位置をチェック
+        trap = current_floor.trap_manager.get_trap_at(player_x, player_y)
+        if trap and trap.is_visible() and trap.is_active():
+            success = trap.disarm(context=self)
+            if success:
+                return f"You successfully disarmed the {trap.name}!"
+            else:
+                return f"You failed to disarm the {trap.name}."
+
+        # 隣接位置で発見済みのトラップを探す
+        directions = [
+            (-1, -1), (0, -1), (1, -1),
+            (-1,  0),          (1,  0),
+            (-1,  1), (0,  1), (1,  1),
+        ]
+
+        visible_traps = []
+        for dx, dy in directions:
+            x, y = player_x + dx, player_y + dy
+
+            # 境界チェック
+            if not (0 <= x < current_floor.tiles.shape[1] and
+                    0 <= y < current_floor.tiles.shape[0]):
+                continue
+
+            trap = current_floor.trap_manager.get_trap_at(x, y)
+            if trap and trap.is_visible() and trap.is_active():
+                visible_traps.append((trap, x, y))
+
+        if not visible_traps:
+            return "There are no visible traps to disarm nearby."
+
+        if len(visible_traps) == 1:
+            # 1つだけの場合は自動的に解除を試行
+            trap, x, y = visible_traps[0]
+            success = trap.disarm(context=self)
+            if success:
+                return f"You successfully disarmed the {trap.name} at ({x}, {y})!"
+            else:
+                return f"You failed to disarm the {trap.name} at ({x}, {y})."
+        else:
+            # 複数ある場合は最初のものを対象とする（将来的には選択UIを実装）
+            trap, x, y = visible_traps[0]
+            success = trap.disarm(context=self)
+            message = f"You attempt to disarm the {trap.name} at ({x}, {y}). "
+            if success:
+                message += "Success!"
+            else:
+                message += "Failed!"
+            return message
 
     def check_victory(self) -> bool:
         """
@@ -679,6 +833,7 @@ class GameLogic:
 
         Returns:
             勝利条件を満たしている場合True
+
         """
         from pyrogue.entities.items.item import Item
 
@@ -694,6 +849,7 @@ class GameLogic:
 
         Returns:
             現在の階層のFloorData
+
         """
         return self.dungeon_manager.get_current_floor_data()
 
@@ -719,6 +875,7 @@ class GameLogic:
         Args:
             monster: モンスターインスタンス
             current_floor: 現在のフロアデータ
+
         """
         # プレイヤーが視界内にいるかチェック
         if self._can_monster_see_player(monster, current_floor):
@@ -738,6 +895,7 @@ class GameLogic:
 
         Returns:
             プレイヤーが視界内にいる場合True
+
         """
         # ユークリッド距離でチェック
         distance = (
@@ -752,6 +910,7 @@ class GameLogic:
         Args:
             monster: モンスターインスタンス
             current_floor: 現在のフロアデータ
+
         """
         dx, dy = monster.get_move_towards_player(self.player.x, self.player.y)
         target_x = monster.x + dx
@@ -770,6 +929,7 @@ class GameLogic:
         Args:
             monster: モンスターインスタンス
             current_floor: 現在のフロアデータ
+
         """
         import random
 
@@ -793,6 +953,7 @@ class GameLogic:
 
         Returns:
             移動可能な場合True
+
         """
         # 境界チェック
         if not (
@@ -822,6 +983,7 @@ class GameLogic:
 
         Args:
             monster: 攻撃するモンスター
+
         """
         damage = max(0, monster.attack - self.player.get_defense())
         self.player.hp = max(0, self.player.hp - damage)

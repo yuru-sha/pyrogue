@@ -20,8 +20,6 @@ Example:
 
 from __future__ import annotations
 
-from typing import Optional
-
 import tcod
 import tcod.console
 import tcod.event
@@ -33,6 +31,7 @@ from pyrogue.core.input_handlers import StateManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
+from pyrogue.ui.screens.magic_screen import MagicScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
 from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
@@ -86,6 +85,7 @@ class Engine:
         self.menu_screen = MenuScreen(self.console, self)
         self.game_screen = GameScreen(self)
         self.inventory_screen = InventoryScreen(self.game_screen)
+        self.magic_screen = MagicScreen(self)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
 
@@ -190,6 +190,10 @@ class Engine:
                     self.game_screen.render()
                 elif self.state == GameStates.SHOW_INVENTORY:
                     self.inventory_screen.render(self.console)
+                elif self.state == GameStates.SHOW_MAGIC:
+                    self.magic_screen.render(self.console)
+                elif self.state == GameStates.TARGETING:
+                    self.game_screen.render()
                 elif self.state == GameStates.GAME_OVER:
                     self.game_over_screen.render()
                 elif self.state == GameStates.VICTORY:
@@ -223,7 +227,7 @@ class Engine:
 
     def _handle_input(
         self, event: tcod.event.KeyDown
-    ) -> tuple[bool, Optional[GameStates]]:
+    ) -> tuple[bool, GameStates | None]:
         """
         キー入力イベントを処理。
 
@@ -244,13 +248,17 @@ class Engine:
         """Get the current screen instance based on state."""
         if self.state == GameStates.MENU:
             return self.menu_screen
-        elif self.state == GameStates.PLAYERS_TURN:
+        if self.state == GameStates.PLAYERS_TURN:
             return self.game_screen
-        elif self.state == GameStates.SHOW_INVENTORY:
+        if self.state == GameStates.SHOW_INVENTORY:
             return self.inventory_screen
-        elif self.state == GameStates.GAME_OVER:
+        if self.state == GameStates.SHOW_MAGIC:
+            return self.magic_screen
+        if self.state == GameStates.TARGETING:
+            return self.game_screen
+        if self.state == GameStates.GAME_OVER:
             return self.game_over_screen
-        elif self.state == GameStates.VICTORY:
+        if self.state == GameStates.VICTORY:
             return self.victory_screen
         return None
 

@@ -17,8 +17,6 @@ import random
 from dataclasses import dataclass, field
 
 # Import after class definitions to avoid circular imports
-from typing import TYPE_CHECKING
-
 import numpy as np
 
 from .tile import (
@@ -29,9 +27,6 @@ from .tile import (
     StairsUp,
     Wall,
 )
-
-if TYPE_CHECKING:
-    from .dungeon_builder import CorridorBuilder, RoomConnector, StairsManager
 
 
 @dataclass

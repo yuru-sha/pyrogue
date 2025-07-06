@@ -25,6 +25,7 @@ def setup_game_logger() -> logging.Logger:
 
     Returns:
         設定されたロガーインスタンス
+
     """
     logger = logging.getLogger("pyrogue")
 

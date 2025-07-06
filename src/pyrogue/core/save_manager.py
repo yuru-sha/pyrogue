@@ -16,11 +16,10 @@ Features:
 from __future__ import annotations
 
 import json
-import os
 import pickle
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pyrogue.utils.logger import game_logger
 
@@ -57,7 +56,7 @@ class SaveManager:
         # セーブディレクトリを作成
         self.save_dir.mkdir(exist_ok=True)
 
-    def save_game_state(self, game_data: Dict[str, Any]) -> bool:
+    def save_game_state(self, game_data: dict[str, Any]) -> bool:
         """
         ゲーム状態を保存。
 
@@ -106,7 +105,7 @@ class SaveManager:
                 self.backup_file.rename(self.save_file)
             return False
 
-    def load_game_state(self) -> Optional[Dict[str, Any]]:
+    def load_game_state(self) -> dict[str, Any] | None:
         """
         ゲーム状態を読み込み。
 
@@ -121,7 +120,7 @@ class SaveManager:
         try:
             # メタデータを確認
             if self.metadata_file.exists():
-                with open(self.metadata_file, "r") as f:
+                with open(self.metadata_file) as f:
                     metadata = json.load(f)
 
                 # プレイヤーが死亡している場合はロードを拒否
@@ -180,7 +179,7 @@ class SaveManager:
         except Exception as e:
             game_logger.error(f"Error during permadeath cleanup: {e}")
 
-    def trigger_permadeath_on_death(self, game_data: Dict[str, Any]) -> None:
+    def trigger_permadeath_on_death(self, game_data: dict[str, Any]) -> None:
         """
         プレイヤー死亡時にパーマデスを発動。
 
@@ -204,7 +203,7 @@ class SaveManager:
         """
         return self.save_file.exists() and not self.is_permadeath_triggered
 
-    def get_save_info(self) -> Optional[Dict[str, Any]]:
+    def get_save_info(self) -> dict[str, Any] | None:
         """
         セーブファイルの情報を取得。
 
@@ -216,7 +215,7 @@ class SaveManager:
             return None
 
         try:
-            with open(self.metadata_file, "r") as f:
+            with open(self.metadata_file) as f:
                 metadata = json.load(f)
             return metadata
         except Exception as e:

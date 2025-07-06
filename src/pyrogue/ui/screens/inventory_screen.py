@@ -94,6 +94,7 @@ class InventoryScreen(Screen):
 
         Args:
             event: キーボードイベント
+
         """
         from pyrogue.core.game_states import GameStates
 
@@ -139,7 +140,7 @@ class InventoryScreen(Screen):
                 return
 
             # u: 使用
-            elif event.sym == tcod.event.KeySym.U:
+            if event.sym == tcod.event.KeySym.U:
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # TODO: Implement item use functionality
                     self.game_screen.game_logic.add_message(
@@ -152,7 +153,7 @@ class InventoryScreen(Screen):
                 return
 
             # d: ドロップ
-            elif event.sym == tcod.event.KeySym.D:
+            if event.sym == tcod.event.KeySym.D:
                 if self.game_screen.game_logic.can_drop_item_at(
                     self.game_screen.game_logic.player.x,
                     self.game_screen.game_logic.player.y,

@@ -1,10 +1,7 @@
 """Test cases for dungeon generation."""
 
-import pytest
-import numpy as np
 from pyrogue.map.dungeon import DungeonGenerator, Room
-from pyrogue.map.tile import Floor, Wall, Door, SecretDoor, Stairs
-from typing import Tuple
+from pyrogue.map.tile import Door, Floor, SecretDoor, Wall
 
 
 def test_room_size():
@@ -221,11 +218,10 @@ def test_door_types():
                             dead_end_normal += 1
                         else:
                             dead_end_secret += 1
+                    elif isinstance(door, Door):
+                        normal_doors += 1
                     else:
-                        if isinstance(door, Door):
-                            normal_doors += 1
-                        else:
-                            secret_doors += 1
+                        secret_doors += 1
 
     # 通常の扉の確率をチェック（許容誤差10%）
     total_normal_doors = normal_doors + secret_doors
@@ -461,7 +457,7 @@ def test_stairs_in_room_interior():
     generator = DungeonGenerator(80, 50)
     tiles, start_pos, end_pos = generator.generate()
 
-    def is_in_room_interior(pos: Tuple[int, int], room: Room) -> bool:
+    def is_in_room_interior(pos: tuple[int, int], room: Room) -> bool:
         """座標が部屋の内部にあるかチェック"""
         return pos in room.inner
 

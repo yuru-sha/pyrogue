@@ -3,9 +3,9 @@
 アイテムドロップ機能のテストスクリプト
 """
 
-from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.actors.inventory import Inventory
-from pyrogue.entities.items.item import Weapon, Armor, Scroll, Food
+from pyrogue.entities.items.item import Armor, Scroll, Weapon
+from pyrogue.entities.items.item_spawner import ItemSpawner
 
 
 def test_item_drop():

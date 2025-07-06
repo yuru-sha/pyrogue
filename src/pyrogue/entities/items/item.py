@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyrogue.entities.items.effects import Effect, EffectContext
@@ -98,7 +98,7 @@ class Ring(Item):
 class Scroll(Item):
     """巻物クラス"""
 
-    def __init__(self, x: int, y: int, name: str, effect: "Effect"):
+    def __init__(self, x: int, y: int, name: str, effect: Effect):
         super().__init__(
             x=x,
             y=y,
@@ -114,7 +114,7 @@ class Scroll(Item):
         """巻物を使用した時のメッセージを返す"""
         return f"You read {self.name}."
 
-    def apply_effect(self, context: "EffectContext") -> bool:
+    def apply_effect(self, context: EffectContext) -> bool:
         """巻物の効果を適用する"""
         return self.effect.apply(context)
 
@@ -122,7 +122,7 @@ class Scroll(Item):
 class Potion(Item):
     """薬クラス"""
 
-    def __init__(self, x: int, y: int, name: str, effect: "Effect"):
+    def __init__(self, x: int, y: int, name: str, effect: Effect):
         super().__init__(
             x=x,
             y=y,
@@ -138,7 +138,7 @@ class Potion(Item):
         """薬を使用した時のメッセージを返す"""
         return f"You drink {self.name}."
 
-    def apply_effect(self, context: "EffectContext") -> bool:
+    def apply_effect(self, context: EffectContext) -> bool:
         """薬の効果を適用する"""
         return self.effect.apply(context)
 
@@ -146,7 +146,7 @@ class Potion(Item):
 class Food(Item):
     """食料クラス"""
 
-    def __init__(self, x: int, y: int, name: str, effect: "Effect"):
+    def __init__(self, x: int, y: int, name: str, effect: Effect):
         super().__init__(
             x=x,
             y=y,
@@ -162,7 +162,7 @@ class Food(Item):
         """食料を使用した時のメッセージを返す"""
         return f"You eat {self.name}."
 
-    def apply_effect(self, context: "EffectContext") -> bool:
+    def apply_effect(self, context: EffectContext) -> bool:
         """食料の効果を適用する"""
         return self.effect.apply(context)
 

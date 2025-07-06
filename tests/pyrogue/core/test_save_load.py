@@ -9,8 +9,6 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from pyrogue.core.save_manager import SaveManager
-from pyrogue.ui.screens.game_screen import GameScreen
-from pyrogue.core.engine import Engine
 
 
 def test_save_load():

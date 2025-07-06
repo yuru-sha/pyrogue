@@ -12,6 +12,8 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
+from pyrogue.entities.actors.status_effects import StatusEffectManager
+
 
 @dataclass
 class Monster:
@@ -51,6 +53,10 @@ class Monster:
     view_range: int  # 視界範囲
     color: tuple[int, int, int]  # 表示色
     is_hostile: bool = True  # 敵対的かどうか
+
+    def __post_init__(self) -> None:
+        """データクラスの初期化後に実行される処理。"""
+        self.status_effects = StatusEffectManager()
 
     def move(self, dx: int, dy: int) -> None:
         """
@@ -162,3 +168,41 @@ class Monster:
             (1, 1),
         ]
         return random.choice(directions)  # noqa: S311
+
+    def update_status_effects(self, context) -> None:
+        """
+        状態異常のターン経過処理。
+
+        すべての状態異常の効果を適用し、継続ターン数を更新します。
+        効果が切れた状態異常は自動的に削除されます。
+
+        Args:
+            context: 効果適用のためのコンテキスト
+
+        """
+        self.status_effects.update_effects(context)
+
+    def has_status_effect(self, name: str) -> bool:
+        """
+        指定された状態異常があるかどうかを判定。
+
+        Args:
+            name: 判定する状態異常の名前
+
+        Returns:
+            状態異常が存在する場合はTrue、そうでなければFalse
+
+        """
+        return self.status_effects.has_effect(name)
+
+    def is_paralyzed(self) -> bool:
+        """麻痺状態かどうかを判定。"""
+        return self.has_status_effect("Paralysis")
+
+    def is_confused(self) -> bool:
+        """混乱状態かどうかを判定。"""
+        return self.has_status_effect("Confusion")
+
+    def is_poisoned(self) -> bool:
+        """毒状態かどうかを判定。"""
+        return self.has_status_effect("Poison")

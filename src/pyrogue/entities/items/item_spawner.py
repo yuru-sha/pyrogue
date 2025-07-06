@@ -23,12 +23,6 @@ from pyrogue.map.dungeon import Room
 from .effects import (
     ENCHANT_ARMOR,
     ENCHANT_WEAPON,
-    FOOD_APPLE,
-    FOOD_BREAD,
-    FOOD_RATION,
-    HEAL_FULL,
-    HEAL_LIGHT,
-    HEAL_MEDIUM,
     IDENTIFY,
     LIGHT,
     MAGIC_MAPPING,
@@ -400,16 +394,22 @@ class ItemSpawner:
         """Map effect name to Effect object for potions."""
         power = random.randint(*power_range)
 
-        if effect_name == "healing":
+        if effect_name == "healing" or effect_name == "extra_healing":
             return HealingEffect(power)
-        elif effect_name == "extra_healing":
-            return HealingEffect(power)
-        elif effect_name in [
+        if effect_name == "poison":
+            from .effects import PoisonPotionEffect
+            return PoisonPotionEffect(duration=power, damage=2)
+        if effect_name == "paralysis":
+            from .effects import ParalysisPotionEffect
+            return ParalysisPotionEffect(duration=power)
+        if effect_name == "confusion":
+            from .effects import ConfusionPotionEffect
+            return ConfusionPotionEffect(duration=power)
+        if effect_name in [
             "strength",
             "restore_strength",
             "haste_self",
             "see_invisible",
-            "poison",
         ]:
             # These need special handling or are placeholders
             return HealingEffect(power)  # Temporary fallback

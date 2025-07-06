@@ -30,7 +30,7 @@ def test_game_screen_save_load():
         original_hp = game_screen.player_stats["hp"] = 18
         original_gold = game_screen.player_stats["gold"] = 200
 
-        print(f"セーブ前の状態:")
+        print("セーブ前の状態:")
         print(f"  位置: ({original_x}, {original_y})")
         print(f"  階層: {original_floor}")
         print(f"  HP: {original_hp}")
@@ -48,7 +48,7 @@ def test_game_screen_save_load():
         game_screen.player_stats["hp"] = 1
         game_screen.player_stats["gold"] = 999
 
-        print(f"\n変更後の状態:")
+        print("\n変更後の状態:")
         print(f"  位置: ({game_screen.player_x}, {game_screen.player_y})")
         print(f"  階層: {game_screen.current_floor}")
         print(f"  HP: {game_screen.player_stats['hp']}")
@@ -60,7 +60,7 @@ def test_game_screen_save_load():
         print(f"   ロード結果: {'成功' if load_success else '失敗'}")
 
         if load_success:
-            print(f"\nロード後の状態:")
+            print("\nロード後の状態:")
             print(f"  位置: ({game_screen.player_x}, {game_screen.player_y})")
             print(f"  階層: {game_screen.current_floor}")
             print(f"  HP: {game_screen.player_stats['hp']}")

@@ -3,7 +3,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 import tcod.event
 
@@ -16,11 +16,10 @@ class InputHandler(ABC):
     @abstractmethod
     def handle_input(
         self, event: tcod.event.KeyDown, context: Any
-    ) -> Optional[GameStates]:
+    ) -> GameStates | None:
         """特定の状態における入力を処理。"""
-        pass
 
-    def handle_escape(self, current_state: GameStates) -> Optional[GameStates]:
+    def handle_escape(self, current_state: GameStates) -> GameStates | None:
         """Handle escape key press - default behavior."""
         if current_state in (
             GameStates.PLAYERS_TURN,
@@ -42,7 +41,7 @@ class StateManager:
 
     def handle_input(
         self, event: tcod.event.KeyDown, current_state: GameStates, context: Any
-    ) -> tuple[bool, Optional[GameStates]]:
+    ) -> tuple[bool, GameStates | None]:
         """
         Handle input based on current state.
 
@@ -53,6 +52,7 @@ class StateManager:
 
         Returns:
             Tuple of (continue_game, new_state)
+
         """
         # Handle escape key globally
         if event.sym == tcod.event.KeySym.ESCAPE:
@@ -68,21 +68,23 @@ class StateManager:
                 return False, None
             return True, new_state
 
-        elif current_state == GameStates.PLAYERS_TURN:
+        if current_state == GameStates.PLAYERS_TURN:
             context.handle_key(event)
             return True, None
 
-        elif current_state == GameStates.SHOW_INVENTORY:
+        if current_state == GameStates.SHOW_INVENTORY:
             context.handle_input(event)
             return True, None
 
-        elif current_state == GameStates.GAME_OVER:
-            new_state = context.handle_input(event)
-            if new_state == GameStates.EXIT:
-                return False, None
-            return True, new_state
+        if current_state == GameStates.SHOW_MAGIC:
+            context.handle_key(event)
+            return True, None
 
-        elif current_state == GameStates.VICTORY:
+        if current_state == GameStates.TARGETING:
+            context.handle_targeting(event)
+            return True, None
+
+        if current_state == GameStates.GAME_OVER or current_state == GameStates.VICTORY:
             new_state = context.handle_input(event)
             if new_state == GameStates.EXIT:
                 return False, None
@@ -90,7 +92,7 @@ class StateManager:
 
         return True, None
 
-    def _handle_escape(self, current_state: GameStates) -> Optional[GameStates]:
+    def _handle_escape(self, current_state: GameStates) -> GameStates | None:
         """Handle escape key press - default behavior."""
         if current_state in (
             GameStates.PLAYERS_TURN,

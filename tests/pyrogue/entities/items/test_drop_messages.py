@@ -3,7 +3,7 @@
 アイテムドロップメッセージのテスト
 """
 
-from pyrogue.entities.items.item import Weapon, Armor, Scroll, Food, Gold
+from pyrogue.entities.items.item import Armor, Food, Gold, Scroll, Weapon
 
 
 def test_drop_messages():

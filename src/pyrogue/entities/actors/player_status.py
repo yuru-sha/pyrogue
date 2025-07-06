@@ -21,16 +21,21 @@ class PlayerStatusFormatter:
 
         Returns:
             フォーマットされたステータス文字列
+
         """
         weapon = player.inventory.get_equipped_item_name("weapon")
         armor = player.inventory.get_equipped_item_name("armor")
         ring_l = player.inventory.get_equipped_item_name("ring_left")
         ring_r = player.inventory.get_equipped_item_name("ring_right")
 
+        # 状態異常の表示
+        status_effects_text = player.status_effects.get_effect_summary()
+        status_line = f" [{status_effects_text}]" if status_effects_text else ""
+
         return (
-            f"Lv:{player.level} HP:{player.hp}/{player.max_hp} "
+            f"Lv:{player.level} HP:{player.hp}/{player.max_hp} MP:{player.mp}/{player.max_mp} "
             f"Atk:{player.get_attack()} Def:{player.get_defense()} "
-            f"Hunger:{player.hunger}% Exp:{player.exp} Gold:{player.gold}\n"
+            f"Hunger:{player.hunger}% Exp:{player.exp} Gold:{player.gold}{status_line}\n"
             f"Weap:{weapon} Armor:{armor} Ring(L):{ring_l} Ring(R):{ring_r}"
         )
 
@@ -44,6 +49,7 @@ class PlayerStatusFormatter:
 
         Returns:
             Dictionary containing player stats
+
         """
         return {
             "level": player.level,
