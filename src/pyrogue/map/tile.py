@@ -136,11 +136,17 @@ class SecretDoor(Door):
         self.char = "#"  # 未発見時は壁として表示
         self.walkable = False
         self.transparent = False
+        # 未発見時は通常の壁と同じ色にする
+        self.dark = (0, 0, 100)
+        self.light = (130, 110, 50)
 
     def reveal(self) -> None:
         """隠し扉を発見する"""
         self.door_state = "closed"
         self.char = "+"
+        # 発見時はドアの色に変更
+        self.dark = (139, 69, 19)
+        self.light = (139, 69, 19)
 
 
 class Stairs(Tile):

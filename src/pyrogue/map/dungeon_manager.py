@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.traps.trap import TrapManager
-from pyrogue.map.dungeon import DungeonGenerator
+# 新しいBuilder Patternベースのダンジョン生成システムを使用
+from pyrogue.map.dungeon.director import DungeonDirector
 
 
 class FloorData:
@@ -85,6 +86,15 @@ class FloorData:
         self.item_spawner = item_spawner
         self.trap_manager = trap_manager
         self.explored = explored
+
+        # 開始位置を設定（1階では下り階段の位置、その他では上り階段の位置）
+        if up_pos is not None:
+            self.start_pos = up_pos
+        elif down_pos is not None:
+            self.start_pos = down_pos
+        else:
+            # フォールバック：最初の部屋の中央
+            self.start_pos = (0, 0)  # デフォルト値
 
 
 class DungeonManager:
@@ -239,23 +249,23 @@ class DungeonManager:
 
         """
         # ダンジョンを生成
-        dungeon = DungeonGenerator(
+        dungeon_director = DungeonDirector(
             width=self.dungeon_width,
             height=self.dungeon_height,
             floor=floor_number,
         )
-        tiles, up_pos, down_pos = dungeon.generate()
+        tiles, up_pos, down_pos = dungeon_director.build_dungeon()
 
         # モンスターとアイテムを生成
         monster_spawner = MonsterSpawner(floor_number)
-        monster_spawner.spawn_monsters(tiles, dungeon.rooms)
+        monster_spawner.spawn_monsters(tiles, dungeon_director.rooms)
 
         item_spawner = ItemSpawner(floor_number)
-        item_spawner.spawn_items(tiles, dungeon.rooms)
+        item_spawner.spawn_items(tiles, dungeon_director.rooms)
 
         # トラップを生成
         trap_manager = TrapManager()
-        self._spawn_traps(trap_manager, tiles, dungeon.rooms, floor_number)
+        self._spawn_traps(trap_manager, tiles, dungeon_director.rooms, floor_number)
 
         # 探索済み領域を初期化
         explored = np.full((self.dungeon_height, self.dungeon_width), False, dtype=bool)

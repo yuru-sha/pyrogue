@@ -187,13 +187,13 @@ class Engine:
                 if self.state == GameStates.MENU:
                     self.menu_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
-                    self.game_screen.render()
+                    self.game_screen.render(self.console)
                 elif self.state == GameStates.SHOW_INVENTORY:
                     self.inventory_screen.render(self.console)
                 elif self.state == GameStates.SHOW_MAGIC:
                     self.magic_screen.render(self.console)
                 elif self.state == GameStates.TARGETING:
-                    self.game_screen.render()
+                    self.game_screen.render(self.console)
                 elif self.state == GameStates.GAME_OVER:
                     self.game_over_screen.render()
                 elif self.state == GameStates.VICTORY:

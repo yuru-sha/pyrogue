@@ -84,19 +84,19 @@ class GameLogic:
         self.turn_manager = TurnManager()
         self.monster_ai_manager = MonsterAIManager()
 
-        # コンテキストにマネージャーへの参照を追加
-        self.context.monster_ai_manager = self.monster_ai_manager
-
         # 互換性のための一時的な参照
         self.game_screen: GameScreen | None = None
 
     def setup_new_game(self) -> None:
         """新しいゲームをセットアップ。"""
+        # プレイヤーの初期設定
+        self.player.reset_to_initial_state()
+
         # 初期装備の設定
         self._setup_initial_equipment()
 
         # ダンジョンの生成
-        self.dungeon_manager.set_current_floor(1)
+        self.dungeon_manager.generate_floor(1)
 
         # プレイヤーの開始位置を設定
         floor_data = self.dungeon_manager.get_current_floor_data()
@@ -154,11 +154,6 @@ class GameLogic:
         if not self._can_move_to(new_x, new_y):
             return False
 
-        # 斜め移動の場合、角抜け（Corner Cutting）を防止
-        if dx != 0 and dy != 0:  # 斜め移動
-            if not self._can_diagonal_move(self.player.x, self.player.y, dx, dy):
-                return False
-
         # モンスターとの戦闘チェック
         monster = self._get_monster_at(new_x, new_y)
         if monster:
@@ -191,29 +186,6 @@ class GameLogic:
         # タイルチェック
         tile = floor_data.tiles[y, x]
         return getattr(tile, 'walkable', False)
-
-    def _can_diagonal_move(self, from_x: int, from_y: int, dx: int, dy: int) -> bool:
-        """
-        斜め移動が可能かチェック（角抜け防止）。
-
-        斜め移動時に経由する2つの隣接マスが両方とも通行可能な場合のみ移動許可。
-
-        Args:
-            from_x: 移動元X座標
-            from_y: 移動元Y座標
-            dx: X方向の移動量
-            dy: Y方向の移動量
-
-        Returns:
-            斜め移動が可能な場合True
-        """
-        # 経由する2つのマスをチェック
-        path1_x, path1_y = from_x + dx, from_y  # 水平方向の経由マス
-        path2_x, path2_y = from_x, from_y + dy  # 垂直方向の経由マス
-
-        # 両方の経由マスが通行可能でなければ斜め移動不可
-        return (self._can_move_to(path1_x, path1_y) and
-                self._can_move_to(path2_x, path2_y))
 
     def _get_monster_at(self, x: int, y: int) -> Monster | None:
         """指定座標のモンスターを取得。"""
@@ -393,105 +365,17 @@ class GameLogic:
     # ドア処理（DoorManagerに委譲予定）
     def open_door(self, x: int, y: int) -> bool:
         """ドアを開く。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 座標チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
-            return False
-
-        tile = floor_data.tiles[y, x]
-
-        # ドアタイルかチェック
-        from pyrogue.map.tile import Door
-        if isinstance(tile, Door) and tile.door_state == "closed":
-            tile.toggle()  # ドアを開く
-            self.add_message("You open the door.")
-            # FOVを更新
-            self._update_fov()
-            return True
-
+        # TODO: DoorManagerに委譲
         return False
 
     def close_door(self, x: int, y: int) -> bool:
         """ドアを閉じる。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 座標チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
-            return False
-
-        tile = floor_data.tiles[y, x]
-
-        # ドアタイルかチェック
-        from pyrogue.map.tile import Door
-        if isinstance(tile, Door) and tile.door_state == "open":
-            # モンスターやプレイヤーがドアの上にいないかチェック
-            if not self._is_position_occupied(x, y):
-                tile.toggle()  # ドアを閉じる
-                self.add_message("You close the door.")
-                # FOVを更新
-                self._update_fov()
-                return True
-            else:
-                self.add_message("There is something in the way.")
-                return False
-
+        # TODO: DoorManagerに委譲
         return False
-
-    def _is_position_occupied(self, x: int, y: int) -> bool:
-        """指定位置にプレイヤーやモンスターがいるかチェック。"""
-        # プレイヤーがいるかチェック
-        if self.player.x == x and self.player.y == y:
-            return True
-
-        # モンスターがいるかチェック
-        monster = self._get_monster_at(x, y)
-        return monster is not None
-
-    def _update_fov(self) -> None:
-        """FOVを更新（ゲームスクリーンが存在する場合）。"""
-        if self.game_screen and hasattr(self.game_screen, 'fov_manager'):
-            self.game_screen.fov_manager.update_fov()
 
     def search_secret_door(self, x: int, y: int) -> bool:
         """隠しドアを探索。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 座標チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
-            return False
-
-        tile = floor_data.tiles[y, x]
-
-        # 隠しドアかチェック
-        from pyrogue.map.tile import SecretDoor
-        if isinstance(tile, SecretDoor) and tile.door_state == "secret":
-            # 発見成功率はプレイヤーレベルに依存（基本30% + レベル*5%）
-            import random
-            success_rate = min(80, 30 + self.player.level * 5)
-
-            if random.randint(1, 100) <= success_rate:
-                tile.reveal()  # 隠しドアを発見
-                self.add_message("You found a secret door!")
-                # FOVを更新
-                self._update_fov()
-                return True
-            else:
-                # 失敗してもメッセージは出さない（まとめて処理される）
-                return False
-
+        # TODO: DoorManagerに委譲
         return False
 
     # トラップ処理（TrapManagerに委譲予定）

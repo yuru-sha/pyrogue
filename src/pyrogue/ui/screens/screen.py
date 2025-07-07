@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import tcod.event
 from tcod.console import Console
+
+if TYPE_CHECKING:
+    from pyrogue.core.engine import Engine
 
 
 class Screen:
     """画面の基本クラス"""
+
+    def __init__(self, engine: "Engine") -> None:
+        """
+        スクリーンを初期化。
+
+        Args:
+            engine: メインゲームエンジンのインスタンス
+        """
+        self.engine = engine
 
     def render(self, console: Console) -> None:
         """

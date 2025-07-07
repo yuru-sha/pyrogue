@@ -19,6 +19,7 @@ class InventoryScreen(Screen):
     """インベントリ画面"""
 
     def __init__(self, game_screen: GameScreen) -> None:
+        super().__init__(game_screen.engine)
         self.game_screen = game_screen
         self.selected_index = 0
         self.show_help = True

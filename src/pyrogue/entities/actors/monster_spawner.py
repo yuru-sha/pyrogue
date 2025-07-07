@@ -156,3 +156,12 @@ class MonsterSpawner:
             if monster.x == x and monster.y == y:
                 return monster
         return None
+
+    def remove_monster(self, monster: Monster) -> None:
+        """モンスターをリストから削除"""
+        if monster in self.monsters:
+            self.monsters.remove(monster)
+            # 占有位置からも削除
+            pos = (monster.x, monster.y)
+            if pos in self.occupied_positions:
+                self.occupied_positions.remove(pos)
