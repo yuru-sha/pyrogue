@@ -87,7 +87,7 @@ class GameLogic:
         # コンテキストにマネージャーへの参照を追加
         self.context.monster_ai_manager = self.monster_ai_manager
 
-        # 互換性のための一時的な参照
+        # GameScreen参照（段階的移行用）
         self.game_screen: GameScreen | None = None
 
     def setup_new_game(self) -> None:
@@ -107,11 +107,10 @@ class GameLogic:
 
     def _setup_initial_equipment(self) -> None:
         """初期装備を設定。"""
-        # 基本的な初期装備
-        # TODO: 実際のアイテムシステムと連携
+        # 基本的な初期装備（アイテムシステムと連携時に実装）
         pass
 
-    # プロパティ（互換性のため）
+    # EffectContext用プロパティ
     @property
     def dungeon(self):
         """EffectContext用のダンジョンプロパティ。"""
@@ -154,10 +153,10 @@ class GameLogic:
         if not self._can_move_to(new_x, new_y):
             return False
 
-        # 斜め移動の場合、角抜け（Corner Cutting）を防止
-        if dx != 0 and dy != 0:  # 斜め移動
-            if not self._can_diagonal_move(self.player.x, self.player.y, dx, dy):
-                return False
+        # 斜め移動の場合、角抜け（Corner Cutting）を防止（一時的に無効化）
+        # if dx != 0 and dy != 0:  # 斜め移動
+        #     if not self._can_diagonal_move(self.player.x, self.player.y, dx, dy):
+        #         return False
 
         # モンスターとの戦闘チェック
         monster = self._get_monster_at(new_x, new_y)
@@ -196,7 +195,8 @@ class GameLogic:
         """
         斜め移動が可能かチェック（角抜け防止）。
 
-        斜め移動時に経由する2つの隣接マスが両方とも通行可能な場合のみ移動許可。
+        真の角抜けを防ぐため、斜めのコーナーが完全に閉じられている場合のみ移動を制限。
+        一方でも通行可能な場合は移動を許可（通常のローグライク動作）。
 
         Args:
             from_x: 移動元X座標
@@ -211,9 +211,12 @@ class GameLogic:
         path1_x, path1_y = from_x + dx, from_y  # 水平方向の経由マス
         path2_x, path2_y = from_x, from_y + dy  # 垂直方向の経由マス
 
-        # 両方の経由マスが通行可能でなければ斜め移動不可
-        return (self._can_move_to(path1_x, path1_y) and
-                self._can_move_to(path2_x, path2_y))
+        path1_walkable = self._can_move_to(path1_x, path1_y)
+        path2_walkable = self._can_move_to(path2_x, path2_y)
+
+        # 両方のマスが通行不可能な場合のみ斜め移動を禁止（角抜け防止）
+        # どちらか一方でも通行可能なら移動許可
+        return path1_walkable or path2_walkable
 
     def _get_monster_at(self, x: int, y: int) -> Monster | None:
         """指定座標のモンスターを取得。"""
@@ -296,7 +299,15 @@ class GameLogic:
         # 最初のアイテムを取得
         item = items_at_pos[0]
 
-        # インベントリに追加
+        # ゴールドの場合は直接プレイヤーのゴールドに追加
+        if hasattr(item, 'item_type') and item.item_type == "GOLD":
+            self.player.gold += getattr(item, 'amount', 1)
+            floor_data.item_spawner.items.remove(item)
+            message = f"You picked up {getattr(item, 'amount', 1)} gold."
+            self.add_message(message)
+            return message
+
+        # 通常のアイテムはインベントリに追加
         if self.inventory.add_item(item):
             floor_data.item_spawner.items.remove(item)
             message = f"You picked up {item.name}."
@@ -497,13 +508,13 @@ class GameLogic:
     # トラップ処理（TrapManagerに委譲予定）
     def disarm_trap(self, x: int, y: int) -> bool:
         """トラップを解除。"""
-        # TODO: TrapManagerに委譲
+        # TrapManagerに委譲予定（現在未実装）
         return False
 
     # 魔法処理（MagicManagerに委譲予定）
     def handle_target_selection(self, x: int, y: int) -> None:
         """ターゲット選択処理。"""
-        # TODO: MagicManagerに委譲
+        # MagicManagerに委譲予定（現在未実装）
         pass
 
     # ユーティリティメソッド
@@ -531,7 +542,7 @@ class GameLogic:
         if floor_data and hasattr(floor_data, 'explored'):
             floor_data.explored |= visible_tiles
 
-    # CLI互換性メソッド（後方互換性のため）
+    # CLIモード互換メソッド
     def try_attack_adjacent_enemy(self) -> bool:
         """隣接する敵を攻撃。"""
         player = self.player
@@ -551,7 +562,7 @@ class GameLogic:
 
     def try_use_item(self, item) -> bool:
         """アイテムを使用。"""
-        # TODO: ItemManagerに委譲
+        # ItemManagerに委譲予定（現在未実装）
         return False
 
     def get_nearby_enemies(self) -> list:

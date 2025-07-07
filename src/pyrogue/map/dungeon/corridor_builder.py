@@ -2,7 +2,7 @@
 通路ビルダー - 通路生成専用コンポーネント。
 
 このモジュールは、部屋間を接続する通路の生成に特化したビルダーです。
-オリジナルRogue式の接続アルゴリズム、L字型通路、安全な線描画を担当します。
+オリジナルRogue式の接続アルゴリズム、直線通路、安全な線描画を担当します。
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ class CorridorBuilder:
     通路生成専用のビルダークラス。
 
     部屋間を接続する通路の生成、オリジナルRogue式の接続アルゴリズム、
-    L字型通路の作成、安全な線描画を担当します。
+    直線通路の作成、安全な線描画を担当します。
 
     Attributes:
         width: ダンジョンの幅
@@ -115,40 +115,6 @@ class CorridorBuilder:
         game_logger.info(f"Created {len(self.corridors)} corridors connecting {len(rooms)} rooms")
         return self.corridors
 
-    def _find_closest_room(
-        self,
-        target_room: Room,
-        rooms: List[Room],
-        connected_rooms: set
-    ) -> Room | None:
-        """
-        最も近い未接続の部屋を見つける。
-
-        Args:
-            target_room: 基準となる部屋
-            rooms: 全ての部屋のリスト
-            connected_rooms: 既に接続された部屋のID集合
-
-        Returns:
-            最も近い部屋、または None
-        """
-        closest_room = None
-        min_distance = float('inf')
-
-        target_center = target_room.center()
-
-        for room in rooms:
-            if room.id == target_room.id or room.id in connected_rooms:
-                continue
-
-            room_center = room.center()
-            distance = self._calculate_distance(target_center, room_center)
-
-            if distance < min_distance:
-                min_distance = distance
-                closest_room = room
-
-        return closest_room
 
     def _calculate_distance(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> float:
         """
@@ -244,7 +210,7 @@ class CorridorBuilder:
         tiles: np.ndarray
     ) -> List[Tuple[int, int]]:
         """
-        直線通路を作成（L字型ではなく直線で接続）。
+        直線通路を作成（Bresenhamアルゴリズムで直線接続）。
 
         Args:
             start: 開始点
@@ -304,38 +270,6 @@ class CorridorBuilder:
 
         return actual_corridor_points
 
-    def _create_line_segment(
-        self,
-        start: Tuple[int, int],
-        end: Tuple[int, int]
-    ) -> List[Tuple[int, int]]:
-        """
-        2点間の線分を作成。
-
-        Args:
-            start: 開始点
-            end: 終了点
-
-        Returns:
-            線分上の座標点のリスト
-        """
-        points = []
-        x1, y1 = start
-        x2, y2 = end
-
-        # 水平線
-        if y1 == y2:
-            min_x, max_x = min(x1, x2), max(x1, x2)
-            for x in range(min_x, max_x + 1):
-                points.append((x, y1))
-
-        # 垂直線
-        elif x1 == x2:
-            min_y, max_y = min(y1, y2), max(y1, y2)
-            for y in range(min_y, max_y + 1):
-                points.append((x1, y))
-
-        return points
 
     def _is_valid_corridor_position(self, x: int, y: int, tiles: np.ndarray) -> bool:
         """
@@ -353,24 +287,8 @@ class CorridorBuilder:
         if x < 1 or y < 1 or x >= self.width - 1 or y >= self.height - 1:
             return False
 
-        # 既に床タイルの場合も通路として有効（重複座標を許可）
         return True
 
-    def _is_room_wall(self, x: int, y: int, tiles: np.ndarray) -> bool:
-        """
-        指定座標が部屋の壁かチェック。
-
-        Args:
-            x: X座標
-            y: Y座標
-            tiles: ダンジョンのタイル配列
-
-        Returns:
-            部屋の壁の場合True（通路生成では常にFalse）
-        """
-        # 通路生成では壁を通過可能とする
-        # （元のRogue式では通路は壁を通過して部屋を接続する）
-        return False
 
     def _create_additional_connections(self, rooms: List[Room], tiles: np.ndarray) -> None:
         """

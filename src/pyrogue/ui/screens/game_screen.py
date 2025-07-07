@@ -134,7 +134,7 @@ class GameScreen:
         """
         return self.save_load_manager.load_game()
 
-    # プロパティ（互換性のため）
+    # GameLogic連携プロパティ
     @property
     def player(self) -> Player:
         """プレイヤーオブジェクトへのアクセス。"""
@@ -198,7 +198,7 @@ class GameScreen:
         """勝利条件をチェック。"""
         return self.game_logic.check_victory()
 
-    # CLI互換性メソッド（後方互換性のため）
+    # CLIモード互換メソッド
     def try_move_player(self, dx: int, dy: int) -> bool:
         """プレイヤーの移動を試行。"""
         return self.game_logic.handle_player_move(dx, dy)

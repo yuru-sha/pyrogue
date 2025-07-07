@@ -54,14 +54,7 @@ class StateManager:
             Tuple of (continue_game, new_state)
 
         """
-        # Handle escape key globally
-        if event.sym == tcod.event.KeySym.ESCAPE:
-            new_state = self._handle_escape(current_state)
-            if new_state == GameStates.EXIT:
-                return False, None
-            return True, new_state
-
-        # Delegate to appropriate handler
+        # Delegate to appropriate handler first
         if current_state == GameStates.MENU:
             new_state = context.handle_input(event)
             if new_state == GameStates.EXIT:
@@ -90,6 +83,13 @@ class StateManager:
                 return False, None
             return True, new_state
 
+        # Handle escape key as fallback for states without explicit handling
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            new_state = self._handle_escape(current_state)
+            if new_state == GameStates.EXIT:
+                return False, None
+            return True, new_state
+
         return True, None
 
     def _handle_escape(self, current_state: GameStates) -> GameStates | None:
@@ -102,4 +102,10 @@ class StateManager:
             return GameStates.MENU
         if current_state == GameStates.MENU:
             return GameStates.EXIT
+        if current_state in (
+            GameStates.SHOW_INVENTORY,
+            GameStates.SHOW_MAGIC,
+            GameStates.TARGETING,
+        ):
+            return GameStates.PLAYERS_TURN
         return None
