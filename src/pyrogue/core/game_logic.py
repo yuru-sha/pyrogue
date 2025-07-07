@@ -339,7 +339,7 @@ class GameLogic:
             self.add_message("You have reached the deepest part of the dungeon!")
             return False
 
-        self.dungeon_manager.move_to_floor(next_floor)
+        self.dungeon_manager.set_current_floor(next_floor)
         floor_data = self.get_current_floor_data()
 
         if floor_data and hasattr(floor_data, 'start_pos'):

@@ -181,6 +181,7 @@ class Gold(Item):
             identified=True,
         )
         self.amount = amount
+        self.item_type = "GOLD"  # ゴールドタイプを明示的に設定
 
     def pick_up(self) -> str:
         return f"You pick up {self.amount} gold pieces."

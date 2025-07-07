@@ -131,11 +131,11 @@ class InputHandler:
             # トラップ解除
             self._handle_disarm_action()
 
-        elif key == tcod.event.KeySym.PERIOD and mod & tcod.event.KMOD_SHIFT:
+        elif key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT:
             # 階段（下り） - Shift + .
             self.game_screen.game_logic.descend_stairs()
 
-        elif key == tcod.event.KeySym.COMMA and mod & tcod.event.KMOD_SHIFT:
+        elif key == tcod.event.KeySym.COMMA and mod & tcod.event.Modifier.SHIFT:
             # 階段（上り） - Shift + ,
             self.game_screen.game_logic.ascend_stairs()
 

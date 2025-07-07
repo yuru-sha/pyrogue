@@ -15,6 +15,7 @@ from pyrogue.constants import GameConstants, ProbabilityConstants
 from pyrogue.map.dungeon.corridor_builder import CorridorBuilder
 from pyrogue.map.dungeon.door_manager import DoorManager
 from pyrogue.map.dungeon.room_builder import RoomBuilder
+from pyrogue.map.dungeon.section_based_builder import BSPDungeonBuilder
 from pyrogue.map.dungeon.special_room_builder import SpecialRoomBuilder
 from pyrogue.map.dungeon.stairs_manager import StairsManager
 from pyrogue.map.dungeon.validation_manager import ValidationManager
@@ -58,11 +59,16 @@ class DungeonDirector:
 
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
+        self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=8)
         self.corridor_builder = CorridorBuilder(width, height)
         self.door_manager = DoorManager()
         self.special_room_builder = SpecialRoomBuilder(floor)
         self.stairs_manager = StairsManager()
         self.validation_manager = ValidationManager()
+
+        # フラグ: セクションベースシステムを使用するか
+        # 新しいダンジョン生成システムを使用したい場合は True に設定
+        self.use_section_based = True
 
         game_logger.debug(f"DungeonDirector initialized for floor {floor} ({width}x{height})")
 
@@ -76,34 +82,57 @@ class DungeonDirector:
         game_logger.info(f"Starting dungeon generation for floor {self.floor}")
 
         try:
-            # 1. 基本部屋構造の生成
-            self.rooms = self.room_builder.create_room_grid()
-            game_logger.debug(f"Generated {len(self.rooms)} rooms")
+            if self.use_section_based:
+                # BSPベースシステムを使用
+                # 1. BSPで部屋と通路を生成
+                self.rooms = self.bsp_builder.build_dungeon(self.tiles)
+                game_logger.debug(f"Generated {len(self.rooms)} rooms using BSP system")
 
-            # 2. 特別部屋の処理
-            self.special_room_builder.process_special_rooms(self.rooms)
+                # 2. 特別部屋の処理
+                self.special_room_builder.process_special_rooms(self.rooms)
 
-            # 3. 部屋をタイル配列に配置
-            self._place_rooms_on_tiles()
+                # 3. ドアの配置
+                self.door_manager.place_doors(self.rooms, [], self.tiles)
 
-            # 4. 通路の生成
-            self.corridors = self.corridor_builder.connect_rooms_rogue_style(
-                self.rooms, self.tiles
-            )
-            game_logger.debug(f"Generated {len(self.corridors)} corridor segments")
+                # 4. 階段の配置
+                start_pos, end_pos = self.stairs_manager.place_stairs(
+                    self.rooms, self.floor, self.tiles
+                )
 
-            # 5. ドアの配置
-            self.door_manager.place_doors(self.rooms, self.corridors, self.tiles)
+                # 5. 最終検証
+                self.validation_manager.validate_dungeon(
+                    self.rooms, [], start_pos, end_pos, self.tiles
+                )
+            else:
+                # 従来のシステムを使用
+                # 1. 基本部屋構造の生成
+                self.rooms = self.room_builder.create_room_grid()
+                game_logger.debug(f"Generated {len(self.rooms)} rooms")
 
-            # 6. 階段の配置
-            start_pos, end_pos = self.stairs_manager.place_stairs(
-                self.rooms, self.floor, self.tiles
-            )
+                # 2. 特別部屋の処理
+                self.special_room_builder.process_special_rooms(self.rooms)
 
-            # 7. 最終検証
-            self.validation_manager.validate_dungeon(
-                self.rooms, self.corridors, start_pos, end_pos, self.tiles
-            )
+                # 3. 部屋をタイル配列に配置
+                self._place_rooms_on_tiles()
+
+                # 4. 通路の生成
+                self.corridors = self.corridor_builder.connect_rooms_rogue_style(
+                    self.rooms, self.tiles
+                )
+                game_logger.debug(f"Generated {len(self.corridors)} corridor segments")
+
+                # 5. ドアの配置
+                self.door_manager.place_doors(self.rooms, self.corridors, self.tiles)
+
+                # 6. 階段の配置
+                start_pos, end_pos = self.stairs_manager.place_stairs(
+                    self.rooms, self.floor, self.tiles
+                )
+
+                # 7. 最終検証
+                self.validation_manager.validate_dungeon(
+                    self.rooms, self.corridors, start_pos, end_pos, self.tiles
+                )
 
             game_logger.info(f"Dungeon generation completed for floor {self.floor}")
             return self.tiles, start_pos, end_pos
