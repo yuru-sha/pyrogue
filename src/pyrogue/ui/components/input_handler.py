@@ -152,6 +152,10 @@ class InputHandler:
             # 隠しドア探索（Ctrlが押されていない場合のみ）
             self._handle_search_action()
 
+        elif key == ord('t'):
+            # NPCとの対話
+            self._handle_talk_action()
+
         # ゲーム終了
         elif key == tcod.event.KeySym.ESCAPE:
             if self.game_screen.engine:
@@ -296,3 +300,61 @@ class InputHandler:
             (ターゲット選択中か, X座標, Y座標)
         """
         return self.targeting_mode, self.targeting_x, self.targeting_y
+
+    def _handle_talk_action(self) -> None:
+        """
+        NPCとの対話処理。
+
+        プレイヤーの周囲8方向をチェックし、NPCがいる場合は対話を開始する。
+        """
+        player = self.game_screen.player
+        if not player:
+            return
+
+        # プレイヤーの周囲8方向をチェック
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                target_x = player.x + dx
+                target_y = player.y + dy
+
+                # NPCがいるかチェック
+                npc = self.game_screen.game_logic.get_npc_at(target_x, target_y)
+                if npc:
+                    # NPCとの対話を開始
+                    self._start_dialogue_with_npc(npc)
+                    return
+
+        # 周囲にNPCがいない場合
+        self.game_screen.game_logic.add_message("There is no one to talk to.")
+
+    def _start_dialogue_with_npc(self, npc) -> None:
+        """
+        NPCとの対話を開始。
+
+        Args:
+            npc: 対話するNPC
+        """
+        if not self.game_screen.engine:
+            return
+
+        # NPCの対話IDを取得
+        dialogue_id = getattr(npc, 'dialogue_id', 'default')
+
+        # 対話画面に遷移
+        from pyrogue.ui.screens.dialogue_screen import DialogueScreen
+
+        dialogue_screen = DialogueScreen(
+            self.game_screen.engine,
+            self.game_screen.engine.dialogue_manager,
+            dialogue_id
+        )
+
+        # 対話画面を設定
+        self.game_screen.engine.dialogue_screen = dialogue_screen
+        self.game_screen.engine.state = GameStates.DIALOGUE
+
+        # 対話開始メッセージ
+        self.game_screen.game_logic.add_message(f"You talk to {npc.name}.")

@@ -12,11 +12,11 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
+from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.status_effects import StatusEffectManager
 
 
-@dataclass
-class Monster:
+class Monster(Actor):
     """
     モンスターの基本クラス。
 
@@ -25,80 +25,46 @@ class Monster:
 
     Attributes:
         char: 表示文字（A-Z）
-        x: モンスターのX座標
-        y: モンスターのY座標
-        name: モンスター名
-        level: モンスターレベル
-        hp: 現在のHP
-        max_hp: 最大HP
-        attack: 攻撃力
-        defense: 防御力
         exp_value: 倒した時の経験値
         view_range: 視界範囲
         color: 表示色（RGB）
-        is_hostile: 敵対的かどうか
 
     """
 
-    char: str  # 表示文字（A-Z）
-    x: int
-    y: int
-    name: str
-    level: int
-    hp: int
-    max_hp: int
-    attack: int
-    defense: int
-    exp_value: int  # 倒した時の経験値
-    view_range: int  # 視界範囲
-    color: tuple[int, int, int]  # 表示色
-    is_hostile: bool = True  # 敵対的かどうか
+    def __init__(self, char: str, x: int, y: int, name: str, level: int,
+                 hp: int, max_hp: int, attack: int, defense: int, exp_value: int,
+                 view_range: int, color: tuple[int, int, int], is_hostile: bool = True) -> None:
+        """
+        モンスターの初期化。
 
-    def __post_init__(self) -> None:
-        """データクラスの初期化後に実行される処理。"""
+        Args:
+            char: 表示文字（A-Z）
+            x: モンスターのX座標
+            y: モンスターのY座標
+            name: モンスター名
+            level: モンスターレベル
+            hp: 現在のHP
+            max_hp: 最大HP
+            attack: 攻撃力
+            defense: 防御力
+            exp_value: 倒した時の経験値
+            view_range: 視界範囲
+            color: 表示色（RGB）
+            is_hostile: 敵対的かどうか
+
+        """
+        super().__init__(x, y, name, hp, max_hp, attack, defense, level, is_hostile)
+
+        # Monster固有の属性
+        self.char = char
+        self.exp_value = exp_value
+        self.view_range = view_range
+        self.color = color
+
+        # システムの初期化
         self.status_effects = StatusEffectManager()
 
-    def move(self, dx: int, dy: int) -> None:
-        """
-        指定した方向にモンスターを移動。
-
-        Args:
-            dx: X軸方向の移動量
-            dy: Y軸方向の移動量
-
-        """
-        self.x += dx
-        self.y += dy
-
-    def take_damage(self, amount: int) -> None:
-        """
-        ダメージを受けてHPを減少。
-
-        Args:
-            amount: 受けるダメージ量
-
-        """
-        self.hp = max(0, self.hp - max(0, amount - self.defense))
-
-    def is_dead(self) -> bool:
-        """
-        モンスターが死亡しているかチェック。
-
-        Returns:
-            HPが0以下の場合True
-
-        """
-        return self.hp <= 0
-
-    def heal(self, amount: int) -> None:
-        """
-        HPを回復。
-
-        Args:
-            amount: 回復するHP量
-
-        """
-        self.hp = min(self.max_hp, self.hp + amount)
+    # move, take_damage, is_dead, heal は基底クラスから継承
 
     def can_see_player(self, player_x: int, player_y: int, fov_map: Any) -> bool:
         """
@@ -113,8 +79,8 @@ class Monster:
             視界内にプレイヤーがいる場合True
 
         """
-        # モンスターからプレイヤーまでのユークリッド距離を計算
-        distance = ((self.x - player_x) ** 2 + (self.y - player_y) ** 2) ** 0.5
+        # 基底クラスの距離計算メソッドを使用
+        distance = self.get_distance_to(player_x, player_y)
 
         # 視界範囲内かつ、壁などで視線が遮られていないか確認
         return distance <= self.view_range and fov_map.transparent[player_y, player_x]

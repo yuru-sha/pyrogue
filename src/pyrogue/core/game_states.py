@@ -44,6 +44,7 @@ class GameStates(Enum):
     DROP_INVENTORY = auto()  # アイテム破棄モード
     SHOW_MAGIC = auto()  # 魔法一覧表示
     TARGETING = auto()  # ターゲット選択モード
+    DIALOGUE = auto()  # NPC対話状態
     LEVEL_UP = auto()  # レベルアップ時の選択
     CHARACTER_SCREEN = auto()  # キャラクター情報表示
     EXIT = auto()  # ゲーム終了シグナル

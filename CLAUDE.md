@@ -2,30 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## プロジェクト概要
 
-PyRogue is a traditional roguelike game built with Python and TCOD (The Coding of Doryen). It features procedurally generated dungeons, turn-based combat, permadeath mechanics, and classic roguelike exploration elements. The game follows traditional roguelike conventions where monsters are represented by A-Z letters and all items are pre-identified.
+PyRogueは、Python 3.12とTCODライブラリを使用した**本格的なローグライクゲーム**です。オリジナルRogueの26階層構造を忠実に再現し、手続き生成ダンジョン、ターンベース戦闘、パーマデス、探索重視のゲームプレイを提供します。
 
-### Key Features
-- Procedural dungeon generation with rooms and corridors (26 floors, matching original Rogue)
-- Turn-based tactical combat system
-- Permadeath (permanent death) mechanics
-- Exploration-focused gameplay
-- Vi-key movement controls (hjkl + diagonals)
-- Comprehensive inventory and equipment system
-- Status effect system (poison, paralysis, confusion)
-- Trap system (pit traps, poison needles, teleport traps)
-- Magic system with MP management and spell casting
-- Save/load functionality
-- Both GUI and CLI modes for testing
+### 完成状態
+PyRogueは現在、**完全に機能する本格的なローグライクゲーム**として完成しています：
+- ✅ 26階層の手続き生成ダンジョン
+- ✅ ターンベース戦闘・魔法・アイテムシステム
+- ✅ 状態異常・トラップシステム
+- ✅ 包括的なUI/UXとセーブ・ロード機能
+- ✅ 高品質なアーキテクチャ（責務分離、テスト可能性、拡張性）
 
-### Technology Stack
-- **Python 3.12**: Core language
-- **TCOD >=19.0.0**: Rendering, input handling, and console management
-- **NumPy >=1.26.3**: Numerical operations and array handling
-- **UV**: Package manager for fast dependency resolution
+### 技術スタック
+- **Python 3.12**: 最新のPython機能を活用
+- **TCOD >=19.0.0**: 描画、入力処理、視界計算
+- **NumPy >=1.26.3**: 数値計算・配列操作
+- **UV**: 高速パッケージ管理
 
-## Directory Structure
+## ディレクトリ構造
 
 ```
 pyrogue/
@@ -37,344 +32,227 @@ pyrogue/
 ├── uv.lock               # Dependency lock file
 │
 ├── src/pyrogue/           # Main source code
-│   ├── __init__.py
 │   ├── main.py           # Application entry point
-│   ├── config.py         # Game configuration
+│   ├── config.py         # Game configuration (deprecated)
+│   ├── constants.py      # Game constants (recommended)
 │   │
 │   ├── core/             # Game engine and core systems
 │   │   ├── engine.py     # Main game engine (GUI mode)
 │   │   ├── cli_engine.py # CLI engine for testing
 │   │   ├── game_states.py # Game state enumeration
+│   │   ├── game_logic.py  # Game logic management
 │   │   ├── input_handlers.py # Input processing
-│   │   └── save_manager.py    # Save/load functionality
+│   │   ├── save_manager.py    # Save/load functionality
+│   │   └── managers/          # Manager classes
+│   │       ├── game_context.py    # Shared context
+│   │       ├── turn_manager.py    # Turn management
+│   │       ├── combat_manager.py  # Combat system
+│   │       └── monster_ai_manager.py # Monster AI
 │   │
 │   ├── entities/         # Game entities (actors and items)
 │   │   ├── actors/       # Player and monsters
-│   │   │   ├── player.py        # Player character with MP and status effects
-│   │   │   ├── monster.py       # Monster entities
-│   │   │   ├── monster_spawner.py # Monster generation
-│   │   │   ├── monster_types.py   # Monster definitions
-│   │   │   ├── inventory.py     # Inventory system
-│   │   │   ├── player_status.py # Player stats and status
-│   │   │   └── status_effects.py # Status effect system
 │   │   ├── items/        # Items and equipment
-│   │   │   ├── item.py          # Base item class
-│   │   │   ├── item_spawner.py  # Item generation
-│   │   │   ├── item_types.py    # Item definitions
-│   │   │   └── effects.py       # Item effects
 │   │   ├── magic/        # Magic system
-│   │   │   ├── __init__.py      # Magic module
-│   │   │   └── spells.py        # Spell definitions and Spellbook
 │   │   └── traps/        # Trap system
-│   │       └── trap.py          # Trap definitions and TrapManager
 │   │
 │   ├── map/              # Dungeon generation and tiles
 │   │   ├── dungeon.py           # Main dungeon class
 │   │   ├── dungeon_builder.py   # Dungeon generation logic
-│   │   └── tile.py              # Tile types (floor, wall, door, stairs)
+│   │   ├── dungeon_manager.py   # Multi-floor management
+│   │   ├── tile.py              # Tile types
+│   │   └── dungeon/             # Builder Pattern implementation
 │   │
 │   ├── ui/               # User interface components
-│   │   ├── elements/     # UI elements (empty currently)
-│   │   └── screens/      # Game screens
-│   │       ├── screen.py           # Base screen class
-│   │       ├── menu_screen.py      # Main menu
-│   │       ├── game_screen.py      # Main gameplay screen
-│   │       ├── inventory_screen.py # Inventory management
-│   │       ├── magic_screen.py     # Magic casting menu
-│   │       ├── game_over_screen.py # Game over screen
-│   │       └── victory_screen.py   # Victory screen
+│   │   ├── screens/      # Game screens
+│   │   └── components/   # UI components
 │   │
 │   └── utils/            # Utility modules
 │       └── logger.py     # Logging system
 │
 ├── data/                 # Game assets and data
-│   ├── assets/fonts/     # Font files
-│   │   └── dejavu10x10_gs_tc.png
-│   ├── fonts/           # Additional fonts (empty)
-│   └── logs/            # Log files (runtime generated)
-│
 ├── saves/               # Save game files (runtime generated)
 ├── tests/               # Unit tests
-│   └── test_dungeon.py  # Dungeon generation tests
-├── test_*.py           # Additional test files (development)
 └── docs/               # Documentation
+    ├── overview.md      # Project overview
+    ├── architecture.md  # Architecture documentation
+    ├── features.md      # Feature documentation
     ├── development.md   # Development guide
     └── task.md         # Task documentation
 ```
 
-## Development Commands
+**注意**: 詳細なディレクトリ構造は `docs/architecture.md` を参照してください。
 
-### Environment Setup
+## 開発コマンド
+
+### 環境構築
 ```bash
-# Initial setup (creates virtual environment and installs dependencies)
-make setup
-
-# Install development dependencies
-make setup-dev
+make setup      # 初期環境構築（仮想環境作成・依存関係インストール）
+make setup-dev  # 開発依存関係インストール
 ```
 
-### Running the Game
+### ゲーム実行
 ```bash
-# Run the game (release mode)
-make run
+make run        # ゲーム実行（リリースモード）
 ```
 
-### Development Workflow
+### 開発ワークフロー
 ```bash
-# Run ci check
-make ci-checks
+make test       # テスト実行
+make ci-checks  # CI検証（リント・型チェック・テスト）
 ```
 
-Note: The project uses `uv` as the package manager. All development commands are run through `uv run`.
+**注意**: プロジェクトは `uv` をパッケージマネージャーとして使用。すべての開発コマンドは `uv run` を通じて実行されます。
 
-## Architecture Overview
+## アーキテクチャ概要
 
-### Core Structure
-- **Engine (`core/engine.py`)**: Main game engine managing the game loop, state transitions, and event handling
-- **Game States (`core/game_states.py`)**: Enum defining all possible game states (MENU, PLAYERS_TURN, GAME_OVER, etc.)
-- **Screen System (`ui/screens/`)**: Different screens for menu, game, inventory, and game over states
+### 設計原則
+- **責務分離**: 各クラスが単一責任を持つ
+- **テスト可能性**: 依存関係注入、モックしやすい設計
+- **拡張性**: 新機能の追加が容易
+- **保守性**: 明確な型ヒント、包括的なドキュメント
 
-### Key Components
+### 主要コンポーネント
+- **Core**: ゲームエンジン、状態管理、入力処理
+- **Entities**: プレイヤー、モンスター、アイテム、魔法、トラップ
+- **Map**: ダンジョン生成、タイル定義、階層管理
+- **UI**: スクリーンシステム、描画処理、ユーザーインターフェース
 
-#### Game Engine
-- Manages TCOD console and context
-- Handles window resizing dynamically
-- Routes input to appropriate screens based on current state
-- Coordinates state transitions between menu, gameplay, and game over
+### 設計パターン
+- **Builder Pattern**: ダンジョン生成の段階的構築
+- **Manager Pattern**: 機能を管理クラスに分割
+- **State Pattern**: ゲーム状態の明確な管理
+- **Command Pattern**: 状態異常・魔法効果の実行
 
-#### Entity System
-- **Player (`entities/actors/player.py`)**: Player character with stats, inventory, MP management, and status effects
-- **Monsters (`entities/actors/monster.py`)**: Enemy entities with AI behavior and status effect support
-- **Items (`entities/items/`)**: Equipment, consumables, and treasure with type-based categorization
-- **Inventory (`entities/actors/inventory.py`)**: Container system for items
-- **Status Effects (`entities/actors/status_effects.py`)**: Poison, paralysis, confusion system
-- **Magic System (`entities/magic/spells.py`)**: Spell casting, MP management, and Spellbook
-- **Trap System (`entities/traps/trap.py`)**: Various traps with detection and disarm mechanics
+**詳細**: 包括的なアーキテクチャ情報は `docs/architecture.md` を参照してください。
 
-#### Map System
-- **Dungeon (`map/dungeon.py`)**: Procedural dungeon generation with rooms and corridors
-- **Tiles (`map/tile.py`)**: Floor, wall, door, and stairs tile types
-- Room-based generation with door connections
-
-#### UI System
-- Screen-based architecture with base Screen class
-- Separate screens for different game states (menu, game, inventory, magic casting)
-- Console-based rendering with TCOD
-- Magic casting UI with spell selection and targeting
-
-### Technical Details
-
-#### Configuration
-- Python 3.12 required
-- Uses TCOD for rendering and input handling
-- Configured with strict linting (ruff, mypy, black, isort)
-- Test coverage with pytest
+## 開発ガイドライン
 
 ### コーディング規約
-
-- PEP 8準拠（ruffで自動チェック）
-- 型ヒント必須（`ruff`チェック通過が必要）
-- Google形式のdocstring（日本語で記述）
-- 実装コメントは日本語で統一
-- ドキュメント（README、docs/配下）は日本語で統一
+- **PEP 8準拠**: ruffで自動チェック
+- **型ヒント必須**: mypy・ruffチェック通過が必要
+- **Google形式のdocstring**: 日本語で記述
+- **実装コメント**: 日本語で統一
+- **ドキュメント**: README、docs/配下は日本語で統一
 
 ### コミットメッセージ規約
-
 **英語で統一し、Conventional Commits形式を使用：**
 
 ```
 <type>(<scope>): <subject>
-
-<body>
-
-<footer>
 ```
 
 **Type一覧：**
 - `feat`: 新機能追加
 - `fix`: バグ修正
 - `docs`: ドキュメント変更のみ
-- `style`: コードの意味に影響しない変更（フォーマット等）
 - `refactor`: バグ修正でも機能追加でもないコード変更
-- `perf`: パフォーマンス改善
 - `test`: テストの追加や修正
 - `chore`: ビルドプロセスや補助ツールの変更
 
-**例：**
+### コーディング三原則
+- **YAGNI**: 今必要じゃない機能は作らない
+- **DRY**: 同じコードを繰り返さない
+- **KISS**: シンプルに保つ
+
+## ゲーム操作
+
+### 基本移動
+- **Vi-keys**: hjkl + 対角線移動 (yubn)
+- **矢印キー**: 標準的な方向移動
+- **テンキー**: 1-9による移動（対角線含む）
+
+### アクション
+- **g**: アイテム取得
+- **i**: インベントリ画面
+- **o**: 扉を開く
+- **c**: 扉を閉じる
+- **s**: 隠し扉の探索
+- **d**: トラップ解除
+- **z**: 魔法書（spellbook）
+- **Tab**: FOV表示切り替え
+
+### セーブ・ロード
+- **Ctrl+S**: ゲームセーブ
+- **Ctrl+L**: ゲームロード
+
+**詳細**: 完全なゲーム機能一覧は `docs/features.md` を参照してください。
+
+## テスト・ログ
+
+### テスト実行
 ```bash
-feat(ml): add unkai detection CNN model
-fix(dashboard): resolve Streamlit page reload issue
-docs(api): update weather data collection documentation
-refactor(database): optimize query performance in repository
+make test  # pytest + カバレッジレポート
 ```
 
-#### Font and Display
-- Uses dejavu10x10_gs_tc.png font (located in `data/assets/fonts/`)
-- Default screen size: 80x50 characters
-- Supports window resizing
-- Map area: 80x43 (reserves space for UI elements)
-
-## Game Controls
-
-### Basic Movement
-- **Vi-keys**: hjkl + diagonals (yubn)
-- **Arrow keys**: Standard directional movement
-- **Numpad**: 1-9 for movement and diagonals
-
-### Actions
-- **g**: Get/pick up items
-- **i**: Open inventory
-- **o**: Open doors
-- **c**: Close doors
-- **s**: Search for hidden doors
-- **d**: Disarm traps
-- **z**: Open magic casting menu (spellbook)
-- **Tab**: Toggle FOV display
-
-### Magic System
-- **Z key**: Opens spellbook for spell casting
-- **Arrow keys**: Navigate spell list in magic menu
-- **Enter**: Cast selected spell
-- **Letter keys (a-z)**: Quick cast spells by letter
-- **Targeting mode**: Enter to confirm target for offensive spells
-
-### Save/Load
-- **Ctrl+S**: Save game
-- **Ctrl+L**: Load game
-
-## Testing
-
-Run tests with:
+### デバッグログ
 ```bash
-make test
+DEBUG=1 make run  # デバッグモードで実行
 ```
 
-Test files are located in the `tests/` directory. The project uses pytest with coverage reporting.
+カスタムロガー（`utils/logger.py`）を使用。
 
-## Logging
-
-The game uses a custom logger (`utils/logger.py`) with debug mode enabled via `DEBUG=1` environment variable.
-
-## Game Systems
-
-### Status Effect System
-Located in `src/pyrogue/entities/actors/status_effects.py`:
-- **Poison**: Deals damage over time, naturally recovers
-- **Paralysis**: Prevents movement, recovered over time
-- **Confusion**: Randomizes movement direction
-- **StatusEffectManager**: Manages multiple status effects per actor
-- Integration with both player and monster entities
-
-### Trap System
-Located in `src/pyrogue/entities/traps/trap.py`:
-- **PitTrap**: Deals falling damage
-- **PoisonNeedleTrap**: Inflicts poison status effect
-- **TeleportTrap**: Randomly relocates the player
-- **Hidden/Visible states**: Traps start hidden and can be discovered
-- **Disarm mechanics**: Success rate based on player level
-- **TrapManager**: Handles trap placement and management per floor
-
-### Magic System
-Located in `src/pyrogue/entities/magic/spells.py`:
-- **MP Management**: Players have MP that increases with level
-- **Spellbook**: Manages known spells and casting
-- **Spell Types**:
-  - **Magic Missile**: Offensive spell, guaranteed hit
-  - **Heal**: Restores HP
-  - **Cure Poison**: Removes poison status effect
-  - **Poison Bolt**: Inflicts poison on enemies
-- **Targeting System**: Separate targeting mode for offensive spells
-- **MP Recovery**: Natural recovery over time when not starving
-
-### Dungeon Generation
-Following original Rogue specifications:
-- **26 floors total** (matching original Rogue depth)
-- **3x3 room grid** per floor
-- **Procedural generation** with rooms and corridors
-- **The Amulet of Yendor** appears on floor 26
-- **Escape requirement**: Must return to surface with amulet
-
-## Gemini CLI 連携ガイド
-
-### 目的
-ユーザーが **「Geminiと相談しながら進めて」** と指示した場合、
-Claude は以降のタスクを **Gemini CLI** と協調しながら進める。
-
-### トリガー
-- 正規表現: `/Gemini.*相談しながら/`
-
-### 基本フロー
-1. **PROMPT 生成**
-   Claude はユーザーの要件を1つのテキストにまとめ、環境変数 `$PROMPT` に格納
-
-2. **Gemini CLI 呼び出し**
-```bash
-gemini <<EOF
-$PROMPT
-EOF
-```
-
-3. **結果の統合**
-   - Gemini の回答を提示
-   - Claude の追加分析・コメントを付加
-
-## Gemini活用
+## Gemini CLI 協調開発
 
 ### 三位一体の開発原則
-人間の**意思決定**、Claude Codeの**分析と実行**、Gemini CLIの**検証と助言**を組み合わせ、開発の質と速度を最大化する：
-- **人間 (ユーザー)**：プロジェクトの目的・要件・最終ゴールを定義し、最終的な意思決定を行う**意思決定者**
-  - 反面、具体的なコーディングや詳細な計画を立てる力、タスク管理能力ははありません。
-- **Claude Code**：高度なタスク分解・高品質な実装・リファクタリング・ファイル操作・タスク管理を担う**実行者**
-  - 指示に対して忠実に、順序立てて実行する能力はありますが、意志がなく、思い込みは勘違いも多く、思考力は少し劣ります。
-- **Gemini CLI**：API・ライブラリ・エラー解析など**コードレベル**の技術調査・Web検索 (Google検索) による最新情報へのアクセスを行う**コード専門家**
-  - ミクロな視点でのコード品質・実装方法・デバッグに優れますが、アーキテクチャ全体の設計判断は専門外です。
+人間の**意思決定**、Claude Codeの**分析と実行**、Gemini CLIの**検証と助言**を組み合わせ、開発の質と速度を最大化：
+
+- **人間 (ユーザー)**: プロジェクトの目的・要件・最終ゴールを定義し、最終的な意思決定を行う**意思決定者**
+- **Claude Code**: 高度なタスク分解・高品質な実装・リファクタリング・ファイル操作・タスク管理を担う**実行者**
+- **Gemini CLI**: API・ライブラリ・エラー解析など**コードレベル**の技術調査・Web検索による最新情報へのアクセスを行う**コード専門家**
+
+### 活用トリガー
+ユーザーが **「Geminiと相談しながら進めて」** と指示した場合、Claude は以降のタスクを **Gemini CLI** と協調しながら進める。
+
+### 基本フロー
+1. **PROMPT 生成**: ユーザーの要件を1つのテキストにまとめ、環境変数 `$PROMPT` に格納
+2. **Gemini CLI 呼び出し**: `gemini <<EOF\n$PROMPT\nEOF`
+3. **結果の統合**: Gemini の回答を提示し、Claude の追加分析・コメントを付加
+
+### 主要な活用場面
+1. **前提確認**: ユーザー、Claude自身に思い込みや勘違い、過信がないかどうか逐一確認
+2. **技術調査**: 最新情報・エラー解決・ドキュメント検索・調査方法の確認
+3. **設計検証**: アーキテクチャ・実装方針の妥当性確認
+4. **問題解決**: Claude自身が自力でエラーを解決できない場合に対処方法を確認
+5. **コードレビュー**: 品質・保守性・パフォーマンスの評価
+6. **計画立案**: タスクの実行計画レビュー・改善提案
+7. **技術選定**: ライブラリ・手法の比較検討
+8. **実装前リスク評価**: 複雑な実装着手前の事前リスク確認・落とし穴の事前把握
+9. **設計判断の事前検証**: アーキテクチャ決定前の多角的検証・技術的負債の予防
 
 ### 壁打ち先の自動判定ルール
 - **ユーザーの要求を受けたら即座に壁打ち**を必ず実施
 - 壁打ち結果は鵜呑みにしすぎず、1意見として判断
 - 結果を元に聞き方を変えて多角的な意見を抽出するのも効果的
 
-### 主要な活用場面
-1. **実現不可能な依頼**: Claude Codeでは実現できない要求への対処 (例: `今日の天気は？`)
-2. **前提確認**: ユーザー、Claude自身に思い込みや勘違い、過信がないかどうか逐一確認 (例: `この前提は正しいか？`）
-3. **技術調査**: 最新情報・エラー解決・ドキュメント検索・調査方法の確認（例: `Rails 7.2の新機能を調べて`）
-4. **設計検証**: アーキテクチャ・実装方針の妥当性確認（例: `この設計パターンは適切か？`）
-5. **問題解決**: Claude自身が自力でエラーを解決できない場合に対処方法を確認 (例: `この問題の対処方法は？`)
-6. **コードレビュー**: 品質・保守性・パフォーマンスの評価（例: `このコードの改善点は？`）
-7. **計画立案**: タスクの実行計画レビュー・改善提案（例: `この実装計画の問題点は？`）
-8. **技術選定**: ライブラリ・手法の比較検討 （例: `このライブラリは他と比べてどうか？`）
-9. **実装前リスク評価**: 複雑な実装着手前の事前リスク確認・落とし穴の事前把握（例: `ReactとD3.jsの組み合わせでよくある問題は？`）
-10. **設計判断の事前検証**: アーキテクチャ決定前の多角的検証・技術的負債の予防（例: `マイクロサービス化の判断は適切か？`）
+## TDD開発手法（t-wada流）
 
-## 開発状況
+### 基本サイクル
+- 🔴 **Red**: 失敗するテストを書く
+- 🟢 **Green**: テストを通す最小限の実装
+- 🔵 **Refactor**: リファクタリング
 
-### 完成済み機能
-PyRogueは現在、**本格的なローグライクゲームとして完全に機能する状態**になっています：
+### 実践原則
+- **小さなステップ**: 一度に1つの機能のみ
+- **仮実装**: テストを通すためにベタ書きでもOK（例：`return 42`）
+- **三角測量**: 2つ目、3つ目のテストケースで一般化する
+- **TODOリスト更新**: 実装中に思いついたことはすぐリストに追加
+- **不安なところから**: 不安な箇所を優先的にテスト
+- **即座にコミット**: テストが通ったらすぐコミット
 
-- ✅ **コアゲームループ**: メニュー、ゲームプレイ、ゲームオーバー、勝利画面
-- ✅ **ダンジョン探索**: 26階の手続き生成ダンジョン、部屋と通路システム
-- ✅ **戦闘システム**: ターンベース戦闘、装備ボーナス、経験値システム
-- ✅ **包括的アイテムシステム**: 武器、防具、ポーション、巻物、食料、指輪
-- ✅ **ステータス異常システム**: 毒、麻痺、混乱の実装
-- ✅ **トラップシステム**: 落とし穴、毒の針、テレポートトラップ
-- ✅ **魔法システム**: MP管理、呪文詠唱、ターゲティング
-- ✅ **UI/UX**: 完全なメニューシステム、インベントリ、魔法画面
-- ✅ **セーブ/ロードシステム**: 完全なゲーム状態永続化
-
-### 残りタスク
-- NPCシステム（商人、会話、売買）
-- コード品質向上とテストカバレッジ
-- ドキュメント更新
-
-### アーキテクチャの特徴
-- **分離されたビジネスロジック**: UIから完全に分離されたGameLogic
-- **コマンド/戦略パターン**: 効果システム、魔法システム、トラップシステム
-- **プロトコルベース設計**: EffectContextによる統一インターフェース
-- **状態管理**: Enumベースのゲーム状態管理
-- **テスト可能設計**: CLIモードとGUIモードの両方対応
+### TDDコミットルール
+- 🔴 テストを書いたら: `test: add failing test for [feature]`
+- 🟢 テストを通したら: `feat: implement [feature] to pass test`
+- 🔵 リファクタリングしたら: `refactor: [description]`
 
 ## トラブルシューティング
 
 ### よくある問題
-
 1. **依存関係エラー**: `make setup-dev`を再実行
+2. **型チェックエラー**: `mypy src/pyrogue/`でチェック
+3. **テスト失敗**: `make test -v`で詳細確認
+
+### 参考資料
+- **詳細な概要**: `docs/overview.md`
+- **アーキテクチャ**: `docs/architecture.md`
+- **機能一覧**: `docs/features.md`
+- **開発ガイド**: `docs/development.md`

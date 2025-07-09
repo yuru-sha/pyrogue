@@ -87,6 +87,9 @@ class GameRenderer:
                         # モンスターの描画
                         self._render_monsters_at(console, x, y, floor_data, map_offset_y)
 
+                        # NPCの描画
+                        self._render_npcs_at(console, x, y, floor_data, map_offset_y)
+
         # プレイヤーの描画（Y座標をオフセット）
         player = game_screen.player
         if player:
@@ -241,3 +244,21 @@ class GameRenderer:
         recent_messages = messages[-max_messages:]
         for i, message in enumerate(recent_messages):
             console.print(0, message_y_start + i, message, fg=(255, 255, 255))
+
+    def _render_npcs_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
+        """
+        指定した位置にいるNPCを描画。
+
+        Args:
+            console: TCODコンソール
+            x: 描画位置のX座標
+            y: 描画位置のY座標
+            floor_data: 現在のフロアデータ
+            map_offset_y: マップのYオフセット
+        """
+        if not hasattr(floor_data, 'npc_spawner'):
+            return
+
+        npc = floor_data.npc_spawner.get_npc_at_position(x, y)
+        if npc:
+            console.print(x, y + map_offset_y, npc.char, fg=npc.color)

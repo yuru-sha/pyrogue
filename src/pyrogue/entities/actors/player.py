@@ -15,6 +15,7 @@ Example:
 from dataclasses import dataclass
 
 from pyrogue.config import CONFIG
+from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player_status import PlayerStatusFormatter
 from pyrogue.entities.actors.status_effects import StatusEffectManager
@@ -31,8 +32,7 @@ from pyrogue.entities.items.item import (
 )
 
 
-@dataclass
-class Player:
+class Player(Actor):
     """
     プレイヤーキャラクターを表すクラス。
 
@@ -47,13 +47,8 @@ class Player:
         - アイテムの使用と効果適用
 
     Attributes:
-        x: プレイヤーのX座標
-        y: プレイヤーのY座標
-        hp: 現在のHP
-        max_hp: 最大HP
-        attack: 基本攻撃力
-        defense: 基本防御力
-        level: 現在のレベル
+        mp: 現在のMP
+        max_mp: 最大MP
         exp: 経験値
         hunger: 満腹度（0-100）
         gold: 所持金貨
@@ -61,21 +56,6 @@ class Player:
 
     """
 
-    x: int = 0
-    y: int = 0
-    hp: int = CONFIG.player.INITIAL_HP
-    max_hp: int = CONFIG.player.INITIAL_HP
-    mp: int = 10  # 初期MP
-    max_mp: int = 10  # 最大MP
-    attack: int = CONFIG.player.INITIAL_ATTACK
-    defense: int = CONFIG.player.INITIAL_DEFENSE
-    level: int = 1
-    exp: int = 0
-    hunger: int = CONFIG.player.MAX_HUNGER
-    gold: int = 0
-    light_duration: int = 0  # Light効果の残りターン数
-    base_light_radius: int = 10  # 基本視野範囲
-    light_radius: int = 10  # 現在の視野範囲
 
     def __init__(self, x: int, y: int) -> None:
         """
@@ -89,49 +69,35 @@ class Player:
             y: 初期位置のY座標
 
         """
-        self.x = x
-        self.y = y
-        self.inventory = Inventory()
+        # 基底クラスの属性を初期化
+        super().__init__(
+            x=x,
+            y=y,
+            name="Player",
+            hp=CONFIG.player.INITIAL_HP,
+            max_hp=CONFIG.player.INITIAL_HP,
+            attack=CONFIG.player.INITIAL_ATTACK,
+            defense=CONFIG.player.INITIAL_DEFENSE,
+            level=1,
+            is_hostile=False
+        )
+
+        # Player固有の属性を初期化
+        self.mp = 10
+        self.max_mp = 10
+        self.exp = 0
+        self.hunger = CONFIG.player.MAX_HUNGER
         self.gold = 0
+        self.light_duration = 0
+        self.base_light_radius = 10
+        self.light_radius = 10
+
+        # システムの初期化
+        self.inventory = Inventory()
         self.status_effects = StatusEffectManager()
         self.spellbook = Spellbook()
 
-    def move(self, dx: int, dy: int) -> None:
-        """
-        指定した方向にプレイヤーを移動。
-
-        Args:
-            dx: X軸方向の移動量
-            dy: Y軸方向の移動量
-
-        """
-        self.x += dx
-        self.y += dy
-
-    def take_damage(self, amount: int) -> None:
-        """
-        ダメージを受けるHPを減少。
-
-        防御力を考慮した実ダメージを計算し、HPから差し引きます。
-        HPは0未満にはなりません。
-
-        Args:
-            amount: 受けるダメージ量
-
-        """
-        self.hp = max(0, self.hp - max(0, amount - self.defense))
-
-    def heal(self, amount: int) -> None:
-        """
-        HPを回復。
-
-        指定された量だけHPを回復します。最大HPを超えて回復することはありません。
-
-        Args:
-            amount: 回復するHP量
-
-        """
-        self.hp = min(self.max_hp, self.hp + amount)
+    # move, take_damage, heal は基底クラスから継承
 
     def gain_exp(self, amount: int) -> bool:
         """

@@ -77,6 +77,12 @@ class StateManager:
             context.handle_targeting(event)
             return True, None
 
+        if current_state == GameStates.DIALOGUE:
+            new_screen = context.handle_key(event)
+            if new_screen:
+                return True, GameStates.PLAYERS_TURN
+            return True, None
+
         if current_state == GameStates.GAME_OVER or current_state == GameStates.VICTORY:
             new_state = context.handle_input(event)
             if new_state == GameStates.EXIT:

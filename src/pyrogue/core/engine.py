@@ -28,6 +28,7 @@ import tcod.tileset
 from pyrogue.config import CONFIG
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.input_handlers import StateManager
+from pyrogue.core.managers.dialogue_manager import DialogueManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
@@ -80,6 +81,9 @@ class Engine:
         self.running = False
         self.message_log: list[str] = []  # メッセージログを追加
         self.state_manager = StateManager()
+
+        # 対話マネージャーを初期化
+        self.dialogue_manager = DialogueManager()
 
         # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
@@ -198,6 +202,9 @@ class Engine:
                     self.game_over_screen.render()
                 elif self.state == GameStates.VICTORY:
                     self.victory_screen.render()
+                elif self.state == GameStates.DIALOGUE:
+                    if hasattr(self, 'dialogue_screen'):
+                        self.dialogue_screen.render(self.console)
 
                 self.context.present(self.console)
 
@@ -256,6 +263,8 @@ class Engine:
             return self.magic_screen
         if self.state == GameStates.TARGETING:
             return self.game_screen
+        if self.state == GameStates.DIALOGUE:
+            return getattr(self, 'dialogue_screen', None)
         if self.state == GameStates.GAME_OVER:
             return self.game_over_screen
         if self.state == GameStates.VICTORY:
