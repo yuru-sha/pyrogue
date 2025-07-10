@@ -145,11 +145,17 @@ class IdentifyEffect(InstantEffect):
         player = context.player
         unidentified_count = 0
 
-        # Mark all items as identified (if we add identification system later)
+        # 新しい識別システムを使用
         for item in player.inventory.items:
-            if hasattr(item, "identified") and not item.identified:
-                item.identified = True
-                unidentified_count += 1
+            if hasattr(item, "item_type") and hasattr(item, "name"):
+                # 未識別のアイテムのみ処理
+                if not player.identification.is_identified(item.name, item.item_type):
+                    was_identified = player.identification.identify_item(item.name, item.item_type)
+                    if was_identified:
+                        unidentified_count += 1
+                        # 識別メッセージを追加
+                        msg = player.identification.get_identification_message(item.name, item.item_type)
+                        context.game_screen.message_log.append(msg)
 
         if unidentified_count > 0:
             context.game_screen.message_log.append(

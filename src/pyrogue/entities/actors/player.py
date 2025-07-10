@@ -19,6 +19,7 @@ from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player_status import PlayerStatusFormatter
 from pyrogue.entities.actors.status_effects import StatusEffectManager
 from pyrogue.entities.items.amulet import AmuletOfYendor
+from pyrogue.entities.items.identification import ItemIdentification
 from pyrogue.entities.items.item import (
     Armor,
     Food,
@@ -104,6 +105,7 @@ class Player(Actor):
         self.inventory = Inventory()
         self.status_effects = StatusEffectManager()
         self.spellbook = Spellbook()
+        self.identification = ItemIdentification()
 
     # move, take_damage, heal は基底クラスから継承
 

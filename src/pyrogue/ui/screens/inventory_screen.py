@@ -46,8 +46,10 @@ class InventoryScreen(Screen):
             # 選択中のアイテムはハイライト
             fg = tcod.white if i != self.selected_index else tcod.yellow
 
-            # アイテム情報を表示
-            item_text = f"{index_char}) {item.name}"
+            # アイテム情報を表示（識別システムを使用）
+            player = self.game_screen.game_logic.player
+            display_name = item.get_display_name(player.identification)
+            item_text = f"{index_char}) {display_name}"
             if item.stackable and item.stack_count > 1:
                 item_text += f" (x{item.stack_count})"
 
@@ -155,13 +157,34 @@ class InventoryScreen(Screen):
             # u: 使用
             if event.sym == tcod.event.KeySym.U:
                 if isinstance(selected_item, (Scroll, Potion, Food)):
-                    # TODO: Implement item use functionality
-                    self.game_screen.game_logic.add_message(
-                        f"You use the {selected_item.name}."
-                    )
+                    # アイテムを使用
+                    player = self.game_screen.game_logic.player
+                    success = player.use_item(selected_item, self.game_screen.game_logic)
+
+                    if success:
+                        # 使用成功時に識別
+                        was_identified = player.identification.identify_item(
+                            selected_item.name, selected_item.item_type
+                        )
+
+                        if was_identified:
+                            msg = player.identification.get_identification_message(
+                                selected_item.name, selected_item.item_type
+                            )
+                            self.game_screen.game_logic.add_message(msg)
+
+                        # 選択インデックスを調整
+                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
+                            self.selected_index = max(0, len(self.game_screen.game_logic.inventory.items) - 1)
+                    else:
+                        self.game_screen.game_logic.add_message(
+                            f"You cannot use the {selected_item.get_display_name(player.identification)}."
+                        )
                 else:
+                    player = self.game_screen.game_logic.player
+                    display_name = selected_item.get_display_name(player.identification)
                     self.game_screen.game_logic.add_message(
-                        f"You cannot use the {selected_item.name}."
+                        f"You cannot use the {display_name}."
                     )
                 return
 
