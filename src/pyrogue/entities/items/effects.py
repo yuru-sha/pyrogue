@@ -35,6 +35,10 @@ class EffectContext(Protocol):
         """Access to the game screen for UI updates."""
         ...
 
+    def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
+        """Add a message to the game log."""
+        ...
+
 
 class Effect(ABC):
     """Abstract base class for all item effects."""

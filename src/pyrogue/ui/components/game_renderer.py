@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import random
 import tcod
 import tcod.console
 
@@ -270,3 +271,22 @@ class GameRenderer:
         npc = floor_data.npc_spawner.get_npc_at_position(x, y)
         if npc:
             console.print(x, y + map_offset_y, npc.char, fg=npc.color)
+
+    def _get_hallucination_char(self) -> str:
+        """
+        幻覚状態でランダムな文字を返す。
+
+        Returns:
+            str: ランダムな文字
+        """
+        chars = ['?', '!', '@', '#', '$', '%', '^', '&', '*', '+', '=', '~']
+        return random.choice(chars)
+
+    def _get_hallucination_color(self) -> tuple[int, int, int]:
+        """
+        幻覚状態でランダムな色を返す。
+
+        Returns:
+            tuple[int, int, int]: RGB色値
+        """
+        return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
