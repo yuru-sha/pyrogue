@@ -7,8 +7,9 @@ DialogueScreen モジュール。
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import tcod
-from typing import TYPE_CHECKING, Optional
 
 from pyrogue.core.managers.dialogue_manager import DialogueAction, DialogueManager
 from pyrogue.ui.screens.screen import Screen
@@ -61,7 +62,7 @@ class DialogueScreen(Screen):
         """指定されたNPCオブジェクトを取得。"""
         # 実際の実装では、エンジンからNPCを取得する
         # 現在は簡単な実装として None を返す
-        return None
+        return
 
     def show_message(self, message: str) -> None:
         """メッセージを表示。"""
@@ -113,11 +114,11 @@ class DialogueScreen(Screen):
                 # 会話終了
                 from pyrogue.ui.screens.game_screen import GameScreen
                 return GameScreen(self.engine)
-            elif action == DialogueAction.TRADE:
+            if action == DialogueAction.TRADE:
                 # 取引画面を開く（現在は未実装）
                 from pyrogue.ui.screens.game_screen import GameScreen
                 return GameScreen(self.engine)
-            elif action == DialogueAction.CONTINUE:
+            if action == DialogueAction.CONTINUE:
                 # 会話を継続、選択肢をリセット
                 self.selected_choice = 0
 
@@ -127,13 +128,10 @@ class DialogueScreen(Screen):
             if choice_index < len(current_node.choices):
                 action = self.dialogue_manager.select_choice(choice_index)
 
-                if action == DialogueAction.END:
+                if action == DialogueAction.END or action == DialogueAction.TRADE:
                     from pyrogue.ui.screens.game_screen import GameScreen
                     return GameScreen(self.engine)
-                elif action == DialogueAction.TRADE:
-                    from pyrogue.ui.screens.game_screen import GameScreen
-                    return GameScreen(self.engine)
-                elif action == DialogueAction.CONTINUE:
+                if action == DialogueAction.CONTINUE:
                     self.selected_choice = 0
 
         return None  # 現在の画面を維持

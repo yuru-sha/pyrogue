@@ -12,14 +12,15 @@ Example:
 
 """
 
-from dataclasses import dataclass
 
 from pyrogue.config import CONFIG
+from pyrogue.constants import HungerConstants
 from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player_status import PlayerStatusFormatter
 from pyrogue.entities.actors.status_effects import StatusEffectManager
-from pyrogue.entities.magic.spells import Spellbook
+from pyrogue.entities.items.amulet import AmuletOfYendor
+from pyrogue.entities.items.identification import ItemIdentification
 from pyrogue.entities.items.item import (
     Armor,
     Food,
@@ -30,6 +31,7 @@ from pyrogue.entities.items.item import (
     Scroll,
     Weapon,
 )
+from pyrogue.entities.magic.spells import Spellbook
 
 
 class Player(Actor):
@@ -55,7 +57,6 @@ class Player(Actor):
         inventory: インベントリインスタンス
 
     """
-
 
     def __init__(self, x: int, y: int) -> None:
         """
@@ -92,10 +93,20 @@ class Player(Actor):
         self.base_light_radius = 10
         self.light_radius = 10
 
+        # スコア統計情報
+        self.monsters_killed = 0
+        self.deepest_floor = 1
+        self.turns_played = 0
+        self.items_used = 0
+
+        # ゲーム目標フラグ
+        self.has_amulet = False
+
         # システムの初期化
         self.inventory = Inventory()
         self.status_effects = StatusEffectManager()
         self.spellbook = Spellbook()
+        self.identification = ItemIdentification()
 
     # move, take_damage, heal は基底クラスから継承
 
@@ -277,7 +288,44 @@ class Player(Actor):
 
     def is_hungry(self) -> bool:
         """空腹状態かどうかを判定。"""
-        return self.hunger < CONFIG.player.MAX_HUNGER * 0.1
+        return self.hunger < HungerConstants.HUNGRY_THRESHOLD
+
+    def get_hunger_level(self) -> str:
+        """現在の飢餓レベルを取得。"""
+        if self.hunger >= HungerConstants.FULL_THRESHOLD:
+            return "Full"
+        elif self.hunger >= HungerConstants.CONTENT_THRESHOLD:
+            return "Content"
+        elif self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+            return "Hungry"
+        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+            return "Very Hungry"
+        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+            return "Starving"
+        else:
+            return "Dying"
+
+    def get_hunger_attack_penalty(self) -> int:
+        """飢餓による攻撃力ペナルティを取得。"""
+        if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+            return 0
+        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+            return HungerConstants.HUNGRY_ATTACK_PENALTY
+        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+            return HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
+        else:
+            return HungerConstants.STARVING_ATTACK_PENALTY
+
+    def get_hunger_defense_penalty(self) -> int:
+        """飢餓による防御力ペナルティを取得。"""
+        if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+            return 0
+        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+            return HungerConstants.HUNGRY_DEFENSE_PENALTY
+        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+            return HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
+        else:
+            return HungerConstants.STARVING_DEFENSE_PENALTY
 
     def eat_food(self, amount: int = 25) -> None:
         """
@@ -295,31 +343,35 @@ class Player(Actor):
         """
         現在の攻撃力を計算。
 
-        基本攻撃力に装備アイテムのボーナスを加算した
-        実際の攻撃力を返します。
+        基本攻撃力に装備アイテムのボーナスを加算し、
+        飢餓ペナルティを適用した実際の攻撃力を返します。
 
         Returns:
-            装備ボーナスを含む総攻撃力
+            装備ボーナスと飢餓ペナルティを含む総攻撃力
 
         """
         base_attack = self.attack
-        bonus = self.inventory.get_attack_bonus()
-        return base_attack + bonus
+        equipment_bonus = self.inventory.get_attack_bonus()
+        hunger_penalty = self.get_hunger_attack_penalty()
+        total_attack = base_attack + equipment_bonus - hunger_penalty
+        return max(1, total_attack)  # 最低1の攻撃力は保証
 
     def get_defense(self) -> int:
         """
         現在の防御力を計算。
 
-        基本防御力に装備アイテムのボーナスを加算した
-        実際の防御力を返します。
+        基本防御力に装備アイテムのボーナスを加算し、
+        飢餓ペナルティを適用した実際の防御力を返します。
 
         Returns:
-            装備ボーナスを含む総防御力
+            装備ボーナスと飢餓ペナルティを含む総防御力
 
         """
         base_defense = self.defense
-        bonus = self.inventory.get_defense_bonus()
-        return base_defense + bonus
+        equipment_bonus = self.inventory.get_defense_bonus()
+        hunger_penalty = self.get_hunger_defense_penalty()
+        total_defense = base_defense + equipment_bonus - hunger_penalty
+        return max(0, total_defense)  # 0未満にはならない
 
     def equip_item(self, item: Item) -> Item | None:
         """
@@ -383,6 +435,7 @@ class Player(Actor):
             success = item.apply_effect(context)
             if success:
                 self.inventory.remove_item(item)
+                self.record_item_use()
             return success
 
         if isinstance(item, Gold):
@@ -390,6 +443,14 @@ class Player(Actor):
             self.gold += item.amount
             self.inventory.remove_item(item)
             return True
+
+        if isinstance(item, AmuletOfYendor):
+            # Amulet of Yendorの効果を適用
+            success = item.apply_effect(context)
+            if success:
+                self.inventory.remove_item(item)
+                self.record_item_use()
+            return success
 
         return False
 
@@ -418,3 +479,35 @@ class Player(Actor):
 
         """
         return PlayerStatusFormatter.format_stats_dict(self)
+
+    def record_monster_kill(self) -> None:
+        """モンスター撃破を記録"""
+        self.monsters_killed += 1
+
+    def update_deepest_floor(self, floor: int) -> None:
+        """到達最深階層を更新"""
+        self.deepest_floor = max(self.deepest_floor, floor)
+
+    def increment_turn(self) -> None:
+        """ターン数を増加"""
+        self.turns_played += 1
+
+    def record_item_use(self) -> None:
+        """アイテム使用を記録"""
+        self.items_used += 1
+
+    def calculate_score(self) -> int:
+        """
+        スコアを計算
+
+        Returns:
+            総合スコア
+        """
+        # オリジナルRogue風スコア計算
+        score = 0
+        score += self.gold * 10  # 金貨 x10
+        score += self.exp * 5    # 経験値 x5
+        score += self.level * 100  # レベル x100
+        score += self.monsters_killed * 50  # モンスター撃破 x50
+        score += self.deepest_floor * 200   # 到達階層 x200
+        return score

@@ -89,6 +89,7 @@ class MonsterSpawner:
                     exp_value=stats[6],
                     view_range=stats[7],
                     color=stats[8],
+                    ai_pattern=stats[9],
                 )
 
         return None

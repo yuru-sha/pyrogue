@@ -14,12 +14,13 @@ if TYPE_CHECKING:
 class Screen:
     """画面の基本クラス"""
 
-    def __init__(self, engine: "Engine") -> None:
+    def __init__(self, engine: Engine) -> None:
         """
         スクリーンを初期化。
 
         Args:
             engine: メインゲームエンジンのインスタンス
+
         """
         self.engine = engine
 

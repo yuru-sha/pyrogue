@@ -7,8 +7,6 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import numpy as np
 
 from pyrogue.map.dungeon.corridor_builder import Corridor
@@ -19,7 +17,7 @@ from pyrogue.utils import game_logger
 
 class ValidationError(Exception):
     """ダンジョン検証エラー。"""
-    pass
+
 
 
 class ValidationManager:
@@ -32,6 +30,7 @@ class ValidationManager:
     Attributes:
         validation_results: 検証結果のリスト
         warnings: 警告のリスト
+
     """
 
     def __init__(self) -> None:
@@ -41,10 +40,10 @@ class ValidationManager:
 
     def validate_dungeon(
         self,
-        rooms: List[Room],
-        corridors: List[Corridor],
-        start_pos: Tuple[int, int],
-        end_pos: Tuple[int, int],
+        rooms: list[Room],
+        corridors: list[Corridor],
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
         tiles: np.ndarray
     ) -> bool:
         """
@@ -62,6 +61,7 @@ class ValidationManager:
 
         Raises:
             ValidationError: 重大な検証エラーが発生した場合
+
         """
         self.validation_results = []
         self.warnings = []
@@ -101,13 +101,14 @@ class ValidationManager:
             game_logger.error(f"Validation error: {e}")
             raise ValidationError(f"Dungeon validation failed: {e}")
 
-    def _validate_basic_structure(self, rooms: List[Room], tiles: np.ndarray) -> None:
+    def _validate_basic_structure(self, rooms: list[Room], tiles: np.ndarray) -> None:
         """
         基本構造を検証。
 
         Args:
             rooms: 部屋のリスト
             tiles: ダンジョンのタイル配列
+
         """
         # 最小部屋数のチェック
         if len(rooms) < 1:
@@ -149,12 +150,13 @@ class ValidationManager:
         else:
             self._add_result("floor_coverage", True, f"Floor coverage: {floor_ratio:.2%}")
 
-    def _validate_room_connectivity(self, rooms: List[Room]) -> None:
+    def _validate_room_connectivity(self, rooms: list[Room]) -> None:
         """
         部屋接続性を検証。
 
         Args:
             rooms: 部屋のリスト
+
         """
         if len(rooms) < 2:
             self._add_result("connectivity", True, "Single room, connectivity N/A")
@@ -191,13 +193,14 @@ class ValidationManager:
                 f"Only {visited_rooms}/{total_rooms} rooms are connected"
             )
 
-    def _validate_corridor_integrity(self, corridors: List[Corridor], tiles: np.ndarray) -> None:
+    def _validate_corridor_integrity(self, corridors: list[Corridor], tiles: np.ndarray) -> None:
         """
         通路の完全性を検証。
 
         Args:
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
+
         """
         if not corridors:
             self._add_result("corridor_integrity", True, "No corridors to validate")
@@ -235,8 +238,8 @@ class ValidationManager:
 
     def _validate_boundary_constraints(
         self,
-        rooms: List[Room],
-        corridors: List[Corridor],
+        rooms: list[Room],
+        corridors: list[Corridor],
         tiles: np.ndarray
     ) -> None:
         """
@@ -246,6 +249,7 @@ class ValidationManager:
             rooms: 部屋のリスト
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
+
         """
         height, width = tiles.shape
         boundary_violations = 0
@@ -275,8 +279,8 @@ class ValidationManager:
 
     def _validate_stairs_placement(
         self,
-        start_pos: Tuple[int, int],
-        end_pos: Tuple[int, int],
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
         tiles: np.ndarray
     ) -> None:
         """
@@ -286,6 +290,7 @@ class ValidationManager:
             start_pos: 上り階段位置
             end_pos: 下り階段位置
             tiles: ダンジョンのタイル配列
+
         """
         issues = []
 
@@ -312,12 +317,13 @@ class ValidationManager:
         else:
             self._add_result("stairs_placement", True, "Stairs placed correctly")
 
-    def _validate_special_room_rules(self, rooms: List[Room]) -> None:
+    def _validate_special_room_rules(self, rooms: list[Room]) -> None:
         """
         特別部屋ルールを検証。
 
         Args:
             rooms: 部屋のリスト
+
         """
         special_rooms = [room for room in rooms if room.is_special]
         total_rooms = len(rooms)
@@ -339,9 +345,9 @@ class ValidationManager:
 
     def _validate_accessibility(
         self,
-        rooms: List[Room],
-        start_pos: Tuple[int, int],
-        end_pos: Tuple[int, int],
+        rooms: list[Room],
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
         tiles: np.ndarray
     ) -> None:
         """
@@ -352,6 +358,7 @@ class ValidationManager:
             start_pos: 上り階段位置
             end_pos: 下り階段位置
             tiles: ダンジョンのタイル配列
+
         """
         # 簡単なアクセス可能性チェック
         # 上り階段から下り階段への経路が存在するかをチェック
@@ -373,8 +380,8 @@ class ValidationManager:
 
     def _find_room_containing_position(
         self,
-        position: Tuple[int, int],
-        rooms: List[Room]
+        position: tuple[int, int],
+        rooms: list[Room]
     ) -> Room | None:
         """
         指定位置を含む部屋を検索。
@@ -385,6 +392,7 @@ class ValidationManager:
 
         Returns:
             見つかった部屋、または None
+
         """
         x, y = position
 
@@ -403,6 +411,7 @@ class ValidationManager:
             test_name: テスト名
             passed: 成功したかどうか
             message: メッセージ
+
         """
         self.validation_results.append({
             "test": test_name,
@@ -416,6 +425,7 @@ class ValidationManager:
 
         Args:
             message: 警告メッセージ
+
         """
         self.warnings.append(message)
 
@@ -425,6 +435,7 @@ class ValidationManager:
 
         Returns:
             検証結果の詳細レポート
+
         """
         passed_tests = len([r for r in self.validation_results if r["passed"]])
         total_tests = len(self.validation_results)

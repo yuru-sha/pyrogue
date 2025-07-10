@@ -31,6 +31,7 @@ class FOVManager:
         fov_map: FOV計算用のマップ
         visible: 現在視界内のタイル
         fov_radius: 視界半径
+
     """
 
     def __init__(self, game_screen: GameScreen) -> None:
@@ -39,6 +40,7 @@ class FOVManager:
 
         Args:
             game_screen: メインのゲームスクリーンインスタンス
+
         """
         self.game_screen = game_screen
         self.fov_enabled = True
@@ -104,7 +106,7 @@ class FOVManager:
                 if isinstance(tile, Wall):
                     transparent[y, x] = False
                     walkable[y, x] = False
-                elif hasattr(tile, 'transparent') and hasattr(tile, 'walkable'):
+                elif hasattr(tile, "transparent") and hasattr(tile, "walkable"):
                     # ドアなどのタイルの透明度・通行可能性を使用
                     transparent[y, x] = tile.transparent
                     walkable[y, x] = tile.walkable
@@ -120,6 +122,7 @@ class FOVManager:
         Args:
             x: プレイヤーのX座標
             y: プレイヤーのY座標
+
         """
         # 可視範囲をリセット
         self.visible.fill(False)
@@ -139,14 +142,14 @@ class FOVManager:
 
         Returns:
             現在のFOV状態のメッセージ
+
         """
         self.fov_enabled = not self.fov_enabled
         self.update_fov()
 
         if self.fov_enabled:
             return "FOV enabled"
-        else:
-            return "FOV disabled"
+        return "FOV disabled"
 
     def set_fov_radius(self, radius: int) -> None:
         """
@@ -154,6 +157,7 @@ class FOVManager:
 
         Args:
             radius: 新しい視界半径
+
         """
         self.fov_radius = max(1, min(radius, 20))  # 1-20の範囲に制限
         self.update_fov()
@@ -168,6 +172,7 @@ class FOVManager:
 
         Returns:
             視界内にある場合True
+
         """
         if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
             return False
@@ -183,6 +188,7 @@ class FOVManager:
 
         Returns:
             探索済みの場合True
+
         """
         if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
             return False

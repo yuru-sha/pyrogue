@@ -28,11 +28,11 @@ class CombatManager:
 
     Attributes:
         context: ゲームコンテキスト
+
     """
 
     def __init__(self) -> None:
         """戦闘マネージャーを初期化。"""
-        pass
 
     def handle_player_combat(self, monster: Monster, context: GameContext) -> bool:
         """
@@ -44,6 +44,7 @@ class CombatManager:
 
         Returns:
             戦闘が発生した場合True
+
         """
         player = context.player
 
@@ -53,6 +54,10 @@ class CombatManager:
 
         # 攻撃メッセージ
         context.add_message(f"You attack the {monster.name} for {damage} damage!")
+
+        # モンスター分裂判定（ダメージを受けた時）
+        if monster.hp > 0 and hasattr(context, 'monster_ai_manager'):
+            context.monster_ai_manager.split_monster_on_damage(monster, context)
 
         # モンスターの死亡判定
         if monster.hp <= 0:
@@ -71,6 +76,7 @@ class CombatManager:
         Args:
             monster: 攻撃するモンスター
             context: ゲームコンテキスト
+
         """
         player = context.player
 
@@ -81,9 +87,34 @@ class CombatManager:
         # 攻撃メッセージ
         context.add_message(f"The {monster.name} attacks you for {damage} damage!")
 
+        # 特殊攻撃効果の判定
+        self._handle_special_attack_effects(monster, context)
+
         # プレイヤーの死亡判定
         if player.hp <= 0:
-            self._handle_player_death(context)
+            self._handle_player_death(context, f"Killed by {monster.name}")
+
+    def _handle_special_attack_effects(self, monster: Monster, context: GameContext) -> None:
+        """
+        モンスターの特殊攻撃効果を処理。
+
+        Args:
+            monster: 攻撃したモンスター
+            context: ゲームコンテキスト
+
+        """
+        player = context.player
+
+        # 幻覚を引き起こすモンスターの攻撃（30%の確率）
+        if hasattr(monster, 'ai_pattern') and monster.ai_pattern in ['hallucinogenic', 'psychic']:
+            if random.random() < 0.3:
+                from pyrogue.entities.actors.status_effects import HallucinationEffect
+                hallucination = HallucinationEffect(duration=6)
+                player.status_effects.add_effect(hallucination)
+                context.add_message(f"The {monster.name}'s attack makes you see strange visions!")
+
+        # その他の特殊攻撃効果もここに追加可能
+        # 例：毒攻撃、麻痺攻撃など
 
     def _calculate_damage(self, attacker, defender) -> int:
         """
@@ -95,6 +126,7 @@ class CombatManager:
 
         Returns:
             計算されたダメージ
+
         """
         # 基本攻撃力を取得
         base_attack = self._get_attack_power(attacker)
@@ -120,7 +152,7 @@ class CombatManager:
             damage = max(damage, CombatConstants.MIN_DAMAGE)
 
         # クリティカルメッセージ
-        if is_critical and hasattr(attacker, 'name'):
+        if is_critical and hasattr(attacker, "name"):
             if attacker.name == "Player":
                 game_logger.debug("Critical hit by player!")
             else:
@@ -137,13 +169,13 @@ class CombatManager:
 
         Returns:
             攻撃力
+
         """
-        if hasattr(entity, 'get_attack'):
+        if hasattr(entity, "get_attack"):
             return entity.get_attack()
-        elif hasattr(entity, 'attack'):
+        if hasattr(entity, "attack"):
             return entity.attack
-        else:
-            return CombatConstants.BASE_ATTACK_DAMAGE
+        return CombatConstants.BASE_ATTACK_DAMAGE
 
     def _get_defense_power(self, entity) -> int:
         """
@@ -154,13 +186,13 @@ class CombatManager:
 
         Returns:
             防御力
+
         """
-        if hasattr(entity, 'get_defense'):
+        if hasattr(entity, "get_defense"):
             return entity.get_defense()
-        elif hasattr(entity, 'defense'):
+        if hasattr(entity, "defense"):
             return entity.defense
-        else:
-            return 0
+        return 0
 
     def _handle_monster_death(self, monster: Monster, context: GameContext) -> None:
         """
@@ -169,6 +201,7 @@ class CombatManager:
         Args:
             monster: 死亡したモンスター
             context: ゲームコンテキスト
+
         """
         player = context.player
         floor_data = context.get_current_floor_data()
@@ -177,13 +210,16 @@ class CombatManager:
         exp_gained = self._calculate_exp_reward(monster, player)
         player.exp += exp_gained
 
+        # モンスター撃破を記録
+        player.record_monster_kill()
+
         context.add_message(f"You defeated the {monster.name}! (+{exp_gained} EXP)")
 
         # レベルアップチェック
         self._check_level_up(player, context)
 
         # モンスターをフロアから削除
-        if floor_data and hasattr(floor_data, 'monster_spawner'):
+        if floor_data and hasattr(floor_data, "monster_spawner"):
             floor_data.monster_spawner.remove_monster(monster)
 
         # ドロップアイテム処理
@@ -199,12 +235,13 @@ class CombatManager:
 
         Returns:
             獲得経験値
+
         """
         # 基本経験値（モンスターのレベルベース）
-        base_exp = getattr(monster, 'level', 1) * 10
+        base_exp = getattr(monster, "level", 1) * 10
 
         # プレイヤーレベルによる調整
-        level_diff = getattr(monster, 'level', 1) - player.level
+        level_diff = getattr(monster, "level", 1) - player.level
         if level_diff < 0:
             # 低レベルモンスターからの経験値減少
             base_exp = max(1, base_exp + level_diff * 5)
@@ -218,6 +255,7 @@ class CombatManager:
         Args:
             player: プレイヤー
             context: ゲームコンテキスト
+
         """
         required_exp = self._get_required_exp_for_level(player.level + 1)
 
@@ -233,7 +271,7 @@ class CombatManager:
             player.max_hp += hp_gain
             player.hp += hp_gain  # HPも回復
 
-            if hasattr(player, 'max_mp'):
+            if hasattr(player, "max_mp"):
                 player.max_mp += mp_gain
                 player.mp = min(player.mp + mp_gain, player.max_mp)
 
@@ -253,6 +291,7 @@ class CombatManager:
 
         Returns:
             必要経験値
+
         """
         base = CombatConstants.EXP_PER_LEVEL_BASE
         multiplier = CombatConstants.EXP_LEVEL_MULTIPLIER
@@ -265,6 +304,7 @@ class CombatManager:
         Args:
             monster: 死亡したモンスター
             context: ゲームコンテキスト
+
         """
         floor_data = context.get_current_floor_data()
         if not floor_data:
@@ -280,23 +320,30 @@ class CombatManager:
             floor_data.item_spawner.items.append(gold)
             context.add_message(f"The {monster.name} dropped {gold_amount} gold!")
 
-    def _handle_player_death(self, context: GameContext) -> None:
+    def _handle_player_death(self, context: GameContext, death_cause: str = "Unknown") -> None:
         """
         プレイヤーの死亡処理。
 
         Args:
             context: ゲームコンテキスト
+            death_cause: 死因
+
         """
         player = context.player
         player.hp = 0  # 確実に0にする
 
         context.add_message("You have died!")
-        game_logger.info("Player died in combat")
+        game_logger.info(f"Player died in combat: {death_cause}")
 
-        # ゲームオーバー状態をエンジンに通知
-        if context.engine and hasattr(context.engine, 'game_state'):
-            from pyrogue.core.game_states import GameStates
-            context.engine.game_state = GameStates.GAME_OVER
+        # スコアを記録（GameLogicに委譲）
+        if hasattr(context, 'game_logic') and context.game_logic:
+            context.game_logic.record_game_over(death_cause)
+
+        # ゲームオーバー処理をエンジンに通知
+        if context.engine and hasattr(context.engine, "game_over"):
+            player_stats = player.get_stats_dict()
+            final_floor = context.get_current_floor_number()
+            context.engine.game_over(player_stats, final_floor, death_cause)
 
     def can_attack(self, attacker, x: int, y: int, context: GameContext) -> bool:
         """
@@ -310,6 +357,7 @@ class CombatManager:
 
         Returns:
             攻撃可能な場合True
+
         """
         # 隣接チェック
         dx = abs(attacker.x - x)
@@ -326,6 +374,7 @@ class CombatManager:
 
         Returns:
             戦闘統計辞書
+
         """
         return {
             "level": player.level,

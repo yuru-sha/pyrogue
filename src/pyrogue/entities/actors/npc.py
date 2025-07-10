@@ -8,7 +8,7 @@ NPCモジュール。
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.status_effects import StatusEffectManager
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 class NPCDisposition(Enum):
     """NPC の態度・性格を定義する列挙型。"""
+
     FRIENDLY = "friendly"      # 友好的
     NEUTRAL = "neutral"        # 中立的
     HOSTILE = "hostile"        # 敵対的（モンスター化）
@@ -27,6 +28,7 @@ class NPCDisposition(Enum):
 
 class NPCType(Enum):
     """NPC の種類を定義する列挙型。"""
+
     MERCHANT = "merchant"      # 商人
     GUARD = "guard"           # 警備員
     VILLAGER = "villager"     # 村人
@@ -57,8 +59,8 @@ class NPC(Actor):
                  hp: int, max_hp: int, attack: int, defense: int,
                  color: tuple[int, int, int], disposition: NPCDisposition,
                  npc_type: NPCType, dialogue_id: str,
-                 inventory: Optional[Inventory] = None,
-                 quest_ids: Optional[list[str]] = None) -> None:
+                 inventory: Inventory | None = None,
+                 quest_ids: list[str] | None = None) -> None:
         """
         NPCの初期化。
 
@@ -262,10 +264,9 @@ class NPC(Actor):
         """
         if self.disposition == NPCDisposition.FRIENDLY:
             return f"Hello there, adventurer! I'm {self.name}."
-        elif self.disposition == NPCDisposition.NEUTRAL:
+        if self.disposition == NPCDisposition.NEUTRAL:
             return f"Greetings. I am {self.name}."
-        else:
-            return f"{self.name} glares at you suspiciously."
+        return f"{self.name} glares at you suspiciously."
 
     def get_farewell_message(self) -> str:
         """
@@ -276,11 +277,10 @@ class NPC(Actor):
 
         """
         if self.disposition == NPCDisposition.FRIENDLY:
-            return f"Farewell, and may fortune favor you!"
-        elif self.disposition == NPCDisposition.NEUTRAL:
-            return f"Until we meet again."
-        else:
-            return f"{self.name} turns away coldly."
+            return "Farewell, and may fortune favor you!"
+        if self.disposition == NPCDisposition.NEUTRAL:
+            return "Until we meet again."
+        return f"{self.name} turns away coldly."
 
     def update_status_effects(self, context) -> None:
         """

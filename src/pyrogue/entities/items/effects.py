@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 from pyrogue.entities.actors.status_effects import (
     ConfusionEffect,
+    HallucinationEffect,
     ParalysisEffect,
     PoisonEffect,
 )
@@ -32,6 +33,10 @@ class EffectContext(Protocol):
     @property
     def game_screen(self) -> "GameScreen":
         """Access to the game screen for UI updates."""
+        ...
+
+    def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
+        """Add a message to the game log."""
         ...
 
 
@@ -70,11 +75,11 @@ class HealingEffect(InstantEffect):
         actual_heal = player.hp - old_hp
 
         if actual_heal > 0:
-            context.game_screen.message_log.append(
+            context.add_message(
                 f"You feel better! (+{actual_heal} HP)"
             )
             return True
-        context.game_screen.message_log.append("You are already at full health.")
+        context.add_message("You are already at full health.")
         return False
 
 
@@ -92,9 +97,10 @@ class TeleportEffect(InstantEffect):
 
         # Find a random walkable tile
         max_attempts = 100
+        height, width = dungeon.tiles.shape
         for _ in range(max_attempts):
-            x = random.randint(0, dungeon.width - 1)
-            y = random.randint(0, dungeon.height - 1)
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
 
             if dungeon.tiles[y][x].walkable and not dungeon.get_blocking_entity_at(
                 x, y
@@ -102,12 +108,12 @@ class TeleportEffect(InstantEffect):
                 old_x, old_y = player.x, player.y
                 player.x, player.y = x, y
 
-                context.game_screen.message_log.append(
+                context.add_message(
                     f"You teleport from ({old_x}, {old_y}) to ({x}, {y})!"
                 )
                 return True
 
-        context.game_screen.message_log.append("The teleportation fails!")
+        context.add_message("The teleportation fails!")
         return False
 
 
@@ -123,11 +129,12 @@ class MagicMappingEffect(InstantEffect):
         dungeon = context.dungeon
 
         # Reveal all tiles
-        for y in range(dungeon.height):
-            for x in range(dungeon.width):
+        height, width = dungeon.tiles.shape
+        for y in range(height):
+            for x in range(width):
                 dungeon.explored[y][x] = True
 
-        context.game_screen.message_log.append(
+        context.add_message(
             "The dungeon layout is revealed to your mind!"
         )
         return True
@@ -145,18 +152,24 @@ class IdentifyEffect(InstantEffect):
         player = context.player
         unidentified_count = 0
 
-        # Mark all items as identified (if we add identification system later)
+        # 新しい識別システムを使用
         for item in player.inventory.items:
-            if hasattr(item, "identified") and not item.identified:
-                item.identified = True
-                unidentified_count += 1
+            if hasattr(item, "item_type") and hasattr(item, "name"):
+                # 未識別のアイテムのみ処理
+                if not player.identification.is_identified(item.name, item.item_type):
+                    was_identified = player.identification.identify_item(item.name, item.item_type)
+                    if was_identified:
+                        unidentified_count += 1
+                        # 識別メッセージを追加
+                        msg = player.identification.get_identification_message(item.name, item.item_type)
+                        context.add_message(msg)
 
         if unidentified_count > 0:
-            context.game_screen.message_log.append(
+            context.add_message(
                 f"You identify {unidentified_count} item(s)!"
             )
         else:
-            context.game_screen.message_log.append(
+            context.add_message(
                 "All your items are already known to you."
             )
 
@@ -179,11 +192,11 @@ class NutritionEffect(InstantEffect):
 
         hunger_gained = player.hunger - old_hunger
         if hunger_gained > 0:
-            context.game_screen.message_log.append(
+            context.add_message(
                 f"You feel satisfied. (+{hunger_gained} hunger)"
             )
             return True
-        context.game_screen.message_log.append("You are already full.")
+        context.add_message("You are already full.")
         return False
 
 
@@ -212,11 +225,11 @@ class RemoveCurseEffect(InstantEffect):
                 cursed_count += 1
 
         if cursed_count > 0:
-            context.game_screen.message_log.append(
+            context.add_message(
                 f"You feel the curse lift from {cursed_count} item(s)!"
             )
         else:
-            context.game_screen.message_log.append(
+            context.add_message(
                 "You don't feel any curses upon your belongings."
             )
 
@@ -236,21 +249,21 @@ class EnchantWeaponEffect(InstantEffect):
         weapon = player.inventory.get_equipped_weapon()
 
         if not weapon:
-            context.game_screen.message_log.append(
+            context.add_message(
                 "You need to be wielding a weapon to enchant it!"
             )
             return False
 
         # Check enchantment limit (max +9)
         if weapon.enchantment >= 9:
-            context.game_screen.message_log.append(
+            context.add_message(
                 "Your weapon glows briefly, but nothing happens."
             )
             return False
 
         weapon.enchantment += 1
         enchant_text = f"+{weapon.enchantment}" if weapon.enchantment > 0 else ""
-        context.game_screen.message_log.append(
+        context.add_message(
             f"Your {weapon.name} glows with magical energy! (now {enchant_text} {weapon.name})"
         )
         return True
@@ -269,21 +282,21 @@ class EnchantArmorEffect(InstantEffect):
         armor = player.inventory.get_equipped_armor()
 
         if not armor:
-            context.game_screen.message_log.append(
+            context.add_message(
                 "You need to be wearing armor to enchant it!"
             )
             return False
 
         # Check enchantment limit (max +9)
         if armor.enchantment >= 9:
-            context.game_screen.message_log.append(
+            context.add_message(
                 "Your armor gleams briefly, but nothing happens."
             )
             return False
 
         armor.enchantment += 1
         enchant_text = f"+{armor.enchantment}" if armor.enchantment > 0 else ""
-        context.game_screen.message_log.append(
+        context.add_message(
             f"Your {armor.name} shimmers with protective magic! (now {enchant_text} {armor.name})"
         )
         return True
@@ -303,7 +316,7 @@ class LightEffect(InstantEffect):
         player = context.player
         player.apply_light_effect(self.duration, self.radius)
 
-        context.game_screen.message_log.append(
+        context.add_message(
             "A brilliant light surrounds you, expanding your vision!"
         )
         return True
@@ -323,7 +336,7 @@ class StatusEffectApplication(InstantEffect):
 
         player.status_effects.add_effect(status_effect)
 
-        context.game_screen.message_log.append(
+        context.add_message(
             f"You are affected by {status_effect.name}!"
         )
         return True
@@ -366,6 +379,18 @@ class ConfusionPotionEffect(StatusEffectApplication):
         )
 
 
+class HallucinationPotionEffect(StatusEffectApplication):
+    """Causes hallucinations in the player."""
+
+    def __init__(self, duration: int = 8) -> None:
+        super().__init__(
+            status_effect_class=HallucinationEffect,
+            name="Hallucination",
+            description=f"Causes hallucinations for {duration} turns",
+            duration=duration
+        )
+
+
 # Pre-defined common effects
 HEAL_LIGHT = HealingEffect(25)
 HEAL_MEDIUM = HealingEffect(50)
@@ -383,3 +408,4 @@ FOOD_APPLE = NutritionEffect(50)
 POISON_POTION = PoisonPotionEffect()
 PARALYSIS_POTION = ParalysisPotionEffect()
 CONFUSION_POTION = ConfusionPotionEffect()
+HALLUCINATION_POTION = HallucinationPotionEffect()

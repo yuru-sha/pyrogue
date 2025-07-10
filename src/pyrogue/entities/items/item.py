@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyrogue.entities.items.effects import Effect, EffectContext
+    from pyrogue.entities.items.identification import ItemIdentification
 
 
 @dataclass
@@ -19,7 +20,8 @@ class Item:
     char: str
     color: tuple[int, int, int]
     stackable: bool = False  # 重ね合わせ可能か
-    identified: bool = True  # 識別済みか（このゲームでは常にTrue）
+    identified: bool = True  # 識別済みか
+    item_type: str = "ITEM"  # アイテムタイプ（識別システム用）
     stack_count: int = 1  # スタック数
     cursed: bool = False  # 呪いフラグ
 
@@ -35,6 +37,10 @@ class Item:
             return f"You drop {self.stack_count} {self.name}."
         return f"You drop the {self.name}."
 
+    def get_display_name(self, identification: ItemIdentification) -> str:
+        """識別状態に応じた表示名を取得"""
+        return identification.get_display_name(self.name, self.item_type)
+
 
 class Weapon(Item):
     """武器クラス"""
@@ -48,13 +54,15 @@ class Weapon(Item):
             color=(192, 192, 192),  # 銀色
             stackable=False,
             identified=True,
+            item_type="WEAPON",
         )
         self.attack = attack_bonus
         self.enchantment = 0  # 強化レベル
 
     def pick_up(self) -> str:
         """武器を拾った時のメッセージ"""
-        return f"You pick up the {self.name} (ATK +{self.attack})."
+        sign = "+" if self.attack >= 0 else ""
+        return f"You pick up the {self.name} (ATK {sign}{self.attack})."
 
 
 class Armor(Item):
@@ -69,13 +77,15 @@ class Armor(Item):
             color=(192, 192, 192),  # 銀色
             stackable=False,
             identified=True,
+            item_type="ARMOR",
         )
         self.defense = defense_bonus
         self.enchantment = 0  # 強化レベル
 
     def pick_up(self) -> str:
         """防具を拾った時のメッセージ"""
-        return f"You pick up the {self.name} (DEF +{self.defense})."
+        sign = "+" if self.defense >= 0 else ""
+        return f"You pick up the {self.name} (DEF {sign}{self.defense})."
 
 
 class Ring(Item):
@@ -89,7 +99,8 @@ class Ring(Item):
             char="=",
             color=(255, 215, 0),  # 金色
             stackable=False,
-            identified=True,
+            identified=False,  # 指輪は未識別
+            item_type="RING",
         )
         self.effect = effect
         self.bonus = bonus
@@ -106,7 +117,8 @@ class Scroll(Item):
             char="?",
             color=(255, 255, 255),  # 白色
             stackable=True,
-            identified=True,
+            identified=False,  # 巻物は未識別
+            item_type="SCROLL",
         )
         self.effect = effect
 
@@ -130,7 +142,8 @@ class Potion(Item):
             char="!",
             color=(255, 0, 255),  # マゼンタ
             stackable=True,
-            identified=True,
+            identified=False,  # ポーションは未識別
+            item_type="POTION",
         )
         self.effect = effect
 
@@ -155,6 +168,7 @@ class Food(Item):
             color=(139, 69, 19),  # 茶色
             stackable=True,
             identified=True,
+            item_type="FOOD",
         )
         self.effect = effect
 
@@ -179,6 +193,7 @@ class Gold(Item):
             color=(255, 215, 0),  # 金色
             stackable=True,
             identified=True,
+            item_type="GOLD",
         )
         self.amount = amount
         self.item_type = "GOLD"  # ゴールドタイプを明示的に設定

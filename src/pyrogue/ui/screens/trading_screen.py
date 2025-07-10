@@ -7,10 +7,11 @@ TradingScreen モジュール。
 
 from __future__ import annotations
 
-import tcod
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
-from pyrogue.core.managers.trading_manager import TradingManager, TradeItem, TradeType
+import tcod
+
+from pyrogue.core.managers.trading_manager import TradeItem, TradingManager
 from pyrogue.ui.screens.screen import Screen
 
 if TYPE_CHECKING:
@@ -48,7 +49,7 @@ class TradingScreen(Screen):
         self.npc_id = npc_id
         self.view_mode = "buy"  # デフォルトは購入モード
         self.selected_item = 0
-        self.current_items: List[TradeItem] = []
+        self.current_items: list[TradeItem] = []
 
         # 取引開始
         if not self.trading_manager.start_trading(npc_id, self):
@@ -66,7 +67,7 @@ class TradingScreen(Screen):
         """指定されたNPCオブジェクトを取得。"""
         # 実際の実装では、エンジンからNPCを取得する
         # 現在は簡単な実装として None を返す
-        return None
+        return
 
     def show_message(self, message: str) -> None:
         """メッセージを表示。"""
@@ -356,7 +357,7 @@ class TradingScreen(Screen):
 
         """
         # アイテムの色を取得（既に item.color が設定されている場合）
-        if hasattr(item, 'color'):
+        if hasattr(item, "color"):
             return item.color
 
         # アイテムタイプに応じたデフォルト色
@@ -364,15 +365,14 @@ class TradingScreen(Screen):
 
         if "weapon" in class_name:
             return (192, 192, 192)  # 銀色
-        elif "armor" in class_name:
+        if "armor" in class_name:
             return (139, 69, 19)    # 茶色
-        elif "potion" in class_name:
+        if "potion" in class_name:
             return (255, 0, 255)    # マゼンタ
-        elif "scroll" in class_name:
+        if "scroll" in class_name:
             return (255, 255, 0)    # 黄色
-        elif "food" in class_name:
+        if "food" in class_name:
             return (165, 42, 42)    # 茶色
-        elif "ring" in class_name:
+        if "ring" in class_name:
             return (255, 215, 0)    # 金色
-        else:
-            return (128, 128, 128)  # グレー
+        return (128, 128, 128)  # グレー

@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import random
-from typing import List, Tuple
 
 import numpy as np
 
@@ -27,6 +26,7 @@ class StairsManager:
 
     Attributes:
         stairs_placed: 配置された階段の情報
+
     """
 
     def __init__(self) -> None:
@@ -35,10 +35,10 @@ class StairsManager:
 
     def place_stairs(
         self,
-        rooms: List[Room],
+        rooms: list[Room],
         floor: int,
         tiles: np.ndarray
-    ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         階段を配置。
 
@@ -49,6 +49,7 @@ class StairsManager:
 
         Returns:
             (上り階段位置, 下り階段位置) のタプル
+
         """
         self.stairs_placed = []
 
@@ -66,10 +67,10 @@ class StairsManager:
 
     def _place_up_stairs(
         self,
-        rooms: List[Room],
+        rooms: list[Room],
         floor: int,
         tiles: np.ndarray
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """
         上り階段を配置。
 
@@ -80,6 +81,7 @@ class StairsManager:
 
         Returns:
             上り階段の位置
+
         """
         # 1階では上り階段は不要だが、開始位置として最初の部屋の中央を返す
         if floor <= 1:
@@ -111,10 +113,10 @@ class StairsManager:
 
     def _place_down_stairs(
         self,
-        rooms: List[Room],
+        rooms: list[Room],
         floor: int,
         tiles: np.ndarray
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """
         下り階段を配置。
 
@@ -125,6 +127,7 @@ class StairsManager:
 
         Returns:
             下り階段の位置
+
         """
         # 最深階では下り階段は不要
         if floor >= GameConstants.MAX_FLOORS:
@@ -151,7 +154,7 @@ class StairsManager:
 
         return (1, 1)  # 最終フォールバック
 
-    def _select_stairs_room(self, rooms: List[Room], stairs_type: str, floor: int) -> Room | None:
+    def _select_stairs_room(self, rooms: list[Room], stairs_type: str, floor: int) -> Room | None:
         """
         階段配置用の部屋を選択。
 
@@ -162,6 +165,7 @@ class StairsManager:
 
         Returns:
             選択された部屋、または None
+
         """
         if not rooms:
             return None
@@ -179,11 +183,10 @@ class StairsManager:
         if stairs_type == "up":
             # 上り階段は最初の方の部屋に配置
             return self._select_room_by_criteria(suitable_rooms, "first")
-        else:
-            # 下り階段は最後の方の部屋に配置
-            return self._select_room_by_criteria(suitable_rooms, "last")
+        # 下り階段は最後の方の部屋に配置
+        return self._select_room_by_criteria(suitable_rooms, "last")
 
-    def _select_room_by_criteria(self, rooms: List[Room], criteria: str) -> Room:
+    def _select_room_by_criteria(self, rooms: list[Room], criteria: str) -> Room:
         """
         基準に応じて部屋を選択。
 
@@ -193,25 +196,26 @@ class StairsManager:
 
         Returns:
             選択された部屋
+
         """
         if criteria == "first":
             # 最初の3つの部屋からランダム選択
             candidate_rooms = rooms[:min(3, len(rooms))]
             return random.choice(candidate_rooms)
 
-        elif criteria == "last":
+        if criteria == "last":
             # 最後の3つの部屋からランダム選択
             candidate_rooms = rooms[-min(3, len(rooms)):]
             return random.choice(candidate_rooms)
 
-        elif criteria == "largest":
+        if criteria == "largest":
             # 最も大きい部屋を選択
             return max(rooms, key=lambda r: r.width * r.height)
 
-        else:  # "random"
-            return random.choice(rooms)
+        # "random"
+        return random.choice(rooms)
 
-    def _find_stairs_position(self, room: Room, tiles: np.ndarray) -> Tuple[int, int] | None:
+    def _find_stairs_position(self, room: Room, tiles: np.ndarray) -> tuple[int, int] | None:
         """
         部屋内の階段配置位置を見つける。
 
@@ -221,6 +225,7 @@ class StairsManager:
 
         Returns:
             階段位置、または None
+
         """
         # 部屋の中央付近から候補位置を選択
         center_x, center_y = room.center()
@@ -266,6 +271,7 @@ class StairsManager:
 
         Returns:
             有効な位置の場合True
+
         """
         # 部屋の境界内かチェック
         if (x <= room.x or x >= room.x + room.width - 1 or
@@ -290,6 +296,7 @@ class StairsManager:
 
         Returns:
             階段種類と位置の辞書
+
         """
         positions = {}
         for stairs_type, position, room_id in self.stairs_placed:
@@ -308,6 +315,7 @@ class StairsManager:
 
         Returns:
             妥当な配置の場合True
+
         """
         up_stairs_count = 0
         down_stairs_count = 0

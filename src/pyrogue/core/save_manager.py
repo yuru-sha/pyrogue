@@ -15,6 +15,7 @@ Features:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pickle
 import time
@@ -51,6 +52,7 @@ class SaveManager:
         self.save_file = self.save_dir / "game_save.pkl"
         self.backup_file = self.save_dir / "game_save_backup.pkl"
         self.metadata_file = self.save_dir / "save_metadata.json"
+        self.checksum_file = self.save_dir / "save_checksum.txt"
         self.is_permadeath_triggered = False
 
         # セーブディレクトリを作成
@@ -95,6 +97,9 @@ class SaveManager:
             with open(self.metadata_file, "w") as f:
                 json.dump(metadata, f, indent=2)
 
+            # セーブファイルのチェックサムを計算・保存
+            self._save_checksum()
+
             game_logger.info(f"Game saved successfully to {self.save_file}")
             return True
 
@@ -118,6 +123,20 @@ class SaveManager:
             return None
 
         try:
+            # セーブファイルの整合性チェック
+            if not self._verify_checksum():
+                game_logger.warning("Save file integrity check failed - potential tampering detected")
+                # チェックサム検証失敗時もバックアップを試行
+                if self.backup_file.exists():
+                    try:
+                        with open(self.backup_file, "rb") as f:
+                            game_data = pickle.load(f)
+                        game_logger.info("Game loaded from backup file after checksum failure")
+                        return game_data
+                    except Exception as backup_error:
+                        game_logger.error(f"Backup file also corrupted: {backup_error}")
+                return None
+
             # メタデータを確認
             if self.metadata_file.exists():
                 with open(self.metadata_file) as f:
@@ -175,6 +194,11 @@ class SaveManager:
             if self.metadata_file.exists():
                 self.metadata_file.unlink()
                 game_logger.info("Save metadata deleted (permadeath)")
+
+            # チェックサムファイルを削除
+            if self.checksum_file.exists():
+                self.checksum_file.unlink()
+                game_logger.info("Save checksum deleted (permadeath)")
 
         except Exception as e:
             game_logger.error(f"Error during permadeath cleanup: {e}")
@@ -235,4 +259,73 @@ class SaveManager:
             return True
         except Exception as e:
             game_logger.error(f"Failed to delete save data: {e}")
+            return False
+
+    def _calculate_checksum(self, file_path: Path) -> str:
+        """
+        ファイルのSHA256チェックサムを計算。
+
+        Args:
+            file_path: チェックサムを計算するファイルのパス
+
+        Returns:
+            SHA256チェックサムの16進数表現
+
+        """
+        sha256_hash = hashlib.sha256()
+
+        try:
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(chunk)
+            return sha256_hash.hexdigest()
+        except Exception as e:
+            game_logger.error(f"Failed to calculate checksum for {file_path}: {e}")
+            return ""
+
+    def _save_checksum(self) -> None:
+        """
+        セーブファイルのチェックサムを計算・保存。
+
+        """
+        if not self.save_file.exists():
+            return
+
+        checksum = self._calculate_checksum(self.save_file)
+        if checksum:
+            try:
+                with open(self.checksum_file, "w") as f:
+                    f.write(checksum)
+                game_logger.debug(f"Checksum saved: {checksum}")
+            except Exception as e:
+                game_logger.error(f"Failed to save checksum: {e}")
+
+    def _verify_checksum(self) -> bool:
+        """
+        セーブファイルの整合性をチェックサムで検証。
+
+        Returns:
+            bool: チェックサムが一致する場合はTrue
+
+        """
+        if not self.save_file.exists() or not self.checksum_file.exists():
+            return True  # ファイルが存在しない場合は検証をスキップ
+
+        try:
+            # 保存されたチェックサムを読み込み
+            with open(self.checksum_file) as f:
+                stored_checksum = f.read().strip()
+
+            # 現在のファイルのチェックサムを計算
+            current_checksum = self._calculate_checksum(self.save_file)
+
+            # チェックサムを比較
+            is_valid = stored_checksum == current_checksum
+            if not is_valid:
+                game_logger.warning(f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}")
+
+            return is_valid
+
+        except Exception as e:
+            game_logger.error(f"Failed to verify checksum: {e}")
             return False

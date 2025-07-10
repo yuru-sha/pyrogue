@@ -211,6 +211,6 @@ class MagicScreen(Screen):
                     self.engine.game_screen.game_logic.process_turn()
                 return
 
-    def get_selected_spell(self) -> "Spell | None":
+    def get_selected_spell(self) -> Spell | None:
         """選択中の魔法を取得（ターゲット選択用）"""
         return self.selected_spell

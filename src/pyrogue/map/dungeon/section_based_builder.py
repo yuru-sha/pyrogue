@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 
@@ -28,9 +27,9 @@ class BSPSection:
     width: int
     height: int
     children: list[BSPSection] = field(default_factory=list)
-    parent: Optional[BSPSection] = None
+    parent: BSPSection | None = None
     purpose: str = "unassigned"  # "room", "nothing"
-    room: Optional[Room] = None
+    room: Room | None = None
 
     @property
     def center(self) -> tuple[int, int]:
@@ -58,6 +57,7 @@ class BSPDungeonBuilder:
             width: ダンジョンの幅
             height: ダンジョンの高さ
             min_section_size: セクションの最小サイズ
+
         """
         self.width = width
         self.height = height
@@ -78,6 +78,7 @@ class BSPDungeonBuilder:
 
         Returns:
             生成された部屋のリスト
+
         """
         # 1. BSP分割を実行
         self._split_section(self.root)
@@ -221,10 +222,8 @@ class BSPDungeonBuilder:
                 max_height = min(available_height, target_height)
 
                 # 範囲の妥当性チェック
-                if max_width < min_width:
-                    max_width = min_width
-                if max_height < min_height:
-                    max_height = min_height
+                max_width = max(max_width, min_width)
+                max_height = max(max_height, min_height)
 
                 # 実際の部屋サイズを決定
                 room_width = random.randint(min_width, max_width)
@@ -347,7 +346,7 @@ class BSPDungeonBuilder:
             return False
         return any(self._has_room_descendant(child) for child in section.children)
 
-    def _find_room_center_in_section(self, section: BSPSection) -> Optional[tuple[int, int]]:
+    def _find_room_center_in_section(self, section: BSPSection) -> tuple[int, int] | None:
         """セクション内の部屋の中心座標を見つける。"""
         if section.purpose == "room" and section.room:
             return section.room.center()
@@ -387,10 +386,10 @@ class BSPDungeonBuilder:
         for room in self.rooms:
             # 各壁ごとにドア候補を分類
             wall_candidates = {
-                'north': [],  # 上壁
-                'south': [],  # 下壁
-                'west': [],   # 左壁
-                'east': []    # 右壁
+                "north": [],  # 上壁
+                "south": [],  # 下壁
+                "west": [],   # 左壁
+                "east": []    # 右壁
             }
 
             # 部屋の境界で通路と接続している点を壁ごとに分類
@@ -399,13 +398,13 @@ class BSPDungeonBuilder:
                     # 境界が床で、かつ真の入り口である場合
                     if isinstance(tiles[y, x], Floor) and self._is_room_entrance(x, y, room, tiles):
                         if y == room.y:  # 上壁
-                            wall_candidates['north'].append((x, y))
+                            wall_candidates["north"].append((x, y))
                         elif y == room.y + room.height - 1:  # 下壁
-                            wall_candidates['south'].append((x, y))
+                            wall_candidates["south"].append((x, y))
                         elif x == room.x:  # 左壁
-                            wall_candidates['west'].append((x, y))
+                            wall_candidates["west"].append((x, y))
                         elif x == room.x + room.width - 1:  # 右壁
-                            wall_candidates['east'].append((x, y))
+                            wall_candidates["east"].append((x, y))
 
             # 各壁から最大1個のドアを選択
             selected_doors = []
@@ -462,7 +461,7 @@ class BSPDungeonBuilder:
             return candidates[0]
 
         # 壁の中央に最も近い候補を選択
-        if wall in ['north', 'south']:
+        if wall in ["north", "south"]:
             # 水平方向の壁：中央のX座標に最も近い位置
             center_x = room.x + room.width // 2
             best_candidate = min(candidates, key=lambda pos: abs(pos[0] - center_x))

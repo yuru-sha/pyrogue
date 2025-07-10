@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import List
 
 from pyrogue.constants import ProbabilityConstants
 from pyrogue.utils import game_logger
@@ -20,6 +19,7 @@ class Room:
     """
     部屋を表すデータクラス。
     """
+
     x: int
     y: int
     width: int
@@ -78,6 +78,7 @@ class RoomBuilder:
         grid_width: グリッドの幅（通常は3）
         grid_height: グリッドの高さ（通常は3）
         room_counter: 部屋ID用のカウンター
+
     """
 
     def __init__(self, width: int, height: int, floor: int) -> None:
@@ -88,6 +89,7 @@ class RoomBuilder:
             width: ダンジョンの幅
             height: ダンジョンの高さ
             floor: 階層番号
+
         """
         self.width = width
         self.height = height
@@ -105,12 +107,13 @@ class RoomBuilder:
             f"cell size: {self.cell_width}x{self.cell_height}"
         )
 
-    def create_room_grid(self) -> List[Room]:
+    def create_room_grid(self) -> list[Room]:
         """
         3x3グリッドで部屋を生成。
 
         Returns:
             生成された部屋のリスト
+
         """
         rooms = []
 
@@ -134,6 +137,7 @@ class RoomBuilder:
 
         Returns:
             Gone Roomを作成する場合True
+
         """
         return random.random() < ProbabilityConstants.GONE_ROOM_CHANCE
 
@@ -147,6 +151,7 @@ class RoomBuilder:
 
         Returns:
             生成された部屋
+
         """
         # グリッドセル内での部屋の位置とサイズを計算
         cell_start_x = grid_x * self.cell_width
@@ -200,6 +205,7 @@ class RoomBuilder:
 
         Returns:
             (grid_x, grid_y) のタプル
+
         """
         grid_x = room.x // self.cell_width
         grid_y = room.y // self.cell_height
@@ -210,7 +216,7 @@ class RoomBuilder:
 
         return grid_x, grid_y
 
-    def get_adjacent_grid_positions(self, grid_pos: tuple[int, int]) -> List[tuple[int, int]]:
+    def get_adjacent_grid_positions(self, grid_pos: tuple[int, int]) -> list[tuple[int, int]]:
         """
         隣接するグリッド位置を取得。
 
@@ -219,6 +225,7 @@ class RoomBuilder:
 
         Returns:
             隣接するグリッド位置のリスト
+
         """
         grid_x, grid_y = grid_pos
         adjacent = []
@@ -237,7 +244,7 @@ class RoomBuilder:
 
         return adjacent
 
-    def find_room_at_grid(self, rooms: List[Room], grid_x: int, grid_y: int) -> Room | None:
+    def find_room_at_grid(self, rooms: list[Room], grid_x: int, grid_y: int) -> Room | None:
         """
         指定されたグリッド位置の部屋を検索。
 
@@ -248,6 +255,7 @@ class RoomBuilder:
 
         Returns:
             見つかった部屋、または None
+
         """
         for room in rooms:
             room_grid_x, room_grid_y = self.get_room_grid_position(room)
@@ -269,6 +277,7 @@ class RoomBuilder:
 
         Returns:
             (x, y, width, height) のタプル
+
         """
         grid_x, grid_y = grid_pos
         cell_start_x = grid_x * self.cell_width

@@ -9,12 +9,11 @@ from dataclasses import dataclass, field
 
 # 新しい定数モジュールから値をインポート
 from pyrogue.constants import (
-    GameConstants,
-    DisplayConstants,
     CombatConstants,
+    GameConstants,
     HungerConstants,
+    ItemConstants,
     ProbabilityConstants,
-    ItemConstants
 )
 
 

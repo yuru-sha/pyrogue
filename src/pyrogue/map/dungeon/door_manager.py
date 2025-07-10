@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import random
-from typing import List
 
 import numpy as np
 
@@ -33,8 +32,8 @@ class DoorManager:
 
     def place_doors(
         self,
-        rooms: List[Room],
-        corridors: List[Corridor],
+        rooms: list[Room],
+        corridors: list[Corridor],
         tiles: np.ndarray
     ) -> None:
         """
@@ -44,6 +43,7 @@ class DoorManager:
             rooms: 部屋のリスト
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
+
         """
         self.placed_doors = []
 
@@ -63,9 +63,9 @@ class DoorManager:
     def _find_corridor_to_room_connections(
         self,
         room: Room,
-        corridors: List[Corridor],
+        corridors: list[Corridor],
         tiles: np.ndarray
-    ) -> List[tuple[int, int]]:
+    ) -> list[tuple[int, int]]:
         """
         通路から部屋への接続点を直接探す。
 
@@ -76,9 +76,8 @@ class DoorManager:
 
         Returns:
             ドア配置位置のリスト
-        """
-        from pyrogue.map.tile import Floor, Wall
 
+        """
         door_positions = []
 
         # 各通路の各座標について、部屋の内部に隣接しているかチェック
@@ -108,6 +107,7 @@ class DoorManager:
 
         Returns:
             部屋の境界の場合True
+
         """
         # 部屋の境界矩形内にあり、かつ内部ではない
         return (room.x <= x <= room.x + room.width - 1 and
@@ -117,9 +117,9 @@ class DoorManager:
     def _find_door_positions(
         self,
         room: Room,
-        corridors: List[Corridor],
+        corridors: list[Corridor],
         tiles: np.ndarray
-    ) -> List[tuple[int, int]]:
+    ) -> list[tuple[int, int]]:
         """
         部屋のドア配置位置を見つける。
 
@@ -130,6 +130,7 @@ class DoorManager:
 
         Returns:
             ドア配置位置のリスト
+
         """
         door_positions = []
 
@@ -140,7 +141,7 @@ class DoorManager:
 
         return door_positions
 
-    def _get_room_wall_positions(self, room: Room) -> List[tuple[int, int]]:
+    def _get_room_wall_positions(self, room: Room) -> list[tuple[int, int]]:
         """
         部屋の壁の位置を取得。
 
@@ -149,6 +150,7 @@ class DoorManager:
 
         Returns:
             壁の位置のリスト
+
         """
         wall_positions = []
 
@@ -168,7 +170,7 @@ class DoorManager:
         self,
         position: tuple[int, int],
         room: Room,
-        corridors: List[Corridor],
+        corridors: list[Corridor],
         tiles: np.ndarray
     ) -> bool:
         """
@@ -184,6 +186,7 @@ class DoorManager:
 
         Returns:
             ドアを配置すべき場合True
+
         """
         from pyrogue.map.tile import Floor
 
@@ -227,7 +230,7 @@ class DoorManager:
         x: int,
         y: int,
         room: Room,
-        corridors: List[Corridor]
+        corridors: list[Corridor]
     ) -> bool:
         """
         指定座標が通路のタイルかチェック。
@@ -240,6 +243,7 @@ class DoorManager:
 
         Returns:
             通路のタイルの場合True
+
         """
         # 部屋の内部にある場合は通路ではない
         if (room.x < x < room.x + room.width - 1 and
@@ -256,7 +260,7 @@ class DoorManager:
     def _is_corridor_connection(
         self,
         position: tuple[int, int],
-        corridors: List[Corridor]
+        corridors: list[Corridor]
     ) -> bool:
         """
         位置が通路との接続点かチェック。
@@ -267,6 +271,7 @@ class DoorManager:
 
         Returns:
             通路との接続点の場合True
+
         """
         x, y = position
 
@@ -290,6 +295,7 @@ class DoorManager:
 
         Returns:
             メインドア位置の場合True
+
         """
         x, y = position
 
@@ -319,6 +325,7 @@ class DoorManager:
 
         Returns:
             ドアクラス（Door または SecretDoor）
+
         """
         # 特別な部屋は通常のドア
         if room.is_special:
@@ -347,6 +354,7 @@ class DoorManager:
             door_type: ドアの種類
             room: 部屋
             tiles: ダンジョンのタイル配列
+
         """
         if self._validate_door_placement(x, y, tiles):
             door = door_type()
@@ -369,8 +377,9 @@ class DoorManager:
 
         Returns:
             有効な配置の場合True
+
         """
-        from pyrogue.map.tile import Wall, Floor
+        from pyrogue.map.tile import Floor, Wall
 
         height, width = tiles.shape
 
@@ -400,6 +409,7 @@ class DoorManager:
 
         Returns:
             見つかったドア、または None
+
         """
         if (0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]):
             tile = tiles[y, x]
@@ -413,6 +423,7 @@ class DoorManager:
 
         Returns:
             ドア種類とその数の辞書
+
         """
         door_counts = {}
         for _, _, door_type in self.placed_doors:

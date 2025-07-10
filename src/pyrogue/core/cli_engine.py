@@ -149,11 +149,79 @@ class CLIEngine:
                 print("Usage: stairs <up/down>")
                 return None
             return self.handle_stairs(args[0])
+        elif cmd == "debug" and args:
+            return self.handle_debug_command(args)
         else:
             print(f"Unknown command: {cmd}. Type 'help' for available commands.")
             return None
 
         return True
+
+    def handle_debug_command(self, args: list[str]) -> bool:
+        """デバッグコマンドを処理。"""
+        if not args:
+            return None
+
+        debug_cmd = args[0].lower()
+
+        if debug_cmd == "damage" and len(args) > 1:
+            try:
+                damage = int(args[1])
+                self.game_logic.player.hp = max(0, self.game_logic.player.hp - damage)
+                print(f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
+
+                # 死亡チェック
+                if self.game_logic.player.hp <= 0:
+                    print("You have died!")
+                    return False
+                return True
+            except ValueError:
+                print("Invalid damage value")
+                return None
+        elif debug_cmd == "hp" and len(args) > 1:
+            try:
+                hp = int(args[1])
+                self.game_logic.player.hp = max(0, min(hp, self.game_logic.player.max_hp))
+                print(f"Player HP set to: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
+
+                # 死亡チェック
+                if self.game_logic.player.hp <= 0:
+                    print("You have died!")
+                    return False
+                return True
+            except ValueError:
+                print("Invalid HP value")
+                return None
+        elif debug_cmd == "kill" and len(args) > 1:
+            try:
+                count = int(args[1])
+                self.game_logic.player.monsters_killed += count
+                print(f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}")
+                return True
+            except ValueError:
+                print("Invalid kill count value")
+                return None
+        elif debug_cmd == "spawn":
+            # 周囲にモンスターを生成
+            floor_data = self.game_logic.get_current_floor_data()
+            if floor_data and hasattr(floor_data, 'monster_spawner'):
+                from pyrogue.entities.actors.monster import Monster
+                x = self.game_logic.player.x + 1
+                y = self.game_logic.player.y
+                test_monster = Monster(
+                    x=x, y=y, name="Test Bat", char='b', hp=4, max_hp=4,
+                    attack=2, defense=1, level=1, exp_value=10,
+                    view_range=3, color=(255, 255, 255)
+                )
+                floor_data.monster_spawner.monsters.append(test_monster)
+                print(f"Spawned Test Bat at ({x}, {y})")
+                return True
+            else:
+                print("Could not spawn monster")
+                return None
+        else:
+            print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")
+            return None
 
     def handle_move(self, direction: str) -> bool:
         """
@@ -461,6 +529,10 @@ class CLIEngine:
             print(f"Hunger: {player.hunger}%")
             print(f"Position: ({player.x}, {player.y})")
             print(f"EXP: {player.exp}")
+            print(f"Monsters Killed: {player.monsters_killed}")
+            print(f"Deepest Floor: {player.deepest_floor}")
+            print(f"Turns Played: {player.turns_played}")
+            print(f"Score: {player.calculate_score()}")
 
         except Exception as e:
             print(f"Error displaying player status: {e}")

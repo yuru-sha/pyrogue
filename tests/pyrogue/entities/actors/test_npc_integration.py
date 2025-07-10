@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """NPCシステムの統合テスト"""
 
+import pytest
 from pyrogue.map.dungeon.director import DungeonDirector
 from pyrogue.entities.actors.npc_spawner import NPCSpawner
 

@@ -13,6 +13,7 @@ from pyrogue.core.managers.combat_manager import CombatManager
 from pyrogue.core.managers.game_context import GameContext
 from pyrogue.core.managers.monster_ai_manager import MonsterAIManager
 from pyrogue.core.managers.turn_manager import TurnManager
+from pyrogue.core.score_manager import ScoreManager
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player import Player
 from pyrogue.map.dungeon_manager import DungeonManager
@@ -40,6 +41,7 @@ class GameLogic:
         combat_manager: 戦闘処理マネージャー
         turn_manager: ターン管理マネージャー
         monster_ai_manager: モンスターAIマネージャー
+
     """
 
     def __init__(
@@ -55,12 +57,13 @@ class GameLogic:
             engine: ゲームエンジンインスタンス（CLIモードではNone）
             dungeon_width: ダンジョンの幅
             dungeon_height: ダンジョンの高さ
+
         """
         self.engine = engine
 
         # ゲーム状態を直接管理
         self.player = Player(x=0, y=0)
-        self.inventory = Inventory()
+        self.inventory = self.player.inventory  # プレイヤーのインベントリを参照
         self.message_log: list[str] = [
             "Welcome to PyRogue!",
             "Use vi keys (hjklyubn), arrow keys, or numpad (1-9) to move.",
@@ -83,9 +86,11 @@ class GameLogic:
         self.combat_manager = CombatManager()
         self.turn_manager = TurnManager()
         self.monster_ai_manager = MonsterAIManager()
+        self.score_manager = ScoreManager()
 
         # コンテキストにマネージャーへの参照を追加
         self.context.monster_ai_manager = self.monster_ai_manager
+        self.context.game_logic = self
 
         # GameScreen参照（段階的移行用）
         self.game_screen: GameScreen | None = None
@@ -100,15 +105,26 @@ class GameLogic:
 
         # プレイヤーの開始位置を設定
         floor_data = self.dungeon_manager.get_current_floor_data()
-        if floor_data and hasattr(floor_data, 'start_pos'):
+        if floor_data and hasattr(floor_data, "start_pos"):
             self.player.x, self.player.y = floor_data.start_pos
 
         self.add_message("You enter the dungeon. Your quest begins!")
 
     def _setup_initial_equipment(self) -> None:
         """初期装備を設定。"""
-        # 基本的な初期装備（アイテムシステムと連携時に実装）
-        pass
+        from pyrogue.entities.items.item import Armor, Weapon
+
+        # 初期武器: Dagger (攻撃力+2)
+        dagger = Weapon(x=0, y=0, name="Dagger", attack_bonus=2)
+        self.inventory.add_item(dagger)
+        self.inventory.equip(dagger)
+
+        # 初期防具: Leather Armor (防御力+1)
+        leather_armor = Armor(x=0, y=0, name="Leather Armor", defense_bonus=1)
+        self.inventory.add_item(leather_armor)
+        self.inventory.equip(leather_armor)
+
+        self.add_message("You are equipped with a Dagger and Leather Armor.")
 
     # EffectContext用プロパティ
     @property
@@ -132,6 +148,7 @@ class GameLogic:
 
         Returns:
             移動が成功した場合True
+
         """
         # ターン管理から行動可能かチェック
         if not self.turn_manager.can_act(self.player):
@@ -189,7 +206,7 @@ class GameLogic:
 
         # タイルチェック
         tile = floor_data.tiles[y, x]
-        return getattr(tile, 'walkable', False)
+        return getattr(tile, "walkable", False)
 
     def _can_diagonal_move(self, from_x: int, from_y: int, dx: int, dy: int) -> bool:
         """
@@ -206,6 +223,7 @@ class GameLogic:
 
         Returns:
             斜め移動が可能な場合True
+
         """
         # 経由する2つのマスをチェック
         path1_x, path1_y = from_x + dx, from_y  # 水平方向の経由マス
@@ -221,7 +239,7 @@ class GameLogic:
     def _get_monster_at(self, x: int, y: int) -> Monster | None:
         """指定座標のモンスターを取得。"""
         floor_data = self.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, 'monster_spawner'):
+        if not floor_data or not hasattr(floor_data, "monster_spawner"):
             return None
 
         return floor_data.monster_spawner.get_monster_at(x, y)
@@ -240,18 +258,18 @@ class GameLogic:
     def _check_traps(self) -> None:
         """トラップチェック。"""
         floor_data = self.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, 'trap_manager'):
+        if not floor_data or not hasattr(floor_data, "trap_manager"):
             return
 
         # トラップ処理はTrapManagerに委譲
         trap_manager = floor_data.trap_manager
-        if hasattr(trap_manager, 'check_player_traps'):
+        if hasattr(trap_manager, "check_player_traps"):
             trap_manager.check_player_traps(self.player, self.context)
 
     def _auto_pickup_gold_only(self) -> None:
         """金貨の自動取得。"""
         floor_data = self.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, 'item_spawner'):
+        if not floor_data or not hasattr(floor_data, "item_spawner"):
             return
 
         items_at_pos = [
@@ -260,8 +278,8 @@ class GameLogic:
         ]
 
         for item in items_at_pos:
-            if hasattr(item, 'item_type') and item.item_type == "GOLD":
-                self.player.gold += getattr(item, 'amount', 1)
+            if hasattr(item, "item_type") and item.item_type == "GOLD":
+                self.player.gold += getattr(item, "amount", 1)
                 floor_data.item_spawner.items.remove(item)
                 self.add_message(f"You picked up {getattr(item, 'amount', 1)} gold.")
 
@@ -273,7 +291,7 @@ class GameLogic:
 
         tile = floor_data.tiles[self.player.y, self.player.x]
 
-        if hasattr(tile, '__class__'):
+        if hasattr(tile, "__class__"):
             from pyrogue.map.tile import StairsDown, StairsUp
 
             if isinstance(tile, StairsDown):
@@ -285,7 +303,7 @@ class GameLogic:
     def handle_get_item(self) -> str | None:
         """アイテム取得処理。"""
         floor_data = self.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, 'item_spawner'):
+        if not floor_data or not hasattr(floor_data, "item_spawner"):
             return None
 
         items_at_pos = [
@@ -300,8 +318,8 @@ class GameLogic:
         item = items_at_pos[0]
 
         # ゴールドの場合は直接プレイヤーのゴールドに追加
-        if hasattr(item, 'item_type') and item.item_type == "GOLD":
-            self.player.gold += getattr(item, 'amount', 1)
+        if hasattr(item, "item_type") and item.item_type == "GOLD":
+            self.player.gold += getattr(item, "amount", 1)
             floor_data.item_spawner.items.remove(item)
             message = f"You picked up {getattr(item, 'amount', 1)} gold."
             self.add_message(message)
@@ -313,9 +331,8 @@ class GameLogic:
             message = f"You picked up {item.name}."
             self.add_message(message)
             return message
-        else:
-            self.add_message("Your inventory is full!")
-            return None
+        self.add_message("Your inventory is full!")
+        return None
 
     # 階段処理（FloorManagerに委譲予定）
     def descend_stairs(self) -> bool:
@@ -342,8 +359,12 @@ class GameLogic:
         self.dungeon_manager.set_current_floor(next_floor)
         floor_data = self.get_current_floor_data()
 
-        if floor_data and hasattr(floor_data, 'start_pos'):
-            self.player.x, self.player.y = floor_data.start_pos
+        if floor_data:
+            spawn_pos = self.dungeon_manager.get_player_spawn_position(floor_data)
+            self.player.x, self.player.y = spawn_pos
+
+        # 最深階層を更新
+        self.player.update_deepest_floor(next_floor)
 
         self.add_message(f"You descend to floor B{next_floor}F.")
         return True
@@ -368,16 +389,24 @@ class GameLogic:
             # 勝利条件チェック
             if self.check_victory():
                 self.add_message("You have escaped with the Amulet of Yendor! You win!")
-                return True
-            else:
-                self.add_message("You need the Amulet of Yendor to escape!")
-                return False
+                self.record_victory()
 
-        self.dungeon_manager.move_to_floor(prev_floor)
+                # 勝利処理をエンジンに通知
+                if self.engine and hasattr(self.engine, "victory"):
+                    player_stats = self.player.get_stats_dict()
+                    final_floor = self.dungeon_manager.current_floor
+                    self.engine.victory(player_stats, final_floor)
+
+                return True
+            self.add_message("You need the Amulet of Yendor to escape!")
+            return False
+
+        self.dungeon_manager.set_current_floor(prev_floor)
         floor_data = self.get_current_floor_data()
 
-        if floor_data and hasattr(floor_data, 'end_pos'):
-            self.player.x, self.player.y = floor_data.end_pos
+        if floor_data:
+            spawn_pos = self.dungeon_manager.get_player_spawn_position(floor_data)
+            self.player.x, self.player.y = spawn_pos
 
         self.add_message(f"You ascend to floor B{prev_floor}F.")
         return True
@@ -390,7 +419,7 @@ class GameLogic:
     def check_victory(self) -> bool:
         """勝利条件をチェック。"""
         # イェンダーのアミュレットを持っているかチェック
-        return getattr(self.player, 'has_amulet', False)
+        return getattr(self.player, "has_amulet", False)
 
     def check_game_over(self) -> bool:
         """ゲームオーバー状態をチェック。"""
@@ -451,9 +480,8 @@ class GameLogic:
                 # FOVを更新
                 self._update_fov()
                 return True
-            else:
-                self.add_message("There is something in the way.")
-                return False
+            self.add_message("There is something in the way.")
+            return False
 
         return False
 
@@ -469,7 +497,7 @@ class GameLogic:
 
     def _update_fov(self) -> None:
         """FOVを更新（ゲームスクリーンが存在する場合）。"""
-        if self.game_screen and hasattr(self.game_screen, 'fov_manager'):
+        if self.game_screen and hasattr(self.game_screen, "fov_manager"):
             self.game_screen.fov_manager.update_fov()
 
     def search_secret_door(self, x: int, y: int) -> bool:
@@ -499,9 +527,8 @@ class GameLogic:
                 # FOVを更新
                 self._update_fov()
                 return True
-            else:
-                # 失敗してもメッセージは出さない（まとめて処理される）
-                return False
+            # 失敗してもメッセージは出さない（まとめて処理される）
+            return False
 
         return False
 
@@ -515,7 +542,6 @@ class GameLogic:
     def handle_target_selection(self, x: int, y: int) -> None:
         """ターゲット選択処理。"""
         # MagicManagerに委譲予定（現在未実装）
-        pass
 
     # ユーティリティメソッド
     def add_message(self, message: str) -> None:
@@ -529,7 +555,7 @@ class GameLogic:
     def get_explored_tiles(self):
         """探索済みタイルを取得。"""
         floor_data = self.get_current_floor_data()
-        if floor_data and hasattr(floor_data, 'explored'):
+        if floor_data and hasattr(floor_data, "explored"):
             return floor_data.explored
 
         # デフォルトの探索状態を返す
@@ -539,7 +565,7 @@ class GameLogic:
     def update_explored_tiles(self, visible_tiles) -> None:
         """探索済みタイルを更新。"""
         floor_data = self.get_current_floor_data()
-        if floor_data and hasattr(floor_data, 'explored'):
+        if floor_data and hasattr(floor_data, "explored"):
             floor_data.explored |= visible_tiles
 
     # CLIモード互換メソッド
@@ -571,7 +597,7 @@ class GameLogic:
         player = self.player
         floor_data = self.get_current_floor_data()
 
-        if not floor_data or not hasattr(floor_data, 'monster_spawner'):
+        if not floor_data or not hasattr(floor_data, "monster_spawner"):
             return enemies
 
         for monster in floor_data.monster_spawner.monsters:
@@ -585,7 +611,33 @@ class GameLogic:
         """指定した座標にいるNPCを取得。"""
         floor_data = self.get_current_floor_data()
 
-        if not floor_data or not hasattr(floor_data, 'npc_spawner'):
+        if not floor_data or not hasattr(floor_data, "npc_spawner"):
             return None
 
         return floor_data.npc_spawner.get_npc_at_position(x, y)
+
+    def record_game_over(self, death_cause: str = "Unknown") -> None:
+        """ゲームオーバー時のスコア記録"""
+        self.score_manager.add_score(
+            self.player,
+            death_cause=death_cause,
+            game_result="death",
+            player_name="Player"
+        )
+
+    def record_victory(self) -> None:
+        """勝利時のスコア記録"""
+        self.score_manager.add_score(
+            self.player,
+            death_cause="Victory",
+            game_result="victory",
+            player_name="Player"
+        )
+
+    def get_high_score(self) -> int:
+        """最高スコアを取得"""
+        return self.score_manager.get_high_score()
+
+    def get_score_table(self, limit: int = 10) -> str:
+        """スコアテーブルを取得"""
+        return self.score_manager.format_score_table(limit)

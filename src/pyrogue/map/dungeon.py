@@ -7,11 +7,10 @@
 Example:
     >>> generator = DungeonGenerator(width=80, height=50, floor=1)
     >>> tiles, start_pos, end_pos = generator.generate()
+
 """
 
 from __future__ import annotations
-
-from typing import Tuple
 
 import numpy as np
 
@@ -34,6 +33,7 @@ class DungeonGenerator:
         director: Builder Patternのディレクター
         rooms: 生成された部屋のリスト
         tiles: 生成されたタイル配列
+
     """
 
     def __init__(self, width: int, height: int, floor: int = 1) -> None:
@@ -44,6 +44,7 @@ class DungeonGenerator:
             width: ダンジョンの幅
             height: ダンジョンの高さ
             floor: 階層番号
+
         """
         self.width = width
         self.height = height
@@ -60,12 +61,13 @@ class DungeonGenerator:
 
         game_logger.debug(f"DungeonGenerator initialized for floor {floor} ({width}x{height})")
 
-    def generate(self) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
+    def generate(self) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
         """
         ダンジョンを生成。
 
         Returns:
             (tiles, start_pos, end_pos) のタプル
+
         """
         try:
             # Builder Patternでダンジョンを構築
@@ -88,6 +90,7 @@ class DungeonGenerator:
 
         Returns:
             生成統計の辞書
+
         """
         return self.director.get_generation_statistics()
 
@@ -97,6 +100,7 @@ class DungeonGenerator:
 
         Returns:
             検証レポートの辞書
+
         """
         return self.director.validation_manager.get_validation_report()
 
@@ -114,7 +118,7 @@ class DungeonGenerator:
     @property
     def corridors(self) -> list:
         """通路のリスト（後方互換性のため）。"""
-        return getattr(self.director.corridor_builder, 'corridors', [])
+        return getattr(self.director.corridor_builder, "corridors", [])
 
     # 後方互換性のためのメソッド
     def _get_room_grid_position(self, room: Room) -> tuple[int, int]:
@@ -137,6 +141,7 @@ class DungeonGenerator:
 
         Returns:
             デバッグ情報の辞書
+
         """
         info = {
             "dungeon_info": {
@@ -149,19 +154,19 @@ class DungeonGenerator:
         }
 
         # 各ビルダーコンポーネントの統計情報
-        if hasattr(self.director.room_builder, 'get_statistics'):
+        if hasattr(self.director.room_builder, "get_statistics"):
             info["room_builder_stats"] = self.director.room_builder.get_statistics()
 
-        if hasattr(self.director.corridor_builder, 'get_statistics'):
+        if hasattr(self.director.corridor_builder, "get_statistics"):
             info["corridor_builder_stats"] = self.director.corridor_builder.get_statistics()
 
-        if hasattr(self.director.door_manager, 'get_statistics'):
+        if hasattr(self.director.door_manager, "get_statistics"):
             info["door_manager_stats"] = self.director.door_manager.get_statistics()
 
-        if hasattr(self.director.special_room_builder, 'get_statistics'):
+        if hasattr(self.director.special_room_builder, "get_statistics"):
             info["special_room_builder_stats"] = self.director.special_room_builder.get_statistics()
 
-        if hasattr(self.director.stairs_manager, 'get_statistics'):
+        if hasattr(self.director.stairs_manager, "get_statistics"):
             info["stairs_manager_stats"] = self.director.stairs_manager.get_statistics()
 
         return info
@@ -169,10 +174,9 @@ class DungeonGenerator:
 
 # 後方互換性のためのクラスエイリアス
 # 新しいRoomクラスを既存コードで使用できるようにする
-from pyrogue.map.dungeon.room_builder import Room
 
 # モジュールレベルでのエクスポート
 __all__ = [
-    'DungeonGenerator',
-    'Room',
+    "DungeonGenerator",
+    "Room",
 ]
