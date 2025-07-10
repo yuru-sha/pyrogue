@@ -1,0 +1,212 @@
+"""
+ゲーム定数モジュール。
+
+このモジュールは、PyRogue全体で使用される定数値を集約管理します。
+マジックナンバーの削減と設定の一元化を目的としています。
+"""
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class GameConstants:
+    """ゲーム全般の定数。"""
+
+    # ダンジョンサイズ
+    DUNGEON_WIDTH: int = 80
+    DUNGEON_HEIGHT: int = 45
+    MAP_DISPLAY_HEIGHT: int = 43  # UI用の余白を考慮
+
+    # 階層関連
+    MAX_FLOORS: int = 26  # オリジナルRogueと同じ
+    AMULET_FLOOR: int = 26  # イェンダーのアミュレットが配置される階
+
+    # プレイヤー初期値
+    PLAYER_INITIAL_HP: int = 20
+    PLAYER_INITIAL_LEVEL: int = 1
+    PLAYER_INITIAL_GOLD: int = 0
+    PLAYER_INITIAL_HUNGER: int = 100
+    PLAYER_INITIAL_MP: int = 5
+
+    # FOV関連
+    DEFAULT_FOV_RADIUS: int = 8
+    MAX_FOV_RADIUS: int = 20
+
+    # UI関連
+    STATUS_PANEL_HEIGHT: int = 7
+    MESSAGE_LOG_SIZE: int = 3
+
+
+@dataclass(frozen=True)
+class ProbabilityConstants:
+    """確率に関する定数。"""
+
+    # ダンジョン生成確率
+    GONE_ROOM_CHANCE: float = 0.25  # "gone room"（通路のみ）の確率
+    SECRET_DOOR_CHANCE: float = 0.15  # 隠し扉の確率
+    SPECIAL_ROOM_CHANCE: float = 0.33  # 特別な部屋の確率
+    DEAD_END_SECRET_DOOR_CHANCE: float = 0.25  # 行き止まりの隠し扉確率
+
+    # モンスター関連
+    MONSTER_MOVE_CHANCE: float = 0.7  # モンスターが移動する確率
+    MONSTER_SPAWN_BASE_CHANCE: float = 0.1  # 基本スポーン確率
+
+    # アイテム関連
+    ITEM_SPAWN_BASE_CHANCE: float = 0.05  # 基本アイテムスポーン確率
+    CURSED_ITEM_CHANCE: float = 0.1  # 呪われたアイテムの確率
+
+    # トラップ関連
+    TRAP_SPAWN_CHANCE: float = 0.05  # トラップスポーン確率
+    TRAP_DETECTION_BASE_CHANCE: float = 0.3  # 基本トラップ発見確率
+    TRAP_DISARM_BASE_CHANCE: float = 0.6  # 基本トラップ解除確率
+
+    # ステータス異常関連
+    POISON_RECOVERY_CHANCE: float = 0.1  # 毒からの自然回復確率
+    PARALYSIS_RECOVERY_CHANCE: float = 0.2  # 麻痺からの自然回復確率
+    CONFUSION_RECOVERY_CHANCE: float = 0.15  # 混乱からの自然回復確率
+
+
+@dataclass(frozen=True)
+class CombatConstants:
+    """戦闘に関する定数。"""
+
+    # ダメージ計算
+    BASE_ATTACK_DAMAGE: int = 1
+    CRITICAL_HIT_MULTIPLIER: float = 2.0
+    CRITICAL_HIT_CHANCE: float = 0.05
+
+    # レベルアップ
+    EXP_PER_LEVEL_BASE: int = 100
+    EXP_LEVEL_MULTIPLIER: float = 1.5
+    HP_GAIN_PER_LEVEL: int = 5
+    MP_GAIN_PER_LEVEL: int = 2
+
+    # 攻撃・防御
+    MIN_DAMAGE: int = 1
+    DEFENSE_REDUCTION_FACTOR: float = 0.5
+
+
+@dataclass(frozen=True)
+class ItemConstants:
+    """アイテムに関する定数。"""
+
+    # インベントリ
+    MAX_INVENTORY_SIZE: int = 26  # A-Zのアルファベット数
+    STACK_SIZE_LIMIT: int = 99  # スタック可能アイテムの最大数
+
+    # 装備強化
+    MAX_ENCHANTMENT_LEVEL: int = 10
+    MIN_ENCHANTMENT_LEVEL: int = -5
+    ENCHANTMENT_BONUS_MULTIPLIER: int = 1
+
+    # アイテム種別による基本値
+    POTION_BASE_VALUE: int = 50
+    SCROLL_BASE_VALUE: int = 100
+    WEAPON_BASE_VALUE: int = 150
+    ARMOR_BASE_VALUE: int = 200
+    RING_BASE_VALUE: int = 250
+
+
+@dataclass(frozen=True)
+class HungerConstants:
+    """満腹度に関する定数。"""
+
+    # 満腹度レベル
+    MAX_HUNGER: int = 100
+    STARVING_THRESHOLD: int = 10
+    HUNGRY_THRESHOLD: int = 30
+
+    # 満腹度減少
+    HUNGER_DECREASE_RATE: int = 1  # ターンあたりの減少量
+    HUNGER_DECREASE_INTERVAL: int = 10  # 減少間隔（ターン）
+
+    # 餓死ダメージ
+    STARVING_DAMAGE: int = 1
+    STARVING_DAMAGE_INTERVAL: int = 5  # ダメージ間隔（ターン）
+
+
+@dataclass(frozen=True)
+class MagicConstants:
+    """魔法に関する定数。"""
+
+    # MP管理
+    MP_RECOVERY_RATE: int = 1  # ターンあたりのMP回復量
+    MP_RECOVERY_INTERVAL: int = 5  # 回復間隔（ターン）
+
+    # 呪文コスト
+    MAGIC_MISSILE_COST: int = 3
+    HEAL_COST: int = 5
+    CURE_POISON_COST: int = 4
+    POISON_BOLT_COST: int = 4
+    TELEPORT_COST: int = 8
+
+    # 魔法効果
+    MAGIC_MISSILE_DAMAGE: int = 6
+    HEAL_AMOUNT: int = 10
+    TELEPORT_MAX_ATTEMPTS: int = 100
+
+
+@dataclass(frozen=True)
+class DisplayConstants:
+    """表示に関する定数。"""
+
+    # 色定義（RGB）
+    COLOR_WHITE: tuple[int, int, int] = (255, 255, 255)
+    COLOR_BLACK: tuple[int, int, int] = (0, 0, 0)
+    COLOR_RED: tuple[int, int, int] = (255, 0, 0)
+    COLOR_GREEN: tuple[int, int, int] = (0, 255, 0)
+    COLOR_BLUE: tuple[int, int, int] = (0, 0, 255)
+    COLOR_YELLOW: tuple[int, int, int] = (255, 255, 0)
+    COLOR_CYAN: tuple[int, int, int] = (0, 255, 255)
+    COLOR_MAGENTA: tuple[int, int, int] = (255, 0, 255)
+    COLOR_GRAY: tuple[int, int, int] = (128, 128, 128)
+    COLOR_DARK_GRAY: tuple[int, int, int] = (64, 64, 64)
+
+    # 文字定義
+    CHAR_PLAYER: str = "@"
+    CHAR_WALL: str = "#"
+    CHAR_FLOOR: str = "."
+    CHAR_DOOR: str = "+"
+    CHAR_STAIRS_UP: str = "<"
+    CHAR_STAIRS_DOWN: str = ">"
+    CHAR_GOLD: str = "$"
+    CHAR_UNKNOWN: str = "?"
+
+
+@dataclass(frozen=True)
+class FileConstants:
+    """ファイル・パスに関する定数。"""
+
+    # セーブファイル
+    SAVE_FILE_NAME: str = "pyrogue_save.json"
+    SAVE_FILE_DIR: str = "saves"
+
+    # フォント
+    FONT_FILE: str = "data/assets/fonts/dejavu10x10_gs_tc.png"
+
+    # ログファイル
+    LOG_FILE_DIR: str = "data/logs"
+    LOG_FILE_NAME: str = "pyrogue.log"
+
+
+# 便利な関数
+def get_exp_for_level(level: int) -> int:
+    """指定レベルに必要な経験値を計算。"""
+    base = CombatConstants.EXP_PER_LEVEL_BASE
+    multiplier = CombatConstants.EXP_LEVEL_MULTIPLIER
+    return int(base * (multiplier ** (level - 1)))
+
+
+def get_hunger_status(hunger: int) -> str:
+    """満腹度から状態文字列を取得。"""
+    if hunger <= HungerConstants.STARVING_THRESHOLD:
+        return "Starving"
+    elif hunger <= HungerConstants.HUNGRY_THRESHOLD:
+        return "Hungry"
+    else:
+        return "Fed"
+
+
+def is_max_floor(floor: int) -> bool:
+    """最深階かどうかを判定。"""
+    return floor >= GameConstants.MAX_FLOORS

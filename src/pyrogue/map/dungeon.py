@@ -1,295 +1,178 @@
-"""Dungeon generation module."""
+"""
+ダンジョン生成モジュール - Builder Patternファサード。
+
+このモジュールは、Builder Patternで実装されたダンジョン生成システムへの
+ファサードを提供し、既存コードとの後方互換性を保ちます。
+
+Example:
+    >>> generator = DungeonGenerator(width=80, height=50, floor=1)
+    >>> tiles, start_pos, end_pos = generator.generate()
+"""
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, List, Tuple, Dict, Set
-import random
+from typing import Tuple
+
 import numpy as np
 
+from pyrogue.map.dungeon.director import DungeonDirector
+from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.utils import game_logger
-from .tile import Tile, Floor, Wall, Door, SecretDoor, Stairs, Water, Lava, StairsUp, StairsDown
 
-@dataclass
-class Room:
-    """部屋を表すクラス"""
-    x: int
-    y: int
-    width: int
-    height: int
-    is_special: bool = False
-    room_type: Optional[str] = None
-    connected_rooms: Set[int] = field(default_factory=set)
-    doors: List[Tuple[int, int]] = field(default_factory=list)
-    id: int = field(default_factory=lambda: next(Room._id_counter))
-
-    # IDカウンター
-    _id_counter = iter(range(1000000))
-
-    @property
-    def center(self) -> Tuple[int, int]:
-        """部屋の中心座標を返す"""
-        return (self.x + self.width // 2, self.y + self.height // 2)
-
-    @property
-    def inner(self) -> List[Tuple[int, int]]:
-        """部屋の内部の座標リストを返す（壁と扉を除く）"""
-        return [
-            (x, y)
-            for x in range(self.x + 1, self.x + self.width - 1)
-            for y in range(self.y + 1, self.y + self.height - 1)
-        ]
-
-    def get_wall_center(self, direction: str) -> Tuple[int, int]:
-        """指定した方向の壁の中心座標を返す"""
-        if direction == "north":
-            return (self.x + self.width // 2, self.y)
-        elif direction == "south":
-            return (self.x + self.width // 2, self.y + self.height - 1)
-        elif direction == "west":
-            return (self.x, self.y + self.height // 2)
-        elif direction == "east":
-            return (self.x + self.width - 1, self.y + self.height // 2)
-        raise ValueError(f"Invalid direction: {direction}")
 
 class DungeonGenerator:
-    """ダンジョン生成クラス"""
-    SPECIAL_ROOM_TYPES = ["treasure", "armory", "food", "monster", "laboratory", "library"]
+    """
+    ダンジョン生成クラス - Builder Patternのファサード。
 
-    def __init__(
-        self,
-        width: int,
-        height: int,
-        floor: int = 1,
-        min_room_size: Tuple[int, int] = (6, 6),
-        max_room_size: Tuple[int, int] = (10, 10),
-    ) -> None:
+    既存のAPIを維持しながら、新しいBuilder Patternベースの
+    ダンジョン生成システムを使用します。
+
+    Attributes:
+        width: ダンジョンの幅
+        height: ダンジョンの高さ
+        floor: 階層番号
+        director: Builder Patternのディレクター
+        rooms: 生成された部屋のリスト
+        tiles: 生成されたタイル配列
+    """
+
+    def __init__(self, width: int, height: int, floor: int = 1) -> None:
+        """
+        ダンジョンジェネレーターを初期化。
+
+        Args:
+            width: ダンジョンの幅
+            height: ダンジョンの高さ
+            floor: 階層番号
+        """
         self.width = width
         self.height = height
         self.floor = floor
-        self.min_room_size = min_room_size
-        self.max_room_size = max_room_size
-        self.rooms: List[Room] = []
-        self.tiles = np.full((height, width), fill_value=Wall(), dtype=object)
-        self.start_pos: Optional[Tuple[int, int]] = None
-        self.end_pos: Optional[Tuple[int, int]] = None
 
-    def _create_room(self, room: Room) -> None:
-        """部屋を生成する"""
-        # 部屋の外周を壁に
-        for y in range(room.y, room.y + room.height):
-            for x in range(room.x, room.x + room.width):
-                if (y == room.y or y == room.y + room.height - 1 or
-                    x == room.x or x == room.x + room.width - 1):
-                    self.tiles[y, x] = Wall()
-                else:
-                    self.tiles[y, x] = Floor()
+        # Builder Patternのディレクターを作成
+        self.director = DungeonDirector(width, height, floor)
 
-        # 特別な部屋の場合、部屋タイプに応じたアイテムを配置
-        if room.is_special and room.room_type:
-            self._decorate_special_room(room)
+        # 生成結果の保存用
+        self.rooms = []
+        self.tiles = None
+        self.start_pos = None
+        self.end_pos = None
 
-    def _decorate_special_room(self, room: Room) -> None:
-        """特別な部屋を装飾する"""
-        inner_tiles = room.inner
-        if not inner_tiles:
-            return
-
-        if room.room_type == "treasure":
-            # 宝物庫：金貨とアイテムを配置
-            gold_count = random.randint(100, 250)
-            positions = random.sample(inner_tiles, min(len(inner_tiles), gold_count))
-            for x, y in positions:
-                self.tiles[y, x] = Floor(has_gold=True)
-
-        elif room.room_type == "laboratory":
-            # 実験室：ランダムな薬を配置
-            potion_count = random.randint(5, 10)
-            positions = random.sample(inner_tiles, min(len(inner_tiles), potion_count))
-            for x, y in positions:
-                self.tiles[y, x] = Floor(has_potion=True)
-
-        elif room.room_type == "library":
-            # 図書室：巻物を配置
-            scroll_count = random.randint(5, 10)
-            positions = random.sample(inner_tiles, min(len(inner_tiles), scroll_count))
-            for x, y in positions:
-                self.tiles[y, x] = Floor(has_scroll=True)
-
-        # 他の特別な部屋タイプも同様に実装
-
-    def _create_special_rooms(self) -> None:
-        """特別な部屋を生成"""
-        # 5階ごとに1つの特別な部屋を生成（10%の確率）
-        if self.floor % 5 == 0 and random.random() < 0.1:
-            room_type = random.choice(self.SPECIAL_ROOM_TYPES)
-            width = random.randint(self.min_room_size[0], min(self.max_room_size[0], 5))
-            height = random.randint(self.min_room_size[1], min(self.max_room_size[1], 5))
-            
-            # 部屋の配置位置を探す
-            for _ in range(50):  # 最大50回試行
-                x = random.randint(1, self.width - width - 1)
-                y = random.randint(1, self.height - height - 1)
-                
-                # 既存の部屋と重なっていないか確認
-                overlaps = False
-                for room in self.rooms:
-                    if (x < room.x + room.width + 2 and x + width + 2 > room.x and
-                        y < room.y + room.height + 2 and y + height + 2 > room.y):
-                        overlaps = True
-                        break
-                
-                if not overlaps:
-                    room = Room(x=x, y=y, width=width, height=height, is_special=True, room_type=room_type)
-                    self._create_room(room)
-                    self.rooms.append(room)
-                    break
-
-    def _connect_rooms(self) -> None:
-        """部屋同士を接続"""
-        # 最小全域木を使用して部屋を接続
-        edges: List[Tuple[float, int, int]] = []  # (distance, room1_id, room2_id)
-        room_dict = {room.id: room for room in self.rooms}
-        
-        for i, room1 in enumerate(self.rooms):
-            for room2 in self.rooms[i + 1:]:
-                distance = ((room1.center[0] - room2.center[0]) ** 2 + 
-                          (room1.center[1] - room2.center[1]) ** 2) ** 0.5
-                edges.append((distance, room1.id, room2.id))
-
-        # 距離でソート
-        edges.sort()
-
-        # Union-Find用の親配列
-        parent = {room.id: room.id for room in self.rooms}
-
-        def find(x: int) -> int:
-            if parent[x] != x:
-                parent[x] = find(parent[x])
-            return parent[x]
-
-        def union(x: int, y: int) -> None:
-            parent[find(x)] = find(y)
-
-        # 最小全域木を構築（30%の確率で追加の接続を作成）
-        for distance, room1_id, room2_id in edges:
-            room1 = room_dict[room1_id]
-            room2 = room_dict[room2_id]
-            if find(room1.id) != find(room2.id) or random.random() < 0.3:
-                self._create_corridor(room1, room2)
-                union(room1.id, room2.id)
-                room1.connected_rooms.add(room2.id)
-                room2.connected_rooms.add(room1.id)
-
-    def _create_corridor(self, room1: Room, room2: Room) -> None:
-        """2つの部屋を接続する通路を生成"""
-        x1, y1 = room1.center
-        x2, y2 = room2.center
-
-        # 部屋の相対位置に基づいて扉の位置を決定
-        if abs(x1 - x2) > abs(y1 - y2):
-            # 水平方向の接続
-            if x1 < x2:
-                door1_pos = room1.get_wall_center("east")
-                door2_pos = room2.get_wall_center("west")
-            else:
-                door1_pos = room1.get_wall_center("west")
-                door2_pos = room2.get_wall_center("east")
-        else:
-            # 垂直方向の接続
-            if y1 < y2:
-                door1_pos = room1.get_wall_center("south")
-                door2_pos = room2.get_wall_center("north")
-            else:
-                door1_pos = room1.get_wall_center("north")
-                door2_pos = room2.get_wall_center("south")
-
-        # 扉を配置
-        is_special_room = room1.is_special or room2.is_special
-        for door_x, door_y in [door1_pos, door2_pos]:
-            door = Door() if is_special_room else (SecretDoor() if random.random() < 0.5 else Door())
-            self.tiles[door_y, door_x] = door
-            if door_x == door1_pos[0] and door_y == door1_pos[1]:
-                room1.doors.append((door_x, door_y))
-            else:
-                room2.doors.append((door_x, door_y))
-
-        # L字型の通路を生成
-        if abs(x1 - x2) > abs(y1 - y2):
-            # 水平方向が長い場合、水平→垂直の順で通路を生成
-            self._create_h_tunnel(door1_pos[0], door2_pos[0], door1_pos[1])
-            self._create_v_tunnel(door1_pos[1], door2_pos[1], door2_pos[0])
-        else:
-            # 垂直方向が長い場合、垂直→水平の順で通路を生成
-            self._create_v_tunnel(door1_pos[1], door2_pos[1], door1_pos[0])
-            self._create_h_tunnel(door1_pos[0], door2_pos[0], door2_pos[1])
-
-    def _create_h_tunnel(self, x1: int, x2: int, y: int) -> None:
-        """水平方向の通路を生成"""
-        for x in range(min(x1, x2), max(x1, x2) + 1):
-            if not isinstance(self.tiles[y, x], Door):
-                self.tiles[y, x] = Floor()
-
-    def _create_v_tunnel(self, y1: int, y2: int, x: int) -> None:
-        """垂直方向の通路を生成"""
-        for y in range(min(y1, y2), max(y1, y2) + 1):
-            if not isinstance(self.tiles[y, x], Door):
-                self.tiles[y, x] = Floor()
-
-    def _place_stairs(self) -> None:
-        """階段を配置"""
-        # 上り階段を配置（1階の場合は配置しない - GameScreenで制御）
-        if self.floor > 1:
-            up_room = random.choice(self.rooms)
-            up_x = random.randint(up_room.x + 1, up_room.x + up_room.width - 2)
-            up_y = random.randint(up_room.y + 1, up_room.y + up_room.height - 2)
-            self.tiles[up_y, up_x] = StairsUp()
-            self.start_pos = (up_x, up_y)
-        else:
-            # 1階の場合は、上り階段の位置だけ記録（GameScreenで制御）
-            up_room = random.choice(self.rooms)
-            up_x = random.randint(up_room.x + 1, up_room.x + up_room.width - 2)
-            up_y = random.randint(up_room.y + 1, up_room.y + up_room.height - 2)
-            self.start_pos = (up_x, up_y)
-
-        # 下り階段を配置（上り階段とは別の部屋に）
-        down_rooms = [room for room in self.rooms if room != up_room]
-        down_room = random.choice(down_rooms)
-        down_x = random.randint(down_room.x + 1, down_room.x + down_room.width - 2)
-        down_y = random.randint(down_room.y + 1, down_room.y + down_room.height - 2)
-        self.tiles[down_y, down_x] = StairsDown()
-        self.end_pos = (down_x, down_y)
+        game_logger.debug(f"DungeonGenerator initialized for floor {floor} ({width}x{height})")
 
     def generate(self) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
-        """ダンジョンを生成"""
-        # 特別な部屋を生成
-        self._create_special_rooms()
+        """
+        ダンジョンを生成。
 
-        # 通常の部屋を生成（ランダムな位置に配置）
-        for _ in range(random.randint(8, 12)):  # 8-12個の部屋
-            for _ in range(50):  # 最大50回試行
-                width = random.randint(self.min_room_size[0], self.max_room_size[0])
-                height = random.randint(self.min_room_size[1], self.max_room_size[1])
-                x = random.randint(1, self.width - width - 1)
-                y = random.randint(1, self.height - height - 1)
+        Returns:
+            (tiles, start_pos, end_pos) のタプル
+        """
+        try:
+            # Builder Patternでダンジョンを構築
+            self.tiles, self.start_pos, self.end_pos = self.director.build_dungeon()
 
-                # 既存の部屋と重なっていないか確認（通路用の余白も確保）
-                overlaps = False
-                for room in self.rooms:
-                    if (x < room.x + room.width + 2 and x + width + 2 > room.x and
-                        y < room.y + room.height + 2 and y + height + 2 > room.y):
-                        overlaps = True
-                        break
+            # 部屋情報を取得
+            self.rooms = self.director.rooms
 
-                if not overlaps:
-                    room = Room(x=x, y=y, width=width, height=height)
-                    self._create_room(room)
-                    self.rooms.append(room)
-                    break
+            game_logger.info(f"Dungeon generation completed for floor {self.floor}")
 
-        # 部屋を接続
-        self._connect_rooms()
+            return self.tiles, self.start_pos, self.end_pos
 
-        # 階段を配置
-        self._place_stairs()
+        except Exception as e:
+            game_logger.error(f"Dungeon generation failed: {e}")
+            raise
 
-        return self.tiles, self.start_pos, self.end_pos 
+    def get_generation_statistics(self) -> dict:
+        """
+        ダンジョン生成の統計情報を取得。
+
+        Returns:
+            生成統計の辞書
+        """
+        return self.director.get_generation_statistics()
+
+    def get_validation_report(self) -> dict:
+        """
+        ダンジョン検証レポートを取得。
+
+        Returns:
+            検証レポートの辞書
+        """
+        return self.director.validation_manager.get_validation_report()
+
+    def reset(self) -> None:
+        """
+        ジェネレーターの状態をリセット。
+        """
+        self.director.reset()
+        self.rooms = []
+        self.tiles = None
+        self.start_pos = None
+        self.end_pos = None
+
+    # 後方互換性のためのプロパティ
+    @property
+    def corridors(self) -> list:
+        """通路のリスト（後方互換性のため）。"""
+        return getattr(self.director.corridor_builder, 'corridors', [])
+
+    # 後方互換性のためのメソッド
+    def _get_room_grid_position(self, room: Room) -> tuple[int, int]:
+        """部屋のグリッド位置を取得（後方互換性のため）。"""
+        return self.director.room_builder.get_room_grid_position(room)
+
+    def _find_room_at_grid(self, grid_x: int, grid_y: int) -> Room | None:
+        """グリッド位置の部屋を検索（後方互換性のため）。"""
+        return self.director.room_builder.find_room_at_grid(self.rooms, grid_x, grid_y)
+
+    def _can_create_corridor(self, start: tuple, end: tuple) -> bool:
+        """通路作成可能性をチェック（後方互換性のため）。"""
+        # 簡単な距離チェック
+        distance = ((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5
+        return distance > 0 and distance < max(self.width, self.height)
+
+    def get_debug_info(self) -> dict:
+        """
+        デバッグ情報を取得。
+
+        Returns:
+            デバッグ情報の辞書
+        """
+        info = {
+            "dungeon_info": {
+                "width": self.width,
+                "height": self.height,
+                "floor": self.floor,
+                "rooms_count": len(self.rooms),
+            },
+            "generation_stats": self.get_generation_statistics(),
+        }
+
+        # 各ビルダーコンポーネントの統計情報
+        if hasattr(self.director.room_builder, 'get_statistics'):
+            info["room_builder_stats"] = self.director.room_builder.get_statistics()
+
+        if hasattr(self.director.corridor_builder, 'get_statistics'):
+            info["corridor_builder_stats"] = self.director.corridor_builder.get_statistics()
+
+        if hasattr(self.director.door_manager, 'get_statistics'):
+            info["door_manager_stats"] = self.director.door_manager.get_statistics()
+
+        if hasattr(self.director.special_room_builder, 'get_statistics'):
+            info["special_room_builder_stats"] = self.director.special_room_builder.get_statistics()
+
+        if hasattr(self.director.stairs_manager, 'get_statistics'):
+            info["stairs_manager_stats"] = self.director.stairs_manager.get_statistics()
+
+        return info
+
+
+# 後方互換性のためのクラスエイリアス
+# 新しいRoomクラスを既存コードで使用できるようにする
+from pyrogue.map.dungeon.room_builder import Room
+
+# モジュールレベルでのエクスポート
+__all__ = [
+    'DungeonGenerator',
+    'Room',
+]

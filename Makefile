@@ -1,87 +1,82 @@
-.PHONY: all install run clean format lint test help dev debug release venv
+.PHONY: help setup setup-dev test clean clean-pyc clean-build run pre-commit-install pre-commit-run ci-checks
 
 # デフォルトのPythonインタプリタ
-PYTHON = python3.12
-VENV = .venv
-VENV_BIN = $(VENV)/bin
+PYTHON_INTERPRETER ?= python3.12
+VENV_DIR := .venv
+VENV_PYTHON := $(VENV_DIR)/bin/python
+UV_INTERPRETER ?= uv
 
-# パッケージマネージャー
-UV = uv
+# デフォルトターゲット
+help:
+	@echo "Available targets:"
+	@echo "  setup          : Create virtual environment and install dependencies"
+	@echo "  setup-dev      : Install development dependencies"
+	@echo "  test           : Run pytest tests"
+	@echo "  pre-commit-install : Install pre-commit hooks"
+	@echo "  pre-commit-run     : Run pre-commit on all files"
+	@echo "  clean          : Remove python artifacts and build directories"
+	@echo "  clean-pyc      : Remove .pyc files"
+	@echo "  clean-build    : Remove build artifacts"
+	@echo "  run            : Run the CLI application (example: make run ARGS=\"your-command --option\")"
+	@echo "  ci-checks        : Run all CI checks locally (pre-commit + test)"
 
-# ソースコードのディレクトリ
-SRC_DIR = src/pyrogue
-TEST_DIR = tests
-DATA_DIR = data
-LOGS_DIR = $(DATA_DIR)/logs
+# Environment and Dependency Management
+setup: $(VENV_DIR)/.setup-check ## Create virtual environment and install base dependencies by creating a marker file
 
-# 環境変数
-export PYTHONPATH = $(SRC_DIR)
+$(VENV_DIR)/.setup-check:
+	@echo "Cleaning up existing virtual environment in $(VENV_DIR)..."make
+	@rm -rf $(VENV_DIR)
+	@echo "Creating virtual environment and installing dependencies using uv..."
+	@$(UV_INTERPRETER) sync
+	@echo "Base setup complete. Marking with .setup-check"
+	@touch $(VENV_DIR)/.setup-check
 
-help:  ## このヘルプメッセージを表示
-	@echo 'Usage: make [target]'
-	@echo ''
-	@echo 'Targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+setup-dev: $(VENV_DIR)/.setup-dev-check ## Install development and optional dependencies by creating a marker file
 
-all: install format lint test  ## 全てのタスクを実行
+$(VENV_DIR)/.setup-dev-check: $(VENV_DIR)/.setup-check
+	@echo "Installing development dependencies..."
+	@$(UV_INTERPRETER) sync --extra dev
+	@echo "Development setup complete. Marking with .setup-dev-check"
+	@touch $(VENV_DIR)/.setup-dev-check
 
-venv: ## 仮想環境を作成
-	$(PYTHON) -m venv $(VENV)
-	$(VENV_BIN)/$(PYTHON) -m pip install uv
+# テスト
+test:
+	@echo "Running pytest tests with in-memory SQLite..."
+	@DATABASE_URL="sqlite:///:memory:" ENABLE_CREATE_ALL=1 $(UV_INTERPRETER) run pytest
 
-setup: venv ## プロジェクトの初期セットアップを実行
-	mkdir -p $(DATA_DIR)/fonts $(LOGS_DIR)
-	$(VENV_BIN)/$(UV) pip install -r requirements-dev.txt
+# クリーンアップ
+clean: clean-pyc clean-build
+	@echo "Cleaning complete."
 
-install: ## 依存関係をインストール
-	$(VENV_BIN)/$(UV) pip install -r requirements-dev.txt
+clean-pyc:
+	@find . -name '*.pyc' -exec rm -f {} +
+	@find . -name '*.pyo' -exec rm -f {} +
+	@find . -name '*~' -exec rm -f {} +
+	@find . -name '__pycache__' -exec rm -rf {} +
 
-run: ## ゲームを実行（リリースモード）
-	$(VENV_BIN)/$(PYTHON) -m pyrogue.main
+clean-build:
+	@rm -rf build/
+	@rm -rf dist/
+	@rm -rf .eggs/
+	@rm -f .coverage
+	@rm -rf htmlcov/
+	@rm -rf .pytest_cache
 
-dev: ## 開発モードでゲームを実行（デバッグログ有効）
-	DEBUG=1 $(VENV_BIN)/$(PYTHON) -m pyrogue.main
+# アプリケーション実行
+run:
+	@PYTHONPATH=src $(UV_INTERPRETER) run -m pyrogue.main $(ARGS)
 
-debug: dev ## devのエイリアス
+# CI関連
+ci-checks: test
+	@echo "Running all pre-commit hooks..."
+	@$(UV_INTERPRETER) run pre-commit run --all-files
+	@echo "All CI checks completed successfully!"
 
-clean: ## 一時ファイルとキャッシュを削除
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.pyd" -delete
-	find . -type f -name ".coverage" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
-	find . -type d -name "*.egg" -exec rm -rf {} +
-	find . -type d -name ".tox" -exec rm -rf {} +
-	find . -type d -name "build" -exec rm -rf {} +
-	find . -type d -name "dist" -exec rm -rf {} +
+# pre-commit
+pre-commit-install:
+	@echo "Installing pre-commit hooks..."
+	@$(UV_INTERPRETER) run pre-commit install
 
-clean-logs: ## ログファイルを削除
-	rm -f $(LOGS_DIR)/*.log*
-
-format: ## コードをフォーマット
-	$(VENV_BIN)/black $(SRC_DIR) $(TEST_DIR)
-	$(VENV_BIN)/isort $(SRC_DIR) $(TEST_DIR)
-
-lint: ## リンターとタイプチェックを実行
-	$(VENV_BIN)/black --check $(SRC_DIR) $(TEST_DIR)
-	$(VENV_BIN)/isort --check-only $(SRC_DIR) $(TEST_DIR)
-	$(VENV_BIN)/pylint $(SRC_DIR)
-	$(VENV_BIN)/mypy $(SRC_DIR)
-
-test: ## テストを実行
-	$(VENV_BIN)/pytest $(TEST_DIR) -v
-
-watch-format: ## ファイル変更を監視してフォーマットを実行
-	find $(SRC_DIR) $(TEST_DIR) -name "*.py" | entr make format
-
-watch-test: ## ファイル変更を監視してテストを実行
-	find $(SRC_DIR) $(TEST_DIR) -name "*.py" | entr make test
-
-watch-run: ## ファイル変更を監視してゲームを再起動
-	find $(SRC_DIR) -name "*.py" | entr -r make dev
-
-release: clean format lint test ## リリースビルドを作成（全てのチェックを実行）
-	$(VENV_BIN)/$(PYTHON) -m build
+pre-commit-run:
+	@echo "Running pre-commit on all files..."
+	@$(UV_INTERPRETER) run pre-commit run --all-files
