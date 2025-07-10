@@ -32,10 +32,14 @@ class PlayerStatusFormatter:
         status_effects_text = player.status_effects.get_effect_summary()
         status_line = f" [{status_effects_text}]" if status_effects_text else ""
 
+        # 飢餓状態の表示
+        hunger_level = player.get_hunger_level()
+        hunger_display = f"{hunger_level}({player.hunger}%)"
+
         return (
             f"Lv:{player.level} HP:{player.hp}/{player.max_hp} MP:{player.mp}/{player.max_mp} "
             f"Atk:{player.get_attack()} Def:{player.get_defense()} "
-            f"Hunger:{player.hunger}% Exp:{player.exp} Gold:{player.gold}{status_line}\n"
+            f"Hunger:{hunger_display} Exp:{player.exp} Gold:{player.gold}{status_line}\n"
             f"Weap:{weapon} Armor:{armor} Ring(L):{ring_l} Ring(R):{ring_r}"
         )
 

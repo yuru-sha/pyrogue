@@ -55,6 +55,10 @@ class CombatManager:
         # 攻撃メッセージ
         context.add_message(f"You attack the {monster.name} for {damage} damage!")
 
+        # モンスター分裂判定（ダメージを受けた時）
+        if monster.hp > 0 and hasattr(context, 'monster_ai_manager'):
+            context.monster_ai_manager.split_monster_on_damage(monster, context)
+
         # モンスターの死亡判定
         if monster.hp <= 0:
             self._handle_monster_death(monster, context)

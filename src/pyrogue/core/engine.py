@@ -29,6 +29,7 @@ from pyrogue.config import CONFIG
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.input_handlers import StateManager
 from pyrogue.core.managers.dialogue_manager import DialogueManager
+from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
@@ -84,6 +85,9 @@ class Engine:
 
         # 対話マネージャーを初期化
         self.dialogue_manager = DialogueManager()
+
+        # セーブマネージャーを初期化
+        self.save_manager = SaveManager()
 
         # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
@@ -296,6 +300,7 @@ class Engine:
 
         プレイヤーの最終ステータスと死因を記録し、
         ゲームオーバー画面に遷移します。
+        Permadeath機能により、セーブデータを自動削除します。
 
         Args:
             player_stats: プレイヤーの最終ステータス
@@ -303,6 +308,13 @@ class Engine:
             cause_of_death: 死因の説明文
 
         """
+        # Permadeath機能：セーブデータを自動削除
+        game_data = {
+            "player_stats": player_stats,
+            "current_floor": final_floor,
+        }
+        self.save_manager.trigger_permadeath_on_death(game_data)
+
         self.game_over_screen.set_game_over_data(
             player_stats, final_floor, cause_of_death
         )

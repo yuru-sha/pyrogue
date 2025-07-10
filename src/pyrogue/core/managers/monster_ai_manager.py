@@ -44,8 +44,32 @@ class MonsterAIManager:
         if not self._can_monster_act(monster):
             return
 
+        # 特殊能力のクールダウンを減少
+        if hasattr(monster, 'special_ability_cooldown') and monster.special_ability_cooldown > 0:
+            monster.special_ability_cooldown -= 1
+
+        # 逃走判定
+        if self._should_flee(monster):
+            self._flee_from_player(monster, player, context)
+            return
+
         # プレイヤーが見えるかチェック
-        if self._can_monster_see_player(monster, player, context):
+        can_see_player = self._can_monster_see_player(monster, player, context)
+
+        if can_see_player:
+            # 遠距離攻撃可能かチェック
+            if self._can_use_ranged_attack(monster, player):
+                self._use_ranged_attack(monster, player, context)
+                return
+
+            # 隣接している場合は特殊攻撃またはメレー攻撃
+            if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= 1.5:
+                if self._can_use_special_attack(monster):
+                    self._use_special_attack(monster, player, context)
+                else:
+                    self._monster_attack_player(monster, context)
+                return
+
             # プレイヤーを追跡
             self._chase_player(monster, player, context)
         # ランダム移動
@@ -399,3 +423,300 @@ class MonsterAIManager:
         for monster in monsters:
             if monster.hp > 0:  # 生きているモンスターのみ処理
                 self.process_monster_ai(monster, context)
+
+    # ========== 特殊AI行動パターンのメソッド ==========
+
+    def _should_flee(self, monster: Monster) -> bool:
+        """
+        モンスターが逃走すべきかチェック。
+
+        Args:
+            monster: チェック対象のモンスター
+
+        Returns:
+            逃走すべき場合True
+
+        """
+        if not hasattr(monster, 'can_flee') or not monster.can_flee:
+            return False
+
+        # HP比率による逃走判定
+        hp_ratio = monster.hp / monster.max_hp
+        flee_threshold = getattr(monster, 'flee_threshold', 0.3)
+
+        if hp_ratio <= flee_threshold:
+            monster.is_fleeing = True
+            return True
+
+        return getattr(monster, 'is_fleeing', False)
+
+    def _flee_from_player(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        プレイヤーから逃走する。
+
+        Args:
+            monster: 逃走するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        # プレイヤーから遠ざかる方向を計算
+        dx = monster.x - player.x
+        dy = monster.y - player.y
+
+        # 正規化（-1, 0, 1のいずれか）
+        if dx != 0:
+            dx = dx // abs(dx)
+        if dy != 0:
+            dy = dy // abs(dy)
+
+        # 逃走方向に移動を試行
+        if not self._try_move_monster(monster, dx, dy, context):
+            # 直線的に逃げられない場合はランダム移動
+            self._random_move(monster, context)
+
+    def _can_use_ranged_attack(self, monster: Monster, player) -> bool:
+        """
+        遠距離攻撃が使用可能かチェック。
+
+        Args:
+            monster: チェック対象のモンスター
+            player: プレイヤー
+
+        Returns:
+            遠距離攻撃可能な場合True
+
+        """
+        if not hasattr(monster, 'can_ranged_attack') or not monster.can_ranged_attack:
+            return False
+
+        if hasattr(monster, 'special_ability_cooldown') and monster.special_ability_cooldown > 0:
+            return False
+
+        distance = self._calculate_distance(monster.x, monster.y, player.x, player.y)
+        ranged_range = getattr(monster, 'ranged_attack_range', 5)
+
+        # 射程内かつ隣接していない場合
+        return 1.5 < distance <= ranged_range
+
+    def _use_ranged_attack(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        遠距離攻撃を実行。
+
+        Args:
+            monster: 攻撃するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        damage = getattr(monster, 'ranged_attack_damage', monster.attack // 2)
+
+        # 攻撃命中判定
+        if random.random() < 0.8:  # 80%の命中率
+            actual_damage = max(1, damage - player.get_defense())
+            player.take_damage(actual_damage)
+            context.add_message(f"{monster.name} shoots you for {actual_damage} damage!")
+        else:
+            context.add_message(f"{monster.name}'s ranged attack misses!")
+
+        # クールダウン設定
+        monster.special_ability_cooldown = 3
+
+        game_logger.debug(f"{monster.name} used ranged attack on player")
+
+    def _can_use_special_attack(self, monster: Monster) -> bool:
+        """
+        特殊攻撃が使用可能かチェック。
+
+        Args:
+            monster: チェック対象のモンスター
+
+        Returns:
+            特殊攻撃可能な場合True
+
+        """
+        if hasattr(monster, 'special_ability_cooldown') and monster.special_ability_cooldown > 0:
+            return False
+
+        # 30%の確率で特殊攻撃を使用
+        return random.random() < 0.3 and (
+            getattr(monster, 'can_steal_items', False) or
+            getattr(monster, 'can_steal_gold', False) or
+            getattr(monster, 'can_drain_level', False)
+        )
+
+    def _use_special_attack(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        特殊攻撃を実行。
+
+        Args:
+            monster: 攻撃するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        # アイテム盗取
+        if getattr(monster, 'can_steal_items', False):
+            self._steal_item(monster, player, context)
+        # ゴールド盗取
+        elif getattr(monster, 'can_steal_gold', False):
+            self._steal_gold(monster, player, context)
+        # レベル下げ攻撃
+        elif getattr(monster, 'can_drain_level', False):
+            self._drain_level(monster, player, context)
+        else:
+            # 通常攻撃にフォールバック
+            self._monster_attack_player(monster, context)
+
+        # クールダウン設定
+        monster.special_ability_cooldown = 5
+
+    def _steal_item(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        アイテム盗取攻撃。
+
+        Args:
+            monster: 攻撃するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        # インベントリからランダムなアイテムを盗む
+        items = player.inventory.items
+        if items:
+            stolen_item = random.choice(items)
+            player.inventory.remove_item(stolen_item)
+            context.add_message(f"{monster.name} steals your {stolen_item.name}!")
+
+            # モンスターが逃走を開始
+            monster.is_fleeing = True
+
+            game_logger.debug(f"{monster.name} stole {stolen_item.name} from player")
+        else:
+            context.add_message(f"{monster.name} tries to steal from you, but you have nothing!")
+
+    def _steal_gold(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        ゴールド盗取攻撃。
+
+        Args:
+            monster: 攻撃するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        if player.gold > 0:
+            stolen_amount = min(player.gold, random.randint(10, 50))
+            player.gold -= stolen_amount
+            context.add_message(f"{monster.name} steals {stolen_amount} gold from you!")
+
+            # モンスターが逃走を開始
+            monster.is_fleeing = True
+
+            game_logger.debug(f"{monster.name} stole {stolen_amount} gold from player")
+        else:
+            context.add_message(f"{monster.name} searches for gold, but you have none!")
+
+    def _drain_level(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        レベル下げ攻撃。
+
+        Args:
+            monster: 攻撃するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        if player.level > 1:
+            # レベルを1下げる
+            player.level -= 1
+
+            # ステータスも減少
+            player.max_hp = max(10, player.max_hp - 5)
+            player.hp = min(player.hp, player.max_hp)
+            player.max_mp = max(5, player.max_mp - 3)
+            player.mp = min(player.mp, player.max_mp)
+            player.attack = max(1, player.attack - 2)
+            player.defense = max(0, player.defense - 1)
+
+            context.add_message(f"{monster.name} drains your life force! You feel weaker!")
+            game_logger.debug(f"{monster.name} drained player level from {player.level + 1} to {player.level}")
+        else:
+            # 通常ダメージを与える
+            damage = max(1, monster.attack - player.get_defense())
+            player.take_damage(damage)
+            context.add_message(f"{monster.name} attacks you for {damage} damage!")
+
+    def split_monster_on_damage(self, monster: Monster, context: GameContext) -> None:
+        """
+        ダメージを受けた時のモンスター分裂処理。
+
+        Args:
+            monster: 分裂するモンスター
+            context: ゲームコンテキスト
+
+        """
+        if not getattr(monster, 'can_split', False):
+            return
+
+        # 既に分裂している場合はスキップ
+        if getattr(monster, 'parent_monster', None) is not None:
+            return
+
+        # 分裂判定（30%の確率）
+        if random.random() > 0.3:
+            return
+
+        floor_data = context.get_current_floor_data()
+        if not floor_data or not hasattr(floor_data, "monster_spawner"):
+            return
+
+        # 分裂先の座標を探す
+        spawn_positions = []
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                new_x = monster.x + dx
+                new_y = monster.y + dy
+
+                if self._can_monster_move_to(new_x, new_y, context):
+                    spawn_positions.append((new_x, new_y))
+
+        if spawn_positions:
+            # 分裂モンスターを作成
+            spawn_x, spawn_y = random.choice(spawn_positions)
+
+            # 元のモンスターの属性をコピーして分裂体を作成
+            from pyrogue.entities.actors.monster import Monster as MonsterClass
+            split_monster = MonsterClass(
+                char=monster.char,
+                x=spawn_x,
+                y=spawn_y,
+                name=f"{monster.name} (split)",
+                level=monster.level,
+                hp=monster.hp // 2,  # HPは半分
+                max_hp=monster.max_hp // 2,
+                attack=monster.attack,
+                defense=monster.defense,
+                exp_value=monster.exp_value // 2,  # 経験値も半分
+                view_range=monster.view_range,
+                color=monster.color,
+                ai_pattern=monster.ai_pattern
+            )
+
+            # 親子関係を設定
+            split_monster.parent_monster = monster
+            monster.split_children.append(split_monster)
+
+            # 元のモンスターのHPも半分に
+            monster.hp = monster.hp // 2
+            monster.max_hp = monster.max_hp // 2
+
+            # スポナーに追加
+            floor_data.monster_spawner.monsters.append(split_monster)
+            floor_data.monster_spawner.occupied_positions.add((spawn_x, spawn_y))
+
+            context.add_message(f"{monster.name} splits into two!")
+            game_logger.debug(f"{monster.name} split into two monsters")

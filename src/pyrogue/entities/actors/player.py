@@ -14,6 +14,7 @@ Example:
 
 
 from pyrogue.config import CONFIG
+from pyrogue.constants import HungerConstants
 from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player_status import PlayerStatusFormatter
@@ -287,7 +288,44 @@ class Player(Actor):
 
     def is_hungry(self) -> bool:
         """空腹状態かどうかを判定。"""
-        return self.hunger < CONFIG.player.MAX_HUNGER * 0.1
+        return self.hunger < HungerConstants.HUNGRY_THRESHOLD
+
+    def get_hunger_level(self) -> str:
+        """現在の飢餓レベルを取得。"""
+        if self.hunger >= HungerConstants.FULL_THRESHOLD:
+            return "Full"
+        elif self.hunger >= HungerConstants.CONTENT_THRESHOLD:
+            return "Content"
+        elif self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+            return "Hungry"
+        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+            return "Very Hungry"
+        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+            return "Starving"
+        else:
+            return "Dying"
+
+    def get_hunger_attack_penalty(self) -> int:
+        """飢餓による攻撃力ペナルティを取得。"""
+        if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+            return 0
+        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+            return HungerConstants.HUNGRY_ATTACK_PENALTY
+        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+            return HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
+        else:
+            return HungerConstants.STARVING_ATTACK_PENALTY
+
+    def get_hunger_defense_penalty(self) -> int:
+        """飢餓による防御力ペナルティを取得。"""
+        if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+            return 0
+        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+            return HungerConstants.HUNGRY_DEFENSE_PENALTY
+        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+            return HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
+        else:
+            return HungerConstants.STARVING_DEFENSE_PENALTY
 
     def eat_food(self, amount: int = 25) -> None:
         """
@@ -305,31 +343,35 @@ class Player(Actor):
         """
         現在の攻撃力を計算。
 
-        基本攻撃力に装備アイテムのボーナスを加算した
-        実際の攻撃力を返します。
+        基本攻撃力に装備アイテムのボーナスを加算し、
+        飢餓ペナルティを適用した実際の攻撃力を返します。
 
         Returns:
-            装備ボーナスを含む総攻撃力
+            装備ボーナスと飢餓ペナルティを含む総攻撃力
 
         """
         base_attack = self.attack
-        bonus = self.inventory.get_attack_bonus()
-        return base_attack + bonus
+        equipment_bonus = self.inventory.get_attack_bonus()
+        hunger_penalty = self.get_hunger_attack_penalty()
+        total_attack = base_attack + equipment_bonus - hunger_penalty
+        return max(1, total_attack)  # 最低1の攻撃力は保証
 
     def get_defense(self) -> int:
         """
         現在の防御力を計算。
 
-        基本防御力に装備アイテムのボーナスを加算した
-        実際の防御力を返します。
+        基本防御力に装備アイテムのボーナスを加算し、
+        飢餓ペナルティを適用した実際の防御力を返します。
 
         Returns:
-            装備ボーナスを含む総防御力
+            装備ボーナスと飢餓ペナルティを含む総防御力
 
         """
         base_defense = self.defense
-        bonus = self.inventory.get_defense_bonus()
-        return base_defense + bonus
+        equipment_bonus = self.inventory.get_defense_bonus()
+        hunger_penalty = self.get_hunger_defense_penalty()
+        total_defense = base_defense + equipment_bonus - hunger_penalty
+        return max(0, total_defense)  # 0未満にはならない
 
     def equip_item(self, item: Item) -> Item | None:
         """

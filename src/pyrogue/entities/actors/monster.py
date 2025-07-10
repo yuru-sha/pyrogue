@@ -32,7 +32,8 @@ class Monster(Actor):
 
     def __init__(self, char: str, x: int, y: int, name: str, level: int,
                  hp: int, max_hp: int, attack: int, defense: int, exp_value: int,
-                 view_range: int, color: tuple[int, int, int], is_hostile: bool = True) -> None:
+                 view_range: int, color: tuple[int, int, int], is_hostile: bool = True,
+                 ai_pattern: str = "basic") -> None:
         """
         モンスターの初期化。
 
@@ -50,6 +51,7 @@ class Monster(Actor):
             view_range: 視界範囲
             color: 表示色（RGB）
             is_hostile: 敵対的かどうか
+            ai_pattern: AIパターン（basic, thief, drain, split, ranged, flee等）
 
         """
         super().__init__(x, y, name, hp, max_hp, attack, defense, level, is_hostile)
@@ -59,6 +61,32 @@ class Monster(Actor):
         self.exp_value = exp_value
         self.view_range = view_range
         self.color = color
+
+        # AI行動パターン
+        self.ai_pattern = ai_pattern
+
+        # AI特殊能力用の属性
+        self.can_steal_items = ai_pattern in ["item_thief", "leprechaun"]
+        self.can_steal_gold = ai_pattern in ["gold_thief", "nymph"]
+        self.can_drain_level = ai_pattern in ["level_drain", "wraith"]
+        self.can_split = ai_pattern in ["split", "split_on_hit"]
+        self.can_ranged_attack = ai_pattern in ["ranged", "archer"]
+        self.can_flee = ai_pattern in ["flee", "coward"]
+
+        # 特殊能力のクールダウン
+        self.special_ability_cooldown = 0
+
+        # 分裂モンスター用の属性
+        self.parent_monster = None
+        self.split_children = []
+
+        # 逃走モンスター用の属性
+        self.flee_threshold = 0.3  # HP30%以下で逃走
+        self.is_fleeing = False
+
+        # 遠距離攻撃モンスター用の属性
+        self.ranged_attack_range = 5
+        self.ranged_attack_damage = self.attack // 2
 
         # システムの初期化
         self.status_effects = StatusEffectManager()
