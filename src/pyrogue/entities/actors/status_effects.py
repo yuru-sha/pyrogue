@@ -221,6 +221,58 @@ class ConfusionEffect(StatusEffect):
         return self.update_duration()
 
 
+class HallucinationEffect(StatusEffect):
+    """
+    幻覚状態効果。
+
+    視覚混乱によってモンスターやアイテムの表示を
+    ランダムな文字に変換する状態異常です。
+
+    """
+
+    def __init__(self, duration: int = 8) -> None:
+        """
+        幻覚状態効果を初期化。
+
+        Args:
+            duration: 継続ターン数
+
+        """
+        super().__init__(
+            name="Hallucination",
+            description="幻覚状態：視覚混乱",
+            duration=duration
+        )
+
+    def apply_per_turn(self, context: EffectContext) -> bool:
+        """
+        幻覚の効果を適用。
+
+        Args:
+            context: 効果適用のためのコンテキスト
+
+        Returns:
+            幻覚状態が継続する場合はTrue、終了した場合はFalse
+
+        """
+        # 幻覚状態のメッセージを表示
+        import random
+        messages = [
+            "Everything looks strange and distorted!",
+            "Your vision blurs and shifts!",
+            "Reality seems to waver before your eyes!",
+            "The world around you seems unreal!"
+        ]
+
+        if hasattr(context, 'add_message'):
+            context.add_message(random.choice(messages))
+        elif hasattr(context, 'game_screen') and hasattr(context.game_screen, 'message_log'):
+            context.game_screen.message_log.append(random.choice(messages))
+
+        # 継続ターン数を更新
+        return self.update_duration()
+
+
 class StatusEffectManager:
     """
     状態異常の管理クラス。

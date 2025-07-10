@@ -65,6 +65,10 @@ MONSTER_STATS: dict[
     "XEROC": ("X", "Xeroc", 9, 18, 13, 4, 16, 7, (255, 255, 255), "split"),  # 分裂型
     "YETI": ("Y", "Yeti", 8, 22, 12, 5, 14, 5, (255, 255, 255), "basic"),  # 冷気攻撃
     "ZOMBIE": ("Z", "Zombie", 6, 16, 10, 4, 11, 3, (128, 128, 128), "basic"),  # アンデッド
+
+    # 幻覚系モンスター（オリジナル拡張）
+    "DREAM_EATER": ("@", "Dream Eater", 7, 15, 9, 3, 12, 6, (255, 20, 147), "psychic"),  # 精神攻撃
+    "PHANTOM_FUNGUS": ("f", "Phantom Fungus", 5, 10, 6, 2, 8, 4, (138, 43, 226), "hallucinogenic"),  # 胞子攻撃
 }
 
 # 階層ごとの出現モンスター定義
@@ -74,10 +78,10 @@ FLOOR_MONSTERS: dict[int, list[tuple[str, int]]] = {
     2: [("BAT", 30), ("RATTLESNAKE", 35), ("KESTREL", 35)],
     3: [("KESTREL", 30), ("SNAKE", 35), ("EMU", 35)],
     4: [("SNAKE", 25), ("EMU", 30), ("QUAGGA", 25), ("AQUATOR", 20)],
-    5: [("QUAGGA", 30), ("AQUATOR", 25), ("ICE_MONSTER", 25), ("LEPRECHAUN", 20)],
-    6: [("LEPRECHAUN", 25), ("ORC", 35), ("VENUS_FLYTRAP", 25), ("ZOMBIE", 15)],
-    7: [("ORC", 30), ("ZOMBIE", 25), ("CENTAUR", 25), ("HOBGOBLIN", 20)],
-    8: [("CENTAUR", 25), ("HOBGOBLIN", 30), ("GRIFFIN", 25), ("YETI", 20)],
+    5: [("QUAGGA", 25), ("AQUATOR", 25), ("ICE_MONSTER", 20), ("LEPRECHAUN", 20), ("PHANTOM_FUNGUS", 10)],
+    6: [("LEPRECHAUN", 20), ("ORC", 30), ("VENUS_FLYTRAP", 25), ("ZOMBIE", 15), ("PHANTOM_FUNGUS", 10)],
+    7: [("ORC", 25), ("ZOMBIE", 25), ("CENTAUR", 25), ("HOBGOBLIN", 15), ("DREAM_EATER", 10)],
+    8: [("CENTAUR", 20), ("HOBGOBLIN", 25), ("GRIFFIN", 25), ("YETI", 20), ("DREAM_EATER", 10)],
     9: [("GRIFFIN", 25), ("YETI", 25), ("XEROC", 25), ("NYMPH", 25)],
     10: [("XEROC", 20), ("NYMPH", 30), ("MEDUSA", 30), ("TROLL", 20)],
     11: [("MEDUSA", 25), ("TROLL", 30), ("VAMPIRE", 30), ("WRAITH", 15)],

@@ -87,9 +87,34 @@ class CombatManager:
         # 攻撃メッセージ
         context.add_message(f"The {monster.name} attacks you for {damage} damage!")
 
+        # 特殊攻撃効果の判定
+        self._handle_special_attack_effects(monster, context)
+
         # プレイヤーの死亡判定
         if player.hp <= 0:
             self._handle_player_death(context, f"Killed by {monster.name}")
+
+    def _handle_special_attack_effects(self, monster: Monster, context: GameContext) -> None:
+        """
+        モンスターの特殊攻撃効果を処理。
+
+        Args:
+            monster: 攻撃したモンスター
+            context: ゲームコンテキスト
+
+        """
+        player = context.player
+
+        # 幻覚を引き起こすモンスターの攻撃（30%の確率）
+        if hasattr(monster, 'ai_pattern') and monster.ai_pattern in ['hallucinogenic', 'psychic']:
+            if random.random() < 0.3:
+                from pyrogue.entities.actors.status_effects import HallucinationEffect
+                hallucination = HallucinationEffect(duration=6)
+                player.status_effects.add_effect(hallucination)
+                context.add_message(f"The {monster.name}'s attack makes you see strange visions!")
+
+        # その他の特殊攻撃効果もここに追加可能
+        # 例：毒攻撃、麻痺攻撃など
 
     def _calculate_damage(self, attacker, defender) -> int:
         """
