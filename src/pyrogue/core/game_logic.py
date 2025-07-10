@@ -543,6 +543,182 @@ class GameLogic:
         """ターゲット選択処理。"""
         # MagicManagerに委譲予定（現在未実装）
 
+    def handle_use_item(self, item_name: str) -> bool:
+        """アイテム使用処理。"""
+        # 簡単な実装：名前でアイテムを検索して使用
+        for item in self.player.inventory.items:
+            if item.name.lower() == item_name.lower():
+                # アイテム使用ロジック（簡単な実装）
+                self.add_message(f"You use {item.name}")
+                return True
+        self.add_message(f"You don't have {item_name}")
+        return False
+
+    def handle_combat(self) -> bool:
+        """戦闘処理。"""
+        # 隣接する敵を検索して攻撃
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                target_x = self.player.x + dx
+                target_y = self.player.y + dy
+
+                monster = floor_data.get_monster_at(target_x, target_y)
+                if monster:
+                    # 戦闘処理を実行
+                    self.combat_manager.handle_player_attack(monster, self.context)
+                    return True
+
+        self.add_message("No enemy to attack nearby")
+        return False
+
+    def handle_stairs_up(self) -> bool:
+        """上り階段の処理。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        tile = floor_data.tiles[self.player.y][self.player.x]
+        if hasattr(tile, 'char') and tile.char == '<':
+            success = self.dungeon_manager.move_to_floor(
+                self.dungeon_manager.current_floor - 1
+            )
+            if success:
+                self.add_message("You climb up the stairs")
+                return True
+
+        self.add_message("There are no stairs up here")
+        return False
+
+    def handle_stairs_down(self) -> bool:
+        """下り階段の処理。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        tile = floor_data.tiles[self.player.y][self.player.x]
+        if hasattr(tile, 'char') and tile.char == '>':
+            success = self.dungeon_manager.move_to_floor(
+                self.dungeon_manager.current_floor + 1
+            )
+            if success:
+                self.add_message("You climb down the stairs")
+                return True
+
+        self.add_message("There are no stairs down here")
+        return False
+
+    def handle_open_door(self) -> bool:
+        """扉を開く処理。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 隣接する扉を検索
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                x = self.player.x + dx
+                y = self.player.y + dy
+
+                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
+                    tile = floor_data.tiles[y][x]
+                    if hasattr(tile, 'char') and tile.char == '+':
+                        # 扉を開く
+                        from pyrogue.map.tile import Floor
+                        floor_data.tiles[y][x] = Floor()
+                        self.add_message("You open the door")
+                        return True
+
+        self.add_message("No door to open nearby")
+        return False
+
+    def handle_close_door(self) -> bool:
+        """扉を閉じる処理。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 隣接する開いた扉を検索
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                x = self.player.x + dx
+                y = self.player.y + dy
+
+                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
+                    tile = floor_data.tiles[y][x]
+                    if hasattr(tile, 'char') and tile.char == '.':
+                        # モンスターがいないことを確認
+                        if not floor_data.get_monster_at(x, y):
+                            # 扉を閉じる
+                            from pyrogue.map.tile import Door
+                            floor_data.tiles[y][x] = Door()
+                            self.add_message("You close the door")
+                            return True
+
+        self.add_message("No door to close nearby")
+        return False
+
+    def handle_search(self) -> bool:
+        """隠し扉の探索処理。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 隣接する壁を検索
+        found_secret = False
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+
+                x = self.player.x + dx
+                y = self.player.y + dy
+
+                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
+                    tile = floor_data.tiles[y][x]
+                    # 隠し扉の発見処理（簡単な実装）
+                    if hasattr(tile, 'char') and tile.char == '#':
+                        import random
+                        if random.random() < 0.1:  # 10%の確率で隠し扉発見
+                            from pyrogue.map.tile import Door
+                            floor_data.tiles[y][x] = Door()
+                            self.add_message("You found a secret door!")
+                            found_secret = True
+
+        if not found_secret:
+            self.add_message("You search but find nothing")
+
+        return found_secret
+
+    def handle_disarm_trap(self) -> bool:
+        """トラップ解除の処理。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 現在位置でのトラップ解除
+        trap = floor_data.get_trap_at(self.player.x, self.player.y)
+        if trap and not trap.is_revealed:
+            # トラップを解除
+            trap.disarm(self)
+            self.add_message("You disarm the trap")
+            return True
+
+        self.add_message("No trap to disarm here")
+        return False
+
     # ユーティリティメソッド
     def add_message(self, message: str) -> None:
         """メッセージログにメッセージを追加。"""

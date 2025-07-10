@@ -48,6 +48,12 @@ HIDDEN_DOOR_CHANCE = 0.15             # 隠し扉の出現確率
 #### 実装場所
 - `src/pyrogue/core/input_handlers.py` - 入力処理
 - `src/pyrogue/ui/components/input_handler.py` - UI入力処理
+- `src/pyrogue/core/command_handler.py` - 統一コマンド処理
+
+#### コマンド統一化システム
+- **共通コマンドハンドラー**: GUIとCLIで統一されたコマンド処理
+- **コマンド抽象化**: インターフェース層での統一的な操作
+- **キー入力変換**: GUI環境でのキー→コマンド自動変換
 
 ### 3. 戦闘システム
 
@@ -354,6 +360,25 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 #### 実装場所
 - `src/pyrogue/utils/logger.py` - ログシステム
 - `src/pyrogue/core/cli_engine.py` - CLI開発モード
+
+#### CLIモード詳細
+```bash
+# CLIモードでの起動
+python -m pyrogue.main --cli
+
+# 利用可能なコマンド例
+> move north    # 北へ移動
+> get           # アイテム取得
+> use potion    # ポーション使用
+> attack        # 攻撃
+> status        # ステータス表示
+> quit          # ゲーム終了
+```
+
+**特徴**:
+- **統一コマンドセット**: GUIと同じ操作がテキストで可能
+- **自動化対応**: スクリプトによる自動テスト
+- **開発効率**: デバッグとテストの高速化
 
 ## 今後の拡張予定
 

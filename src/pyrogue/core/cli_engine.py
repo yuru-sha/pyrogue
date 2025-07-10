@@ -22,9 +22,43 @@ from __future__ import annotations
 
 import sys
 
+from pyrogue.core.command_handler import CommandContext, CommonCommandHandler
 from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.game_states import GameStates
 from pyrogue.utils import game_logger
+
+
+class CLICommandContext(CommandContext):
+    """CLI用のコマンドコンテキスト実装。"""
+
+    def __init__(self, engine: CLIEngine):
+        self.engine = engine
+
+    @property
+    def game_logic(self) -> GameLogic:
+        """ゲームロジックへのアクセス。"""
+        return self.engine.game_logic
+
+    @property
+    def player(self):
+        """プレイヤーへのアクセス。"""
+        return self.engine.game_logic.player
+
+    def add_message(self, message: str) -> None:
+        """メッセージの追加。"""
+        print(message)
+
+    def display_player_status(self) -> None:
+        """プレイヤーステータスの表示。"""
+        self.engine.display_player_status()
+
+    def display_inventory(self) -> None:
+        """インベントリの表示。"""
+        self.engine.display_inventory()
+
+    def display_game_state(self) -> None:
+        """ゲーム状態の表示。"""
+        self.engine.display_game_state()
 
 
 class CLIEngine:
@@ -56,6 +90,10 @@ class CLIEngine:
         self.state = GameStates.PLAYERS_TURN
         self.running = False
         self.game_logic = GameLogic(None)  # CLIモードではエンジンはNone
+
+        # 共通コマンドハンドラーを初期化
+        self.command_context = CLICommandContext(self)
+        self.command_handler = CommonCommandHandler(self.command_context)
 
         game_logger.debug("CLI engine initialized")
 
@@ -119,40 +157,15 @@ class CLIEngine:
         cmd = parts[0]
         args = parts[1:] if len(parts) > 1 else []
 
-        if cmd == "help":
-            self.show_help()
-        elif cmd == "quit" or cmd == "exit":
-            print("Goodbye!")
+        # 共通コマンドハンドラーを使用
+        result = self.command_handler.handle_command(cmd, args)
+
+        if result.message:
+            print(result.message)
+
+        if result.should_quit:
             return False
-        elif cmd == "status":
-            self.display_player_status()
-        elif cmd == "look":
-            self.display_game_state()
-        elif cmd == "inventory":
-            self.display_inventory()
-        elif cmd == "move":
-            if not args:
-                print("Usage: move <direction> (north/south/east/west)")
-                return None
-            return self.handle_move(args[0])
-        elif cmd == "attack":
-            return self.handle_attack(args[0] if args else None)
-        elif cmd == "use":
-            if not args:
-                print("Usage: use <item>")
-                return None
-            return self.handle_use_item(args[0])
-        elif cmd == "get":
-            return self.handle_get_item()
-        elif cmd == "stairs":
-            if not args:
-                print("Usage: stairs <up/down>")
-                return None
-            return self.handle_stairs(args[0])
-        elif cmd == "debug" and args:
-            return self.handle_debug_command(args)
-        else:
-            print(f"Unknown command: {cmd}. Type 'help' for available commands.")
+        elif not result.success:
             return None
 
         return True
