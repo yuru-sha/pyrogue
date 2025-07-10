@@ -3,10 +3,7 @@
 識別システムのテスト用スクリプト
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
+import pytest
 from pyrogue.entities.actors.player import Player
 from pyrogue.entities.items.item import Potion, Scroll, Ring
 from pyrogue.entities.items.effects import HEAL_LIGHT, IDENTIFY

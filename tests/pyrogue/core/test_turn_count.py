@@ -1,5 +1,6 @@
 """ターン数カウントのテストスクリプト"""
 
+import pytest
 from pyrogue.core.game_logic import GameLogic
 
 

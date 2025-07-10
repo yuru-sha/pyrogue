@@ -1,5 +1,6 @@
 """モンスター討伐数のテストスクリプト"""
 
+import pytest
 from pyrogue.core.game_logic import GameLogic
 from pyrogue.entities.actors.monster import Monster
 
