@@ -31,6 +31,7 @@ from .effects import (
     Effect,
     HealingEffect,
 )
+from .amulet import AmuletOfYendor
 from .item import Armor, Food, Gold, Item, Potion, Ring, Scroll, Weapon
 from .item_types import (
     AMULET,
@@ -96,9 +97,7 @@ class ItemSpawner:
             room = random.choice(rooms)
             x, y = self._find_valid_position(dungeon_tiles, room)
             if x is not None and y is not None:
-                amulet = Item(
-                    x=x, y=y, name=AMULET.name, char=AMULET.char, color=(255, 215, 0)
-                )  # Gold color
+                amulet = AmuletOfYendor(x=x, y=y)
                 self.items.append(amulet)
                 self.occupied_positions.add((x, y))  # 位置を追加
 

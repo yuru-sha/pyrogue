@@ -54,7 +54,8 @@ class Weapon(Item):
 
     def pick_up(self) -> str:
         """武器を拾った時のメッセージ"""
-        return f"You pick up the {self.name} (ATK +{self.attack})."
+        sign = "+" if self.attack >= 0 else ""
+        return f"You pick up the {self.name} (ATK {sign}{self.attack})."
 
 
 class Armor(Item):
@@ -75,7 +76,8 @@ class Armor(Item):
 
     def pick_up(self) -> str:
         """防具を拾った時のメッセージ"""
-        return f"You pick up the {self.name} (DEF +{self.defense})."
+        sign = "+" if self.defense >= 0 else ""
+        return f"You pick up the {self.name} (DEF {sign}{self.defense})."
 
 
 class Ring(Item):

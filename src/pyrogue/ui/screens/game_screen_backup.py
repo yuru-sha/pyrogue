@@ -619,7 +619,7 @@ class GameScreen:
 
         # ENTERキーでターゲット確定
         if event.sym == tcod.event.KeySym.RETURN:
-            if self.engine and hasattr(self.engine, 'magic_screen'):
+            if self.engine and hasattr(self.engine, "magic_screen"):
                 selected_spell = self.engine.magic_screen.get_selected_spell()
                 if selected_spell:
                     # プレイヤーの位置をターゲットとして魔法を詠唱

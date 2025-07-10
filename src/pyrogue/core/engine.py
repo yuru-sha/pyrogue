@@ -203,7 +203,7 @@ class Engine:
                 elif self.state == GameStates.VICTORY:
                     self.victory_screen.render()
                 elif self.state == GameStates.DIALOGUE:
-                    if hasattr(self, 'dialogue_screen'):
+                    if hasattr(self, "dialogue_screen"):
                         self.dialogue_screen.render(self.console)
 
                 self.context.present(self.console)
@@ -264,7 +264,7 @@ class Engine:
         if self.state == GameStates.TARGETING:
             return self.game_screen
         if self.state == GameStates.DIALOGUE:
-            return getattr(self, 'dialogue_screen', None)
+            return getattr(self, "dialogue_screen", None)
         if self.state == GameStates.GAME_OVER:
             return self.game_over_screen
         if self.state == GameStates.VICTORY:

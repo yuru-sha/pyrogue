@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
 from typing import Any
 
 from pyrogue.entities.actors.actor import Actor

@@ -66,7 +66,7 @@ class Trap(ABC):
         self.color: tuple[int, int, int] = (255, 0, 0)
         self.name: str = "Trap"
 
-    def reveal(self, context: "EffectContext" | None = None) -> None:
+    def reveal(self, context: EffectContext | None = None) -> None:
         """
         トラップを発見済み状態にする。
 
@@ -79,7 +79,7 @@ class Trap(ABC):
             if context and context.game_screen:
                 context.game_screen.message_log.append(f"You discovered a {self.name}!")
 
-    def disarm(self, context: "EffectContext" | None = None) -> bool:
+    def disarm(self, context: EffectContext | None = None) -> bool:
         """
         トラップを無効化する。
 
@@ -109,15 +109,14 @@ class Trap(ABC):
             if context and context.game_screen:
                 context.game_screen.message_log.append(f"You successfully disarmed the {self.name}!")
             return True
-        else:
+        if context and context.game_screen:
+            context.game_screen.message_log.append(f"You failed to disarm the {self.name}!")
+        # 失敗時にトラップが発動する可能性
+        if random.random() < 0.3:  # 30%の確率で発動
             if context and context.game_screen:
-                context.game_screen.message_log.append(f"You failed to disarm the {self.name}!")
-            # 失敗時にトラップが発動する可能性
-            if random.random() < 0.3:  # 30%の確率で発動
-                if context and context.game_screen:
-                    context.game_screen.message_log.append("Your clumsy attempt triggers the trap!")
-                self.activate(context)
-            return False
+                context.game_screen.message_log.append("Your clumsy attempt triggers the trap!")
+            self.activate(context)
+        return False
 
     def is_active(self) -> bool:
         """
@@ -140,7 +139,7 @@ class Trap(ABC):
         return not self.is_hidden
 
     @abstractmethod
-    def activate(self, context: "EffectContext") -> None:
+    def activate(self, context: EffectContext) -> None:
         """
         トラップを発動させる。
 
@@ -148,7 +147,6 @@ class Trap(ABC):
             context: 効果適用のためのコンテキスト
 
         """
-        pass
 
 
 class PitTrap(Trap):
@@ -176,7 +174,7 @@ class PitTrap(Trap):
         self.char = "^"
         self.color = (139, 69, 19)  # 茶色
 
-    def activate(self, context: "EffectContext") -> None:
+    def activate(self, context: EffectContext) -> None:
         """
         落とし穴の効果を発動。
 
@@ -224,7 +222,7 @@ class PoisonNeedleTrap(Trap):
         self.char = "^"
         self.color = (0, 255, 0)  # 緑色
 
-    def activate(self, context: "EffectContext") -> None:
+    def activate(self, context: EffectContext) -> None:
         """
         毒針の効果を発動。
 
@@ -270,7 +268,7 @@ class TeleportTrap(Trap):
         self.char = "^"
         self.color = (255, 0, 255)  # マゼンタ色
 
-    def activate(self, context: "EffectContext") -> None:
+    def activate(self, context: EffectContext) -> None:
         """
         テレポートの効果を発動。
 
@@ -361,7 +359,7 @@ class TrapManager:
         """
         return [trap for trap in self.traps if trap.is_visible() and trap.is_active()]
 
-    def trigger_trap_at(self, x: int, y: int, context: "EffectContext") -> bool:
+    def trigger_trap_at(self, x: int, y: int, context: EffectContext) -> bool:
         """
         指定された位置のトラップを発動。
 

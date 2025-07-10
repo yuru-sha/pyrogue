@@ -782,8 +782,7 @@ class GameLogic:
             success = trap.disarm(context=self)
             if success:
                 return f"You successfully disarmed the {trap.name}!"
-            else:
-                return f"You failed to disarm the {trap.name}."
+            return f"You failed to disarm the {trap.name}."
 
         # 隣接位置で発見済みのトラップを探す
         directions = [
@@ -814,18 +813,16 @@ class GameLogic:
             success = trap.disarm(context=self)
             if success:
                 return f"You successfully disarmed the {trap.name} at ({x}, {y})!"
-            else:
-                return f"You failed to disarm the {trap.name} at ({x}, {y})."
+            return f"You failed to disarm the {trap.name} at ({x}, {y})."
+        # 複数ある場合は最初のものを対象とする（将来的には選択UIを実装）
+        trap, x, y = visible_traps[0]
+        success = trap.disarm(context=self)
+        message = f"You attempt to disarm the {trap.name} at ({x}, {y}). "
+        if success:
+            message += "Success!"
         else:
-            # 複数ある場合は最初のものを対象とする（将来的には選択UIを実装）
-            trap, x, y = visible_traps[0]
-            success = trap.disarm(context=self)
-            message = f"You attempt to disarm the {trap.name} at ({x}, {y}). "
-            if success:
-                message += "Success!"
-            else:
-                message += "Failed!"
-            return message
+            message += "Failed!"
+        return message
 
     def check_victory(self) -> bool:
         """

@@ -7,9 +7,7 @@
 
 from __future__ import annotations
 
-import json
-import os
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 from pyrogue.core.save_manager import SaveManager
 from pyrogue.entities.items.item import Item
@@ -27,6 +25,7 @@ class SaveLoadManager:
     Attributes:
         game_screen: メインのゲームスクリーンへの参照
         save_manager: セーブファイル管理インスタンス
+
     """
 
     def __init__(self, game_screen: GameScreen) -> None:
@@ -35,6 +34,7 @@ class SaveLoadManager:
 
         Args:
             game_screen: メインのゲームスクリーンインスタンス
+
         """
         self.game_screen = game_screen
         self.save_manager = SaveManager()
@@ -45,6 +45,7 @@ class SaveLoadManager:
 
         Returns:
             保存に成功した場合True
+
         """
         try:
             # 現在のフロア状態を保存
@@ -59,9 +60,8 @@ class SaveLoadManager:
             if success:
                 self.game_screen.game_logic.add_message("Game saved successfully!")
                 return True
-            else:
-                self.game_screen.game_logic.add_message("Failed to save game.")
-                return False
+            self.game_screen.game_logic.add_message("Failed to save game.")
+            return False
 
         except Exception as e:
             self.game_screen.game_logic.add_message(f"Error saving game: {e}")
@@ -73,6 +73,7 @@ class SaveLoadManager:
 
         Returns:
             読み込みに成功した場合True
+
         """
         try:
             # セーブデータを読み込み
@@ -90,9 +91,8 @@ class SaveLoadManager:
                 self.game_screen.fov_manager.update_fov()
                 self.game_screen.game_logic.add_message("Game loaded successfully!")
                 return True
-            else:
-                self.game_screen.game_logic.add_message("Failed to load game.")
-                return False
+            self.game_screen.game_logic.add_message("Failed to load game.")
+            return False
 
         except Exception as e:
             self.game_screen.game_logic.add_message(f"Error loading game: {e}")
@@ -109,12 +109,13 @@ class SaveLoadManager:
             floor_save_data = self._serialize_floor_data(floor_data)
             self.game_screen.game_logic.dungeon_manager.floor_data[current_floor] = floor_save_data
 
-    def _create_save_data(self) -> Dict[str, Any]:
+    def _create_save_data(self) -> dict[str, Any]:
         """
         セーブデータを作成。
 
         Returns:
             セーブデータ辞書
+
         """
         player = self.game_screen.player
         dungeon_manager = self.game_screen.game_logic.dungeon_manager
@@ -125,13 +126,13 @@ class SaveLoadManager:
             "current_floor": dungeon_manager.current_floor,
             "floor_data": dungeon_manager.floor_data,
             "message_log": self.game_screen.game_logic.message_log,
-            "has_amulet": getattr(player, 'has_amulet', False),
+            "has_amulet": getattr(player, "has_amulet", False),
             "version": "1.0"
         }
 
         return save_data
 
-    def _restore_game_state(self, save_data: Dict[str, Any]) -> bool:
+    def _restore_game_state(self, save_data: dict[str, Any]) -> bool:
         """
         セーブデータからゲーム状態を復元。
 
@@ -140,6 +141,7 @@ class SaveLoadManager:
 
         Returns:
             復元に成功した場合True
+
         """
         try:
             # プレイヤー状態の復元
@@ -171,7 +173,7 @@ class SaveLoadManager:
             print(f"Error restoring game state: {e}")
             return False
 
-    def _serialize_player(self, player) -> Dict[str, Any]:
+    def _serialize_player(self, player) -> dict[str, Any]:
         """
         プレイヤーオブジェクトをシリアライズ。
 
@@ -180,6 +182,7 @@ class SaveLoadManager:
 
         Returns:
             シリアライズされたプレイヤーデータ
+
         """
         return {
             "x": player.x,
@@ -191,18 +194,19 @@ class SaveLoadManager:
             "gold": player.gold,
             "attack": player.attack,
             "defense": player.defense,
-            "hunger": getattr(player, 'hunger', 100),
-            "mp": getattr(player, 'mp', 0),
-            "max_mp": getattr(player, 'max_mp', 0),
-            "has_amulet": getattr(player, 'has_amulet', False),
+            "hunger": getattr(player, "hunger", 100),
+            "mp": getattr(player, "mp", 0),
+            "max_mp": getattr(player, "max_mp", 0),
+            "has_amulet": getattr(player, "has_amulet", False),
         }
 
-    def _deserialize_player(self, player_data: Dict[str, Any]) -> None:
+    def _deserialize_player(self, player_data: dict[str, Any]) -> None:
         """
         プレイヤーデータをデシリアライズ。
 
         Args:
             player_data: シリアライズされたプレイヤーデータ
+
         """
         player = self.game_screen.player
 
@@ -226,7 +230,7 @@ class SaveLoadManager:
         if "has_amulet" in player_data:
             player.has_amulet = player_data["has_amulet"]
 
-    def _serialize_inventory(self, inventory) -> Dict[str, Any]:
+    def _serialize_inventory(self, inventory) -> dict[str, Any]:
         """
         インベントリをシリアライズ。
 
@@ -235,6 +239,7 @@ class SaveLoadManager:
 
         Returns:
             シリアライズされたインベントリデータ
+
         """
         return {
             "items": [self._serialize_item(item) for item in inventory.items],
@@ -246,12 +251,13 @@ class SaveLoadManager:
             }
         }
 
-    def _deserialize_inventory(self, inventory_data: Dict[str, Any]) -> None:
+    def _deserialize_inventory(self, inventory_data: dict[str, Any]) -> None:
         """
         インベントリデータをデシリアライズ。
 
         Args:
             inventory_data: シリアライズされたインベントリデータ
+
         """
         inventory = self.game_screen.game_logic.inventory
 
@@ -267,7 +273,7 @@ class SaveLoadManager:
             "ring_right": self._deserialize_item(equipped_data["ring_right"]) if equipped_data["ring_right"] else None,
         }
 
-    def _serialize_item(self, item: Item) -> Dict[str, Any]:
+    def _serialize_item(self, item: Item) -> dict[str, Any]:
         """
         アイテムをシリアライズ。
 
@@ -276,18 +282,19 @@ class SaveLoadManager:
 
         Returns:
             シリアライズされたアイテムデータ
+
         """
         return {
             "item_type": item.item_type,
             "name": item.name,
-            "x": getattr(item, 'x', 0),
-            "y": getattr(item, 'y', 0),
-            "quantity": getattr(item, 'quantity', 1),
-            "enchantment": getattr(item, 'enchantment', 0),
-            "cursed": getattr(item, 'cursed', False),
+            "x": getattr(item, "x", 0),
+            "y": getattr(item, "y", 0),
+            "quantity": getattr(item, "quantity", 1),
+            "enchantment": getattr(item, "enchantment", 0),
+            "cursed": getattr(item, "cursed", False),
         }
 
-    def _deserialize_item(self, item_data: Dict[str, Any]) -> Item:
+    def _deserialize_item(self, item_data: dict[str, Any]) -> Item:
         """
         アイテムデータをデシリアライズ。
 
@@ -296,6 +303,7 @@ class SaveLoadManager:
 
         Returns:
             復元されたアイテムオブジェクト
+
         """
         # 簡略化されたアイテム復元（基本的なItemクラスとして作成）
         item = Item(item_data["name"])
@@ -314,7 +322,7 @@ class SaveLoadManager:
 
         return item
 
-    def _serialize_floor_data(self, floor_data) -> Dict[str, Any]:
+    def _serialize_floor_data(self, floor_data) -> dict[str, Any]:
         """
         フロアデータをシリアライズ。
 
@@ -323,16 +331,17 @@ class SaveLoadManager:
 
         Returns:
             シリアライズされたフロアデータ
+
         """
         return {
             "tiles": floor_data.tiles.tolist(),
             "monsters": [self._serialize_monster(monster) for monster in floor_data.monster_spawner.monsters],
             "items": [self._serialize_item(item) for item in floor_data.item_spawner.items],
             "explored": floor_data.explored.tolist(),
-            "traps": [self._serialize_trap(trap) for trap in getattr(floor_data, 'trap_manager', {}).get('traps', [])]
+            "traps": [self._serialize_trap(trap) for trap in getattr(floor_data, "trap_manager", {}).get("traps", [])]
         }
 
-    def _serialize_monster(self, monster) -> Dict[str, Any]:
+    def _serialize_monster(self, monster) -> dict[str, Any]:
         """
         モンスターをシリアライズ。
 
@@ -341,6 +350,7 @@ class SaveLoadManager:
 
         Returns:
             シリアライズされたモンスターデータ
+
         """
         return {
             "monster_type": monster.monster_type,
@@ -350,7 +360,7 @@ class SaveLoadManager:
             "max_hp": monster.max_hp,
         }
 
-    def _serialize_trap(self, trap) -> Dict[str, Any]:
+    def _serialize_trap(self, trap) -> dict[str, Any]:
         """
         トラップをシリアライズ。
 
@@ -359,6 +369,7 @@ class SaveLoadManager:
 
         Returns:
             シリアライズされたトラップデータ
+
         """
         return {
             "trap_type": trap.trap_type,
@@ -381,16 +392,16 @@ class SaveLoadManager:
             # フロアデータが存在しない場合は新規生成
             self.game_screen.game_logic.dungeon_manager.generate_floor(current_floor)
 
-    def _deserialize_floor_data(self, floor_data: Dict[str, Any]) -> None:
+    def _deserialize_floor_data(self, floor_data: dict[str, Any]) -> None:
         """
         フロアデータをデシリアライズ。
 
         Args:
             floor_data: シリアライズされたフロアデータ
+
         """
         # 実装は複雑になるため、基本的な復元のみ
         # 詳細な復元はGameLogic側で実装
-        pass
 
     def has_save_file(self) -> bool:
         """
@@ -398,6 +409,7 @@ class SaveLoadManager:
 
         Returns:
             セーブファイルが存在する場合True
+
         """
         return self.save_manager.has_save_file()
 
@@ -407,5 +419,6 @@ class SaveLoadManager:
 
         Returns:
             削除に成功した場合True
+
         """
         return self.save_manager.delete_save_file()

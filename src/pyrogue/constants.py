@@ -201,10 +201,9 @@ def get_hunger_status(hunger: int) -> str:
     """満腹度から状態文字列を取得。"""
     if hunger <= HungerConstants.STARVING_THRESHOLD:
         return "Starving"
-    elif hunger <= HungerConstants.HUNGRY_THRESHOLD:
+    if hunger <= HungerConstants.HUNGRY_THRESHOLD:
         return "Hungry"
-    else:
-        return "Fed"
+    return "Fed"
 
 
 def is_max_floor(floor: int) -> bool:

@@ -65,11 +65,15 @@ class GameOverScreen:
 
         # 統計情報
         stats_y = title_y + 5
+        score = self.player_stats.get('score', 0)
         stats_info = [
+            f"Final Score: {score}",
             f"Final Level: {self.player_stats.get('level', 1)}",
             f"Final Floor: B{self.final_floor}F",
             f"Experience: {self.player_stats.get('exp', 0)}",
             f"Gold Collected: {self.player_stats.get('gold', 0)}",
+            f"Monsters Killed: {self.player_stats.get('monsters_killed', 0)}",
+            f"Turns Played: {self.player_stats.get('turns_played', 0)}",
         ]
 
         for i, stat in enumerate(stats_info):

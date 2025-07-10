@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import random
-from typing import List
 
 from pyrogue.constants import ProbabilityConstants
 from pyrogue.map.dungeon.room_builder import Room
@@ -25,6 +24,7 @@ class SpecialRoomBuilder:
     Attributes:
         floor: 現在の階層
         special_rooms_created: 作成された特別部屋のリスト
+
     """
 
     def __init__(self, floor: int) -> None:
@@ -33,16 +33,18 @@ class SpecialRoomBuilder:
 
         Args:
             floor: 階層番号
+
         """
         self.floor = floor
         self.special_rooms_created = []
 
-    def process_special_rooms(self, rooms: List[Room]) -> None:
+    def process_special_rooms(self, rooms: list[Room]) -> None:
         """
         特別部屋を処理。
 
         Args:
             rooms: 部屋のリスト
+
         """
         self.special_rooms_created = []
 
@@ -67,6 +69,7 @@ class SpecialRoomBuilder:
 
         Returns:
             特別部屋を作成する場合True
+
         """
         # 階層が深いほど特別部屋の確率が高くなる
         base_chance = ProbabilityConstants.SPECIAL_ROOM_CHANCE
@@ -82,6 +85,7 @@ class SpecialRoomBuilder:
 
         Returns:
             特別部屋の種類
+
         """
         # 階層に応じて異なる特別部屋を生成
         room_types = {
@@ -118,6 +122,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room_type = room.room_type
 
@@ -144,6 +149,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         # アイテム配置はItemSpawnerで行われるため、
         # ここでは部屋の特性のみ設定
@@ -156,6 +162,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room.scroll_chance = 0.8        # 巻物の出現確率を80%に
         room.book_chance = 0.3          # 本の出現確率を30%に
@@ -166,6 +173,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room.weapon_chance = 0.7        # 武器の出現確率を70%に
         room.armor_chance = 0.7         # 防具の出現確率を70%に
@@ -177,6 +185,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room.potion_chance = 0.8        # ポーションの出現確率を80%に
         room.rare_potion_chance = 0.3   # 希少ポーションの出現確率を30%に
@@ -187,6 +196,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room.blessing_chance = 0.5      # 祝福効果の確率を50%に
         room.holy_item_chance = 0.2     # 聖なるアイテムの確率を20%に
@@ -197,6 +207,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room.treasure_multiplier = 5.0  # アイテム生成量を5倍に
         room.gold_multiplier = 10.0     # 金貨生成量を10倍に
@@ -208,6 +219,7 @@ class SpecialRoomBuilder:
 
         Args:
             room: 装飾する部屋
+
         """
         room.has_amulet = True          # イェンダーのアミュレット配置
         room.guardian_chance = 1.0      # ガーディアンモンスター確定
@@ -221,6 +233,7 @@ class SpecialRoomBuilder:
 
         Returns:
             部屋の説明文
+
         """
         if not room.is_special:
             return "A normal room."
@@ -243,6 +256,7 @@ class SpecialRoomBuilder:
 
         Returns:
             部屋種類とその数の辞書
+
         """
         room_counts = {}
         for room in self.special_rooms_created:

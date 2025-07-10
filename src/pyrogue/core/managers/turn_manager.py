@@ -25,6 +25,7 @@ class TurnManager:
 
     Attributes:
         turn_count: 経過ターン数
+
     """
 
     def __init__(self) -> None:
@@ -37,8 +38,12 @@ class TurnManager:
 
         Args:
             context: ゲームコンテキスト
+
         """
         self.turn_count += 1
+
+        # プレイヤーのターン数を増加
+        context.player.increment_turn()
 
         # プレイヤーのステータス異常処理
         self._process_player_status_effects(context)
@@ -63,10 +68,11 @@ class TurnManager:
 
         Args:
             context: ゲームコンテキスト
+
         """
         player = context.player
 
-        if not hasattr(player, 'status_effect_manager'):
+        if not hasattr(player, "status_effect_manager"):
             return
 
         # ステータス異常の経過処理
@@ -84,6 +90,16 @@ class TurnManager:
 
                 if player.hp <= 0:
                     context.add_message("You died from poison!")
+
+                    # 毒死時のゲームオーバー処理
+                    if hasattr(context, 'game_logic') and context.game_logic:
+                        context.game_logic.record_game_over("Poison")
+
+                    if context.engine and hasattr(context.engine, "game_over"):
+                        player_stats = player.get_stats_dict()
+                        final_floor = context.get_current_floor_number()
+                        context.engine.game_over(player_stats, final_floor, "Poison")
+
                     return
 
             elif effect.name == "Paralysis":
@@ -102,9 +118,10 @@ class TurnManager:
 
         Args:
             context: ゲームコンテキスト
+
         """
         floor_data = context.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, 'monster_spawner'):
+        if not floor_data or not hasattr(floor_data, "monster_spawner"):
             return
 
         # モンスターターンの処理はMonsterAIManagerに委譲
@@ -118,7 +135,7 @@ class TurnManager:
                 self._process_monster_status_effects(monster)
 
         # すべてのモンスターのAI処理をMonsterAIManagerに委譲
-        if hasattr(context, 'monster_ai_manager') and context.monster_ai_manager:
+        if hasattr(context, "monster_ai_manager") and context.monster_ai_manager:
             context.monster_ai_manager.process_all_monsters(context)
 
     def _process_monster_status_effects(self, monster) -> None:
@@ -127,8 +144,9 @@ class TurnManager:
 
         Args:
             monster: 処理するモンスター
+
         """
-        if not hasattr(monster, 'status_effect_manager'):
+        if not hasattr(monster, "status_effect_manager"):
             return
 
         # ステータス異常の経過処理
@@ -151,10 +169,11 @@ class TurnManager:
 
         Args:
             context: ゲームコンテキスト
+
         """
         player = context.player
 
-        if not hasattr(player, 'hunger'):
+        if not hasattr(player, "hunger"):
             return
 
         # 満腹度の減少（一定ターンごと）
@@ -181,16 +200,26 @@ class TurnManager:
             if player.hp <= 0:
                 context.add_message("You died of starvation!")
 
+                # 飢餓死時のゲームオーバー処理
+                if hasattr(context, 'game_logic') and context.game_logic:
+                    context.game_logic.record_game_over("Starvation")
+
+                if context.engine and hasattr(context.engine, "game_over"):
+                    player_stats = player.get_stats_dict()
+                    final_floor = context.get_current_floor_number()
+                    context.engine.game_over(player_stats, final_floor, "Starvation")
+
     def _process_mp_recovery(self, context: GameContext) -> None:
         """
         MP自然回復を処理。
 
         Args:
             context: ゲームコンテキスト
+
         """
         player = context.player
 
-        if not hasattr(player, 'mp') or not hasattr(player, 'max_mp'):
+        if not hasattr(player, "mp") or not hasattr(player, "max_mp"):
             return
 
         # MP回復（一定ターンごと、満腹度が十分な場合のみ）
@@ -211,15 +240,16 @@ class TurnManager:
 
         Args:
             context: ゲームコンテキスト
+
         """
         player = context.player
 
         # プレイヤー死亡チェック
         if player.hp <= 0:
             game_logger.info("Player died during turn processing")
-            if context.engine and hasattr(context.engine, 'game_state'):
+            if context.engine and hasattr(context.engine, "state"):
                 from pyrogue.core.game_states import GameStates
-                context.engine.game_state = GameStates.GAME_OVER
+                context.engine.state = GameStates.GAME_OVER
 
     def get_turn_statistics(self) -> dict:
         """
@@ -227,6 +257,7 @@ class TurnManager:
 
         Returns:
             ターン統計辞書
+
         """
         return {
             "turn_count": self.turn_count,
@@ -246,6 +277,7 @@ class TurnManager:
         Args:
             count: 進めるターン数
             context: ゲームコンテキスト
+
         """
         for _ in range(count):
             self.process_turn(context)
@@ -263,8 +295,9 @@ class TurnManager:
 
         Returns:
             行動可能な場合True
+
         """
-        if not hasattr(entity, 'status_effect_manager'):
+        if not hasattr(entity, "status_effect_manager"):
             return True
 
         # 麻痺状態のチェック
@@ -284,8 +317,9 @@ class TurnManager:
 
         Returns:
             混乱状態の場合True
+
         """
-        if not hasattr(entity, 'status_effect_manager'):
+        if not hasattr(entity, "status_effect_manager"):
             return False
 
         active_effects = entity.status_effect_manager.get_active_effects()

@@ -11,11 +11,12 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Protocol
 
 
 class DialogueAction(Enum):
     """会話アクションの種類を定義する列挙型。"""
+
     CONTINUE = "continue"        # 会話を継続
     END = "end"                 # 会話を終了
     TRADE = "trade"             # 取引画面を開く
@@ -35,10 +36,11 @@ class DialogueChoice:
         condition: 選択肢の表示条件
 
     """
+
     text: str
-    next_node: Optional[str] = None
+    next_node: str | None = None
     action: DialogueAction = DialogueAction.CONTINUE
-    condition: Optional[str] = None
+    condition: str | None = None
 
 
 @dataclass
@@ -55,12 +57,13 @@ class DialogueNode:
         condition: ノード表示条件
 
     """
+
     id: str
     text: str
     speaker: str
-    choices: List[DialogueChoice]
+    choices: list[DialogueChoice]
     action: DialogueAction = DialogueAction.CONTINUE
-    condition: Optional[str] = None
+    condition: str | None = None
 
 
 class DialogueContext(Protocol):
@@ -102,7 +105,7 @@ class DialogueManager:
 
     """
 
-    def __init__(self, data_path: Optional[Path] = None) -> None:
+    def __init__(self, data_path: Path | None = None) -> None:
         """
         DialogueManagerの初期化。
 
@@ -110,10 +113,10 @@ class DialogueManager:
             data_path: 会話データファイルのパス
 
         """
-        self.dialogues: Dict[str, List[DialogueNode]] = {}
-        self.current_dialogue: Optional[str] = None
-        self.current_node: Optional[DialogueNode] = None
-        self.context: Optional[DialogueContext] = None
+        self.dialogues: dict[str, list[DialogueNode]] = {}
+        self.current_dialogue: str | None = None
+        self.current_node: DialogueNode | None = None
+        self.context: DialogueContext | None = None
 
         # デフォルトの会話データパス
         if data_path is None:
@@ -241,7 +244,7 @@ class DialogueManager:
 
         """
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # JSONデータを DialogueNode に変換
@@ -249,22 +252,22 @@ class DialogueManager:
                 nodes = []
                 for node_data in nodes_data:
                     choices = []
-                    for choice_data in node_data.get('choices', []):
+                    for choice_data in node_data.get("choices", []):
                         choice = DialogueChoice(
-                            text=choice_data['text'],
-                            next_node=choice_data.get('next_node'),
-                            action=DialogueAction(choice_data.get('action', 'continue')),
-                            condition=choice_data.get('condition')
+                            text=choice_data["text"],
+                            next_node=choice_data.get("next_node"),
+                            action=DialogueAction(choice_data.get("action", "continue")),
+                            condition=choice_data.get("condition")
                         )
                         choices.append(choice)
 
                     node = DialogueNode(
-                        id=node_data['id'],
-                        text=node_data['text'],
-                        speaker=node_data['speaker'],
+                        id=node_data["id"],
+                        text=node_data["text"],
+                        speaker=node_data["speaker"],
                         choices=choices,
-                        action=DialogueAction(node_data.get('action', 'continue')),
-                        condition=node_data.get('condition')
+                        action=DialogueAction(node_data.get("action", "continue")),
+                        condition=node_data.get("condition")
                     )
                     nodes.append(node)
 
@@ -294,7 +297,7 @@ class DialogueManager:
 
         return True
 
-    def get_current_node(self) -> Optional[DialogueNode]:
+    def get_current_node(self) -> DialogueNode | None:
         """
         現在の会話ノードを取得。
 
@@ -333,11 +336,11 @@ class DialogueManager:
                 self.context.open_trade_screen(self.current_dialogue)
             return DialogueAction.TRADE
 
-        elif choice.action == DialogueAction.END:
+        if choice.action == DialogueAction.END:
             self.end_dialogue()
             return DialogueAction.END
 
-        elif choice.next_node:
+        if choice.next_node:
             # 次のノードに移動
             self.current_node = self._find_node(choice.next_node)
             if not self.current_node:
@@ -345,11 +348,10 @@ class DialogueManager:
                 return DialogueAction.END
             return DialogueAction.CONTINUE
 
-        else:
-            self.end_dialogue()
-            return DialogueAction.END
+        self.end_dialogue()
+        return DialogueAction.END
 
-    def _find_node(self, node_id: str) -> Optional[DialogueNode]:
+    def _find_node(self, node_id: str) -> DialogueNode | None:
         """
         指定されたIDのノードを検索。
 
@@ -407,7 +409,7 @@ class DialogueManager:
         """
         return self.current_dialogue is not None and self.current_node is not None
 
-    def get_available_dialogues(self) -> List[str]:
+    def get_available_dialogues(self) -> list[str]:
         """
         利用可能な会話IDのリストを取得。
 
@@ -417,7 +419,7 @@ class DialogueManager:
         """
         return list(self.dialogues.keys())
 
-    def add_dialogue(self, dialogue_id: str, nodes: List[DialogueNode]) -> None:
+    def add_dialogue(self, dialogue_id: str, nodes: list[DialogueNode]) -> None:
         """
         会話データを追加。
 

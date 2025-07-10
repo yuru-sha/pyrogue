@@ -12,14 +12,13 @@ Example:
 
 """
 
-from dataclasses import dataclass
 
 from pyrogue.config import CONFIG
 from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player_status import PlayerStatusFormatter
 from pyrogue.entities.actors.status_effects import StatusEffectManager
-from pyrogue.entities.magic.spells import Spellbook
+from pyrogue.entities.items.amulet import AmuletOfYendor
 from pyrogue.entities.items.item import (
     Armor,
     Food,
@@ -30,6 +29,7 @@ from pyrogue.entities.items.item import (
     Scroll,
     Weapon,
 )
+from pyrogue.entities.magic.spells import Spellbook
 
 
 class Player(Actor):
@@ -55,7 +55,6 @@ class Player(Actor):
         inventory: インベントリインスタンス
 
     """
-
 
     def __init__(self, x: int, y: int) -> None:
         """
@@ -91,6 +90,15 @@ class Player(Actor):
         self.light_duration = 0
         self.base_light_radius = 10
         self.light_radius = 10
+
+        # スコア統計情報
+        self.monsters_killed = 0
+        self.deepest_floor = 1
+        self.turns_played = 0
+        self.items_used = 0
+
+        # ゲーム目標フラグ
+        self.has_amulet = False
 
         # システムの初期化
         self.inventory = Inventory()
@@ -383,6 +391,7 @@ class Player(Actor):
             success = item.apply_effect(context)
             if success:
                 self.inventory.remove_item(item)
+                self.record_item_use()
             return success
 
         if isinstance(item, Gold):
@@ -390,6 +399,14 @@ class Player(Actor):
             self.gold += item.amount
             self.inventory.remove_item(item)
             return True
+
+        if isinstance(item, AmuletOfYendor):
+            # Amulet of Yendorの効果を適用
+            success = item.apply_effect(context)
+            if success:
+                self.inventory.remove_item(item)
+                self.record_item_use()
+            return success
 
         return False
 
@@ -418,3 +435,35 @@ class Player(Actor):
 
         """
         return PlayerStatusFormatter.format_stats_dict(self)
+
+    def record_monster_kill(self) -> None:
+        """モンスター撃破を記録"""
+        self.monsters_killed += 1
+
+    def update_deepest_floor(self, floor: int) -> None:
+        """到達最深階層を更新"""
+        self.deepest_floor = max(self.deepest_floor, floor)
+
+    def increment_turn(self) -> None:
+        """ターン数を増加"""
+        self.turns_played += 1
+
+    def record_item_use(self) -> None:
+        """アイテム使用を記録"""
+        self.items_used += 1
+
+    def calculate_score(self) -> int:
+        """
+        スコアを計算
+
+        Returns:
+            総合スコア
+        """
+        # オリジナルRogue風スコア計算
+        score = 0
+        score += self.gold * 10  # 金貨 x10
+        score += self.exp * 5    # 経験値 x5
+        score += self.level * 100  # レベル x100
+        score += self.monsters_killed * 50  # モンスター撃破 x50
+        score += self.deepest_floor * 200   # 到達階層 x200
+        return score

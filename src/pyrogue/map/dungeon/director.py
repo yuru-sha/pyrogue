@@ -7,11 +7,8 @@
 
 from __future__ import annotations
 
-from typing import Tuple
-
 import numpy as np
 
-from pyrogue.constants import GameConstants, ProbabilityConstants
 from pyrogue.map.dungeon.corridor_builder import CorridorBuilder
 from pyrogue.map.dungeon.door_manager import DoorManager
 from pyrogue.map.dungeon.room_builder import RoomBuilder
@@ -37,6 +34,7 @@ class DungeonDirector:
         tiles: ダンジョンのタイル配列
         rooms: 生成された部屋のリスト
         corridors: 生成された通路のリスト
+
     """
 
     def __init__(self, width: int, height: int, floor: int) -> None:
@@ -47,6 +45,7 @@ class DungeonDirector:
             width: ダンジョンの幅
             height: ダンジョンの高さ
             floor: 階層番号
+
         """
         self.width = width
         self.height = height
@@ -72,12 +71,13 @@ class DungeonDirector:
 
         game_logger.debug(f"DungeonDirector initialized for floor {floor} ({width}x{height})")
 
-    def build_dungeon(self) -> Tuple[np.ndarray, Tuple[int, int], Tuple[int, int]]:
+    def build_dungeon(self) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
         """
         ダンジョンを構築。
 
         Returns:
             (tiles, start_pos, end_pos) のタプル
+
         """
         game_logger.info(f"Starting dungeon generation for floor {self.floor}")
 
@@ -158,7 +158,7 @@ class DungeonDirector:
         """
         部屋の境界を再強化し、通路以外の境界が確実に壁になるようにする。
         """
-        from pyrogue.map.tile import Wall, Floor
+        from pyrogue.map.tile import Floor, Wall
 
         for room in self.rooms:
             # 部屋の境界座標を取得
@@ -191,6 +191,7 @@ class DungeonDirector:
 
         Returns:
             生成統計の辞書
+
         """
         total_floor_tiles = sum(
             1 for y in range(self.height) for x in range(self.width)
@@ -226,6 +227,7 @@ class DungeonDirector:
 
         Args:
             各ビルダーコンポーネント（Noneの場合はデフォルトを使用）
+
         """
         if room_builder:
             self.room_builder = room_builder
@@ -257,5 +259,5 @@ class DungeonDirector:
             self.stairs_manager,
             self.validation_manager,
         ]:
-            if hasattr(builder, 'reset'):
+            if hasattr(builder, "reset"):
                 builder.reset()

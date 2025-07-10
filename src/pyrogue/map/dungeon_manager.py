@@ -32,6 +32,7 @@ from pyrogue.entities.actors.monster_spawner import MonsterSpawner
 from pyrogue.entities.actors.npc_spawner import NPCSpawner
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.traps.trap import TrapManager
+
 # 新しいBuilder Patternベースのダンジョン生成システムを使用
 from pyrogue.map.dungeon.director import DungeonDirector
 
@@ -312,6 +313,7 @@ class DungeonManager:
 
         """
         import random
+
         from pyrogue.entities.traps.trap import PitTrap, PoisonNeedleTrap, TeleportTrap
         from pyrogue.map.tile import Floor
 

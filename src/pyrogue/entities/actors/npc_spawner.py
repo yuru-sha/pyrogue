@@ -8,13 +8,13 @@ NPCSpawner モジュール。
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.npc import NPC, NPCDisposition, NPCType
-from pyrogue.entities.items.item import Weapon, Armor, Potion, Scroll, Food
+from pyrogue.entities.items.item import Armor, Weapon
 
 if TYPE_CHECKING:
     from pyrogue.map.dungeon.room import Room
@@ -43,10 +43,10 @@ class NPCSpawner:
 
         """
         self.floor = floor
-        self.npcs: List[NPC] = []
-        self.occupied_positions: Set[Tuple[int, int]] = set()
+        self.npcs: list[NPC] = []
+        self.occupied_positions: set[tuple[int, int]] = set()
 
-    def spawn_npcs(self, dungeon_tiles: np.ndarray, rooms: List[Room]) -> None:
+    def spawn_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
         """
         ダンジョンにNPCを配置する。
 
@@ -61,7 +61,7 @@ class NPCSpawner:
         # 通常の部屋にNPCを配置
         self._spawn_regular_room_npcs(dungeon_tiles, rooms)
 
-    def _spawn_special_room_npcs(self, dungeon_tiles: np.ndarray, rooms: List[Room]) -> None:
+    def _spawn_special_room_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
         """
         特別な部屋にNPCを配置する。
 
@@ -84,7 +84,7 @@ class NPCSpawner:
                         self.npcs.append(npc)
                         self.occupied_positions.add(position)
 
-    def _spawn_regular_room_npcs(self, dungeon_tiles: np.ndarray, rooms: List[Room]) -> None:
+    def _spawn_regular_room_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
         """
         通常の部屋にNPCを配置する。
 
@@ -117,7 +117,7 @@ class NPCSpawner:
                     self.npcs.append(npc)
                     self.occupied_positions.add(position)
 
-    def _get_npc_type_for_special_room(self, room_type: str) -> Optional[NPCType]:
+    def _get_npc_type_for_special_room(self, room_type: str) -> NPCType | None:
         """
         特別な部屋の種類に応じたNPCタイプを取得する。
 
@@ -129,11 +129,11 @@ class NPCSpawner:
 
         """
         special_room_mapping = {
-            'treasure_room': NPCType.MERCHANT,
-            'shrine': NPCType.PRIEST,
-            'laboratory': NPCType.MAGE,
-            'library': NPCType.MAGE,
-            'armory': NPCType.GUARD,
+            "treasure_room": NPCType.MERCHANT,
+            "shrine": NPCType.PRIEST,
+            "laboratory": NPCType.MAGE,
+            "library": NPCType.MAGE,
+            "armory": NPCType.GUARD,
         }
 
         return special_room_mapping.get(room_type)
@@ -176,7 +176,7 @@ class NPCSpawner:
 
         return max(0, base_count + variation)
 
-    def _get_random_position_in_room(self, room: Room, dungeon_tiles: np.ndarray) -> Optional[Tuple[int, int]]:
+    def _get_random_position_in_room(self, room: Room, dungeon_tiles: np.ndarray) -> tuple[int, int] | None:
         """
         部屋内のランダムな位置を取得する。
 
@@ -230,8 +230,8 @@ class NPCSpawner:
         # 実際の実装では、タイルの種類に応じて適切な値をチェック
         return dungeon_tiles[y, x] == 0  # 0 = 床タイル（実装により異なる）
 
-    def _create_npc(self, npc_type: NPCType, position: Tuple[int, int],
-                   room_type: Optional[str] = None) -> Optional[NPC]:
+    def _create_npc(self, npc_type: NPCType, position: tuple[int, int],
+                   room_type: str | None = None) -> NPC | None:
         """
         NPCを作成する。
 
@@ -249,44 +249,44 @@ class NPCSpawner:
         # NPCのタイプに応じた基本設定
         npc_configs = {
             NPCType.MERCHANT: {
-                'name': self._generate_merchant_name(),
-                'char': '@',
-                'color': (255, 255, 0),  # 金色
-                'disposition': NPCDisposition.FRIENDLY,
-                'dialogue_id': 'friendly_merchant',
-                'create_inventory': True,
+                "name": self._generate_merchant_name(),
+                "char": "@",
+                "color": (255, 255, 0),  # 金色
+                "disposition": NPCDisposition.FRIENDLY,
+                "dialogue_id": "friendly_merchant",
+                "create_inventory": True,
             },
             NPCType.PRIEST: {
-                'name': self._generate_priest_name(),
-                'char': '@',
-                'color': (255, 255, 255),  # 白色
-                'disposition': NPCDisposition.FRIENDLY,
-                'dialogue_id': 'friendly_priest',
-                'create_inventory': False,
+                "name": self._generate_priest_name(),
+                "char": "@",
+                "color": (255, 255, 255),  # 白色
+                "disposition": NPCDisposition.FRIENDLY,
+                "dialogue_id": "friendly_priest",
+                "create_inventory": False,
             },
             NPCType.MAGE: {
-                'name': self._generate_mage_name(),
-                'char': '@',
-                'color': (128, 0, 128),  # 紫色
-                'disposition': NPCDisposition.NEUTRAL,
-                'dialogue_id': 'neutral_mage',
-                'create_inventory': False,
+                "name": self._generate_mage_name(),
+                "char": "@",
+                "color": (128, 0, 128),  # 紫色
+                "disposition": NPCDisposition.NEUTRAL,
+                "dialogue_id": "neutral_mage",
+                "create_inventory": False,
             },
             NPCType.GUARD: {
-                'name': self._generate_guard_name(),
-                'char': '@',
-                'color': (169, 169, 169),  # 灰色
-                'disposition': NPCDisposition.NEUTRAL,
-                'dialogue_id': 'neutral_guard',
-                'create_inventory': False,
+                "name": self._generate_guard_name(),
+                "char": "@",
+                "color": (169, 169, 169),  # 灰色
+                "disposition": NPCDisposition.NEUTRAL,
+                "dialogue_id": "neutral_guard",
+                "create_inventory": False,
             },
             NPCType.VILLAGER: {
-                'name': self._generate_villager_name(),
-                'char': '@',
-                'color': (139, 69, 19),  # 茶色
-                'disposition': NPCDisposition.FRIENDLY,
-                'dialogue_id': 'friendly_villager',
-                'create_inventory': False,
+                "name": self._generate_villager_name(),
+                "char": "@",
+                "color": (139, 69, 19),  # 茶色
+                "disposition": NPCDisposition.FRIENDLY,
+                "dialogue_id": "friendly_villager",
+                "create_inventory": False,
             },
         }
 
@@ -297,24 +297,24 @@ class NPCSpawner:
 
         # インベントリの作成
         inventory = None
-        if config['create_inventory']:
+        if config["create_inventory"]:
             inventory = self._create_merchant_inventory()
 
         # NPCの作成
         npc = NPC(
-            char=config['char'],
+            char=config["char"],
             x=x,
             y=y,
-            name=config['name'],
+            name=config["name"],
             level=1,
             hp=50,
             max_hp=50,
             attack=10,
             defense=5,
-            color=config['color'],
-            disposition=config['disposition'],
+            color=config["color"],
+            disposition=config["disposition"],
             npc_type=npc_type,
-            dialogue_id=config['dialogue_id'],
+            dialogue_id=config["dialogue_id"],
             inventory=inventory,
         )
 
@@ -388,7 +388,7 @@ class NPCSpawner:
         names = ["Villager Sam", "Citizen Jane", "Farmer Bill", "Resident Lisa"]
         return random.choice(names)
 
-    def get_npcs(self) -> List[NPC]:
+    def get_npcs(self) -> list[NPC]:
         """
         生成されたNPCのリストを取得する。
 
@@ -398,7 +398,7 @@ class NPCSpawner:
         """
         return self.npcs.copy()
 
-    def get_npc_at_position(self, x: int, y: int) -> Optional[NPC]:
+    def get_npc_at_position(self, x: int, y: int) -> NPC | None:
         """
         指定された位置にいるNPCを取得する。
 

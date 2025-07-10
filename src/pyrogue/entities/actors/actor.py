@@ -8,11 +8,6 @@ Actor基底クラス。
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pyrogue.entities.actors.status_effects import StatusEffectManager
 
 
 class Actor(ABC):
@@ -136,7 +131,6 @@ class Actor(ABC):
             context: 効果適用のためのコンテキスト
 
         """
-        pass
 
     @abstractmethod
     def has_status_effect(self, name: str) -> bool:
@@ -152,7 +146,6 @@ class Actor(ABC):
             状態異常が存在する場合はTrue、そうでなければFalse
 
         """
-        pass
 
     def is_paralyzed(self) -> bool:
         """麻痺状態かどうかを判定。"""

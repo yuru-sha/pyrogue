@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 import tcod
 
 from pyrogue.core.game_logic import GameLogic
@@ -39,6 +38,7 @@ class GameScreen:
         save_load_manager: セーブ・ロード管理コンポーネント
         dungeon_width: ダンジョンの幅
         dungeon_height: ダンジョンの高さ
+
     """
 
     def __init__(self, engine: Engine | None) -> None:
@@ -47,6 +47,7 @@ class GameScreen:
 
         Args:
             engine: メインゲームエンジンのインスタンス（CLIモードの場合はNone）
+
         """
         self.engine = engine
 
@@ -91,6 +92,7 @@ class GameScreen:
 
         Args:
             console: TCODコンソール
+
         """
         # FOVを更新
         self.fov_manager.update_fov()
@@ -104,6 +106,7 @@ class GameScreen:
 
         Args:
             event: TCODキーイベント
+
         """
         self.input_handler.handle_key(event)
 
@@ -113,6 +116,7 @@ class GameScreen:
 
         Args:
             event: TCODキーイベント
+
         """
         self.input_handler.handle_targeting(event)
 
@@ -122,6 +126,7 @@ class GameScreen:
 
         Returns:
             保存に成功した場合True
+
         """
         return self.save_load_manager.save_game()
 
@@ -131,6 +136,7 @@ class GameScreen:
 
         Returns:
             読み込みに成功した場合True
+
         """
         return self.save_load_manager.load_game()
 

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 from pyrogue.constants import ProbabilityConstants
 from pyrogue.utils import game_logger
@@ -28,7 +28,6 @@ class MonsterAIManager:
 
     def __init__(self) -> None:
         """モンスターAIマネージャーを初期化。"""
-        pass
 
     def process_monster_ai(self, monster: Monster, context: GameContext) -> None:
         """
@@ -37,6 +36,7 @@ class MonsterAIManager:
         Args:
             monster: 処理するモンスター
             context: ゲームコンテキスト
+
         """
         player = context.player
 
@@ -48,10 +48,9 @@ class MonsterAIManager:
         if self._can_monster_see_player(monster, player, context):
             # プレイヤーを追跡
             self._chase_player(monster, player, context)
-        else:
-            # ランダム移動
-            if random.random() < ProbabilityConstants.MONSTER_MOVE_CHANCE:
-                self._random_move(monster, context)
+        # ランダム移動
+        elif random.random() < ProbabilityConstants.MONSTER_MOVE_CHANCE:
+            self._random_move(monster, context)
 
     def _can_monster_act(self, monster: Monster) -> bool:
         """
@@ -62,13 +61,14 @@ class MonsterAIManager:
 
         Returns:
             行動可能な場合True
+
         """
         # HPチェック
         if monster.hp <= 0:
             return False
 
         # ステータス異常チェック
-        if hasattr(monster, 'status_effect_manager'):
+        if hasattr(monster, "status_effect_manager"):
             active_effects = monster.status_effect_manager.get_active_effects()
             for effect in active_effects:
                 if effect.name == "Paralysis":
@@ -87,10 +87,11 @@ class MonsterAIManager:
 
         Returns:
             プレイヤーが見える場合True
+
         """
         # 距離チェック（視界範囲内か）
         distance = self._calculate_distance(monster.x, monster.y, player.x, player.y)
-        sight_range = getattr(monster, 'sight_range', 8)  # デフォルト視界範囲
+        sight_range = getattr(monster, "sight_range", 8)  # デフォルト視界範囲
 
         if distance > sight_range:
             return False
@@ -108,6 +109,7 @@ class MonsterAIManager:
 
         Returns:
             ユークリッド距離
+
         """
         return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
 
@@ -122,6 +124,7 @@ class MonsterAIManager:
 
         Returns:
             視界がある場合True
+
         """
         floor_data = context.get_current_floor_data()
         if not floor_data:
@@ -135,12 +138,12 @@ class MonsterAIManager:
                 0 <= x < floor_data.tiles.shape[1]):
 
                 tile = floor_data.tiles[y, x]
-                if not getattr(tile, 'transparent', True):
+                if not getattr(tile, "transparent", True):
                     return False
 
         return True
 
-    def _get_line_points(self, x1: int, y1: int, x2: int, y2: int) -> list[Tuple[int, int]]:
+    def _get_line_points(self, x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
         """
         ブレゼンハム線分アルゴリズムで線上の点を取得。
 
@@ -150,6 +153,7 @@ class MonsterAIManager:
 
         Returns:
             線上の点のリスト
+
         """
         points = []
         dx = abs(x2 - x1)
@@ -182,6 +186,7 @@ class MonsterAIManager:
             monster: 追跡するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
+
         """
         # プレイヤーとの距離が1の場合は攻撃
         if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= 1.5:
@@ -217,6 +222,7 @@ class MonsterAIManager:
         Args:
             monster: 移動するモンスター
             context: ゲームコンテキスト
+
         """
         # ランダムな方向を選択
         dx = random.randint(-1, 1)
@@ -237,6 +243,7 @@ class MonsterAIManager:
 
         Returns:
             移動が成功した場合True
+
         """
         new_x = monster.x + dx
         new_y = monster.y + dy
@@ -245,7 +252,7 @@ class MonsterAIManager:
         if self._can_monster_move_to(new_x, new_y, context):
             # MonsterSpawnerの占有位置も更新
             floor_data = context.get_current_floor_data()
-            if hasattr(floor_data, 'monster_spawner'):
+            if hasattr(floor_data, "monster_spawner"):
                 spawner = floor_data.monster_spawner
                 # 古い位置を削除
                 old_pos = (monster.x, monster.y)
@@ -273,6 +280,7 @@ class MonsterAIManager:
 
         Returns:
             移動可能な場合True
+
         """
         floor_data = context.get_current_floor_data()
         if not floor_data:
@@ -286,7 +294,7 @@ class MonsterAIManager:
 
         # タイルチェック
         tile = floor_data.tiles[y, x]
-        if not getattr(tile, 'walkable', False):
+        if not getattr(tile, "walkable", False):
             return False
 
         # プレイヤーの位置チェック
@@ -295,7 +303,7 @@ class MonsterAIManager:
             return False
 
         # 他のモンスターとの重複チェック
-        if hasattr(floor_data, 'monster_spawner'):
+        if hasattr(floor_data, "monster_spawner"):
             for other_monster in floor_data.monster_spawner.monsters:
                 if other_monster.x == x and other_monster.y == y:
                     return False
@@ -309,6 +317,7 @@ class MonsterAIManager:
         Args:
             monster: 攻撃するモンスター
             context: ゲームコンテキスト
+
         """
         # 戦闘処理はCombatManagerに委譲
         # ここではAIの観点での攻撃決定のみ
@@ -323,8 +332,9 @@ class MonsterAIManager:
 
         Returns:
             混乱状態の場合True
+
         """
-        if not hasattr(monster, 'status_effect_manager'):
+        if not hasattr(monster, "status_effect_manager"):
             return False
 
         active_effects = monster.status_effect_manager.get_active_effects()
@@ -344,6 +354,7 @@ class MonsterAIManager:
 
         Returns:
             行動情報辞書
+
         """
         player = context.player
 
@@ -352,7 +363,7 @@ class MonsterAIManager:
             "can_see_player": self._can_monster_see_player(monster, player, context),
             "distance_to_player": self._calculate_distance(monster.x, monster.y, player.x, player.y),
             "is_confused": self._is_confused(monster),
-            "sight_range": getattr(monster, 'sight_range', 8),
+            "sight_range": getattr(monster, "sight_range", 8),
         }
 
     def set_monster_aggressive(self, monster: Monster, aggressive: bool = True) -> None:
@@ -362,12 +373,13 @@ class MonsterAIManager:
         Args:
             monster: 対象モンスター
             aggressive: 攻撃的にするかどうか
+
         """
         monster.aggressive = aggressive
         if aggressive:
-            monster.sight_range = getattr(monster, 'sight_range', 8) * 2
+            monster.sight_range = getattr(monster, "sight_range", 8) * 2
         else:
-            monster.sight_range = getattr(monster, 'sight_range', 8) // 2
+            monster.sight_range = getattr(monster, "sight_range", 8) // 2
 
     def process_all_monsters(self, context: GameContext) -> None:
         """
@@ -375,9 +387,10 @@ class MonsterAIManager:
 
         Args:
             context: ゲームコンテキスト
+
         """
         floor_data = context.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, 'monster_spawner'):
+        if not floor_data or not hasattr(floor_data, "monster_spawner"):
             return
 
         # モンスターリストをコピー（処理中の変更に対応）

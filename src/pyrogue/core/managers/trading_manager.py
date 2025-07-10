@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from pyrogue.entities.actors.npc import NPC
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 class TradeType(Enum):
     """取引の種類を定義する列挙型。"""
+
     BUY = "buy"         # プレイヤーがNPCから購入
     SELL = "sell"       # プレイヤーがNPCに売却
 
@@ -35,6 +36,7 @@ class TradeItem:
         trade_type: 取引の種類
 
     """
+
     item: Item
     price: int
     quantity: int
@@ -81,9 +83,9 @@ class TradingManager:
 
     def __init__(self) -> None:
         """TradingManagerの初期化。"""
-        self.current_npc: Optional[NPC] = None
-        self.context: Optional[TradingContext] = None
-        self.available_items: List[TradeItem] = []
+        self.current_npc: NPC | None = None
+        self.context: TradingContext | None = None
+        self.available_items: list[TradeItem] = []
 
         # 価格設定
         self.base_price_multiplier = 1.0    # 基本価格倍率
@@ -198,7 +200,7 @@ class TradingManager:
             "gold": 1
         }
 
-        item_type = getattr(item, 'item_type', 'unknown')
+        item_type = getattr(item, "item_type", "unknown")
         if item_type in base_prices:
             return base_prices[item_type]
 
@@ -206,20 +208,19 @@ class TradingManager:
         class_name = item.__class__.__name__.lower()
         if "weapon" in class_name:
             return 100
-        elif "armor" in class_name:
+        if "armor" in class_name:
             return 80
-        elif "potion" in class_name:
+        if "potion" in class_name:
             return 25
-        elif "scroll" in class_name:
+        if "scroll" in class_name:
             return 50
-        elif "food" in class_name:
+        if "food" in class_name:
             return 10
-        elif "ring" in class_name:
+        if "ring" in class_name:
             return 200
-        elif "gold" in class_name:
+        if "gold" in class_name:
             return 1
-        else:
-            return 50  # デフォルト価格
+        return 50  # デフォルト価格
 
     def _can_sell_item(self, item: Item) -> bool:
         """
@@ -233,7 +234,7 @@ class TradingManager:
 
         """
         # 呪われたアイテムは売却不可
-        if getattr(item, 'cursed', False):
+        if getattr(item, "cursed", False):
             return False
 
         # 装備中のアイテムは売却不可（実装によって異なる）
@@ -259,7 +260,7 @@ class TradingManager:
         if trade_item.trade_type == TradeType.BUY:
             # プレイヤーが購入
             return self._execute_buy(player, trade_item)
-        elif trade_item.trade_type == TradeType.SELL:
+        if trade_item.trade_type == TradeType.SELL:
             # プレイヤーが売却
             return self._execute_sell(player, trade_item)
 
@@ -338,7 +339,7 @@ class TradingManager:
 
         return False
 
-    def get_buy_items(self) -> List[TradeItem]:
+    def get_buy_items(self) -> list[TradeItem]:
         """
         購入可能なアイテムリストを取得。
 
@@ -348,7 +349,7 @@ class TradingManager:
         """
         return [item for item in self.available_items if item.trade_type == TradeType.BUY]
 
-    def get_sell_items(self) -> List[TradeItem]:
+    def get_sell_items(self) -> list[TradeItem]:
         """
         売却可能なアイテムリストを取得。
 
@@ -358,7 +359,7 @@ class TradingManager:
         """
         return [item for item in self.available_items if item.trade_type == TradeType.SELL]
 
-    def get_all_items(self) -> List[TradeItem]:
+    def get_all_items(self) -> list[TradeItem]:
         """
         すべての取引可能なアイテムリストを取得。
 
@@ -384,7 +385,7 @@ class TradingManager:
         """
         return self.current_npc is not None and self.context is not None
 
-    def get_current_npc(self) -> Optional[NPC]:
+    def get_current_npc(self) -> NPC | None:
         """
         現在取引中のNPCを取得。
 

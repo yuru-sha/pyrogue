@@ -50,6 +50,15 @@ class InventoryScreen(Screen):
             item_text = f"{index_char}) {item.name}"
             if item.stackable and item.stack_count > 1:
                 item_text += f" (x{item.stack_count})"
+
+            # 装備状態を表示
+            equipped = self.game_screen.game_logic.inventory.equipped
+            if (isinstance(item, Weapon) and equipped["weapon"] == item) or \
+               (isinstance(item, Armor) and equipped["armor"] == item) or \
+               (isinstance(item, Ring) and (equipped["ring_left"] == item or equipped["ring_right"] == item)):
+                item_text += " (equipped)"
+                fg = tcod.green if i != self.selected_index else tcod.yellow
+
             console.print(2, 3 + i, item_text, fg)
 
         # 装備情報を表示
@@ -78,7 +87,7 @@ class InventoryScreen(Screen):
         if self.show_help:
             help_text = [
                 "Commands:",
-                "[a-z] Select item",
+                "[↑/↓] Select item",
                 "[e] Equip selected item",
                 "[u] Use selected item",
                 "[d] Drop selected item",
@@ -110,12 +119,15 @@ class InventoryScreen(Screen):
             self.show_help = not self.show_help
             return
 
-        # アイテムの選択（a-z）
-        if tcod.event.KeySym.A <= event.sym <= tcod.event.KeySym.Z:
-            index = event.sym - tcod.event.KeySym.A
-            if index < len(self.game_screen.game_logic.inventory.items):
-                self.selected_index = index
-            return
+        # カーソルキーでアイテム選択
+        inventory_size = len(self.game_screen.game_logic.inventory.items)
+        if inventory_size > 0:
+            if event.sym == tcod.event.KeySym.UP:
+                self.selected_index = (self.selected_index - 1) % inventory_size
+                return
+            elif event.sym == tcod.event.KeySym.DOWN:
+                self.selected_index = (self.selected_index + 1) % inventory_size
+                return
 
         # 選択中のアイテムに対する操作
         if len(self.game_screen.game_logic.inventory.items) > 0:
@@ -150,6 +162,41 @@ class InventoryScreen(Screen):
                 else:
                     self.game_screen.game_logic.add_message(
                         f"You cannot use the {selected_item.name}."
+                    )
+                return
+
+            # r: 装備解除
+            if event.sym == tcod.event.KeySym.R:
+                if isinstance(selected_item, (Weapon, Armor, Ring)):
+                    # 装備されているかチェック
+                    equipped = self.game_screen.game_logic.inventory.equipped
+                    unequipped = False
+
+                    if isinstance(selected_item, Weapon) and equipped["weapon"] == selected_item:
+                        self.game_screen.game_logic.inventory.unequip("weapon")
+                        unequipped = True
+                    elif isinstance(selected_item, Armor) and equipped["armor"] == selected_item:
+                        self.game_screen.game_logic.inventory.unequip("armor")
+                        unequipped = True
+                    elif isinstance(selected_item, Ring):
+                        if equipped["ring_left"] == selected_item:
+                            self.game_screen.game_logic.inventory.unequip("ring_left")
+                            unequipped = True
+                        elif equipped["ring_right"] == selected_item:
+                            self.game_screen.game_logic.inventory.unequip("ring_right")
+                            unequipped = True
+
+                    if unequipped:
+                        self.game_screen.game_logic.add_message(
+                            f"You unequip the {selected_item.name}."
+                        )
+                    else:
+                        self.game_screen.game_logic.add_message(
+                            f"The {selected_item.name} is not equipped."
+                        )
+                else:
+                    self.game_screen.game_logic.add_message(
+                        f"You cannot unequip the {selected_item.name}."
                     )
                 return
 

@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING
 import tcod
 import tcod.console
 
-from pyrogue.entities.actors.monster import Monster
-from pyrogue.entities.items.item import Item
 from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
 
 if TYPE_CHECKING:
@@ -29,6 +27,7 @@ class GameRenderer:
 
     Attributes:
         game_screen: メインのゲームスクリーンへの参照
+
     """
 
     def __init__(self, game_screen: GameScreen) -> None:
@@ -37,6 +36,7 @@ class GameRenderer:
 
         Args:
             game_screen: メインのゲームスクリーンインスタンス
+
         """
         self.game_screen = game_screen
 
@@ -46,6 +46,7 @@ class GameRenderer:
 
         Args:
             console: TCODコンソール
+
         """
         console.clear()
 
@@ -60,6 +61,7 @@ class GameRenderer:
 
         Args:
             console: TCODコンソール
+
         """
         game_screen = self.game_screen
         floor_data = game_screen.game_logic.get_current_floor_data()
@@ -105,6 +107,7 @@ class GameRenderer:
             y: Y座標
             tile: タイルオブジェクト
             visible: 現在視界内かどうか
+
         """
         if isinstance(tile, Wall):
             char = "#"
@@ -118,7 +121,7 @@ class GameRenderer:
         elif isinstance(tile, StairsUp):
             char = "<"
             color = (255, 255, 255) if visible else (128, 128, 128)
-        elif hasattr(tile, 'char'):  # Door, SecretDoor等のタイル
+        elif hasattr(tile, "char"):  # Door, SecretDoor等のタイル
             char = tile.char
             color = tile.light if visible else tile.dark
         else:
@@ -137,6 +140,7 @@ class GameRenderer:
             y: Y座標（マップ座標）
             floor_data: フロアデータ
             map_offset_y: マップのYオフセット
+
         """
         items_at_pos = [item for item in floor_data.item_spawner.items if item.x == x and item.y == y]
         if items_at_pos:
@@ -153,6 +157,7 @@ class GameRenderer:
             y: Y座標（マップ座標）
             floor_data: フロアデータ
             map_offset_y: マップのYオフセット
+
         """
         monster = floor_data.monster_spawner.get_monster_at(x, y)
         if monster:
@@ -164,6 +169,7 @@ class GameRenderer:
 
         Args:
             console: TCODコンソール
+
         """
         player = self.game_screen.player
         if not player:
@@ -174,7 +180,7 @@ class GameRenderer:
 
         # 1行目: レベル、HP、MP、攻撃力、防御力、空腹度、経験値、所持金
         mp_display = ""
-        if hasattr(player, 'mp') and hasattr(player, 'max_mp'):
+        if hasattr(player, "mp") and hasattr(player, "max_mp"):
             mp_display = f"MP:{player.mp}/{player.max_mp} "
 
         status_line1 = (
@@ -231,6 +237,7 @@ class GameRenderer:
 
         Args:
             console: TCODコンソール
+
         """
         messages = self.game_screen.game_logic.message_log
         if not messages:
@@ -255,8 +262,9 @@ class GameRenderer:
             y: 描画位置のY座標
             floor_data: 現在のフロアデータ
             map_offset_y: マップのYオフセット
+
         """
-        if not hasattr(floor_data, 'npc_spawner'):
+        if not hasattr(floor_data, "npc_spawner"):
             return
 
         npc = floor_data.npc_spawner.get_npc_at_position(x, y)

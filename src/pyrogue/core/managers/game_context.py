@@ -7,11 +7,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from pyrogue.entities.actors.player import Player
     from pyrogue.entities.actors.inventory import Inventory
+    from pyrogue.entities.actors.player import Player
     from pyrogue.map.dungeon_manager import DungeonManager
 
 
@@ -29,6 +29,7 @@ class GameContext:
         message_log: メッセージログリスト
         engine: ゲームエンジン（CLIモードではNone）
         game_screen: ゲームスクリーン（UIコンテキスト用）
+
     """
 
     def __init__(
@@ -36,7 +37,7 @@ class GameContext:
         player: Player,
         inventory: Inventory,
         dungeon_manager: DungeonManager,
-        message_log: List[str],
+        message_log: list[str],
         engine: Any = None,
         game_screen: Any = None
     ) -> None:
@@ -50,6 +51,7 @@ class GameContext:
             message_log: メッセージログリスト
             engine: ゲームエンジン（オプション）
             game_screen: ゲームスクリーン（オプション）
+
         """
         self.player = player
         self.inventory = inventory
@@ -58,12 +60,17 @@ class GameContext:
         self.engine = engine
         self.game_screen = game_screen
 
+        # マネージャーへの参照（他のマネージャーから設定される）
+        self.monster_ai_manager = None
+        self.game_logic = None
+
     def add_message(self, message: str) -> None:
         """
         メッセージログにメッセージを追加。
 
         Args:
             message: 追加するメッセージ
+
         """
         self.message_log.append(message)
 
@@ -81,7 +88,7 @@ class GameContext:
 
     def update_console(self) -> None:
         """コンソールの更新（エンジンが存在する場合）。"""
-        if self.engine and hasattr(self.engine, 'update_console'):
+        if self.engine and hasattr(self.engine, "update_console"):
             self.engine.update_console()
 
     def is_cli_mode(self) -> bool:

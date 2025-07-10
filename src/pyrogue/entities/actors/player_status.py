@@ -60,4 +60,9 @@ class PlayerStatusFormatter:
             "exp": player.exp,
             "gold": player.gold,
             "hunger": player.hunger,
+            "score": player.calculate_score(),
+            "monsters_killed": player.monsters_killed,
+            "deepest_floor": player.deepest_floor,
+            "turns_played": player.turns_played,
+            "items_used": player.items_used,
         }
