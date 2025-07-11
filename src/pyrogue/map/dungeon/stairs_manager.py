@@ -378,7 +378,7 @@ class StairsManager:
         # デフォルト位置を設定
         if not up_stairs_pos:
             up_stairs_pos = (1, 1)
-        if not down_stairs_pos:
+        if not down_stairs_pos and floor < GameConstants.MAX_FLOORS:
             down_stairs_pos = (1, 2)
 
         game_logger.debug(f"Placed maze stairs: up={up_stairs_pos}, down={down_stairs_pos}")

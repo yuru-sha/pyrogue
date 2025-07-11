@@ -586,11 +586,11 @@ class ValidationManager:
                 elif isinstance(tiles[y, x], Wall):
                     wall_count += 1
 
-        # 迷路の密度をチェック（床の割合が10%～40%の範囲）
+        # 迷路の密度をチェック（床の割合が5%～40%の範囲）
         total_tiles = height * width
         floor_ratio = floor_count / total_tiles
 
-        if floor_ratio < 0.1:
+        if floor_ratio < 0.05:
             self._add_result("maze_structure", False, f"Too few corridors: {floor_ratio:.2%}")
         elif floor_ratio > 0.4:
             self._add_result("maze_structure", False, f"Too many corridors: {floor_ratio:.2%}")

@@ -676,7 +676,7 @@ class GameLogic:
         if not floor_data:
             return False
 
-        # 隣接する壁を検索
+        # 隣接する8方向を検索
         found_secret = False
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
@@ -686,16 +686,9 @@ class GameLogic:
                 x = self.player.x + dx
                 y = self.player.y + dy
 
-                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
-                    tile = floor_data.tiles[y][x]
-                    # 隠し扉の発見処理（簡単な実装）
-                    if hasattr(tile, 'char') and tile.char == '#':
-                        import random
-                        if random.random() < 0.1:  # 10%の確率で隠し扉発見
-                            from pyrogue.map.tile import Door
-                            floor_data.tiles[y][x] = Door()
-                            self.add_message("You found a secret door!")
-                            found_secret = True
+                # 隠し扉の発見処理を委譲
+                if self.search_secret_door(x, y):
+                    found_secret = True
 
         if not found_secret:
             self.add_message("You search but find nothing")

@@ -13,7 +13,7 @@ import random
 import tcod
 import tcod.console
 
-from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
+from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall, SecretDoor
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen

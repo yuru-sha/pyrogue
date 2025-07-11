@@ -11,6 +11,7 @@ import numpy as np
 
 from pyrogue.map.dungeon.corridor_builder import CorridorBuilder
 from pyrogue.map.dungeon.door_manager import DoorManager
+from pyrogue.map.dungeon.isolated_room_builder import IsolatedRoomBuilder
 from pyrogue.map.dungeon.maze_builder import MazeBuilder
 from pyrogue.map.dungeon.room_builder import RoomBuilder
 from pyrogue.map.dungeon.section_based_builder import BSPDungeonBuilder
@@ -61,6 +62,7 @@ class DungeonDirector:
         self.room_builder = RoomBuilder(width, height, floor)
         self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=8)
         self.maze_builder = MazeBuilder(width, height, complexity=0.75)
+        self.isolated_room_builder = IsolatedRoomBuilder(width, height, isolation_level=0.8)
         self.corridor_builder = CorridorBuilder(width, height)
         self.door_manager = DoorManager()
         self.special_room_builder = SpecialRoomBuilder(floor)
@@ -114,15 +116,22 @@ class DungeonDirector:
                     # 2. 特別部屋の処理
                     self.special_room_builder.process_special_rooms(self.rooms)
 
-                    # 3. ドアの配置
+                    # 3. 孤立部屋群の生成（特定の階層のみ）
+                    if self._should_generate_isolated_rooms():
+                        isolated_groups = self.isolated_room_builder.generate_isolated_rooms(
+                            self.tiles, self.rooms, max_groups=2
+                        )
+                        game_logger.debug(f"Generated {len(isolated_groups)} isolated room groups")
+
+                    # 4. ドアの配置
                     self.door_manager.place_doors(self.rooms, [], self.tiles)
 
-                    # 4. 階段の配置
+                    # 5. 階段の配置
                     start_pos, end_pos = self.stairs_manager.place_stairs(
                         self.rooms, self.floor, self.tiles
                     )
 
-                    # 5. 最終検証
+                    # 6. 最終検証
                     self.validation_manager.validate_dungeon(
                         self.rooms, [], start_pos, end_pos, self.tiles
                     )
@@ -278,6 +287,7 @@ class DungeonDirector:
             self.room_builder,
             self.bsp_builder,
             self.maze_builder,
+            self.isolated_room_builder,
             self.corridor_builder,
             self.door_manager,
             self.special_room_builder,
@@ -318,3 +328,21 @@ class DungeonDirector:
             return "maze"
         else:
             return "bsp"  # BSPベースのダンジョン
+
+    def _should_generate_isolated_rooms(self) -> bool:
+        """
+        孤立部屋群を生成すべきかどうかを決定。
+
+        Returns:
+            孤立部屋群を生成する場合True
+        """
+        # 特定の階層で孤立部屋群を生成
+        # 浅い階層では低確率、深い階層では高確率
+        if self.floor <= 3:
+            return False  # 浅い階層では生成しない
+        elif self.floor <= 10:
+            return self.floor in [4, 8]  # 4階、8階で確実に生成
+        elif self.floor <= 20:
+            return self.floor in [11, 15, 18]  # 11階、15階、18階で確実に生成
+        else:
+            return self.floor in [22, 25]  # 22階、25階で確実に生成
