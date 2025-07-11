@@ -5,6 +5,7 @@
 基底クラスと具体的なトラップ実装を定義します。
 
 Example:
+-------
     >>> pit_trap = PitTrap(x=10, y=5)
     >>> pit_trap.activate(player)
     >>> poison_trap = PoisonNeedleTrap(x=15, y=8)
@@ -30,7 +31,8 @@ class Trap(ABC):
     ダンジョン内に配置される隠れたトラップの基本的な
     機能と状態管理を定義します。
 
-    Attributes:
+    Attributes
+    ----------
         x: トラップのX座標
         y: トラップのY座標
         is_hidden: 隠蔽状態（Trueで隠れている）
@@ -42,16 +44,13 @@ class Trap(ABC):
     """
 
     def __init__(
-        self,
-        x: int,
-        y: int,
-        is_hidden: bool = True,
-        is_disarmed: bool = False
+        self, x: int, y: int, is_hidden: bool = True, is_disarmed: bool = False
     ) -> None:
         """
         トラップを初期化。
 
         Args:
+        ----
             x: トラップのX座標
             y: トラップのY座標
             is_hidden: 初期の隠蔽状態（デフォルト: True）
@@ -71,6 +70,7 @@ class Trap(ABC):
         トラップを発見済み状態にする。
 
         Args:
+        ----
             context: メッセージ表示用のコンテキスト
 
         """
@@ -84,9 +84,11 @@ class Trap(ABC):
         トラップを無効化する。
 
         Args:
+        ----
             context: メッセージ表示用のコンテキスト
 
         Returns:
+        -------
             解除に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -97,24 +99,33 @@ class Trap(ABC):
 
         if self.is_hidden:
             if context and context.game_screen:
-                context.game_screen.message_log.append("You can't disarm a trap you can't see!")
+                context.game_screen.message_log.append(
+                    "You can't disarm a trap you can't see!"
+                )
             return False
 
         # 簡単な成功判定（将来的にはスキルベースに）
         import random
+
         success = random.random() < 0.7  # 70%の成功率
 
         if success:
             self.is_disarmed = True
             if context and context.game_screen:
-                context.game_screen.message_log.append(f"You successfully disarmed the {self.name}!")
+                context.game_screen.message_log.append(
+                    f"You successfully disarmed the {self.name}!"
+                )
             return True
         if context and context.game_screen:
-            context.game_screen.message_log.append(f"You failed to disarm the {self.name}!")
+            context.game_screen.message_log.append(
+                f"You failed to disarm the {self.name}!"
+            )
         # 失敗時にトラップが発動する可能性
         if random.random() < 0.3:  # 30%の確率で発動
             if context and context.game_screen:
-                context.game_screen.message_log.append("Your clumsy attempt triggers the trap!")
+                context.game_screen.message_log.append(
+                    "Your clumsy attempt triggers the trap!"
+                )
             self.activate(context)
         return False
 
@@ -122,7 +133,8 @@ class Trap(ABC):
         """
         トラップが有効（発動可能）かどうかを判定。
 
-        Returns:
+        Returns
+        -------
             有効な場合はTrue、無効な場合はFalse
 
         """
@@ -132,7 +144,8 @@ class Trap(ABC):
         """
         トラップが見える状態かどうかを判定。
 
-        Returns:
+        Returns
+        -------
             見える場合はTrue、隠れている場合はFalse
 
         """
@@ -144,6 +157,7 @@ class Trap(ABC):
         トラップを発動させる。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -163,6 +177,7 @@ class PitTrap(Trap):
         落とし穴トラップを初期化。
 
         Args:
+        ----
             x: トラップのX座標
             y: トラップのY座標
             damage: 与えるダメージ量
@@ -179,6 +194,7 @@ class PitTrap(Trap):
         落とし穴の効果を発動。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -211,6 +227,7 @@ class PoisonNeedleTrap(Trap):
         毒針トラップを初期化。
 
         Args:
+        ----
             x: トラップのX座標
             y: トラップのY座標
             poison_duration: 毒の継続ターン数
@@ -227,6 +244,7 @@ class PoisonNeedleTrap(Trap):
         毒針の効果を発動。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -259,6 +277,7 @@ class TeleportTrap(Trap):
         テレポートトラップを初期化。
 
         Args:
+        ----
             x: トラップのX座標
             y: トラップのY座標
 
@@ -273,6 +292,7 @@ class TeleportTrap(Trap):
         テレポートの効果を発動。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -310,6 +330,7 @@ class TrapManager:
         トラップを追加。
 
         Args:
+        ----
             trap: 追加するトラップ
 
         """
@@ -320,9 +341,11 @@ class TrapManager:
         トラップを削除。
 
         Args:
+        ----
             trap: 削除するトラップ
 
         Returns:
+        -------
             削除に成功した場合はTrue、トラップが存在しない場合はFalse
 
         """
@@ -336,10 +359,12 @@ class TrapManager:
         指定された位置にあるトラップを取得。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             トラップが存在する場合はTrapオブジェクト、
             存在しない場合はNone
 
@@ -353,7 +378,8 @@ class TrapManager:
         """
         発見済みで有効なトラップのリストを取得。
 
-        Returns:
+        Returns
+        -------
             発見済みで有効なトラップのリスト
 
         """
@@ -364,11 +390,13 @@ class TrapManager:
         指定された位置のトラップを発動。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             トラップが発動した場合はTrue、なかった場合はFalse
 
         """
@@ -386,7 +414,8 @@ class TrapManager:
         """
         有効なトラップの総数を取得。
 
-        Returns:
+        Returns
+        -------
             有効なトラップの数
 
         """

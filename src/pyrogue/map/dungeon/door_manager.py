@@ -31,15 +31,13 @@ class DoorManager:
         self.placed_doors = []
 
     def place_doors(
-        self,
-        rooms: list[Room],
-        corridors: list[Corridor],
-        tiles: np.ndarray
+        self, rooms: list[Room], corridors: list[Corridor], tiles: np.ndarray
     ) -> None:
         """
         ドアを配置。
 
         Args:
+        ----
             rooms: 部屋のリスト
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
@@ -49,7 +47,9 @@ class DoorManager:
 
         # 新しいアプローチ: 通路から部屋への接続点を直接探す
         for room in rooms:
-            door_positions = self._find_corridor_to_room_connections(room, corridors, tiles)
+            door_positions = self._find_corridor_to_room_connections(
+                room, corridors, tiles
+            )
 
             # 各部屋に最大2個のドアまでに制限
             door_positions = door_positions[:2]
@@ -61,20 +61,19 @@ class DoorManager:
         game_logger.info(f"Placed {len(self.placed_doors)} doors")
 
     def _find_corridor_to_room_connections(
-        self,
-        room: Room,
-        corridors: list[Corridor],
-        tiles: np.ndarray
+        self, room: Room, corridors: list[Corridor], tiles: np.ndarray
     ) -> list[tuple[int, int]]:
         """
         通路から部屋への接続点を直接探す。
 
         Args:
+        ----
             room: 対象の部屋
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             ドア配置位置のリスト
 
         """
@@ -101,34 +100,37 @@ class DoorManager:
         指定座標が部屋の境界（壁）かチェック。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             room: 部屋
 
         Returns:
+        -------
             部屋の境界の場合True
 
         """
         # 部屋の境界矩形内にあり、かつ内部ではない
-        return (room.x <= x <= room.x + room.width - 1 and
-                room.y <= y <= room.y + room.height - 1 and
-                (x, y) not in room.inner)
+        return (
+            room.x <= x <= room.x + room.width - 1
+            and room.y <= y <= room.y + room.height - 1
+            and (x, y) not in room.inner
+        )
 
     def _find_door_positions(
-        self,
-        room: Room,
-        corridors: list[Corridor],
-        tiles: np.ndarray
+        self, room: Room, corridors: list[Corridor], tiles: np.ndarray
     ) -> list[tuple[int, int]]:
         """
         部屋のドア配置位置を見つける。
 
         Args:
+        ----
             room: 対象の部屋
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             ドア配置位置のリスト
 
         """
@@ -146,9 +148,11 @@ class DoorManager:
         部屋の壁の位置を取得。
 
         Args:
+        ----
             room: 対象の部屋
 
         Returns:
+        -------
             壁の位置のリスト
 
         """
@@ -171,7 +175,7 @@ class DoorManager:
         position: tuple[int, int],
         room: Room,
         corridors: list[Corridor],
-        tiles: np.ndarray
+        tiles: np.ndarray,
     ) -> bool:
         """
         指定位置にドアを配置すべきかチェック。
@@ -179,12 +183,14 @@ class DoorManager:
         壁の両側をチェックし、片側が部屋の内部、もう片側が通路の場合のみTrue。
 
         Args:
+        ----
             position: チェック位置（壁の座標）
             room: 部屋
             corridors: 通路のリスト
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             ドアを配置すべき場合True
 
         """
@@ -195,7 +201,7 @@ class DoorManager:
         # 壁に対して垂直な方向（2つの対向する方向）をチェック
         directions = [
             [(0, 1), (0, -1)],  # 南北
-            [(1, 0), (-1, 0)]   # 東西
+            [(1, 0), (-1, 0)],  # 東西
         ]
 
         for dir_pair in directions:
@@ -226,28 +232,28 @@ class DoorManager:
         return False
 
     def _is_corridor_tile(
-        self,
-        x: int,
-        y: int,
-        room: Room,
-        corridors: list[Corridor]
+        self, x: int, y: int, room: Room, corridors: list[Corridor]
     ) -> bool:
         """
         指定座標が通路のタイルかチェック。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             room: 部屋
             corridors: 通路のリスト
 
         Returns:
+        -------
             通路のタイルの場合True
 
         """
         # 部屋の内部にある場合は通路ではない
-        if (room.x < x < room.x + room.width - 1 and
-            room.y < y < room.y + room.height - 1):
+        if (
+            room.x < x < room.x + room.width - 1
+            and room.y < y < room.y + room.height - 1
+        ):
             return False
 
         # 通路の座標リストに含まれているかチェック
@@ -258,18 +264,18 @@ class DoorManager:
         return False
 
     def _is_corridor_connection(
-        self,
-        position: tuple[int, int],
-        corridors: list[Corridor]
+        self, position: tuple[int, int], corridors: list[Corridor]
     ) -> bool:
         """
         位置が通路との接続点かチェック。
 
         Args:
+        ----
             position: チェック位置
             corridors: 通路のリスト
 
         Returns:
+        -------
             通路との接続点の場合True
 
         """
@@ -290,10 +296,12 @@ class DoorManager:
         位置がメインドア位置（部屋の中央壁）かチェック。
 
         Args:
+        ----
             position: チェック位置
             room: 部屋
 
         Returns:
+        -------
             メインドア位置の場合True
 
         """
@@ -304,13 +312,11 @@ class DoorManager:
         center_y = room.y + room.height // 2
 
         # 北壁または南壁の中央
-        if ((y == room.y or y == room.y + room.height - 1) and
-            abs(x - center_x) <= 1):
+        if (y == room.y or y == room.y + room.height - 1) and abs(x - center_x) <= 1:
             return True
 
         # 西壁または東壁の中央
-        if ((x == room.x or x == room.x + room.width - 1) and
-            abs(y - center_y) <= 1):
+        if (x == room.x or x == room.x + room.width - 1) and abs(y - center_y) <= 1:
             return True
 
         return False
@@ -320,10 +326,12 @@ class DoorManager:
         ドアの種類を決定。
 
         Args:
+        ----
             room: 部屋
             position: ドア位置
 
         Returns:
+        -------
             ドアクラス（Door または SecretDoor）
 
         """
@@ -338,17 +346,13 @@ class DoorManager:
         return Door
 
     def _place_door_at_position(
-        self,
-        x: int,
-        y: int,
-        door_type: type,
-        room: Room,
-        tiles: np.ndarray
+        self, x: int, y: int, door_type: type, room: Room, tiles: np.ndarray
     ) -> None:
         """
         指定位置にドアを配置。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             door_type: ドアの種類
@@ -371,11 +375,13 @@ class DoorManager:
         ドア配置の有効性を検証。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             有効な配置の場合True
 
         """
@@ -398,20 +404,24 @@ class DoorManager:
 
         return True
 
-    def get_door_at_position(self, x: int, y: int, tiles: np.ndarray) -> Door | SecretDoor | None:
+    def get_door_at_position(
+        self, x: int, y: int, tiles: np.ndarray
+    ) -> Door | SecretDoor | None:
         """
         指定位置のドアを取得。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             見つかったドア、または None
 
         """
-        if (0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]):
+        if 0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]:
             tile = tiles[y, x]
             if isinstance(tile, (Door, SecretDoor)):
                 return tile
@@ -421,7 +431,8 @@ class DoorManager:
         """
         種類別のドア数をカウント。
 
-        Returns:
+        Returns
+        -------
             ドア種類とその数の辞書
 
         """
@@ -441,5 +452,6 @@ class DoorManager:
         return {
             "total_doors": len(self.placed_doors),
             "door_types": door_counts,
-            "secret_door_ratio": door_counts.get("SecretDoor", 0) / max(1, len(self.placed_doors)),
+            "secret_door_ratio": door_counts.get("SecretDoor", 0)
+            / max(1, len(self.placed_doors)),
         }

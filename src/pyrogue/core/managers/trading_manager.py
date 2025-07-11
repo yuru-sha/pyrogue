@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 class TradeType(Enum):
     """取引の種類を定義する列挙型。"""
 
-    BUY = "buy"         # プレイヤーがNPCから購入
-    SELL = "sell"       # プレイヤーがNPCに売却
+    BUY = "buy"  # プレイヤーがNPCから購入
+    SELL = "sell"  # プレイヤーがNPCに売却
 
 
 @dataclass
@@ -29,7 +29,8 @@ class TradeItem:
     """
     取引アイテムを表すデータクラス。
 
-    Attributes:
+    Attributes
+    ----------
         item: 取引対象のアイテム
         price: 取引価格
         quantity: 取引数量
@@ -74,7 +75,8 @@ class TradingManager:
     NPCとの取引を管理し、アイテムの売買、価格計算、
     取引の実行などを行います。
 
-    Attributes:
+    Attributes
+    ----------
         current_npc: 現在取引中のNPC
         context: 取引コンテキスト
         available_items: 取引可能なアイテムリスト
@@ -88,19 +90,21 @@ class TradingManager:
         self.available_items: list[TradeItem] = []
 
         # 価格設定
-        self.base_price_multiplier = 1.0    # 基本価格倍率
-        self.buy_price_multiplier = 1.5     # 購入価格倍率
-        self.sell_price_multiplier = 0.6    # 売却価格倍率
+        self.base_price_multiplier = 1.0  # 基本価格倍率
+        self.buy_price_multiplier = 1.5  # 購入価格倍率
+        self.sell_price_multiplier = 0.6  # 売却価格倍率
 
     def start_trading(self, npc_id: str, context: TradingContext) -> bool:
         """
         取引を開始する。
 
         Args:
+        ----
             npc_id: 取引するNPC ID
             context: 取引コンテキスト
 
         Returns:
+        -------
             取引開始に成功した場合はTrue
 
         """
@@ -134,7 +138,7 @@ class TradingManager:
                 item=item,
                 price=price,
                 quantity=item.stack_count if item.stackable else 1,
-                trade_type=TradeType.BUY
+                trade_type=TradeType.BUY,
             )
             self.available_items.append(trade_item)
 
@@ -146,7 +150,7 @@ class TradingManager:
                     item=item,
                     price=price,
                     quantity=item.stack_count if item.stackable else 1,
-                    trade_type=TradeType.SELL
+                    trade_type=TradeType.SELL,
                 )
                 self.available_items.append(trade_item)
 
@@ -155,9 +159,11 @@ class TradingManager:
         購入価格を計算する。
 
         Args:
+        ----
             item: 価格を計算するアイテム
 
         Returns:
+        -------
             計算された購入価格
 
         """
@@ -169,9 +175,11 @@ class TradingManager:
         売却価格を計算する。
 
         Args:
+        ----
             item: 価格を計算するアイテム
 
         Returns:
+        -------
             計算された売却価格
 
         """
@@ -183,9 +191,11 @@ class TradingManager:
         アイテムの基本価格を取得する。
 
         Args:
+        ----
             item: 価格を取得するアイテム
 
         Returns:
+        -------
             基本価格
 
         """
@@ -197,7 +207,7 @@ class TradingManager:
             "scroll": 50,
             "food": 10,
             "ring": 200,
-            "gold": 1
+            "gold": 1,
         }
 
         item_type = getattr(item, "item_type", "unknown")
@@ -227,9 +237,11 @@ class TradingManager:
         アイテムが売却可能かどうかを判定する。
 
         Args:
+        ----
             item: 判定するアイテム
 
         Returns:
+        -------
             売却可能な場合はTrue
 
         """
@@ -246,9 +258,11 @@ class TradingManager:
         取引を実行する。
 
         Args:
+        ----
             trade_item: 取引するアイテム
 
         Returns:
+        -------
             取引に成功した場合はTrue
 
         """
@@ -271,10 +285,12 @@ class TradingManager:
         購入を実行する。
 
         Args:
+        ----
             player: プレイヤー
             trade_item: 購入するアイテム
 
         Returns:
+        -------
             購入に成功した場合はTrue
 
         """
@@ -297,7 +313,9 @@ class TradingManager:
             player.inventory.add_item(trade_item.item)
 
             if self.context:
-                self.context.show_message(f"You bought {trade_item.item.name} for {trade_item.price} gold.")
+                self.context.show_message(
+                    f"You bought {trade_item.item.name} for {trade_item.price} gold."
+                )
                 self.context.update_display()
 
             # 取引可能なアイテムリストを更新
@@ -311,10 +329,12 @@ class TradingManager:
         売却を実行する。
 
         Args:
+        ----
             player: プレイヤー
             trade_item: 売却するアイテム
 
         Returns:
+        -------
             売却に成功した場合はTrue
 
         """
@@ -330,7 +350,9 @@ class TradingManager:
             player.gold += trade_item.price
 
             if self.context:
-                self.context.show_message(f"You sold {trade_item.item.name} for {trade_item.price} gold.")
+                self.context.show_message(
+                    f"You sold {trade_item.item.name} for {trade_item.price} gold."
+                )
                 self.context.update_display()
 
             # 取引可能なアイテムリストを更新
@@ -343,27 +365,34 @@ class TradingManager:
         """
         購入可能なアイテムリストを取得。
 
-        Returns:
+        Returns
+        -------
             購入可能なアイテムリスト
 
         """
-        return [item for item in self.available_items if item.trade_type == TradeType.BUY]
+        return [
+            item for item in self.available_items if item.trade_type == TradeType.BUY
+        ]
 
     def get_sell_items(self) -> list[TradeItem]:
         """
         売却可能なアイテムリストを取得。
 
-        Returns:
+        Returns
+        -------
             売却可能なアイテムリスト
 
         """
-        return [item for item in self.available_items if item.trade_type == TradeType.SELL]
+        return [
+            item for item in self.available_items if item.trade_type == TradeType.SELL
+        ]
 
     def get_all_items(self) -> list[TradeItem]:
         """
         すべての取引可能なアイテムリストを取得。
 
-        Returns:
+        Returns
+        -------
             すべての取引可能なアイテムリスト
 
         """
@@ -379,7 +408,8 @@ class TradingManager:
         """
         取引が進行中かどうかを判定。
 
-        Returns:
+        Returns
+        -------
             取引が進行中の場合はTrue
 
         """
@@ -389,17 +419,21 @@ class TradingManager:
         """
         現在取引中のNPCを取得。
 
-        Returns:
+        Returns
+        -------
             現在取引中のNPC
 
         """
         return self.current_npc
 
-    def set_price_multipliers(self, buy_multiplier: float, sell_multiplier: float) -> None:
+    def set_price_multipliers(
+        self, buy_multiplier: float, sell_multiplier: float
+    ) -> None:
         """
         価格倍率を設定。
 
         Args:
+        ----
             buy_multiplier: 購入価格倍率
             sell_multiplier: 売却価格倍率
 

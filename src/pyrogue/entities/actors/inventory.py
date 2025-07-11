@@ -25,9 +25,11 @@ class Inventory:
         アイテムを追加
 
         Args:
+        ----
             item: 追加するアイテム
 
         Returns:
+        -------
             bool: 追加に成功したかどうか
 
         """
@@ -53,6 +55,7 @@ class Inventory:
         アイテムを削除
 
         Args:
+        ----
             item: 削除するアイテム
 
         """
@@ -69,9 +72,11 @@ class Inventory:
         指定されたインデックスのアイテムを取得
 
         Args:
+        ----
             index: アイテムのインデックス
 
         Returns:
+        -------
             Optional[Item]: アイテム（存在しない場合はNone）
 
         """
@@ -84,9 +89,11 @@ class Inventory:
         アイテムを装備
 
         Args:
+        ----
             item: 装備するアイテム
 
         Returns:
+        -------
             Optional[Item]: 外したアイテム（ある場合）
 
         """
@@ -117,9 +124,11 @@ class Inventory:
         装備を外す
 
         Args:
+        ----
             slot: 装備スロット名
 
         Returns:
+        -------
             Optional[Item]: 外したアイテム（ある場合）
 
         """
@@ -136,7 +145,8 @@ class Inventory:
         """
         装備による攻撃力ボーナスを計算
 
-        Returns:
+        Returns
+        -------
             int: 攻撃力ボーナス
 
         """
@@ -159,7 +169,8 @@ class Inventory:
         """
         装備による防御力ボーナスを計算
 
-        Returns:
+        Returns
+        -------
             int: 防御力ボーナス
 
         """
@@ -183,9 +194,11 @@ class Inventory:
         装備スロットのアイテム名を取得
 
         Args:
+        ----
             slot: 装備スロット名
 
         Returns:
+        -------
             str: アイテム名（装備なしの場合は "None"）
 
         """
@@ -196,7 +209,8 @@ class Inventory:
         """
         装備中の武器を取得
 
-        Returns:
+        Returns
+        -------
             Optional[Weapon]: 装備中の武器（ない場合はNone）
 
         """
@@ -207,7 +221,8 @@ class Inventory:
         """
         装備中の防具を取得
 
-        Returns:
+        Returns
+        -------
             Optional[Armor]: 装備中の防具（ない場合はNone）
 
         """
@@ -219,9 +234,11 @@ class Inventory:
         指定されたアイテムが装備中かどうかを確認
 
         Args:
+        ----
             item: 確認するアイテム
 
         Returns:
+        -------
             bool: 装備中の場合True
         """
         return item in self.equipped.values()
@@ -231,9 +248,11 @@ class Inventory:
         指定されたアイテムの装備スロットを取得
 
         Args:
+        ----
             item: 確認するアイテム
 
         Returns:
+        -------
             str | None: 装備スロット名（装備されていない場合はNone）
         """
         for slot, equipped_item in self.equipped.items():

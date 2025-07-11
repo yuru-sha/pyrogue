@@ -6,6 +6,7 @@
 レベルアップシステムなどを統合的に処理します。
 
 Example:
+-------
     >>> player = Player(x=10, y=10)
     >>> player.take_damage(5)
     >>> player.gain_exp(50)
@@ -48,7 +49,8 @@ class Player(Actor):
         - 満腹度システムとサバイバル要素
         - アイテムの使用と効果適用
 
-    Attributes:
+    Attributes
+    ----------
         mp: 現在のMP
         max_mp: 最大MP
         exp: 経験値
@@ -66,6 +68,7 @@ class Player(Actor):
         ゲーム開始時の初期状態でステータスを設定します。
 
         Args:
+        ----
             x: 初期位置のX座標
             y: 初期位置のY座標
 
@@ -80,7 +83,7 @@ class Player(Actor):
             attack=CONFIG.player.INITIAL_ATTACK,
             defense=CONFIG.player.INITIAL_DEFENSE,
             level=1,
-            is_hostile=False
+            is_hostile=False,
         )
 
         # Player固有の属性を初期化
@@ -118,9 +121,11 @@ class Player(Actor):
         レベルアップ処理を実行します。現在のレベル×100が必要経験値です。
 
         Args:
+        ----
             amount: 獲得する経験値
 
         Returns:
+        -------
             レベルアップした場合はTrue、そうでなければFalse
 
         """
@@ -155,9 +160,11 @@ class Player(Actor):
         満腹度は0未満にはなりません。
 
         Args:
+        ----
             amount: 消費する満腹度
 
         Returns:
+        -------
             飢餓メッセージ。飢餓状態でない場合はNone
 
         """
@@ -168,6 +175,7 @@ class Player(Actor):
         if self.hunger > 0 and self.mp < self.max_mp:
             # 10%の確率でMP+1回復
             import random
+
             if random.random() < 0.1:
                 self.mp = min(self.max_mp, self.mp + 1)
 
@@ -208,6 +216,7 @@ class Player(Actor):
         効果が切れた状態異常は自動的に削除されます。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -218,9 +227,11 @@ class Player(Actor):
         指定された状態異常があるかどうかを判定。
 
         Args:
+        ----
             name: 判定する状態異常の名前
 
         Returns:
+        -------
             状態異常が存在する場合はTrue、そうでなければFalse
 
         """
@@ -243,9 +254,11 @@ class Player(Actor):
         MPを消費する。
 
         Args:
+        ----
             amount: 消費するMP量
 
         Returns:
+        -------
             消費に成功した場合はTrue、MPが不足している場合はFalse
 
         """
@@ -259,9 +272,11 @@ class Player(Actor):
         MPを回復する。
 
         Args:
+        ----
             amount: 回復するMP量
 
         Returns:
+        -------
             実際に回復したMP量
 
         """
@@ -274,9 +289,11 @@ class Player(Actor):
         指定されたMP量があるかどうかを判定。
 
         Args:
+        ----
             amount: 必要なMP量
 
         Returns:
+        -------
             MP量が十分な場合はTrue、不足している場合はFalse
 
         """
@@ -334,6 +351,7 @@ class Player(Actor):
         指定された量だけ満腹度を回復します。満腹度の最大値は100です。
 
         Args:
+        ----
             amount: 回復する満腹度
 
         """
@@ -346,7 +364,8 @@ class Player(Actor):
         基本攻撃力に装備アイテムのボーナスを加算し、
         飢餓ペナルティを適用した実際の攻撃力を返します。
 
-        Returns:
+        Returns
+        -------
             装備ボーナスと飢餓ペナルティを含む総攻撃力
 
         """
@@ -363,7 +382,8 @@ class Player(Actor):
         基本防御力に装備アイテムのボーナスを加算し、
         飢餓ペナルティを適用した実際の防御力を返します。
 
-        Returns:
+        Returns
+        -------
             装備ボーナスと飢餓ペナルティを含む総防御力
 
         """
@@ -381,9 +401,11 @@ class Player(Actor):
         装備がある場合は自動的に外してインベントリに戻します。
 
         Args:
+        ----
             item: 装備するアイテム
 
         Returns:
+        -------
             外したアイテム。ない場合はNone
 
         """
@@ -402,9 +424,11 @@ class Player(Actor):
         外したアイテムは自動的にインベントリに追加されます。
 
         Args:
+        ----
             slot: 装備スロット名（"weapon", "armor", "ring_left", "ring_right"）
 
         Returns:
+        -------
             外したアイテム。ない場合はNone
 
         """
@@ -421,10 +445,12 @@ class Player(Actor):
         成功した場合はインベントリからアイテムを除去します。
 
         Args:
+        ----
             item: 使用するアイテム
             context: 効果適用のためのコンテキスト（ゲーム画面など）
 
         Returns:
+        -------
             使用に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -461,7 +487,8 @@ class Player(Actor):
         プレイヤーの総合ステータスと装備状態を表示用の
         文字列としてフォーマットして返します。
 
-        Returns:
+        Returns
+        -------
             プレイヤーのステータスと装備情報を含む文字列
 
         """
@@ -474,7 +501,8 @@ class Player(Actor):
         ゲームオーバー画面や勝利画面で使用する
         ステータス情報を辞書形式で返します。
 
-        Returns:
+        Returns
+        -------
             プレイヤーのステータス情報を含む辞書
 
         """
@@ -500,14 +528,15 @@ class Player(Actor):
         """
         スコアを計算
 
-        Returns:
+        Returns
+        -------
             総合スコア
         """
         # オリジナルRogue風スコア計算
         score = 0
         score += self.gold * 10  # 金貨 x10
-        score += self.exp * 5    # 経験値 x5
+        score += self.exp * 5  # 経験値 x5
         score += self.level * 100  # レベル x100
         score += self.monsters_killed * 50  # モンスター撃破 x50
-        score += self.deepest_floor * 200   # 到達階層 x200
+        score += self.deepest_floor * 200  # 到達階層 x200
         return score

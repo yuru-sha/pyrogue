@@ -40,7 +40,8 @@ class CorridorBuilder:
     部屋間を接続する通路の生成、オリジナルRogue式の接続アルゴリズム、
     直線通路の作成、安全な線描画を担当します。
 
-    Attributes:
+    Attributes
+    ----------
         width: ダンジョンの幅
         height: ダンジョンの高さ
         corridors: 生成された通路のリスト
@@ -52,6 +53,7 @@ class CorridorBuilder:
         通路ビルダーを初期化。
 
         Args:
+        ----
             width: ダンジョンの幅
             height: ダンジョンの高さ
 
@@ -60,15 +62,19 @@ class CorridorBuilder:
         self.height = height
         self.corridors = []
 
-    def connect_rooms_rogue_style(self, rooms: list[Room], tiles: np.ndarray) -> list[Corridor]:
+    def connect_rooms_rogue_style(
+        self, rooms: list[Room], tiles: np.ndarray
+    ) -> list[Corridor]:
         """
         オリジナルRogue式の部屋接続アルゴリズム。
 
         Args:
+        ----
             rooms: 接続する部屋のリスト
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             生成された通路のリスト
 
         """
@@ -98,7 +104,9 @@ class CorridorBuilder:
                     if unconnected_room.id in connected_rooms:
                         continue
 
-                    distance = self._calculate_distance(connected_room.center(), unconnected_room.center())
+                    distance = self._calculate_distance(
+                        connected_room.center(), unconnected_room.center()
+                    )
                     if distance < best_distance:
                         best_distance = distance
                         best_pair = (connected_room, unconnected_room)
@@ -115,39 +123,43 @@ class CorridorBuilder:
         # 追加の接続を作成（ランダムに）
         self._create_additional_connections(rooms, tiles)
 
-        game_logger.info(f"Created {len(self.corridors)} corridors connecting {len(rooms)} rooms")
+        game_logger.info(
+            f"Created {len(self.corridors)} corridors connecting {len(rooms)} rooms"
+        )
         return self.corridors
 
-
-    def _calculate_distance(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> float:
+    def _calculate_distance(
+        self, pos1: tuple[int, int], pos2: tuple[int, int]
+    ) -> float:
         """
         2点間の距離を計算。
 
         Args:
+        ----
             pos1: 点1の座標
             pos2: 点2の座標
 
         Returns:
+        -------
             ユークリッド距離
 
         """
         return ((pos2[0] - pos1[0]) ** 2 + (pos2[1] - pos1[1]) ** 2) ** 0.5
 
     def _create_corridor_between_rooms(
-        self,
-        room1: Room,
-        room2: Room,
-        tiles: np.ndarray
+        self, room1: Room, room2: Room, tiles: np.ndarray
     ) -> Corridor | None:
         """
         2つの部屋を接続する通路を作成。
 
         Args:
+        ----
             room1: 部屋1
             room2: 部屋2
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             作成された通路、または None
 
         """
@@ -166,21 +178,25 @@ class CorridorBuilder:
                 start_pos=start_point,
                 end_pos=end_point,
                 points=corridor_points,
-                connecting_rooms=(room1.id, room2.id)
+                connecting_rooms=(room1.id, room2.id),
             )
             return corridor
 
         return None
 
-    def _find_connection_point(self, from_room: Room, to_room: Room) -> tuple[int, int] | None:
+    def _find_connection_point(
+        self, from_room: Room, to_room: Room
+    ) -> tuple[int, int] | None:
         """
         部屋の壁上で最適な接続点を見つける。
 
         Args:
+        ----
             from_room: 接続元の部屋
             to_room: 接続先の部屋
 
         Returns:
+        -------
             接続点の座標、または None
 
         """
@@ -210,20 +226,19 @@ class CorridorBuilder:
         return closest_point
 
     def _create_straight_corridor(
-        self,
-        start: tuple[int, int],
-        end: tuple[int, int],
-        tiles: np.ndarray
+        self, start: tuple[int, int], end: tuple[int, int], tiles: np.ndarray
     ) -> list[tuple[int, int]]:
         """
         直線通路を作成（Bresenhamアルゴリズムで直線接続）。
 
         Args:
+        ----
             start: 開始点
             end: 終了点
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             通路の座標点のリスト
 
         """
@@ -277,17 +292,18 @@ class CorridorBuilder:
 
         return actual_corridor_points
 
-
     def _is_valid_corridor_position(self, x: int, y: int, tiles: np.ndarray) -> bool:
         """
         通路配置位置が有効かチェック。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             有効な位置の場合True
 
         """
@@ -297,12 +313,14 @@ class CorridorBuilder:
 
         return True
 
-
-    def _create_additional_connections(self, rooms: list[Room], tiles: np.ndarray) -> None:
+    def _create_additional_connections(
+        self, rooms: list[Room], tiles: np.ndarray
+    ) -> None:
         """
         追加の接続を作成（ランダムに）。
 
         Args:
+        ----
             rooms: 部屋のリスト
             tiles: ダンジョンのタイル配列
 
@@ -323,10 +341,12 @@ class CorridorBuilder:
         指定位置の通路を取得。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             見つかった通路、または None
 
         """
@@ -346,5 +366,7 @@ class CorridorBuilder:
         return {
             "corridors_count": len(self.corridors),
             "total_length": total_length,
-            "average_length": total_length / len(self.corridors) if self.corridors else 0,
+            "average_length": total_length / len(self.corridors)
+            if self.corridors
+            else 0,
         }

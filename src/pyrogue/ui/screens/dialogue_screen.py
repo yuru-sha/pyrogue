@@ -25,7 +25,8 @@ class DialogueScreen(Screen):
     NPCとの会話を表示し、プレイヤーの選択を処理します。
     DialogueManagerと連携して会話の進行を管理します。
 
-    Attributes:
+    Attributes
+    ----------
         dialogue_manager: 会話管理システム
         npc_id: 会話中のNPC ID
         selected_choice: 現在選択中の選択肢インデックス
@@ -33,11 +34,14 @@ class DialogueScreen(Screen):
 
     """
 
-    def __init__(self, engine: Engine, dialogue_manager: DialogueManager, npc_id: str) -> None:
+    def __init__(
+        self, engine: Engine, dialogue_manager: DialogueManager, npc_id: str
+    ) -> None:
         """
         DialogueScreenの初期化。
 
         Args:
+        ----
             engine: ゲームエンジン
             dialogue_manager: 会話管理システム
             npc_id: 会話中のNPC ID
@@ -78,9 +82,11 @@ class DialogueScreen(Screen):
         キーダウンイベントを処理する。
 
         Args:
+        ----
             key: キーダウンイベント
 
         Returns:
+        -------
             次の画面（Noneの場合は現在の画面を維持）
 
         """
@@ -91,6 +97,7 @@ class DialogueScreen(Screen):
             self.dialogue_manager.end_dialogue()
             # 前の画面に戻る（通常はGameScreen）
             from pyrogue.ui.screens.game_screen import GameScreen
+
             return GameScreen(self.engine)
 
         # 現在のノードを取得
@@ -98,13 +105,16 @@ class DialogueScreen(Screen):
         if not current_node:
             # ノードがない場合は会話を終了
             from pyrogue.ui.screens.game_screen import GameScreen
+
             return GameScreen(self.engine)
 
         # 上下キーで選択肢を移動
         if key_sym == tcod.event.K_UP:
             self.selected_choice = max(0, self.selected_choice - 1)
         elif key_sym == tcod.event.K_DOWN:
-            self.selected_choice = min(len(current_node.choices) - 1, self.selected_choice + 1)
+            self.selected_choice = min(
+                len(current_node.choices) - 1, self.selected_choice + 1
+            )
 
         # Enterキーで選択肢を決定
         elif key_sym == tcod.event.K_RETURN:
@@ -113,10 +123,12 @@ class DialogueScreen(Screen):
             if action == DialogueAction.END:
                 # 会話終了
                 from pyrogue.ui.screens.game_screen import GameScreen
+
                 return GameScreen(self.engine)
             if action == DialogueAction.TRADE:
                 # 取引画面を開く（現在は未実装）
                 from pyrogue.ui.screens.game_screen import GameScreen
+
                 return GameScreen(self.engine)
             if action == DialogueAction.CONTINUE:
                 # 会話を継続、選択肢をリセット
@@ -130,6 +142,7 @@ class DialogueScreen(Screen):
 
                 if action == DialogueAction.END or action == DialogueAction.TRADE:
                     from pyrogue.ui.screens.game_screen import GameScreen
+
                     return GameScreen(self.engine)
                 if action == DialogueAction.CONTINUE:
                     self.selected_choice = 0
@@ -141,6 +154,7 @@ class DialogueScreen(Screen):
         画面を描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -155,18 +169,14 @@ class DialogueScreen(Screen):
                 console.width // 2,
                 console.height // 2,
                 "No dialogue available.",
-                alignment=tcod.CENTER
+                alignment=tcod.CENTER,
             )
             return
 
         # タイトルを表示
         title = f"Conversation with {current_node.speaker}"
         console.print(
-            console.width // 2,
-            2,
-            title,
-            fg=tcod.white,
-            alignment=tcod.CENTER
+            console.width // 2, 2, title, fg=tcod.white, alignment=tcod.CENTER
         )
 
         # 会話テキストを表示
@@ -178,11 +188,14 @@ class DialogueScreen(Screen):
         # 操作方法を表示
         self._render_help(console)
 
-    def _render_dialogue_text(self, console: tcod.Console, text: str, start_y: int) -> None:
+    def _render_dialogue_text(
+        self, console: tcod.Console, text: str, start_y: int
+    ) -> None:
         """
         会話テキストを描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
             text: 表示するテキスト
             start_y: 開始Y座標
@@ -198,14 +211,17 @@ class DialogueScreen(Screen):
                 start_y + i,
                 line,
                 fg=tcod.light_gray,
-                alignment=tcod.CENTER
+                alignment=tcod.CENTER,
             )
 
-    def _render_choices(self, console: tcod.Console, choices: list, start_y: int) -> None:
+    def _render_choices(
+        self, console: tcod.Console, choices: list, start_y: int
+    ) -> None:
         """
         選択肢を描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
             choices: 選択肢のリスト
             start_y: 開始Y座標
@@ -220,7 +236,7 @@ class DialogueScreen(Screen):
             start_y,
             "Choose your response:",
             fg=tcod.white,
-            alignment=tcod.CENTER
+            alignment=tcod.CENTER,
         )
 
         # 各選択肢を描画
@@ -240,19 +256,14 @@ class DialogueScreen(Screen):
             choice_text = f"{prefix}{i + 1}. {choice.text}"
 
             # 選択肢を描画
-            console.print(
-                x,
-                y,
-                choice_text,
-                fg=fg_color,
-                alignment=tcod.CENTER
-            )
+            console.print(x, y, choice_text, fg=fg_color, alignment=tcod.CENTER)
 
     def _render_help(self, console: tcod.Console) -> None:
         """
         操作方法を描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -261,7 +272,7 @@ class DialogueScreen(Screen):
         help_lines = [
             "Controls:",
             "↑/↓: Navigate choices  Enter: Select  1-9: Quick select",
-            "Esc: End conversation"
+            "Esc: End conversation",
         ]
 
         for i, line in enumerate(help_lines):
@@ -270,7 +281,7 @@ class DialogueScreen(Screen):
                 help_y + i,
                 line,
                 fg=tcod.dark_gray,
-                alignment=tcod.CENTER
+                alignment=tcod.CENTER,
             )
 
     def _wrap_text(self, text: str, width: int) -> list[str]:
@@ -278,10 +289,12 @@ class DialogueScreen(Screen):
         テキストを指定された幅で折り返す。
 
         Args:
+        ----
             text: 折り返すテキスト
             width: 最大幅
 
         Returns:
+        -------
             折り返されたテキスト行のリスト
 
         """

@@ -12,6 +12,7 @@
     - TCODライブラリとの統合
 
 Example:
+-------
     >>> engine = Engine()
     >>> engine.initialize()
     >>> engine.run()
@@ -53,7 +54,8 @@ class Engine:
         - 統合されたログ機能
         - エラー処理とリソース管理
 
-    Attributes:
+    Attributes
+    ----------
         screen_width: スクリーンの幅（文字数）
         screen_height: スクリーンの高さ（文字数）
         console: TCODコンソールオブジェクト
@@ -85,6 +87,7 @@ class Engine:
 
         # 対話マネージャーを初期化（NPCシステムが有効な場合のみ）
         from pyrogue.constants import FeatureConstants
+
         if FeatureConstants.ENABLE_NPC_SYSTEM:
             self.dialogue_manager = DialogueManager()
         else:
@@ -148,6 +151,7 @@ class Engine:
         コンソールと各画面を更新します。最小サイズ制限も適用します。
 
         Args:
+        ----
             event: ウィンドウリサイズイベント
 
         """
@@ -249,9 +253,11 @@ class Engine:
         StateManagerを使用してクリーンな状態管理を行います。
 
         Args:
+        ----
             event: キーボード入力イベント
 
         Returns:
+        -------
             Tuple of (continue_game, new_state)
 
         """
@@ -307,6 +313,7 @@ class Engine:
         Permadeath機能により、セーブデータを自動削除します。
 
         Args:
+        ----
             player_stats: プレイヤーの最終ステータス
             final_floor: 到達した最終階層
             cause_of_death: 死因の説明文
@@ -332,6 +339,7 @@ class Engine:
         勝利画面に遷移します。
 
         Args:
+        ----
             player_stats: プレイヤーの最終ステータス
             final_floor: 到達した最終階層
 
@@ -345,10 +353,12 @@ class Engine:
         最終スコアを計算。
 
         Args:
+        ----
             player_stats: プレイヤーの最終ステータス
             final_floor: 到達した最終階層
 
         Returns:
+        -------
             計算された最終スコア
 
         """

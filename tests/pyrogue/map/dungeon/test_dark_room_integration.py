@@ -6,12 +6,10 @@
 """
 
 import pytest
-import numpy as np
-
-from pyrogue.map.dungeon.director import DungeonDirector
+from pyrogue.entities.items.light_items import Lantern, LightRing, Torch
 from pyrogue.map.dungeon.dark_room_builder import DarkRoom, DarkRoomBuilder
-from pyrogue.map.tile import Floor, Wall
-from pyrogue.entities.items.light_items import Torch, Lantern, LightRing
+from pyrogue.map.dungeon.director import DungeonDirector
+from pyrogue.map.tile import Floor
 
 
 class TestDarkRoomIntegration:
@@ -39,7 +37,10 @@ class TestDarkRoomIntegration:
                 if isinstance(tiles[y, x], Floor):
                     floor_count += 1
                     # 光源タイルをチェック
-                    if hasattr(tiles[y, x], 'has_light_source') and tiles[y, x].has_light_source:
+                    if (
+                        hasattr(tiles[y, x], "has_light_source")
+                        and tiles[y, x].has_light_source
+                    ):
                         light_source_count += 1
 
         assert floor_count > 0, "床タイルが存在しません"
@@ -56,16 +57,40 @@ class TestDarkRoomIntegration:
             assert should_generate, f"階層{floor}で暗い部屋が生成されるべきです"
 
         # 暗い部屋が生成されない階層
-        non_dark_room_floors = [1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 21, 22, 25, 26]
+        non_dark_room_floors = [
+            1,
+            2,
+            3,
+            4,
+            5,
+            7,
+            8,
+            9,
+            11,
+            12,
+            13,
+            15,
+            16,
+            18,
+            19,
+            21,
+            22,
+            25,
+            26,
+        ]
 
         for floor in non_dark_room_floors:
             director = DungeonDirector(80, 45, floor=floor)
             should_generate = director._should_generate_dark_rooms()
-            assert not should_generate, f"階層{floor}で暗い部屋が生成されるべきではありません"
+            assert (
+                not should_generate
+            ), f"階層{floor}で暗い部屋が生成されるべきではありません"
 
     def test_dark_room_with_bsp_system(self):
         """BSPシステムとの統合テスト。"""
-        director = DungeonDirector(80, 45, floor=6)  # 6階は暗い部屋生成対象（迷路ではない）
+        director = DungeonDirector(
+            80, 45, floor=6
+        )  # 6階は暗い部屋生成対象（迷路ではない）
 
         # BSPシステムを使用
         director.use_section_based = True
@@ -102,11 +127,12 @@ class TestDarkRoomIntegration:
 
             # 光源タイルが床または階段であることを確認
             light_tile = tiles[light_y, light_x]
-            from pyrogue.map.tile import StairsUp, StairsDown
+            from pyrogue.map.tile import StairsDown, StairsUp
+
             assert isinstance(light_tile, (Floor, StairsUp, StairsDown))
             # 床タイルの場合のみ光源属性をチェック
             if isinstance(light_tile, Floor):
-                assert hasattr(light_tile, 'has_light_source')
+                assert hasattr(light_tile, "has_light_source")
                 assert light_tile.has_light_source
 
     def test_darkness_level_calculation(self):
@@ -253,7 +279,10 @@ class TestDarkRoomIntegration:
         assert low_stats["darkness_intensity"] == 0.2
 
         # 暗さ強度が部屋の変換に影響することを確認
-        assert high_darkness_builder.darkness_intensity > low_darkness_builder.darkness_intensity
+        assert (
+            high_darkness_builder.darkness_intensity
+            > low_darkness_builder.darkness_intensity
+        )
 
     def test_special_room_exclusion_from_darkness(self):
         """特別な部屋が暗くならないことの確認テスト。"""
@@ -320,15 +349,27 @@ class TestLightItemsIntegration:
 
         # 異なる光源での視界範囲をテスト
         torch_visibility = builder.get_visibility_range_at(
-            12, 12, rooms, True, 4  # たいまつの光量
+            12,
+            12,
+            rooms,
+            True,
+            4,  # たいまつの光量
         )
 
         lantern_visibility = builder.get_visibility_range_at(
-            12, 12, rooms, True, 6  # ランタンの光量
+            12,
+            12,
+            rooms,
+            True,
+            6,  # ランタンの光量
         )
 
         ring_visibility = builder.get_visibility_range_at(
-            12, 12, rooms, True, 3  # 指輪の光量
+            12,
+            12,
+            rooms,
+            True,
+            3,  # 指輪の光量
         )
 
         # ランタンが最も明るく、たいまつがその次、指輪が最も暗い

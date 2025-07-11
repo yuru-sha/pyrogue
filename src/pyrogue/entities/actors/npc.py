@@ -21,19 +21,19 @@ if TYPE_CHECKING:
 class NPCDisposition(Enum):
     """NPC の態度・性格を定義する列挙型。"""
 
-    FRIENDLY = "friendly"      # 友好的
-    NEUTRAL = "neutral"        # 中立的
-    HOSTILE = "hostile"        # 敵対的（モンスター化）
+    FRIENDLY = "friendly"  # 友好的
+    NEUTRAL = "neutral"  # 中立的
+    HOSTILE = "hostile"  # 敵対的（モンスター化）
 
 
 class NPCType(Enum):
     """NPC の種類を定義する列挙型。"""
 
-    MERCHANT = "merchant"      # 商人
-    GUARD = "guard"           # 警備員
-    VILLAGER = "villager"     # 村人
-    PRIEST = "priest"         # 僧侶
-    MAGE = "mage"            # 魔術師
+    MERCHANT = "merchant"  # 商人
+    GUARD = "guard"  # 警備員
+    VILLAGER = "villager"  # 村人
+    PRIEST = "priest"  # 僧侶
+    MAGE = "mage"  # 魔術師
 
 
 class NPC(Actor):
@@ -44,7 +44,8 @@ class NPC(Actor):
     インタラクション機能を提供します。プレイヤーとの相互作用を通じて
     ゲーム世界の豊かさを演出します。
 
-    Attributes:
+    Attributes
+    ----------
         char: 表示文字
         color: 表示色（RGB）
         disposition: NPC の態度
@@ -55,16 +56,29 @@ class NPC(Actor):
 
     """
 
-    def __init__(self, char: str, x: int, y: int, name: str, level: int,
-                 hp: int, max_hp: int, attack: int, defense: int,
-                 color: tuple[int, int, int], disposition: NPCDisposition,
-                 npc_type: NPCType, dialogue_id: str,
-                 inventory: Inventory | None = None,
-                 quest_ids: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        char: str,
+        x: int,
+        y: int,
+        name: str,
+        level: int,
+        hp: int,
+        max_hp: int,
+        attack: int,
+        defense: int,
+        color: tuple[int, int, int],
+        disposition: NPCDisposition,
+        npc_type: NPCType,
+        dialogue_id: str,
+        inventory: Inventory | None = None,
+        quest_ids: list[str] | None = None,
+    ) -> None:
         """
         NPCの初期化。
 
         Args:
+        ----
             char: 表示文字
             x: NPCのX座標
             y: NPCのY座標
@@ -100,39 +114,47 @@ class NPC(Actor):
 
         # 会話・取引の状態管理
         self.dialogue_state: dict[str, Any] = {}  # 会話の進行状況
-        self.last_interaction_turn: int = 0      # 最後の相互作用ターン
+        self.last_interaction_turn: int = 0  # 最後の相互作用ターン
 
     def can_trade(self) -> bool:
         """
         取引可能かどうかを判定。
 
-        Returns:
+        Returns
+        -------
             取引可能な場合はTrue
 
         """
-        return (self.npc_type == NPCType.MERCHANT and
-                self.disposition in [NPCDisposition.FRIENDLY, NPCDisposition.NEUTRAL] and
-                self.inventory is not None)
+        return (
+            self.npc_type == NPCType.MERCHANT
+            and self.disposition in [NPCDisposition.FRIENDLY, NPCDisposition.NEUTRAL]
+            and self.inventory is not None
+        )
 
     def can_talk(self) -> bool:
         """
         会話可能かどうかを判定。
 
-        Returns:
+        Returns
+        -------
             会話可能な場合はTrue
 
         """
-        return (self.disposition in [NPCDisposition.FRIENDLY, NPCDisposition.NEUTRAL] and
-                self.dialogue_id is not None)
+        return (
+            self.disposition in [NPCDisposition.FRIENDLY, NPCDisposition.NEUTRAL]
+            and self.dialogue_id is not None
+        )
 
     def has_quest(self, quest_id: str) -> bool:
         """
         指定されたクエストを持っているかどうかを判定。
 
         Args:
+        ----
             quest_id: クエストID
 
         Returns:
+        -------
             クエストを持っている場合はTrue
 
         """
@@ -143,6 +165,7 @@ class NPC(Actor):
         クエストを追加。
 
         Args:
+        ----
             quest_id: 追加するクエストID
 
         """
@@ -154,6 +177,7 @@ class NPC(Actor):
         クエストを削除。
 
         Args:
+        ----
             quest_id: 削除するクエストID
 
         """
@@ -165,10 +189,12 @@ class NPC(Actor):
         会話状態を取得。
 
         Args:
+        ----
             key: 状態のキー
             default: デフォルト値
 
         Returns:
+        -------
             会話状態の値
 
         """
@@ -179,6 +205,7 @@ class NPC(Actor):
         会話状態を設定。
 
         Args:
+        ----
             key: 状態のキー
             value: 設定する値
 
@@ -190,6 +217,7 @@ class NPC(Actor):
         最後の相互作用ターンを更新。
 
         Args:
+        ----
             turn: 現在のターン数
 
         """
@@ -200,9 +228,11 @@ class NPC(Actor):
         相互作用のクールダウン残り時間を取得。
 
         Args:
+        ----
             current_turn: 現在のターン数
 
         Returns:
+        -------
             クールダウン残り時間
 
         """
@@ -215,9 +245,11 @@ class NPC(Actor):
         アイテムを売る（NPCが購入）。
 
         Args:
+        ----
             item: 売るアイテム
 
         Returns:
+        -------
             取引が成功した場合はTrue
 
         """
@@ -236,9 +268,11 @@ class NPC(Actor):
         アイテムを買う（NPCが販売）。
 
         Args:
+        ----
             item: 買うアイテム
 
         Returns:
+        -------
             取引が成功した場合はTrue
 
         """
@@ -258,7 +292,8 @@ class NPC(Actor):
         """
         挨拶メッセージを取得。
 
-        Returns:
+        Returns
+        -------
             挨拶メッセージ
 
         """
@@ -272,7 +307,8 @@ class NPC(Actor):
         """
         別れのメッセージを取得。
 
-        Returns:
+        Returns
+        -------
             別れのメッセージ
 
         """
@@ -287,6 +323,7 @@ class NPC(Actor):
         状態異常のターン経過処理。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -297,9 +334,11 @@ class NPC(Actor):
         指定された状態異常があるかどうかを判定。
 
         Args:
+        ----
             name: 判定する状態異常の名前
 
         Returns:
+        -------
             状態異常が存在する場合はTrue
 
         """
@@ -311,5 +350,7 @@ class NPC(Actor):
 
     def __repr__(self) -> str:
         """NPCの詳細な文字列表現を取得。"""
-        return (f"NPC(name={self.name}, type={self.npc_type.value}, "
-                f"disposition={self.disposition.value}, pos=({self.x}, {self.y}))")
+        return (
+            f"NPC(name={self.name}, type={self.npc_type.value}, "
+            f"disposition={self.disposition.value}, pos=({self.x}, {self.y}))"
+        )

@@ -234,8 +234,24 @@ class MovementManager:
             if item.x == player.x and item.y == player.y
         ]
 
+        if not items_at_position:
+            return
+
+        # ゴールドのオートピックアップ処理
+        gold_items = [
+            item
+            for item in items_at_position
+            if hasattr(item, "item_type") and item.item_type == "GOLD"
+        ]
+        for gold_item in gold_items:
+            amount = getattr(gold_item, "amount", 1)
+            player.gold += amount
+            floor_data.items.remove(gold_item)
+            self.context.add_message(f"You picked up {amount} gold.")
+            items_at_position.remove(gold_item)
+
+        # 残りのアイテムがある場合は通知
         if items_at_position:
-            # 複数アイテムの場合は通知のみ
             if len(items_at_position) == 1:
                 item = items_at_position[0]
                 self.context.add_message(

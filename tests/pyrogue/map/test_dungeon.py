@@ -1,7 +1,7 @@
 """Test cases for dungeon generation."""
 
-from pyrogue.map.dungeon import DungeonDirector, Room
-from pyrogue.map.tile import Door, Floor, SecretDoor, Wall
+from pyrogue.map.dungeon import DungeonDirector
+from pyrogue.map.tile import Wall
 
 
 def test_room_size():
@@ -75,12 +75,12 @@ def test_special_room_generation():
         tiles, up_pos, down_pos = director.build_dungeon()
 
         # 特別な部屋を探す
-        special_rooms = [room for room in director.rooms if getattr(room, 'is_special', False)]
+        special_rooms = [
+            room for room in director.rooms if getattr(room, "is_special", False)
+        ]
 
         # 特別な部屋が存在することを確認（現在の実装では複数の特別な部屋が生成される）
-        assert len(special_rooms) >= 0, (
-            f"Floor {floor} should have some special rooms"
-        )
+        assert len(special_rooms) >= 0, f"Floor {floor} should have some special rooms"
 
 
 def test_map_boundary():
@@ -110,8 +110,12 @@ def test_basic_dungeon_generation():
     # 階段位置が有効な範囲内か
     assert 0 <= up_pos[0] < 80, f"Up stairs X position {up_pos[0]} is out of bounds"
     assert 0 <= up_pos[1] < 50, f"Up stairs Y position {up_pos[1]} is out of bounds"
-    assert 0 <= down_pos[0] < 80, f"Down stairs X position {down_pos[0]} is out of bounds"
-    assert 0 <= down_pos[1] < 50, f"Down stairs Y position {down_pos[1]} is out of bounds"
+    assert (
+        0 <= down_pos[0] < 80
+    ), f"Down stairs X position {down_pos[0]} is out of bounds"
+    assert (
+        0 <= down_pos[1] < 50
+    ), f"Down stairs Y position {down_pos[1]} is out of bounds"
 
     # 部屋が生成されているか
     assert len(director.rooms) > 0, "No rooms generated"
@@ -126,5 +130,5 @@ def test_room_boundaries():
     for room in director.rooms:
         assert room.x >= 0, f"Room X position {room.x} is out of bounds"
         assert room.y >= 0, f"Room Y position {room.y} is out of bounds"
-        assert room.x + room.width <= 80, f"Room extends beyond width boundary"
-        assert room.y + room.height <= 50, f"Room extends beyond height boundary"
+        assert room.x + room.width <= 80, "Room extends beyond width boundary"
+        assert room.y + room.height <= 50, "Room extends beyond height boundary"

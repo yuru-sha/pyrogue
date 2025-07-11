@@ -6,6 +6,7 @@
 安全なゲームの起動と終了を保証します。
 
 Example:
+-------
     $ python -m pyrogue.main
 
 """

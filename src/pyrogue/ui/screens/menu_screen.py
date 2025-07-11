@@ -32,6 +32,7 @@ class MenuScreen:
         メニュースクリーンを初期化。
 
         Args:
+        ----
             console: TCODコンソールオブジェクト
             engine: メインゲームエンジンのインスタンス
 
@@ -48,6 +49,7 @@ class MenuScreen:
         ウィンドウサイズ変更時にコンソール参照を更新します。
 
         Args:
+        ----
             console: 新しいTCODコンソールオブジェクト
 
         """
@@ -132,9 +134,11 @@ class MenuScreen:
         メニューナビゲーションとオプション選択を処理します。
 
         Args:
+        ----
             key: キーボード入力イベント
 
         Returns:
+        -------
             選択されたゲーム状態、またはNone
 
         """

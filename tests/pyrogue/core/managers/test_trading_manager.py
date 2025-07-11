@@ -4,14 +4,13 @@ TradingManager のテストモジュール。
 取引システムの機能テストを提供します。
 """
 
-import pytest
 from unittest.mock import Mock
 
-from pyrogue.core.managers.trading_manager import TradingManager, TradeItem, TradeType
+from pyrogue.core.managers.trading_manager import TradeItem, TradeType, TradingManager
+from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.npc import NPC, NPCDisposition, NPCType
 from pyrogue.entities.actors.player import Player
-from pyrogue.entities.actors.inventory import Inventory
-from pyrogue.entities.items.item import Weapon, Armor, Potion
+from pyrogue.entities.items.item import Armor, Weapon
 
 
 class TestTradingManager:
@@ -37,14 +36,24 @@ class TestTradingManager:
 
         # NPCとプレイヤーの設定
         inventory = Inventory()
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
         inventory.add_item(weapon)
 
         merchant = NPC(
-            char='@', x=5, y=10, name='Merchant', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(255, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.MERCHANT,
-            dialogue_id='merchant', inventory=inventory
+            char="@",
+            x=5,
+            y=10,
+            name="Merchant",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(255, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.MERCHANT,
+            dialogue_id="merchant",
+            inventory=inventory,
         )
 
         player = Player(x=10, y=10)
@@ -69,10 +78,19 @@ class TestTradingManager:
 
         # 取引不可能なNPC
         non_merchant = NPC(
-            char='@', x=5, y=10, name='Villager', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(0, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.VILLAGER,
-            dialogue_id='villager'
+            char="@",
+            x=5,
+            y=10,
+            name="Villager",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(0, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.VILLAGER,
+            dialogue_id="villager",
         )
 
         mock_context = Mock()
@@ -89,7 +107,7 @@ class TestTradingManager:
         manager = TradingManager()
 
         # テストアイテム
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
 
         # 基本価格の取得
         base_price = manager._get_base_price(weapon)
@@ -108,11 +126,11 @@ class TestTradingManager:
         manager = TradingManager()
 
         # 各アイテムタイプの基本価格をテスト
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
-        armor = Armor(x=0, y=0, name='Test Armor', defense_bonus=3)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
+        armor = Armor(x=0, y=0, name="Test Armor", defense_bonus=3)
         # Potionクラスは effect パラメータが必要なので、簡単なモックを使用
         potion = Mock()
-        potion.__class__.__name__ = 'Potion'
+        potion.__class__.__name__ = "Potion"
 
         assert manager._get_base_price(weapon) == 100
         assert manager._get_base_price(armor) == 80
@@ -123,11 +141,11 @@ class TestTradingManager:
         manager = TradingManager()
 
         # 通常のアイテム
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
         assert manager._can_sell_item(weapon) is True
 
         # 呪われたアイテム
-        cursed_weapon = Weapon(x=0, y=0, name='Cursed Sword', attack_bonus=5)
+        cursed_weapon = Weapon(x=0, y=0, name="Cursed Sword", attack_bonus=5)
         cursed_weapon.cursed = True
         assert manager._can_sell_item(cursed_weapon) is False
 
@@ -137,14 +155,24 @@ class TestTradingManager:
 
         # NPCとプレイヤーの設定
         inventory = Inventory()
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
         inventory.add_item(weapon)
 
         merchant = NPC(
-            char='@', x=5, y=10, name='Merchant', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(255, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.MERCHANT,
-            dialogue_id='merchant', inventory=inventory
+            char="@",
+            x=5,
+            y=10,
+            name="Merchant",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(255, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.MERCHANT,
+            dialogue_id="merchant",
+            inventory=inventory,
         )
 
         player = Player(x=10, y=10)
@@ -181,15 +209,25 @@ class TestTradingManager:
         # NPCとプレイヤーの設定
         inventory = Inventory()
         merchant = NPC(
-            char='@', x=5, y=10, name='Merchant', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(255, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.MERCHANT,
-            dialogue_id='merchant', inventory=inventory
+            char="@",
+            x=5,
+            y=10,
+            name="Merchant",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(255, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.MERCHANT,
+            dialogue_id="merchant",
+            inventory=inventory,
         )
 
         player = Player(x=10, y=10)
         player.gold = 100
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
         player.inventory.add_item(weapon)
 
         mock_context = Mock()
@@ -222,14 +260,24 @@ class TestTradingManager:
 
         # NPCとプレイヤーの設定
         inventory = Inventory()
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
         inventory.add_item(weapon)
 
         merchant = NPC(
-            char='@', x=5, y=10, name='Merchant', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(255, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.MERCHANT,
-            dialogue_id='merchant', inventory=inventory
+            char="@",
+            x=5,
+            y=10,
+            name="Merchant",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(255, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.MERCHANT,
+            dialogue_id="merchant",
+            inventory=inventory,
         )
 
         player = Player(x=10, y=10)
@@ -259,18 +307,28 @@ class TestTradingManager:
 
         # NPCとプレイヤーの設定
         inventory = Inventory()
-        weapon = Weapon(x=0, y=0, name='NPC Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="NPC Sword", attack_bonus=5)
         inventory.add_item(weapon)
 
         merchant = NPC(
-            char='@', x=5, y=10, name='Merchant', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(255, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.MERCHANT,
-            dialogue_id='merchant', inventory=inventory
+            char="@",
+            x=5,
+            y=10,
+            name="Merchant",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(255, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.MERCHANT,
+            dialogue_id="merchant",
+            inventory=inventory,
         )
 
         player = Player(x=10, y=10)
-        player_weapon = Weapon(x=0, y=0, name='Player Sword', attack_bonus=3)
+        player_weapon = Weapon(x=0, y=0, name="Player Sword", attack_bonus=3)
         player.inventory.add_item(player_weapon)
 
         mock_context = Mock()
@@ -299,10 +357,20 @@ class TestTradingManager:
         # 取引開始
         inventory = Inventory()
         merchant = NPC(
-            char='@', x=5, y=10, name='Merchant', level=1,
-            hp=50, max_hp=50, attack=10, defense=5, color=(255, 255, 0),
-            disposition=NPCDisposition.FRIENDLY, npc_type=NPCType.MERCHANT,
-            dialogue_id='merchant', inventory=inventory
+            char="@",
+            x=5,
+            y=10,
+            name="Merchant",
+            level=1,
+            hp=50,
+            max_hp=50,
+            attack=10,
+            defense=5,
+            color=(255, 255, 0),
+            disposition=NPCDisposition.FRIENDLY,
+            npc_type=NPCType.MERCHANT,
+            dialogue_id="merchant",
+            inventory=inventory,
         )
 
         mock_context = Mock()
@@ -333,7 +401,7 @@ class TestTradingManager:
         assert manager.sell_price_multiplier == 0.8
 
         # 価格計算の確認
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
         base_price = manager._get_base_price(weapon)
 
         buy_price = manager._calculate_buy_price(weapon)
@@ -344,13 +412,10 @@ class TestTradingManager:
 
     def test_trade_item_creation(self):
         """TradeItemの作成テスト。"""
-        weapon = Weapon(x=0, y=0, name='Test Sword', attack_bonus=5)
+        weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
 
         trade_item = TradeItem(
-            item=weapon,
-            price=150,
-            quantity=1,
-            trade_type=TradeType.BUY
+            item=weapon, price=150, quantity=1, trade_type=TradeType.BUY
         )
 
         assert trade_item.item == weapon

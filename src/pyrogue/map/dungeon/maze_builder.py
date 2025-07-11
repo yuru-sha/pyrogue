@@ -8,16 +8,12 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
 
 import numpy as np
 
 from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Floor, Wall
 from pyrogue.utils import game_logger
-
-if TYPE_CHECKING:
-    pass
 
 
 class MazeBuilder:
@@ -33,6 +29,7 @@ class MazeBuilder:
         迷路ビルダーを初期化。
 
         Args:
+        ----
             width: ダンジョンの幅
             height: ダンジョンの高さ
             complexity: 迷路の複雑さ（0.0-1.0）。高いほど入り組んだ迷路になる
@@ -43,16 +40,20 @@ class MazeBuilder:
         self.complexity = complexity
         self.rooms: list[Room] = []  # 迷路には部屋は存在しないが、互換性のため
 
-        game_logger.info(f"MazeBuilder initialized: {width}x{height}, complexity={complexity}")
+        game_logger.info(
+            f"MazeBuilder initialized: {width}x{height}, complexity={complexity}"
+        )
 
     def build_dungeon(self, tiles: np.ndarray) -> list[Room]:
         """
         迷路階層を生成。
 
         Args:
+        ----
             tiles: タイル配列
 
         Returns:
+        -------
             空の部屋リスト（迷路には部屋が存在しない）
 
         """
@@ -100,9 +101,11 @@ class MazeBuilder:
 
                 for dx, dy in directions:
                     nx, ny = x + dx, y + dy
-                    if (1 <= nx < self.width - 1 and 1 <= ny < self.height - 1 and
-                        random.random() < extension_probability):
-
+                    if (
+                        1 <= nx < self.width - 1
+                        and 1 <= ny < self.height - 1
+                        and random.random() < extension_probability
+                    ):
                         # 通路と中間点を床に
                         tiles[ny, nx] = Floor()
                         tiles[y + dy // 2, x + dx // 2] = Floor()
@@ -157,7 +160,10 @@ class MazeBuilder:
                                 floor_neighbors += 1
 
                         # デッドエンド（隣接する床が1つだけ）を除去
-                        if floor_neighbors == 1 and random.random() < dead_end_removal_rate:
+                        if (
+                            floor_neighbors == 1
+                            and random.random() < dead_end_removal_rate
+                        ):
                             tiles[y, x] = Wall()
                             changed = True
 
@@ -182,15 +188,23 @@ class MazeBuilder:
                 if isinstance(tiles[y, x], Floor) and (x, y) not in largest_component:
                     tiles[y, x] = Wall()
 
-    def _flood_fill(self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int) -> list[tuple[int, int]]:
+    def _flood_fill(
+        self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int
+    ) -> list[tuple[int, int]]:
         """フラッドフィルで連結成分を取得。"""
         component = []
         stack = [(start_x, start_y)]
 
         while stack:
             x, y = stack.pop()
-            if (x < 0 or x >= self.width or y < 0 or y >= self.height or
-                visited[y, x] or isinstance(tiles[y, x], Wall)):
+            if (
+                x < 0
+                or x >= self.width
+                or y < 0
+                or y >= self.height
+                or visited[y, x]
+                or isinstance(tiles[y, x], Wall)
+            ):
                 continue
 
             visited[y, x] = True

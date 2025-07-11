@@ -5,6 +5,7 @@
 継続的な状態異常（毒、麻痺、混乱など）を定義します。
 
 Example:
+-------
     >>> poison = PoisonEffect(duration=5, damage=2)
     >>> poison.apply_per_turn(context)
     >>> confusion = ConfusionEffect(duration=3)
@@ -30,7 +31,8 @@ class StatusEffect(ABC):
     継続的な効果を持つ状態異常（毒、麻痺、混乱など）の
     基本的な機能を定義します。
 
-    Attributes:
+    Attributes
+    ----------
         name: 状態異常の名前
         description: 状態異常の説明
         duration: 残り継続ターン数
@@ -48,6 +50,7 @@ class StatusEffect(ABC):
         状態異常を初期化。
 
         Args:
+        ----
             name: 状態異常の名前
             description: 状態異常の説明
             duration: 継続ターン数
@@ -64,9 +67,11 @@ class StatusEffect(ABC):
         ターンごとに状態異常の効果を適用。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             状態異常が継続する場合はTrue、終了した場合はFalse
 
         """
@@ -75,7 +80,8 @@ class StatusEffect(ABC):
         """
         状態異常の継続ターン数を更新。
 
-        Returns:
+        Returns
+        -------
             状態異常が継続する場合はTrue、終了した場合はFalse
 
         """
@@ -105,6 +111,7 @@ class PoisonEffect(StatusEffect):
         毒状態効果を初期化。
 
         Args:
+        ----
             duration: 継続ターン数
             damage: 毎ターンのダメージ量
 
@@ -112,7 +119,7 @@ class PoisonEffect(StatusEffect):
         super().__init__(
             name="Poison",
             description=f"毒状態：毎ターン{damage}ダメージ",
-            duration=duration
+            duration=duration,
         )
         self.damage = damage
 
@@ -121,9 +128,11 @@ class PoisonEffect(StatusEffect):
         毒の効果を適用。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             毒状態が継続する場合はTrue、終了した場合はFalse
 
         """
@@ -153,13 +162,12 @@ class ParalysisEffect(StatusEffect):
         麻痺状態効果を初期化。
 
         Args:
+        ----
             duration: 継続ターン数
 
         """
         super().__init__(
-            name="Paralysis",
-            description="麻痺状態：行動不能",
-            duration=duration
+            name="Paralysis", description="麻痺状態：行動不能", duration=duration
         )
 
     def apply_per_turn(self, context: EffectContext) -> bool:
@@ -167,9 +175,11 @@ class ParalysisEffect(StatusEffect):
         麻痺の効果を適用。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             麻痺状態が継続する場合はTrue、終了した場合はFalse
 
         """
@@ -194,13 +204,14 @@ class ConfusionEffect(StatusEffect):
         混乱状態効果を初期化。
 
         Args:
+        ----
             duration: 継続ターン数
 
         """
         super().__init__(
             name="Confusion",
             description="混乱状態：行動がランダム化",
-            duration=duration
+            duration=duration,
         )
 
     def apply_per_turn(self, context: EffectContext) -> bool:
@@ -208,9 +219,11 @@ class ConfusionEffect(StatusEffect):
         混乱の効果を適用。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             混乱状態が継続する場合はTrue、終了した場合はFalse
 
         """
@@ -235,13 +248,12 @@ class HallucinationEffect(StatusEffect):
         幻覚状態効果を初期化。
 
         Args:
+        ----
             duration: 継続ターン数
 
         """
         super().__init__(
-            name="Hallucination",
-            description="幻覚状態：視覚混乱",
-            duration=duration
+            name="Hallucination", description="幻覚状態：視覚混乱", duration=duration
         )
 
     def apply_per_turn(self, context: EffectContext) -> bool:
@@ -249,24 +261,29 @@ class HallucinationEffect(StatusEffect):
         幻覚の効果を適用。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             幻覚状態が継続する場合はTrue、終了した場合はFalse
 
         """
         # 幻覚状態のメッセージを表示
         import random
+
         messages = [
             "Everything looks strange and distorted!",
             "Your vision blurs and shifts!",
             "Reality seems to waver before your eyes!",
-            "The world around you seems unreal!"
+            "The world around you seems unreal!",
         ]
 
-        if hasattr(context, 'add_message'):
+        if hasattr(context, "add_message"):
             context.add_message(random.choice(messages))
-        elif hasattr(context, 'game_screen') and hasattr(context.game_screen, 'message_log'):
+        elif hasattr(context, "game_screen") and hasattr(
+            context.game_screen, "message_log"
+        ):
             context.game_screen.message_log.append(random.choice(messages))
 
         # 継続ターン数を更新
@@ -294,6 +311,7 @@ class StatusEffectManager:
         より長い継続時間を優先します。
 
         Args:
+        ----
             effect: 追加する状態異常
 
         """
@@ -309,9 +327,11 @@ class StatusEffectManager:
         状態異常を削除。
 
         Args:
+        ----
             name: 削除する状態異常の名前
 
         Returns:
+        -------
             削除に成功した場合はTrue、指定された名前の状態異常が
             存在しない場合はFalse
 
@@ -326,9 +346,11 @@ class StatusEffectManager:
         指定された状態異常があるかどうかを判定。
 
         Args:
+        ----
             name: 判定する状態異常の名前
 
         Returns:
+        -------
             状態異常が存在する場合はTrue、そうでなければFalse
 
         """
@@ -338,7 +360,8 @@ class StatusEffectManager:
         """
         有効な状態異常のリストを取得。
 
-        Returns:
+        Returns
+        -------
             有効な状態異常のリスト
 
         """
@@ -352,6 +375,7 @@ class StatusEffectManager:
         効果が切れた状態異常は自動的に削除されます。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -378,7 +402,8 @@ class StatusEffectManager:
         """
         状態異常の要約を取得。
 
-        Returns:
+        Returns
+        -------
             状態異常の要約文字列
 
         """

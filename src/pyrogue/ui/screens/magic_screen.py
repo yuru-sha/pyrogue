@@ -5,6 +5,7 @@
 プレイヤーが魔法を選択して詠唱するためのUIを提供します。
 
 Example:
+-------
     >>> engine = Engine()
     >>> magic_screen = MagicScreen(engine)
     >>> magic_screen.render(console)
@@ -40,6 +41,7 @@ class MagicScreen(Screen):
         魔法スクリーンを初期化。
 
         Args:
+        ----
             engine: メインゲームエンジンのインスタンス
 
         """
@@ -53,6 +55,7 @@ class MagicScreen(Screen):
         魔法メニューを描画。
 
         Args:
+        ----
             console: 描画先のコンソール
 
         """
@@ -61,32 +64,25 @@ class MagicScreen(Screen):
 
         # タイトル
         console.print(
-            x=2, y=1,
-            string="Spellbook - Select a spell to cast",
-            fg=tcod.color.yellow
+            x=2, y=1, string="Spellbook - Select a spell to cast", fg=tcod.color.yellow
         )
 
         # MPの表示
         player = self.engine.game_screen.game_logic.player
         console.print(
-            x=2, y=3,
+            x=2,
+            y=3,
             string=f"MP: {player.mp}/{player.max_mp}",
-            fg=tcod.color.light_cyan
+            fg=tcod.color.light_cyan,
         )
 
         # 魔法一覧
         spells = player.spellbook.known_spells
         if not spells:
             console.print(
-                x=2, y=5,
-                string="You don't know any spells yet.",
-                fg=tcod.color.gray
+                x=2, y=5, string="You don't know any spells yet.", fg=tcod.color.gray
             )
-            console.print(
-                x=2, y=7,
-                string="Press ESC to return.",
-                fg=tcod.color.gray
-            )
+            console.print(x=2, y=7, string="Press ESC to return.", fg=tcod.color.gray)
             return
 
         # 魔法リスト表示
@@ -95,11 +91,7 @@ class MagicScreen(Screen):
 
             # 選択中の魔法をハイライト
             if i == self.selected_index:
-                console.print(
-                    x=1, y=y,
-                    string=">",
-                    fg=tcod.color.yellow
-                )
+                console.print(x=1, y=y, string=">", fg=tcod.color.yellow)
 
             # 魔法名とMP消費量
             spell_text = f"{chr(ord('a') + i)}) {spell.name} (MP:{spell.mp_cost})"
@@ -110,24 +102,19 @@ class MagicScreen(Screen):
             else:
                 color = tcod.color.white
 
-            console.print(
-                x=3, y=y,
-                string=spell_text,
-                fg=color
-            )
+            console.print(x=3, y=y, string=spell_text, fg=color)
 
             # 魔法の説明
             console.print(
-                x=5, y=y+1,
-                string=f"   {spell.description}",
-                fg=tcod.color.light_gray
+                x=5, y=y + 1, string=f"   {spell.description}", fg=tcod.color.light_gray
             )
 
         # 操作説明
         console.print(
-            x=2, y=len(spells) * 2 + 7,
+            x=2,
+            y=len(spells) * 2 + 7,
             string="Use arrow keys to select, Enter to cast, ESC to cancel",
-            fg=tcod.color.gray
+            fg=tcod.color.gray,
         )
 
     def handle_key(self, event: tcod.event.KeyDown) -> None:
@@ -135,6 +122,7 @@ class MagicScreen(Screen):
         魔法選択メニューのキー入力処理。
 
         Args:
+        ----
             event: キー入力イベント
 
         """
@@ -167,7 +155,9 @@ class MagicScreen(Screen):
 
             # MP不足チェック
             if player.mp < selected_spell.mp_cost:
-                self.engine.game_screen.game_logic.add_message("You don't have enough MP!")
+                self.engine.game_screen.game_logic.add_message(
+                    "You don't have enough MP!"
+                )
                 return
 
             # 攻撃魔法の場合はターゲット選択へ
@@ -194,7 +184,9 @@ class MagicScreen(Screen):
 
                 # MP不足チェック
                 if player.mp < selected_spell.mp_cost:
-                    self.engine.game_screen.game_logic.add_message("You don't have enough MP!")
+                    self.engine.game_screen.game_logic.add_message(
+                        "You don't have enough MP!"
+                    )
                     return
 
                 # 攻撃魔法の場合はターゲット選択へ

@@ -54,6 +54,7 @@ class BSPDungeonBuilder:
         BSPダンジョンビルダーを初期化。
 
         Args:
+        ----
             width: ダンジョンの幅
             height: ダンジョンの高さ
             min_section_size: セクションの最小サイズ
@@ -67,16 +68,20 @@ class BSPDungeonBuilder:
         self.root = BSPSection(0, 0, width, height)
         self.rooms: list[Room] = []
 
-        game_logger.info(f"BSPDungeonBuilder initialized: {width}x{height}, min_size={min_section_size}")
+        game_logger.info(
+            f"BSPDungeonBuilder initialized: {width}x{height}, min_size={min_section_size}"
+        )
 
     def build_dungeon(self, tiles: np.ndarray) -> list[Room]:
         """
         BSPベースのダンジョンを生成。
 
         Args:
+        ----
             tiles: タイル配列
 
         Returns:
+        -------
             生成された部屋のリスト
 
         """
@@ -101,8 +106,10 @@ class BSPDungeonBuilder:
     def _split_section(self, section: BSPSection) -> None:
         """セクションを再帰的に分割。"""
         # 分割が不可能な場合は停止
-        if (section.width < self.min_section_size * 2 or
-            section.height < self.min_section_size * 2):
+        if (
+            section.width < self.min_section_size * 2
+            or section.height < self.min_section_size * 2
+        ):
             return
 
         # 分割方向を決定（より正方形に近いセクションになるように）
@@ -125,18 +132,17 @@ class BSPDungeonBuilder:
                 return  # 分割不可
 
             split_pos = random.randint(
-                self.min_section_size,
-                section.height - self.min_section_size
+                self.min_section_size, section.height - self.min_section_size
             )
             child1 = BSPSection(
-                section.x, section.y,
-                section.width, split_pos,
-                parent=section
+                section.x, section.y, section.width, split_pos, parent=section
             )
             child2 = BSPSection(
-                section.x, section.y + split_pos,
-                section.width, section.height - split_pos,
-                parent=section
+                section.x,
+                section.y + split_pos,
+                section.width,
+                section.height - split_pos,
+                parent=section,
             )
         else:
             # 垂直分割（幅を分割）
@@ -144,18 +150,17 @@ class BSPDungeonBuilder:
                 return  # 分割不可
 
             split_pos = random.randint(
-                self.min_section_size,
-                section.width - self.min_section_size
+                self.min_section_size, section.width - self.min_section_size
             )
             child1 = BSPSection(
-                section.x, section.y,
-                split_pos, section.height,
-                parent=section
+                section.x, section.y, split_pos, section.height, parent=section
             )
             child2 = BSPSection(
-                section.x + split_pos, section.y,
-                section.width - split_pos, section.height,
-                parent=section
+                section.x + split_pos,
+                section.y,
+                section.width - split_pos,
+                section.height,
+                parent=section,
             )
 
         section.children = [child1, child2]
@@ -230,7 +235,9 @@ class BSPDungeonBuilder:
                 room_height = random.randint(min_height, max_height)
 
                 # アスペクト比チェックと調整
-                aspect_ratio = max(room_width, room_height) / min(room_width, room_height)
+                aspect_ratio = max(room_width, room_height) / min(
+                    room_width, room_height
+                )
                 if aspect_ratio > 2.0:  # 2:1より細長い場合は調整
                     if room_width > room_height:
                         room_width = min(room_width, room_height * 2)
@@ -243,12 +250,20 @@ class BSPDungeonBuilder:
 
                 # 中央位置から少しずらす（±1マスの範囲内）
                 offset_range = 1
-                room_x = max(section.x + margin,
-                           min(center_x + random.randint(-offset_range, offset_range),
-                               section.x + section.width - room_width - margin))
-                room_y = max(section.y + margin,
-                           min(center_y + random.randint(-offset_range, offset_range),
-                               section.y + section.height - room_height - margin))
+                room_x = max(
+                    section.x + margin,
+                    min(
+                        center_x + random.randint(-offset_range, offset_range),
+                        section.x + section.width - room_width - margin,
+                    ),
+                )
+                room_y = max(
+                    section.y + margin,
+                    min(
+                        center_y + random.randint(-offset_range, offset_range),
+                        section.y + section.height - room_height - margin,
+                    ),
+                )
 
                 # 境界チェック
                 room_x = max(1, min(room_x, self.width - room_width - 1))
@@ -257,11 +272,7 @@ class BSPDungeonBuilder:
                 room_height = min(room_height, self.height - room_y - 1)
 
                 room = Room(
-                    id=room_id,
-                    x=room_x,
-                    y=room_y,
-                    width=room_width,
-                    height=room_height
+                    id=room_id, x=room_x, y=room_y, width=room_width, height=room_height
                 )
 
                 self.rooms.append(room)
@@ -283,8 +294,12 @@ class BSPDungeonBuilder:
         for y in range(room.y, room.y + room.height):
             for x in range(room.x, room.x + room.width):
                 if 0 <= x < self.width and 0 <= y < self.height:
-                    if (x == room.x or x == room.x + room.width - 1 or
-                        y == room.y or y == room.y + room.height - 1):
+                    if (
+                        x == room.x
+                        or x == room.x + room.width - 1
+                        or y == room.y
+                        or y == room.y + room.height - 1
+                    ):
                         # 既に床でない場合のみ壁に設定
                         if not isinstance(tiles[y, x], Floor):
                             tiles[y, x] = Wall()
@@ -304,7 +319,9 @@ class BSPDungeonBuilder:
             child1, child2 = current.children
 
             # 両方の子に部屋があるかチェック
-            if not (self._has_room_descendant(child1) and self._has_room_descendant(child2)):
+            if not (
+                self._has_room_descendant(child1) and self._has_room_descendant(child2)
+            ):
                 continue
 
             # 分割線に沿って通路を作成
@@ -312,7 +329,7 @@ class BSPDungeonBuilder:
                 split_x = child2.x
                 corridor_y = random.randint(
                     max(child1.y + 1, child2.y + 1),
-                    min(child1.y + child1.height - 2, child2.y + child2.height - 2)
+                    min(child1.y + child1.height - 2, child2.y + child2.height - 2),
                 )
 
                 room1_center = self._find_room_center_in_section(child1)
@@ -320,14 +337,18 @@ class BSPDungeonBuilder:
 
                 if room1_center and room2_center:
                     # L字型通路を作成
-                    self._create_corridor(tiles, room1_center[0], room1_center[1], split_x, corridor_y)
-                    self._create_corridor(tiles, split_x, corridor_y, room2_center[0], room2_center[1])
+                    self._create_corridor(
+                        tiles, room1_center[0], room1_center[1], split_x, corridor_y
+                    )
+                    self._create_corridor(
+                        tiles, split_x, corridor_y, room2_center[0], room2_center[1]
+                    )
 
             else:  # 水平分割
                 split_y = child2.y
                 corridor_x = random.randint(
                     max(child1.x + 1, child2.x + 1),
-                    min(child1.x + child1.width - 2, child2.x + child2.width - 2)
+                    min(child1.x + child1.width - 2, child2.x + child2.width - 2),
                 )
 
                 room1_center = self._find_room_center_in_section(child1)
@@ -335,8 +356,12 @@ class BSPDungeonBuilder:
 
                 if room1_center and room2_center:
                     # L字型通路を作成
-                    self._create_corridor(tiles, room1_center[0], room1_center[1], corridor_x, split_y)
-                    self._create_corridor(tiles, corridor_x, split_y, room2_center[0], room2_center[1])
+                    self._create_corridor(
+                        tiles, room1_center[0], room1_center[1], corridor_x, split_y
+                    )
+                    self._create_corridor(
+                        tiles, corridor_x, split_y, room2_center[0], room2_center[1]
+                    )
 
     def _has_room_descendant(self, section: BSPSection) -> bool:
         """セクションまたはその子孫に部屋があるかチェック。"""
@@ -346,7 +371,9 @@ class BSPDungeonBuilder:
             return False
         return any(self._has_room_descendant(child) for child in section.children)
 
-    def _find_room_center_in_section(self, section: BSPSection) -> tuple[int, int] | None:
+    def _find_room_center_in_section(
+        self, section: BSPSection
+    ) -> tuple[int, int] | None:
         """セクション内の部屋の中心座標を見つける。"""
         if section.purpose == "room" and section.room:
             return section.room.center()
@@ -359,7 +386,9 @@ class BSPDungeonBuilder:
                 return center
         return None
 
-    def _create_corridor(self, tiles: np.ndarray, x1: int, y1: int, x2: int, y2: int) -> None:
+    def _create_corridor(
+        self, tiles: np.ndarray, x1: int, y1: int, x2: int, y2: int
+    ) -> None:
         """2点間にL字型通路を作成。"""
         if random.random() < 0.5:
             # 水平 → 垂直
@@ -370,7 +399,9 @@ class BSPDungeonBuilder:
             self._carve_path(tiles, x1, y1, x1, y2)
             self._carve_path(tiles, x1, y2, x2, y2)
 
-    def _carve_path(self, tiles: np.ndarray, x1: int, y1: int, x2: int, y2: int) -> None:
+    def _carve_path(
+        self, tiles: np.ndarray, x1: int, y1: int, x2: int, y2: int
+    ) -> None:
         """直線通路を彫る。"""
         if x1 == x2:  # 垂直線
             for y in range(min(y1, y2), max(y1, y2) + 1):
@@ -388,15 +419,17 @@ class BSPDungeonBuilder:
             wall_candidates = {
                 "north": [],  # 上壁
                 "south": [],  # 下壁
-                "west": [],   # 左壁
-                "east": []    # 右壁
+                "west": [],  # 左壁
+                "east": [],  # 右壁
             }
 
             # 部屋の境界で通路と接続している点を壁ごとに分類
             for y in range(room.y, room.y + room.height):
                 for x in range(room.x, room.x + room.width):
                     # 境界が床で、かつ真の入り口である場合
-                    if isinstance(tiles[y, x], Floor) and self._is_room_entrance(x, y, room, tiles):
+                    if isinstance(tiles[y, x], Floor) and self._is_room_entrance(
+                        x, y, room, tiles
+                    ):
                         if y == room.y:  # 上壁
                             wall_candidates["north"].append((x, y))
                         elif y == room.y + room.height - 1:  # 下壁
@@ -426,8 +459,12 @@ class BSPDungeonBuilder:
     def _is_room_entrance(self, x: int, y: int, room: Room, tiles: np.ndarray) -> bool:
         """指定された位置が部屋の真の入り口かどうかを判定。"""
         # 部屋の境界上にあることを確認
-        is_on_boundary = (x == room.x or x == room.x + room.width - 1 or
-                         y == room.y or y == room.y + room.height - 1)
+        is_on_boundary = (
+            x == room.x
+            or x == room.x + room.width - 1
+            or y == room.y
+            or y == room.y + room.height - 1
+        )
 
         if not is_on_boundary:
             return False
@@ -449,10 +486,14 @@ class BSPDungeonBuilder:
 
     def _is_inside_room(self, x: int, y: int, room: Room) -> bool:
         """指定された位置が部屋の内部にあるかチェック。"""
-        return (room.x < x < room.x + room.width - 1 and
-                room.y < y < room.y + room.height - 1)
+        return (
+            room.x < x < room.x + room.width - 1
+            and room.y < y < room.y + room.height - 1
+        )
 
-    def _select_best_door_for_wall(self, candidates: list[tuple[int, int]], room: Room, wall: str) -> tuple[int, int] | None:
+    def _select_best_door_for_wall(
+        self, candidates: list[tuple[int, int]], room: Room, wall: str
+    ) -> tuple[int, int] | None:
         """各壁の最適なドア位置を選択。"""
         if not candidates:
             return None
@@ -486,6 +527,8 @@ class BSPDungeonBuilder:
             "builder_type": "BSP",
             "leaf_sections": leaf_count,
             "room_count": room_count,
-            "room_ratio": f"{room_count / leaf_count * 100:.1f}%" if leaf_count > 0 else "0%",
+            "room_ratio": f"{room_count / leaf_count * 100:.1f}%"
+            if leaf_count > 0
+            else "0%",
             "min_section_size": self.min_section_size,
         }

@@ -23,7 +23,8 @@ class InputHandler:
 
     キーボード入力の解釈、コマンドの実行、ターゲット選択モードの管理を担当します。
 
-    Attributes:
+    Attributes
+    ----------
         game_screen: メインのゲームスクリーンへの参照
         targeting_mode: ターゲット選択モード状態
         targeting_x: ターゲット選択時のX座標
@@ -36,6 +37,7 @@ class InputHandler:
         入力ハンドラーを初期化。
 
         Args:
+        ----
             game_screen: メインのゲームスクリーンインスタンス
 
         """
@@ -49,6 +51,7 @@ class InputHandler:
         キー入力を処理。
 
         Args:
+        ----
             event: TCODキーイベント
 
         """
@@ -62,6 +65,7 @@ class InputHandler:
         通常モードのキー入力を処理。
 
         Args:
+        ----
             event: TCODキーイベント
 
         """
@@ -71,30 +75,28 @@ class InputHandler:
         # 移動コマンド（Vi-keys + 矢印キー + テンキー）
         movement_keys = {
             # Vi-keys
-            ord("h"): (-1, 0),    # 左
-            ord("j"): (0, 1),     # 下
-            ord("k"): (0, -1),    # 上
-            ord("l"): (1, 0),     # 右
-            ord("y"): (-1, -1),   # 左上
-            ord("u"): (1, -1),    # 右上
-            ord("b"): (-1, 1),    # 左下
-            ord("n"): (1, 1),     # 右下
-
+            ord("h"): (-1, 0),  # 左
+            ord("j"): (0, 1),  # 下
+            ord("k"): (0, -1),  # 上
+            ord("l"): (1, 0),  # 右
+            ord("y"): (-1, -1),  # 左上
+            ord("u"): (1, -1),  # 右上
+            ord("b"): (-1, 1),  # 左下
+            ord("n"): (1, 1),  # 右下
             # 矢印キー
             tcod.event.KeySym.LEFT: (-1, 0),
             tcod.event.KeySym.RIGHT: (1, 0),
             tcod.event.KeySym.UP: (0, -1),
             tcod.event.KeySym.DOWN: (0, 1),
-
             # テンキー
-            tcod.event.KeySym.KP_4: (-1, 0),    # 左
-            tcod.event.KeySym.KP_6: (1, 0),     # 右
-            tcod.event.KeySym.KP_8: (0, -1),    # 上
-            tcod.event.KeySym.KP_2: (0, 1),     # 下
-            tcod.event.KeySym.KP_7: (-1, -1),   # 左上
-            tcod.event.KeySym.KP_9: (1, -1),    # 右上
-            tcod.event.KeySym.KP_1: (-1, 1),    # 左下
-            tcod.event.KeySym.KP_3: (1, 1),     # 右下
+            tcod.event.KeySym.KP_4: (-1, 0),  # 左
+            tcod.event.KeySym.KP_6: (1, 0),  # 右
+            tcod.event.KeySym.KP_8: (0, -1),  # 上
+            tcod.event.KeySym.KP_2: (0, 1),  # 下
+            tcod.event.KeySym.KP_7: (-1, -1),  # 左上
+            tcod.event.KeySym.KP_9: (1, -1),  # 右上
+            tcod.event.KeySym.KP_1: (-1, 1),  # 左下
+            tcod.event.KeySym.KP_3: (1, 1),  # 右下
         }
 
         # 移動処理
@@ -170,6 +172,7 @@ class InputHandler:
         ターゲット選択モードのキー入力を処理。
 
         Args:
+        ----
             event: TCODキーイベント
 
         """
@@ -179,11 +182,15 @@ class InputHandler:
         if key == tcod.event.KeySym.LEFT or key == ord("h"):
             self.targeting_x = max(0, self.targeting_x - 1)
         elif key == tcod.event.KeySym.RIGHT or key == ord("l"):
-            self.targeting_x = min(self.game_screen.dungeon_width - 1, self.targeting_x + 1)
+            self.targeting_x = min(
+                self.game_screen.dungeon_width - 1, self.targeting_x + 1
+            )
         elif key == tcod.event.KeySym.UP or key == ord("k"):
             self.targeting_y = max(0, self.targeting_y - 1)
         elif key == tcod.event.KeySym.DOWN or key == ord("j"):
-            self.targeting_y = min(self.game_screen.dungeon_height - 1, self.targeting_y + 1)
+            self.targeting_y = min(
+                self.game_screen.dungeon_height - 1, self.targeting_y + 1
+            )
 
         # ターゲット確定
         elif key == tcod.event.KeySym.RETURN:
@@ -198,6 +205,7 @@ class InputHandler:
         ドアの開閉処理。
 
         Args:
+        ----
             open_door: True=開く、False=閉じる
 
         """
@@ -265,6 +273,7 @@ class InputHandler:
         ターゲット選択モードを開始。
 
         Args:
+        ----
             start_x: 開始X座標（未指定の場合はプレイヤー位置）
             start_y: 開始Y座標（未指定の場合はプレイヤー位置）
 
@@ -289,7 +298,9 @@ class InputHandler:
         """
         self.targeting_mode = False
         # ターゲット座標をゲームロジックに通知
-        self.game_screen.game_logic.handle_target_selection(self.targeting_x, self.targeting_y)
+        self.game_screen.game_logic.handle_target_selection(
+            self.targeting_x, self.targeting_y
+        )
 
     def _cancel_targeting(self) -> None:
         """
@@ -302,7 +313,8 @@ class InputHandler:
         """
         ターゲット選択の情報を取得。
 
-        Returns:
+        Returns
+        -------
             (ターゲット選択中か, X座標, Y座標)
 
         """
@@ -316,8 +328,11 @@ class InputHandler:
         """
         # NPCシステムの有効性をチェック
         from pyrogue.constants import FeatureConstants
+
         if not FeatureConstants.ENABLE_NPC_SYSTEM:
-            self.game_screen.game_logic.add_message("NPCs are not available in this version.")
+            self.game_screen.game_logic.add_message(
+                "NPCs are not available in this version."
+            )
             return
 
         player = self.game_screen.player
@@ -348,6 +363,7 @@ class InputHandler:
         NPCとの対話を開始。
 
         Args:
+        ----
             npc: 対話するNPC
 
         """
@@ -363,7 +379,7 @@ class InputHandler:
         dialogue_screen = DialogueScreen(
             self.game_screen.engine,
             self.game_screen.engine.dialogue_manager,
-            dialogue_id
+            dialogue_id,
         )
 
         # 対話画面を設定

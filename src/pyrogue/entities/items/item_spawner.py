@@ -6,6 +6,7 @@
 ゲームバランスと探索の楽しさを両立させます。
 
 Example:
+-------
     >>> spawner = ItemSpawner(floor=1)
     >>> spawner.spawn_items(dungeon_tiles, rooms)
     >>> item = spawner.get_item_at(10, 5)
@@ -17,9 +18,9 @@ from __future__ import annotations
 import random
 
 import numpy as np
-
 from pyrogue.map.dungeon import Room
 
+from .amulet import AmuletOfYendor
 from .effects import (
     ENCHANT_ARMOR,
     ENCHANT_WEAPON,
@@ -31,10 +32,8 @@ from .effects import (
     Effect,
     HealingEffect,
 )
-from .amulet import AmuletOfYendor
 from .item import Armor, Food, Gold, Item, Potion, Ring, Scroll, Weapon
 from .item_types import (
-    AMULET,
     ARMORS,
     FOODS,
     POTIONS,
@@ -55,7 +54,8 @@ class ItemSpawner:
     アイテムの重複配置を防ぎ、階層に応じた品質調整を行います。
     イェンダーのアミュレットなどの特別なアイテムも管理します。
 
-    Attributes:
+    Attributes
+    ----------
         floor: 現在の階層
         items: 配置されたアイテムのリスト
         occupied_positions: アイテムが配置されている座標のセット
@@ -67,6 +67,7 @@ class ItemSpawner:
         アイテムスポナーを初期化。
 
         Args:
+        ----
             floor: 対象となる階層
 
         """
@@ -82,6 +83,7 @@ class ItemSpawner:
         26階層では特別にイェンダーのアミュレットを配置します。
 
         Args:
+        ----
             dungeon_tiles: ダンジョンのタイル配列
             rooms: ダンジョンの部屋リスト
 
@@ -155,10 +157,12 @@ class ItemSpawner:
         壁を避け、他のアイテムと重複しない位置を最大10回試行して見つけます。
 
         Args:
+        ----
             dungeon_tiles: ダンジョンのタイル配列
             room: 対象の部屋
 
         Returns:
+        -------
             有効な位置の(x, y)座標。見つからない場合は(None, None)
 
         """
@@ -187,9 +191,11 @@ class ItemSpawner:
         迷路階層など部屋がない場合に使用します。
 
         Args:
+        ----
             dungeon_tiles: ダンジョンのタイル配列
 
         Returns:
+        -------
             有効な位置の(x, y)座標。見つからない場合は(None, None)
         """
         height, width = dungeon_tiles.shape
@@ -210,10 +216,12 @@ class ItemSpawner:
         指定された位置がアイテムによって占有されているかチェック。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             占有されている場合True
 
         """
@@ -226,7 +234,8 @@ class ItemSpawner:
         現在の階層で利用可能な武器タイプから重み付き抽選で選択し、
         ボーナス値もランダムに決定します。
 
-        Returns:
+        Returns
+        -------
             生成された武器。利用可能な武器がない場合はNone
 
         """
@@ -247,7 +256,8 @@ class ItemSpawner:
         現在の階層で利用可能な防具タイプから重み付き抽選で選択し、
         ボーナス値もランダムに決定します。
 
-        Returns:
+        Returns
+        -------
             生成された防具。利用可能な防具がない場合はNone
 
         """
@@ -268,7 +278,8 @@ class ItemSpawner:
         現在の階層で利用可能な指輪タイプから重み付き抽選で選択し、
         効果の強度もランダムに決定します。
 
-        Returns:
+        Returns
+        -------
             生成された指輪。利用可能な指輪がない場合はNone
 
         """
@@ -288,7 +299,8 @@ class ItemSpawner:
 
         現在の階層で利用可能な巻物タイプから重み付き抽選で選択します。
 
-        Returns:
+        Returns
+        -------
             生成された巻物。利用可能な巻物がない場合はNone
 
         """
@@ -309,7 +321,8 @@ class ItemSpawner:
         現在の階層で利用可能なポーションタイプから重み付き抽選で選択し、
         効果の強度もランダムに決定します。
 
-        Returns:
+        Returns
+        -------
             生成されたポーション。利用可能なポーションがない場合はNone
 
         """
@@ -329,7 +342,8 @@ class ItemSpawner:
 
         現在の階層で利用可能な食料タイプから重み付き抽選で選択します。
 
-        Returns:
+        Returns
+        -------
             生成された食料。利用可能な食料がない場合はNone
 
         """
@@ -349,7 +363,8 @@ class ItemSpawner:
 
         現在の階層に応じた金額を決定します。
 
-        Returns:
+        Returns
+        -------
             生成された金貨
 
         """
@@ -361,10 +376,12 @@ class ItemSpawner:
         指定された位置にあるアイテムを取得。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             該当位置のアイテム。存在しない場合はNone
 
         """
@@ -380,6 +397,7 @@ class ItemSpawner:
         アイテムリストと占有位置セットの両方から削除します。
 
         Args:
+        ----
             item: 削除するアイテム
 
         """
@@ -394,9 +412,11 @@ class ItemSpawner:
         アイテムを追加。
 
         Args:
+        ----
             item: 追加するアイテム
 
         Returns:
+        -------
             bool: 追加に成功した場合はTrue
 
         """
@@ -430,12 +450,15 @@ class ItemSpawner:
             return HealingEffect(power)
         if effect_name == "poison":
             from .effects import PoisonPotionEffect
+
             return PoisonPotionEffect(duration=power, damage=2)
         if effect_name == "paralysis":
             from .effects import ParalysisPotionEffect
+
             return ParalysisPotionEffect(duration=power)
         if effect_name == "confusion":
             from .effects import ConfusionPotionEffect
+
             return ConfusionPotionEffect(duration=power)
         if effect_name in [
             "strength",

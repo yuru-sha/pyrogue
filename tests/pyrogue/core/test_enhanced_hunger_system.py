@@ -8,8 +8,6 @@
 
 from unittest.mock import Mock
 
-import pytest
-
 from pyrogue.constants import HungerConstants
 from pyrogue.core.managers.game_context import GameContext
 from pyrogue.core.managers.turn_manager import TurnManager
@@ -67,15 +65,24 @@ class TestEnhancedHungerSystem:
 
         # 空腹状態（軽微なペナルティ）
         self.player.hunger = 25
-        assert self.player.get_hunger_attack_penalty() == HungerConstants.HUNGRY_ATTACK_PENALTY
+        assert (
+            self.player.get_hunger_attack_penalty()
+            == HungerConstants.HUNGRY_ATTACK_PENALTY
+        )
 
         # 非常に空腹状態（中程度のペナルティ）
         self.player.hunger = 10
-        assert self.player.get_hunger_attack_penalty() == HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
+        assert (
+            self.player.get_hunger_attack_penalty()
+            == HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
+        )
 
         # 飢餓状態（重大なペナルティ）
         self.player.hunger = 3
-        assert self.player.get_hunger_attack_penalty() == HungerConstants.STARVING_ATTACK_PENALTY
+        assert (
+            self.player.get_hunger_attack_penalty()
+            == HungerConstants.STARVING_ATTACK_PENALTY
+        )
 
         # 攻撃力は最低1を保証
         expected_attack = base_attack - HungerConstants.STARVING_ATTACK_PENALTY
@@ -91,15 +98,24 @@ class TestEnhancedHungerSystem:
 
         # 空腹状態（軽微なペナルティ）
         self.player.hunger = 25
-        assert self.player.get_hunger_defense_penalty() == HungerConstants.HUNGRY_DEFENSE_PENALTY
+        assert (
+            self.player.get_hunger_defense_penalty()
+            == HungerConstants.HUNGRY_DEFENSE_PENALTY
+        )
 
         # 非常に空腹状態（中程度のペナルティ）
         self.player.hunger = 10
-        assert self.player.get_hunger_defense_penalty() == HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
+        assert (
+            self.player.get_hunger_defense_penalty()
+            == HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
+        )
 
         # 飢餓状態（重大なペナルティ）
         self.player.hunger = 3
-        assert self.player.get_hunger_defense_penalty() == HungerConstants.STARVING_DEFENSE_PENALTY
+        assert (
+            self.player.get_hunger_defense_penalty()
+            == HungerConstants.STARVING_DEFENSE_PENALTY
+        )
 
         # 防御力は0未満にならない
         expected_defense = base_defense - HungerConstants.STARVING_DEFENSE_PENALTY
@@ -119,7 +135,9 @@ class TestEnhancedHungerSystem:
         # 減少間隔に達すると飢餓が減少
         self.turn_manager.turn_count = HungerConstants.HUNGER_DECREASE_INTERVAL
         self.turn_manager._process_hunger_system(self.context)
-        assert self.player.hunger == initial_hunger - HungerConstants.HUNGER_DECREASE_RATE
+        assert (
+            self.player.hunger == initial_hunger - HungerConstants.HUNGER_DECREASE_RATE
+        )
 
     def test_hunger_state_change_messages(self):
         """飢餓状態変化時のメッセージテスト。"""
@@ -253,14 +271,28 @@ class TestEnhancedHungerSystem:
         assert HungerConstants.FULL_THRESHOLD > HungerConstants.CONTENT_THRESHOLD
         assert HungerConstants.CONTENT_THRESHOLD > HungerConstants.HUNGRY_THRESHOLD
         assert HungerConstants.HUNGRY_THRESHOLD > HungerConstants.VERY_HUNGRY_THRESHOLD
-        assert HungerConstants.VERY_HUNGRY_THRESHOLD > HungerConstants.STARVING_THRESHOLD
+        assert (
+            HungerConstants.VERY_HUNGRY_THRESHOLD > HungerConstants.STARVING_THRESHOLD
+        )
         assert HungerConstants.STARVING_THRESHOLD >= 0
 
     def test_hunger_penalties_escalation(self):
         """飢餓ペナルティの段階的エスカレーションテスト。"""
         # ペナルティが段階的に厳しくなることを確認
-        assert HungerConstants.HUNGRY_ATTACK_PENALTY < HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
-        assert HungerConstants.VERY_HUNGRY_ATTACK_PENALTY < HungerConstants.STARVING_ATTACK_PENALTY
+        assert (
+            HungerConstants.HUNGRY_ATTACK_PENALTY
+            < HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
+        )
+        assert (
+            HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
+            < HungerConstants.STARVING_ATTACK_PENALTY
+        )
 
-        assert HungerConstants.HUNGRY_DEFENSE_PENALTY < HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
-        assert HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY < HungerConstants.STARVING_DEFENSE_PENALTY
+        assert (
+            HungerConstants.HUNGRY_DEFENSE_PENALTY
+            < HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
+        )
+        assert (
+            HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
+            < HungerConstants.STARVING_DEFENSE_PENALTY
+        )

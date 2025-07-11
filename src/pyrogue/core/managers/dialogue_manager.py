@@ -17,11 +17,11 @@ from typing import Any, Protocol
 class DialogueAction(Enum):
     """会話アクションの種類を定義する列挙型。"""
 
-    CONTINUE = "continue"        # 会話を継続
-    END = "end"                 # 会話を終了
-    TRADE = "trade"             # 取引画面を開く
-    QUEST = "quest"             # クエスト関連の処理
-    CUSTOM = "custom"           # カスタム処理
+    CONTINUE = "continue"  # 会話を継続
+    END = "end"  # 会話を終了
+    TRADE = "trade"  # 取引画面を開く
+    QUEST = "quest"  # クエスト関連の処理
+    CUSTOM = "custom"  # カスタム処理
 
 
 @dataclass
@@ -29,7 +29,8 @@ class DialogueChoice:
     """
     会話の選択肢を表すデータクラス。
 
-    Attributes:
+    Attributes
+    ----------
         text: 選択肢のテキスト
         next_node: 次の会話ノードID
         action: 実行するアクション
@@ -48,7 +49,8 @@ class DialogueNode:
     """
     会話ノードを表すデータクラス。
 
-    Attributes:
+    Attributes
+    ----------
         id: ノードID
         text: 表示するテキスト
         speaker: 話者（NPC名など）
@@ -97,7 +99,8 @@ class DialogueManager:
     NPCとの会話を管理し、会話データの読み込み、会話の進行、
     選択肢の処理などを行います。
 
-    Attributes:
+    Attributes
+    ----------
         dialogues: 読み込まれた会話データ
         current_dialogue: 現在の会話ID
         current_node: 現在の会話ノード
@@ -110,6 +113,7 @@ class DialogueManager:
         DialogueManagerの初期化。
 
         Args:
+        ----
             data_path: 会話データファイルのパス
 
         """
@@ -138,18 +142,15 @@ class DialogueManager:
                         DialogueChoice(
                             text="I'd like to trade.",
                             next_node=None,
-                            action=DialogueAction.TRADE
+                            action=DialogueAction.TRADE,
                         ),
                         DialogueChoice(
-                            text="Tell me about your wares.",
-                            next_node="about_wares"
+                            text="Tell me about your wares.", next_node="about_wares"
                         ),
                         DialogueChoice(
-                            text="Goodbye.",
-                            next_node=None,
-                            action=DialogueAction.END
-                        )
-                    ]
+                            text="Goodbye.", next_node=None, action=DialogueAction.END
+                        ),
+                    ],
                 ),
                 DialogueNode(
                     id="about_wares",
@@ -159,15 +160,15 @@ class DialogueManager:
                         DialogueChoice(
                             text="I'd like to trade.",
                             next_node=None,
-                            action=DialogueAction.TRADE
+                            action=DialogueAction.TRADE,
                         ),
                         DialogueChoice(
                             text="Maybe later.",
                             next_node=None,
-                            action=DialogueAction.END
-                        )
-                    ]
-                )
+                            action=DialogueAction.END,
+                        ),
+                    ],
+                ),
             ],
             "neutral_guard": [
                 DialogueNode(
@@ -177,18 +178,17 @@ class DialogueManager:
                     choices=[
                         DialogueChoice(
                             text="I'm just passing through.",
-                            next_node="passing_through"
+                            next_node="passing_through",
                         ),
                         DialogueChoice(
-                            text="I'm looking for information.",
-                            next_node="information"
+                            text="I'm looking for information.", next_node="information"
                         ),
                         DialogueChoice(
                             text="Sorry, I'll be on my way.",
                             next_node=None,
-                            action=DialogueAction.END
-                        )
-                    ]
+                            action=DialogueAction.END,
+                        ),
+                    ],
                 ),
                 DialogueNode(
                     id="passing_through",
@@ -198,9 +198,9 @@ class DialogueManager:
                         DialogueChoice(
                             text="Thanks for the warning.",
                             next_node=None,
-                            action=DialogueAction.END
+                            action=DialogueAction.END,
                         )
-                    ]
+                    ],
                 ),
                 DialogueNode(
                     id="information",
@@ -208,15 +208,14 @@ class DialogueManager:
                     speaker="Guard",
                     choices=[
                         DialogueChoice(
-                            text="About the dungeon.",
-                            next_node="dungeon_info"
+                            text="About the dungeon.", next_node="dungeon_info"
                         ),
                         DialogueChoice(
                             text="Never mind.",
                             next_node=None,
-                            action=DialogueAction.END
-                        )
-                    ]
+                            action=DialogueAction.END,
+                        ),
+                    ],
                 ),
                 DialogueNode(
                     id="dungeon_info",
@@ -226,11 +225,11 @@ class DialogueManager:
                         DialogueChoice(
                             text="I see. Thank you.",
                             next_node=None,
-                            action=DialogueAction.END
+                            action=DialogueAction.END,
                         )
-                    ]
-                )
-            ]
+                    ],
+                ),
+            ],
         }
 
         self.dialogues = default_dialogues
@@ -240,6 +239,7 @@ class DialogueManager:
         ファイルから会話データを読み込む。
 
         Args:
+        ----
             file_path: 会話データファイルのパス
 
         """
@@ -256,8 +256,10 @@ class DialogueManager:
                         choice = DialogueChoice(
                             text=choice_data["text"],
                             next_node=choice_data.get("next_node"),
-                            action=DialogueAction(choice_data.get("action", "continue")),
-                            condition=choice_data.get("condition")
+                            action=DialogueAction(
+                                choice_data.get("action", "continue")
+                            ),
+                            condition=choice_data.get("condition"),
                         )
                         choices.append(choice)
 
@@ -267,7 +269,7 @@ class DialogueManager:
                         speaker=node_data["speaker"],
                         choices=choices,
                         action=DialogueAction(node_data.get("action", "continue")),
-                        condition=node_data.get("condition")
+                        condition=node_data.get("condition"),
                     )
                     nodes.append(node)
 
@@ -281,10 +283,12 @@ class DialogueManager:
         会話を開始する。
 
         Args:
+        ----
             dialogue_id: 会話ID
             context: 会話コンテキスト
 
         Returns:
+        -------
             会話開始に成功した場合はTrue
 
         """
@@ -301,7 +305,8 @@ class DialogueManager:
         """
         現在の会話ノードを取得。
 
-        Returns:
+        Returns
+        -------
             現在の会話ノード
 
         """
@@ -312,9 +317,11 @@ class DialogueManager:
         選択肢を選択して会話を進める。
 
         Args:
+        ----
             choice_index: 選択肢のインデックス
 
         Returns:
+        -------
             実行するアクション
 
         """
@@ -356,9 +363,11 @@ class DialogueManager:
         指定されたIDのノードを検索。
 
         Args:
+        ----
             node_id: ノードID
 
         Returns:
+        -------
             見つかったノード、またはNone
 
         """
@@ -377,9 +386,11 @@ class DialogueManager:
         条件をチェックする。
 
         Args:
+        ----
             condition: チェックする条件
 
         Returns:
+        -------
             条件が満たされている場合はTrue
 
         """
@@ -403,7 +414,8 @@ class DialogueManager:
         """
         会話が進行中かどうかを判定。
 
-        Returns:
+        Returns
+        -------
             会話が進行中の場合はTrue
 
         """
@@ -413,7 +425,8 @@ class DialogueManager:
         """
         利用可能な会話IDのリストを取得。
 
-        Returns:
+        Returns
+        -------
             会話IDのリスト
 
         """
@@ -424,6 +437,7 @@ class DialogueManager:
         会話データを追加。
 
         Args:
+        ----
             dialogue_id: 会話ID
             nodes: 会話ノードのリスト
 
@@ -435,6 +449,7 @@ class DialogueManager:
         会話データを削除。
 
         Args:
+        ----
             dialogue_id: 削除する会話ID
 
         """

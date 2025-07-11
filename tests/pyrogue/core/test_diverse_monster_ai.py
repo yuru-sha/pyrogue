@@ -8,8 +8,6 @@
 
 from unittest.mock import Mock, patch
 
-import pytest
-
 from pyrogue.core.managers.game_context import GameContext
 from pyrogue.core.managers.monster_ai_manager import MonsterAIManager
 from pyrogue.entities.actors.monster import Monster
@@ -40,14 +38,27 @@ class TestDiverseMonsterAI:
         """アイテム盗取AIのテスト。"""
         # アイテム盗取能力を持つモンスターを作成
         leprechaun = Monster(
-            char="L", x=11, y=10, name="Leprechaun", level=4, hp=10, max_hp=10,
-            attack=6, defense=2, exp_value=7, view_range=6, color=(0, 255, 0),
-            ai_pattern="item_thief"
+            char="L",
+            x=11,
+            y=10,
+            name="Leprechaun",
+            level=4,
+            hp=10,
+            max_hp=10,
+            attack=6,
+            defense=2,
+            exp_value=7,
+            view_range=6,
+            color=(0, 255, 0),
+            ai_pattern="item_thief",
         )
 
         # プレイヤーにアイテムを与える
         from pyrogue.entities.items.item import Item
-        test_item = Item(x=0, y=0, name="Test Item", char="!", color=(255, 0, 0), stackable=False)
+
+        test_item = Item(
+            x=0, y=0, name="Test Item", char="!", color=(255, 0, 0), stackable=False
+        )
         self.player.inventory.add_item(test_item)
 
         # アイテム盗取攻撃をテスト
@@ -65,9 +76,19 @@ class TestDiverseMonsterAI:
         """ゴールド盗取AIのテスト。"""
         # ゴールド盗取能力を持つモンスターを作成
         nymph = Monster(
-            char="N", x=11, y=10, name="Nymph", level=9, hp=14, max_hp=14,
-            attack=12, defense=4, exp_value=14, view_range=6, color=(255, 192, 203),
-            ai_pattern="gold_thief"
+            char="N",
+            x=11,
+            y=10,
+            name="Nymph",
+            level=9,
+            hp=14,
+            max_hp=14,
+            attack=12,
+            defense=4,
+            exp_value=14,
+            view_range=6,
+            color=(255, 192, 203),
+            ai_pattern="gold_thief",
         )
 
         # プレイヤーにゴールドを与える
@@ -75,7 +96,7 @@ class TestDiverseMonsterAI:
 
         # ゴールド盗取攻撃をテスト
         assert nymph.can_steal_gold
-        with patch('random.randint', return_value=25):
+        with patch("random.randint", return_value=25):
             self.ai_manager._steal_gold(nymph, self.player, self.context)
 
         # ゴールドが盗まれたことを確認
@@ -89,9 +110,19 @@ class TestDiverseMonsterAI:
         """レベル下げ攻撃AIのテスト。"""
         # レベル下げ攻撃能力を持つモンスターを作成
         wraith = Monster(
-            char="W", x=11, y=10, name="Wraith", level=12, hp=25, max_hp=25,
-            attack=18, defense=5, exp_value=22, view_range=7, color=(128, 128, 128),
-            ai_pattern="level_drain"
+            char="W",
+            x=11,
+            y=10,
+            name="Wraith",
+            level=12,
+            hp=25,
+            max_hp=25,
+            attack=18,
+            defense=5,
+            exp_value=22,
+            view_range=7,
+            color=(128, 128, 128),
+            ai_pattern="level_drain",
         )
 
         # プレイヤーレベルを設定
@@ -120,9 +151,19 @@ class TestDiverseMonsterAI:
         """遠距離攻撃AIのテスト。"""
         # 遠距離攻撃能力を持つモンスターを作成
         centaur = Monster(
-            char="C", x=15, y=10, name="Centaur", level=6, hp=18, max_hp=18,
-            attack=12, defense=4, exp_value=12, view_range=7, color=(160, 82, 45),
-            ai_pattern="ranged"
+            char="C",
+            x=15,
+            y=10,
+            name="Centaur",
+            level=6,
+            hp=18,
+            max_hp=18,
+            attack=12,
+            defense=4,
+            exp_value=12,
+            view_range=7,
+            color=(160, 82, 45),
+            ai_pattern="ranged",
         )
 
         # 遠距離攻撃が可能かテスト
@@ -130,7 +171,7 @@ class TestDiverseMonsterAI:
         assert self.ai_manager._can_use_ranged_attack(centaur, self.player)
 
         # 遠距離攻撃をテスト
-        with patch('random.random', return_value=0.5):  # 命中
+        with patch("random.random", return_value=0.5):  # 命中
             self.ai_manager._use_ranged_attack(centaur, self.player, self.context)
 
         # クールダウンが設定されることを確認
@@ -141,9 +182,19 @@ class TestDiverseMonsterAI:
         """逃走行動AIのテスト。"""
         # 逃走能力を持つモンスターを作成（HP25%で逃走閾値以下に）
         bat = Monster(
-            char="B", x=12, y=10, name="Bat", level=1, hp=1, max_hp=4,  # HP25%
-            attack=5, defense=1, exp_value=2, view_range=8, color=(150, 150, 150),
-            ai_pattern="flee"
+            char="B",
+            x=12,
+            y=10,
+            name="Bat",
+            level=1,
+            hp=1,
+            max_hp=4,  # HP25%
+            attack=5,
+            defense=1,
+            exp_value=2,
+            view_range=8,
+            color=(150, 150, 150),
+            ai_pattern="flee",
         )
 
         # 逃走判定をテスト
@@ -162,9 +213,19 @@ class TestDiverseMonsterAI:
         """モンスター分裂機能のテスト。"""
         # 分裂能力を持つモンスターを作成
         ice_monster = Monster(
-            char="I", x=12, y=10, name="Ice Monster", level=3, hp=12, max_hp=12,
-            attack=8, defense=3, exp_value=6, view_range=5, color=(173, 216, 230),
-            ai_pattern="split"
+            char="I",
+            x=12,
+            y=10,
+            name="Ice Monster",
+            level=3,
+            hp=12,
+            max_hp=12,
+            attack=8,
+            defense=3,
+            exp_value=6,
+            view_range=5,
+            color=(173, 216, 230),
+            ai_pattern="split",
         )
 
         # 分裂可能性を確認
@@ -174,7 +235,7 @@ class TestDiverseMonsterAI:
         self.ai_manager._can_monster_move_to = Mock(return_value=True)
 
         # 分裂をテスト（30%の確率なので強制実行）
-        with patch('random.random', return_value=0.2):  # 30%以下
+        with patch("random.random", return_value=0.2):  # 30%以下
             self.ai_manager.split_monster_on_damage(ice_monster, self.context)
 
         # 分裂が発生したことを確認
@@ -194,13 +255,23 @@ class TestDiverseMonsterAI:
     def test_special_attack_cooldown_system(self):
         """特殊攻撃クールダウンシステムのテスト。"""
         monster = Monster(
-            char="L", x=11, y=10, name="Test Monster", level=4, hp=10, max_hp=10,
-            attack=6, defense=2, exp_value=7, view_range=6, color=(0, 255, 0),
-            ai_pattern="item_thief"
+            char="L",
+            x=11,
+            y=10,
+            name="Test Monster",
+            level=4,
+            hp=10,
+            max_hp=10,
+            attack=6,
+            defense=2,
+            exp_value=7,
+            view_range=6,
+            color=(0, 255, 0),
+            ai_pattern="item_thief",
         )
 
         # クールダウンなしで特殊攻撃可能（確率要素があるので複数回試行）
-        with patch('random.random', return_value=0.1):  # 30%未満
+        with patch("random.random", return_value=0.1):  # 30%未満
             assert self.ai_manager._can_use_special_attack(monster)
 
         # 特殊攻撃を使用してクールダウンを設定
@@ -213,20 +284,118 @@ class TestDiverseMonsterAI:
         monster.special_ability_cooldown = 0
 
         # 再び特殊攻撃可能
-        with patch('random.random', return_value=0.1):  # 30%未満
+        with patch("random.random", return_value=0.1):  # 30%未満
             assert self.ai_manager._can_use_special_attack(monster)
 
     def test_ai_pattern_integration(self):
         """AIパターン統合のテスト。"""
         # 各AIパターンのモンスターを作成
         monsters = {
-            "basic": Monster("O", 10, 10, "Orc", 5, 12, 12, 10, 3, 8, 5, (0, 200, 0), ai_pattern="basic"),
-            "item_thief": Monster("L", 10, 10, "Leprechaun", 4, 10, 10, 6, 2, 7, 6, (0, 255, 0), ai_pattern="item_thief"),
-            "gold_thief": Monster("N", 10, 10, "Nymph", 9, 14, 14, 12, 4, 14, 6, (255, 192, 203), ai_pattern="gold_thief"),
-            "level_drain": Monster("W", 10, 10, "Wraith", 12, 25, 25, 18, 5, 22, 7, (128, 128, 128), ai_pattern="level_drain"),
-            "ranged": Monster("C", 10, 10, "Centaur", 6, 18, 18, 12, 4, 12, 7, (160, 82, 45), ai_pattern="ranged"),
-            "split": Monster("I", 10, 10, "Ice Monster", 3, 12, 12, 8, 3, 6, 5, (173, 216, 230), ai_pattern="split"),
-            "flee": Monster("B", 10, 10, "Bat", 1, 2, 4, 5, 1, 2, 8, (150, 150, 150), ai_pattern="flee"),
+            "basic": Monster(
+                "O",
+                10,
+                10,
+                "Orc",
+                5,
+                12,
+                12,
+                10,
+                3,
+                8,
+                5,
+                (0, 200, 0),
+                ai_pattern="basic",
+            ),
+            "item_thief": Monster(
+                "L",
+                10,
+                10,
+                "Leprechaun",
+                4,
+                10,
+                10,
+                6,
+                2,
+                7,
+                6,
+                (0, 255, 0),
+                ai_pattern="item_thief",
+            ),
+            "gold_thief": Monster(
+                "N",
+                10,
+                10,
+                "Nymph",
+                9,
+                14,
+                14,
+                12,
+                4,
+                14,
+                6,
+                (255, 192, 203),
+                ai_pattern="gold_thief",
+            ),
+            "level_drain": Monster(
+                "W",
+                10,
+                10,
+                "Wraith",
+                12,
+                25,
+                25,
+                18,
+                5,
+                22,
+                7,
+                (128, 128, 128),
+                ai_pattern="level_drain",
+            ),
+            "ranged": Monster(
+                "C",
+                10,
+                10,
+                "Centaur",
+                6,
+                18,
+                18,
+                12,
+                4,
+                12,
+                7,
+                (160, 82, 45),
+                ai_pattern="ranged",
+            ),
+            "split": Monster(
+                "I",
+                10,
+                10,
+                "Ice Monster",
+                3,
+                12,
+                12,
+                8,
+                3,
+                6,
+                5,
+                (173, 216, 230),
+                ai_pattern="split",
+            ),
+            "flee": Monster(
+                "B",
+                10,
+                10,
+                "Bat",
+                1,
+                2,
+                4,
+                5,
+                1,
+                2,
+                8,
+                (150, 150, 150),
+                ai_pattern="flee",
+            ),
         }
 
         # 各AIパターンの能力フラグを確認
@@ -242,9 +411,19 @@ class TestDiverseMonsterAI:
         """MonsterAIManagerのAI処理統合テスト。"""
         # 特殊能力を持つモンスターを作成
         monster = Monster(
-            char="L", x=11, y=10, name="Leprechaun", level=4, hp=10, max_hp=10,
-            attack=6, defense=2, exp_value=7, view_range=6, color=(0, 255, 0),
-            ai_pattern="item_thief"
+            char="L",
+            x=11,
+            y=10,
+            name="Leprechaun",
+            level=4,
+            hp=10,
+            max_hp=10,
+            attack=6,
+            defense=2,
+            exp_value=7,
+            view_range=6,
+            color=(0, 255, 0),
+            ai_pattern="item_thief",
         )
 
         # プレイヤーが見えるようにモック
@@ -262,31 +441,65 @@ class TestDiverseMonsterAI:
         """エッジケースとエラーハンドリングのテスト。"""
         # アイテムがない場合の盗取
         leprechaun = Monster(
-            char="L", x=11, y=10, name="Leprechaun", level=4, hp=10, max_hp=10,
-            attack=6, defense=2, exp_value=7, view_range=6, color=(0, 255, 0),
-            ai_pattern="item_thief"
+            char="L",
+            x=11,
+            y=10,
+            name="Leprechaun",
+            level=4,
+            hp=10,
+            max_hp=10,
+            attack=6,
+            defense=2,
+            exp_value=7,
+            view_range=6,
+            color=(0, 255, 0),
+            ai_pattern="item_thief",
         )
 
         # アイテムなしでアイテム盗取を試行
         self.ai_manager._steal_item(leprechaun, self.player, self.context)
-        self.context.add_message.assert_called_with("Leprechaun tries to steal from you, but you have nothing!")
+        self.context.add_message.assert_called_with(
+            "Leprechaun tries to steal from you, but you have nothing!"
+        )
 
         # ゴールドがない場合の盗取
         nymph = Monster(
-            char="N", x=11, y=10, name="Nymph", level=9, hp=14, max_hp=14,
-            attack=12, defense=4, exp_value=14, view_range=6, color=(255, 192, 203),
-            ai_pattern="gold_thief"
+            char="N",
+            x=11,
+            y=10,
+            name="Nymph",
+            level=9,
+            hp=14,
+            max_hp=14,
+            attack=12,
+            defense=4,
+            exp_value=14,
+            view_range=6,
+            color=(255, 192, 203),
+            ai_pattern="gold_thief",
         )
 
         self.player.gold = 0
         self.ai_manager._steal_gold(nymph, self.player, self.context)
-        self.context.add_message.assert_called_with("Nymph searches for gold, but you have none!")
+        self.context.add_message.assert_called_with(
+            "Nymph searches for gold, but you have none!"
+        )
 
         # レベル1プレイヤーへのレベル下げ攻撃
         wraith = Monster(
-            char="W", x=11, y=10, name="Wraith", level=12, hp=25, max_hp=25,
-            attack=18, defense=5, exp_value=22, view_range=7, color=(128, 128, 128),
-            ai_pattern="level_drain"
+            char="W",
+            x=11,
+            y=10,
+            name="Wraith",
+            level=12,
+            hp=25,
+            max_hp=25,
+            attack=18,
+            defense=5,
+            exp_value=22,
+            view_range=7,
+            color=(128, 128, 128),
+            ai_pattern="level_drain",
         )
 
         self.player.level = 1
@@ -297,14 +510,36 @@ class TestDiverseMonsterAI:
     def test_ai_pattern_constants_consistency(self):
         """AIパターン定数の一貫性テスト。"""
         # すべてのAIパターンが正しく定義されていることを確認
-        valid_patterns = ["basic", "item_thief", "leprechaun", "gold_thief", "nymph",
-                         "level_drain", "wraith", "split", "split_on_hit",
-                         "ranged", "archer", "flee", "coward"]
+        valid_patterns = [
+            "basic",
+            "item_thief",
+            "leprechaun",
+            "gold_thief",
+            "nymph",
+            "level_drain",
+            "wraith",
+            "split",
+            "split_on_hit",
+            "ranged",
+            "archer",
+            "flee",
+            "coward",
+        ]
 
         test_monster = Monster(
-            char="T", x=10, y=10, name="Test", level=1, hp=5, max_hp=5,
-            attack=3, defense=1, exp_value=1, view_range=5, color=(255, 255, 255),
-            ai_pattern="basic"
+            char="T",
+            x=10,
+            y=10,
+            name="Test",
+            level=1,
+            hp=5,
+            max_hp=5,
+            attack=3,
+            defense=1,
+            exp_value=1,
+            view_range=5,
+            color=(255, 255, 255),
+            ai_pattern="basic",
         )
 
         # 各パターンでモンスターが正しく初期化されることを確認

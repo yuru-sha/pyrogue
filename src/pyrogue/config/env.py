@@ -25,6 +25,7 @@ class EnvConfig:
         環境設定を初期化。
 
         Args:
+        ----
             env_file: .envファイルのパス（指定されない場合はプロジェクトルートの.envを使用）
         """
         self._loaded = False
@@ -35,6 +36,7 @@ class EnvConfig:
         .envファイルを読み込み。
 
         Args:
+        ----
             env_file: .envファイルのパス
         """
         if env_file is None:
@@ -56,10 +58,12 @@ class EnvConfig:
         環境変数の値を取得。
 
         Args:
+        ----
             key: 環境変数のキー
             default: デフォルト値
 
         Returns:
+        -------
             環境変数の値またはデフォルト値
         """
         return os.getenv(key, default)
@@ -69,10 +73,12 @@ class EnvConfig:
         環境変数をbool値として取得。
 
         Args:
+        ----
             key: 環境変数のキー
             default: デフォルト値
 
         Returns:
+        -------
             bool値
         """
         value = self.get(key, str(default)).lower()
@@ -83,10 +89,12 @@ class EnvConfig:
         環境変数をint値として取得。
 
         Args:
+        ----
             key: 環境変数のキー
             default: デフォルト値
 
         Returns:
+        -------
             int値
         """
         try:
@@ -99,10 +107,12 @@ class EnvConfig:
         環境変数をfloat値として取得。
 
         Args:
+        ----
             key: 環境変数のキー
             default: デフォルト値
 
         Returns:
+        -------
             float値
         """
         try:
@@ -115,7 +125,8 @@ class EnvConfig:
         """
         .envファイルが読み込まれたかどうか。
 
-        Returns:
+        Returns
+        -------
             読み込まれた場合True
         """
         return self._loaded

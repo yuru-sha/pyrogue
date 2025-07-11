@@ -17,9 +17,11 @@ class PlayerStatusFormatter:
         表示用のプレイヤーステータスをフォーマット。
 
         Args:
+        ----
             player: プレイヤーインスタンス
 
         Returns:
+        -------
             フォーマットされたステータス文字列
 
         """
@@ -49,9 +51,11 @@ class PlayerStatusFormatter:
         Format player stats as dictionary for game over/victory screens.
 
         Args:
+        ----
             player: Player instance
 
         Returns:
+        -------
             Dictionary containing player stats
 
         """

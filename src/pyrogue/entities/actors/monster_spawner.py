@@ -25,6 +25,7 @@ class MonsterSpawner:
         モンスターを生成
 
         Args:
+        ----
             dungeon_tiles: ダンジョンのタイル配列
             rooms: 部屋のリスト
 
@@ -101,6 +102,7 @@ class MonsterSpawner:
         全モンスターの更新処理
 
         Args:
+        ----
             player_x: プレイヤーのX座標
             player_y: プレイヤーのY座標
             dungeon_tiles: ダンジョンのタイル配列

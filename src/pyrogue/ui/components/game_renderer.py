@@ -7,13 +7,13 @@
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
-import random
 import tcod
 import tcod.console
 
-from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall, SecretDoor
+from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
@@ -26,7 +26,8 @@ class GameRenderer:
     GameScreenから描画処理を分離し、単一の責務を持つように設計されています。
     マップ、ステータス、メッセージログなどの描画を管理します。
 
-    Attributes:
+    Attributes
+    ----------
         game_screen: メインのゲームスクリーンへの参照
 
     """
@@ -36,6 +37,7 @@ class GameRenderer:
         レンダラーを初期化。
 
         Args:
+        ----
             game_screen: メインのゲームスクリーンインスタンス
 
         """
@@ -46,6 +48,7 @@ class GameRenderer:
         メインの描画処理。
 
         Args:
+        ----
             console: TCODコンソール
 
         """
@@ -61,6 +64,7 @@ class GameRenderer:
         マップの描画処理。
 
         Args:
+        ----
             console: TCODコンソール
 
         """
@@ -88,7 +92,9 @@ class GameRenderer:
                         self._render_items_at(console, x, y, floor_data, map_offset_y)
 
                         # モンスターの描画
-                        self._render_monsters_at(console, x, y, floor_data, map_offset_y)
+                        self._render_monsters_at(
+                            console, x, y, floor_data, map_offset_y
+                        )
 
                         # NPCの描画
                         self._render_npcs_at(console, x, y, floor_data, map_offset_y)
@@ -98,11 +104,14 @@ class GameRenderer:
         if player:
             console.print(player.x, player.y + map_offset_y, "@", fg=(255, 255, 255))
 
-    def _render_tile(self, console: tcod.Console, x: int, y: int, tile: object, visible: bool) -> None:
+    def _render_tile(
+        self, console: tcod.Console, x: int, y: int, tile: object, visible: bool
+    ) -> None:
         """
         タイルの描画処理。
 
         Args:
+        ----
             console: TCODコンソール
             x: X座標
             y: Y座標
@@ -131,11 +140,14 @@ class GameRenderer:
 
         console.print(x, y, char, fg=color)
 
-    def _render_items_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
+    def _render_items_at(
+        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
+    ) -> None:
         """
         指定座標のアイテムを描画。
 
         Args:
+        ----
             console: TCODコンソール
             x: X座標（マップ座標）
             y: Y座標（マップ座標）
@@ -143,16 +155,23 @@ class GameRenderer:
             map_offset_y: マップのYオフセット
 
         """
-        items_at_pos = [item for item in floor_data.item_spawner.items if item.x == x and item.y == y]
+        items_at_pos = [
+            item
+            for item in floor_data.item_spawner.items
+            if item.x == x and item.y == y
+        ]
         if items_at_pos:
             item = items_at_pos[0]  # 最初のアイテムを描画
             console.print(x, y + map_offset_y, item.char, fg=item.color)
 
-    def _render_monsters_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
+    def _render_monsters_at(
+        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
+    ) -> None:
         """
         指定座標のモンスターを描画。
 
         Args:
+        ----
             console: TCODコンソール
             x: X座標（マップ座標）
             y: Y座標（マップ座標）
@@ -169,6 +188,7 @@ class GameRenderer:
         ステータス情報の描画。
 
         Args:
+        ----
             console: TCODコンソール
 
         """
@@ -227,7 +247,7 @@ class GameRenderer:
             x=console.width - len(floor_info) - 1,
             y=status_y,
             string=floor_info,
-            fg=(255, 255, 255)
+            fg=(255, 255, 255),
         )
 
         # ステータス異常は必要に応じて別途表示（元の実装では基本2行のみ）
@@ -237,6 +257,7 @@ class GameRenderer:
         メッセージログの描画。
 
         Args:
+        ----
             console: TCODコンソール
 
         """
@@ -253,11 +274,14 @@ class GameRenderer:
         for i, message in enumerate(recent_messages):
             console.print(0, message_y_start + i, message, fg=(255, 255, 255))
 
-    def _render_npcs_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
+    def _render_npcs_at(
+        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
+    ) -> None:
         """
         指定した位置にいるNPCを描画。
 
         Args:
+        ----
             console: TCODコンソール
             x: 描画位置のX座標
             y: 描画位置のY座標
@@ -276,17 +300,19 @@ class GameRenderer:
         """
         幻覚状態でランダムな文字を返す。
 
-        Returns:
+        Returns
+        -------
             str: ランダムな文字
         """
-        chars = ['?', '!', '@', '#', '$', '%', '^', '&', '*', '+', '=', '~']
+        chars = ["?", "!", "@", "#", "$", "%", "^", "&", "*", "+", "=", "~"]
         return random.choice(chars)
 
     def _get_hallucination_color(self) -> tuple[int, int, int]:
         """
         幻覚状態でランダムな色を返す。
 
-        Returns:
+        Returns
+        -------
             tuple[int, int, int]: RGB色値
         """
         return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))

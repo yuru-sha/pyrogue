@@ -5,6 +5,7 @@
 魔法詠唱システムを提供します。
 
 Example:
+-------
     >>> magic_missile = MagicMissile()
     >>> success = magic_missile.cast(context, target_pos)
     >>> heal = Heal()
@@ -29,7 +30,8 @@ class Spell(ABC):
 
     すべての魔法が共通して持つ属性と機能を定義します。
 
-    Attributes:
+    Attributes
+    ----------
         name: 魔法の名前
         description: 魔法の説明
         mp_cost: MP消費量
@@ -44,12 +46,13 @@ class Spell(ABC):
         description: str,
         mp_cost: int,
         spell_level: int = 1,
-        is_offensive: bool = False
+        is_offensive: bool = False,
     ) -> None:
         """
         魔法を初期化。
 
         Args:
+        ----
             name: 魔法の名前
             description: 魔法の説明
             mp_cost: MP消費量
@@ -68,9 +71,11 @@ class Spell(ABC):
         魔法を詠唱できるかどうかを判定。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             詠唱可能な場合はTrue、不可能な場合はFalse
 
         """
@@ -82,10 +87,12 @@ class Spell(ABC):
         魔法を詠唱して効果を発動。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
             **kwargs: 魔法固有のパラメータ
 
         Returns:
+        -------
             魔法の詠唱と効果適用に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -95,9 +102,11 @@ class Spell(ABC):
         MPを消費する。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             MP消費に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -118,6 +127,7 @@ class MagicMissile(Spell):
         マジックミサイルを初期化。
 
         Args:
+        ----
             damage: 与えるダメージ量
 
         """
@@ -126,19 +136,23 @@ class MagicMissile(Spell):
             description=f"A magical projectile that deals {damage} damage",
             mp_cost=3,
             spell_level=1,
-            is_offensive=True
+            is_offensive=True,
         )
         self.damage = damage
 
-    def cast(self, context: EffectContext, target_pos: tuple[int, int] | None = None) -> bool:
+    def cast(
+        self, context: EffectContext, target_pos: tuple[int, int] | None = None
+    ) -> bool:
         """
         マジックミサイルを詠唱。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
             target_pos: ターゲット位置 (x, y)
 
         Returns:
+        -------
             詠唱に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -167,9 +181,12 @@ class MagicMissile(Spell):
 
         # モンスターを検索
         from pyrogue.core.game_logic import GameLogic
+
         if isinstance(context, GameLogic):
             current_floor_data = context.dungeon_manager.get_current_floor_data()
-            monster = current_floor_data.monster_spawner.get_monster_at(target_x, target_y)
+            monster = current_floor_data.monster_spawner.get_monster_at(
+                target_x, target_y
+            )
 
             if monster:
                 # ダメージを与える（防御力無視）
@@ -207,6 +224,7 @@ class Heal(Spell):
         ヒールを初期化。
 
         Args:
+        ----
             heal_amount: 回復するHP量
 
         """
@@ -215,7 +233,7 @@ class Heal(Spell):
             description=f"Restores {heal_amount} HP",
             mp_cost=5,
             spell_level=1,
-            is_offensive=False
+            is_offensive=False,
         )
         self.heal_amount = heal_amount
 
@@ -224,10 +242,12 @@ class Heal(Spell):
         ヒールを詠唱。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
             **kwargs: 未使用
 
         Returns:
+        -------
             詠唱に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -250,9 +270,7 @@ class Heal(Spell):
         player.heal(self.heal_amount)
         actual_heal = player.hp - old_hp
 
-        context.game_screen.message_log.append(
-            f"You feel better! (+{actual_heal} HP)"
-        )
+        context.game_screen.message_log.append(f"You feel better! (+{actual_heal} HP)")
 
         return True
 
@@ -272,7 +290,7 @@ class CurePoison(Spell):
             description="Removes poison status effect",
             mp_cost=4,
             spell_level=1,
-            is_offensive=False
+            is_offensive=False,
         )
 
     def cast(self, context: EffectContext, **kwargs: Any) -> bool:
@@ -280,10 +298,12 @@ class CurePoison(Spell):
         毒回復を詠唱。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
             **kwargs: 未使用
 
         Returns:
+        -------
             詠唱に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -321,6 +341,7 @@ class PoisonBolt(Spell):
         ポイズンボルトを初期化。
 
         Args:
+        ----
             poison_duration: 毒の継続ターン数
 
         """
@@ -329,19 +350,23 @@ class PoisonBolt(Spell):
             description=f"Inflicts poison for {poison_duration} turns",
             mp_cost=6,
             spell_level=2,
-            is_offensive=True
+            is_offensive=True,
         )
         self.poison_duration = poison_duration
 
-    def cast(self, context: EffectContext, target_pos: tuple[int, int] | None = None) -> bool:
+    def cast(
+        self, context: EffectContext, target_pos: tuple[int, int] | None = None
+    ) -> bool:
         """
         ポイズンボルトを詠唱。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
             target_pos: ターゲット位置 (x, y)
 
         Returns:
+        -------
             詠唱に成功した場合はTrue、失敗した場合はFalse
 
         """
@@ -369,9 +394,12 @@ class PoisonBolt(Spell):
 
         # モンスターを検索
         from pyrogue.core.game_logic import GameLogic
+
         if isinstance(context, GameLogic):
             current_floor_data = context.dungeon_manager.get_current_floor_data()
-            monster = current_floor_data.monster_spawner.get_monster_at(target_x, target_y)
+            monster = current_floor_data.monster_spawner.get_monster_at(
+                target_x, target_y
+            )
 
             if monster:
                 # 毒状態異常を付与
@@ -415,6 +443,7 @@ class Spellbook:
         新しい魔法を習得。
 
         Args:
+        ----
             spell: 習得する魔法
 
         """
@@ -430,9 +459,11 @@ class Spellbook:
         名前で魔法を検索。
 
         Args:
+        ----
             name: 魔法の名前
 
         Returns:
+        -------
             見つかった魔法、または None
 
         """
@@ -446,35 +477,36 @@ class Spellbook:
         詠唱可能な魔法のリストを取得。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         Returns:
+        -------
             詠唱可能な魔法のリスト
 
         """
         return [spell for spell in self.known_spells if spell.can_cast(context)]
 
-    def cast_spell(
-        self,
-        spell_name: str,
-        context: EffectContext,
-        **kwargs
-    ) -> bool:
+    def cast_spell(self, spell_name: str, context: EffectContext, **kwargs) -> bool:
         """
         魔法を詠唱。
 
         Args:
+        ----
             spell_name: 詠唱する魔法の名前
             context: 効果適用のためのコンテキスト
             **kwargs: 魔法固有のパラメータ
 
         Returns:
+        -------
             詠唱に成功した場合はTrue、失敗した場合はFalse
 
         """
         spell = self.get_spell_by_name(spell_name)
         if not spell:
-            context.game_screen.message_log.append(f"You don't know the spell '{spell_name}'.")
+            context.game_screen.message_log.append(
+                f"You don't know the spell '{spell_name}'."
+            )
             return False
 
         return spell.cast(context, **kwargs)
@@ -483,7 +515,8 @@ class Spellbook:
         """
         習得済み魔法の名前リストを取得。
 
-        Returns:
+        Returns
+        -------
             魔法名のリスト
 
         """
