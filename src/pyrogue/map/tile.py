@@ -29,6 +29,8 @@ class Floor(Tile):
         has_ring: bool = False,
         has_food: bool = False,
         has_amulet: bool = False,
+        has_light_source: bool = False,
+        light_radius: int = 0,
     ) -> None:
         super().__init__(
             walkable=True,
@@ -45,6 +47,8 @@ class Floor(Tile):
         self.has_ring = has_ring
         self.has_food = has_food
         self.has_amulet = has_amulet
+        self.has_light_source = has_light_source
+        self.light_radius = light_radius
 
     @property
     def has_item(self) -> bool:
@@ -81,6 +85,8 @@ class Floor(Tile):
             return "%"
         if self.has_amulet:
             return "&"
+        if self.has_light_source:
+            return "*"  # 光源を表す文字
         return "."
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import numpy as np
 
 from pyrogue.map.dungeon.corridor_builder import CorridorBuilder
+from pyrogue.map.dungeon.dark_room_builder import DarkRoomBuilder
 from pyrogue.map.dungeon.door_manager import DoorManager
 from pyrogue.map.dungeon.isolated_room_builder import IsolatedRoomBuilder
 from pyrogue.map.dungeon.maze_builder import MazeBuilder
@@ -63,6 +64,7 @@ class DungeonDirector:
         self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=8)
         self.maze_builder = MazeBuilder(width, height, complexity=0.75)
         self.isolated_room_builder = IsolatedRoomBuilder(width, height, isolation_level=0.8)
+        self.dark_room_builder = DarkRoomBuilder(darkness_intensity=0.8)
         self.corridor_builder = CorridorBuilder(width, height)
         self.door_manager = DoorManager()
         self.special_room_builder = SpecialRoomBuilder(floor)
@@ -126,12 +128,21 @@ class DungeonDirector:
                     # 4. ドアの配置
                     self.door_manager.place_doors(self.rooms, [], self.tiles)
 
-                    # 5. 階段の配置
+                    # 5. 暗い部屋の生成（特定の階層のみ）
+                    if self._should_generate_dark_rooms():
+                        dark_rooms = self.dark_room_builder.apply_darkness_to_rooms(
+                            self.rooms, darkness_probability=0.4
+                        )
+                        # 暗い部屋に光源を配置
+                        self.dark_room_builder.place_light_sources(dark_rooms, self.tiles)
+                        game_logger.debug(f"Generated {len(dark_rooms)} dark rooms")
+
+                    # 6. 階段の配置
                     start_pos, end_pos = self.stairs_manager.place_stairs(
                         self.rooms, self.floor, self.tiles
                     )
 
-                    # 6. 最終検証
+                    # 7. 最終検証
                     self.validation_manager.validate_dungeon(
                         self.rooms, [], start_pos, end_pos, self.tiles
                     )
@@ -288,6 +299,7 @@ class DungeonDirector:
             self.bsp_builder,
             self.maze_builder,
             self.isolated_room_builder,
+            self.dark_room_builder,
             self.corridor_builder,
             self.door_manager,
             self.special_room_builder,
@@ -346,3 +358,21 @@ class DungeonDirector:
             return self.floor in [11, 15, 18]  # 11階、15階、18階で確実に生成
         else:
             return self.floor in [22, 25]  # 22階、25階で確実に生成
+
+    def _should_generate_dark_rooms(self) -> bool:
+        """
+        暗い部屋を生成すべきかどうかを決定。
+
+        Returns:
+            暗い部屋を生成する場合True
+        """
+        # 特定の階層で暗い部屋を生成
+        # 深い階層ほど暗い部屋が多くなる
+        if self.floor <= 5:
+            return False  # 浅い階層では生成しない
+        elif self.floor <= 12:
+            return self.floor in [6, 10]  # 6階、10階で確実に生成
+        elif self.floor <= 20:
+            return self.floor in [14, 17, 20]  # 14階、17階、20階で確実に生成
+        else:
+            return self.floor in [23, 24]  # 深層では23階、24階で確実に生成

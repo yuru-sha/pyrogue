@@ -45,6 +45,7 @@ class FOVManager:
         self.game_screen = game_screen
         self.fov_enabled = True
         self.fov_radius = 8
+        self.base_fov_radius = 8  # 基本FOV半径
 
         # FOV計算用のマップを初期化
         self.fov_map = tcod.map.Map(
@@ -127,14 +128,91 @@ class FOVManager:
         # 可視範囲をリセット
         self.visible.fill(False)
 
+        # 暗い部屋での視界制限を適用
+        effective_radius = self._calculate_effective_fov_radius(x, y)
+
         # FOV計算
-        self.fov_map.compute_fov(x, y, radius=self.fov_radius, algorithm=libtcodpy.FOV_SHADOW)
+        self.fov_map.compute_fov(x, y, radius=effective_radius, algorithm=libtcodpy.FOV_SHADOW)
 
         # 結果を可視範囲配列にコピー
         self.visible[:] = self.fov_map.fov[:]
 
         # 現在の可視範囲を探索済みとして記録
         self.game_screen.game_logic.update_explored_tiles(self.visible)
+
+    def _calculate_effective_fov_radius(self, x: int, y: int) -> int:
+        """
+        暗い部屋での効果的なFOV半径を計算。
+
+        Args:
+            x: プレイヤーのX座標
+            y: プレイヤーのY座標
+
+        Returns:
+            効果的なFOV半径
+        """
+        # 現在の階層データを取得
+        floor_data = self.game_screen.game_logic.get_current_floor_data()
+        if not floor_data:
+            return self.base_fov_radius
+
+        # ダンジョンディレクターから暗い部屋情報を取得
+        dungeon_director = getattr(floor_data, 'dungeon_director', None)
+        if not dungeon_director or not hasattr(dungeon_director, 'dark_room_builder'):
+            return self.base_fov_radius
+
+        dark_room_builder = dungeon_director.dark_room_builder
+
+        # プレイヤーの光源状態を取得
+        player = self.game_screen.game_logic.player
+        has_light = self._player_has_light_source(player)
+        light_radius = self._get_player_light_radius(player)
+
+        # 暗い部屋での視界範囲を計算
+        return dark_room_builder.get_visibility_range_at(
+            x, y,
+            getattr(floor_data, 'rooms', []),
+            has_light,
+            light_radius
+        )
+
+    def _player_has_light_source(self, player) -> bool:
+        """
+        プレイヤーが光源を持っているかチェック。
+
+        Args:
+            player: プレイヤーオブジェクト
+
+        Returns:
+            光源を持っている場合True
+        """
+        # プレイヤーのインベントリから光源アイテムを検索
+        if hasattr(player, 'inventory') and hasattr(player.inventory, 'items'):
+            for item in player.inventory.items:
+                if hasattr(item, 'get_light_radius') and item.get_light_radius() > 0:
+                    return True
+
+        return False
+
+    def _get_player_light_radius(self, player) -> int:
+        """
+        プレイヤーの光源半径を取得。
+
+        Args:
+            player: プレイヤーオブジェクト
+
+        Returns:
+            光源半径
+        """
+        max_radius = 0
+
+        if hasattr(player, 'inventory') and hasattr(player.inventory, 'items'):
+            for item in player.inventory.items:
+                if hasattr(item, 'get_light_radius'):
+                    radius = item.get_light_radius()
+                    max_radius = max(max_radius, radius)
+
+        return max_radius if max_radius > 0 else self.base_fov_radius
 
     def toggle_fov(self) -> None:
         """
