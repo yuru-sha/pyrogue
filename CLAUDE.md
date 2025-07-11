@@ -96,6 +96,19 @@ make setup      # 初期環境構築（仮想環境作成・依存関係イン�
 make setup-dev  # 開発依存関係インストール
 ```
 
+### 環境変数設定（.env）
+```bash
+cp .env.example .env  # 設定例をコピー
+# .envファイルを編集して設定をカスタマイズ
+```
+
+**主要な環境変数:**
+- `DEBUG`: デバッグモード有効化 (true/false)
+- `LOG_LEVEL`: ログレベル設定 (DEBUG/INFO/WARNING/ERROR)
+- `WINDOW_WIDTH/HEIGHT`: ウィンドウサイズ設定
+- `FPS_LIMIT`: FPS制限設定
+- `AUTO_SAVE_ENABLED`: オートセーブ機能 (true/false)
+
 ### ゲーム実行
 ```bash
 make run        # ゲーム実行（リリースモード）

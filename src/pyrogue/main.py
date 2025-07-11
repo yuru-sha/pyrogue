@@ -14,6 +14,7 @@ import argparse
 import sys
 import traceback
 
+from pyrogue.config.env import env_config
 from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.core.engine import Engine
 from pyrogue.utils import game_logger
@@ -28,6 +29,10 @@ def main() -> None:
     例外が発生した場合は適切にログ記録し、エラーメッセージを
     標準エラー出力に表示してプログラムを終了します。
     """
+    # .envファイルを読み込み（env_configのインポート時に自動実行される）
+    if env_config.is_loaded:
+        game_logger.info("Environment configuration loaded successfully")
+
     parser = argparse.ArgumentParser(description="PyRogue - A Python Roguelike Game")
     parser.add_argument(
         "--cli", action="store_true", help="Run in CLI mode for automated testing"

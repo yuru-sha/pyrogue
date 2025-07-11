@@ -95,8 +95,15 @@ class GameLogic:
         # GameScreen参照（段階的移行用）
         self.game_screen: GameScreen | None = None
 
+        # 初期化状態を追跡
+        self._is_initialized = False
+
     def setup_new_game(self) -> None:
         """新しいゲームをセットアップ。"""
+        # 重複初期化を防ぐ
+        if self._is_initialized:
+            return
+
         # 初期装備の設定
         self._setup_initial_equipment()
 
@@ -109,6 +116,29 @@ class GameLogic:
             self.player.x, self.player.y = floor_data.start_pos
 
         self.add_message("You enter the dungeon. Your quest begins!")
+
+        # 初期化完了をマーク
+        self._is_initialized = True
+
+    def reset_game(self) -> None:
+        """ゲームの状態をリセット。"""
+        self._is_initialized = False
+
+        # プレイヤーの状態をリセット
+        self.player = Player(x=0, y=0)
+        self.inventory = self.player.inventory
+
+        # メッセージログをクリア
+        self.message_log.clear()
+        self.message_log.extend([
+            "Welcome to PyRogue!",
+            "Use vi keys (hjklyubn), arrow keys, or numpad (1-9) to move.",
+            "Press ESC to return to menu.",
+        ])
+
+        # コンテキストを更新
+        self.context.player = self.player
+        self.context.inventory = self.inventory
 
     def _setup_initial_equipment(self) -> None:
         """初期装備を設定。"""
@@ -333,6 +363,66 @@ class GameLogic:
             return message
         self.add_message("Your inventory is full!")
         return None
+
+    def can_drop_item_at(self, x: int, y: int) -> bool:
+        """
+        指定した位置にアイテムをドロップできるかチェック。
+
+        Args:
+            x: X座標
+            y: Y座標
+
+        Returns:
+            ドロップ可能な場合True
+        """
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 座標の境界チェック
+        if (x < 0 or y < 0 or
+            y >= floor_data.tiles.shape[0] or
+            x >= floor_data.tiles.shape[1]):
+            return False
+
+        # タイルが歩行可能かチェック
+        tile = floor_data.tiles[y, x]
+        if not getattr(tile, "walkable", False):
+            return False
+
+        # モンスターがいないかチェック
+        if self._get_monster_at(x, y):
+            return False
+
+        return True
+
+    def drop_item_at(self, item, x: int, y: int) -> bool:
+        """
+        指定した位置にアイテムをドロップ。
+
+        Args:
+            item: ドロップするアイテム
+            x: X座標
+            y: Y座標
+
+        Returns:
+            ドロップが成功した場合True
+        """
+        if not self.can_drop_item_at(x, y):
+            return False
+
+        floor_data = self.get_current_floor_data()
+        if not floor_data or not hasattr(floor_data, "item_spawner"):
+            return False
+
+        # アイテムの位置を設定
+        item.x = x
+        item.y = y
+
+        # アイテムスポナーに追加
+        floor_data.item_spawner.items.append(item)
+
+        return True
 
     # 階段処理（FloorManagerに委譲予定）
     def descend_stairs(self) -> bool:

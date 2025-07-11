@@ -366,10 +366,7 @@ class ItemSpawner:
         """
         pos = (item.x, item.y)
 
-        # 既に同じ位置にアイテムがある場合は追加しない
-        if pos in self.occupied_positions:
-            return False
-
+        # 同じ位置に複数のアイテムを許可（ローグライクゲームでは一般的）
         self.items.append(item)
         self.occupied_positions.add(pos)
         return True

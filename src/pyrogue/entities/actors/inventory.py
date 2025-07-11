@@ -59,6 +59,11 @@ class Inventory:
         if item in self.items:
             self.items.remove(item)
 
+            # 装備中のアイテムの場合は装備スロットもクリア
+            for slot, equipped_item in self.equipped.items():
+                if equipped_item is item:
+                    self.equipped[slot] = None
+
     def get_item(self, index: int) -> Item | None:
         """
         指定されたインデックスのアイテムを取得
@@ -208,3 +213,30 @@ class Inventory:
         """
         armor = self.equipped.get("armor")
         return armor if isinstance(armor, Armor) else None
+
+    def is_equipped(self, item: Item) -> bool:
+        """
+        指定されたアイテムが装備中かどうかを確認
+
+        Args:
+            item: 確認するアイテム
+
+        Returns:
+            bool: 装備中の場合True
+        """
+        return item in self.equipped.values()
+
+    def get_equipped_slot(self, item: Item) -> str | None:
+        """
+        指定されたアイテムの装備スロットを取得
+
+        Args:
+            item: 確認するアイテム
+
+        Returns:
+            str | None: 装備スロット名（装備されていない場合はNone）
+        """
+        for slot, equipped_item in self.equipped.items():
+            if equipped_item is item:
+                return slot
+        return None
