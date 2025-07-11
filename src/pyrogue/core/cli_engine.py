@@ -11,6 +11,7 @@ CLI ゲームエンジンモジュール。
     - 自動テスト用のインターフェース
 
 Example:
+-------
     $ python -m pyrogue.main --cli
     > move north
     > attack goblin
@@ -78,7 +79,8 @@ class CLIEngine:
         - help: コマンド一覧表示
         - quit: ゲーム終了
 
-    Attributes:
+    Attributes
+    ----------
         state: 現在のゲーム状態
         running: ゲームループ実行フラグ
         game_screen: ゲーム画面インスタンス
@@ -144,9 +146,11 @@ class CLIEngine:
         コマンドを処理し、適切なアクションを実行。
 
         Args:
+        ----
             command: ユーザーが入力したコマンド文字列
 
         Returns:
+        -------
             False if game should quit, True if game should continue, None for invalid commands
 
         """
@@ -164,8 +168,13 @@ class CLIEngine:
             print(result.message)
 
         # 階段コマンド成功後の勝利チェック
-        if (result.success and cmd == "stairs" and len(args) > 0 and
-            args[0].lower() in ["up", "u"] and self.game_logic.check_victory()):
+        if (
+            result.success
+            and cmd == "stairs"
+            and len(args) > 0
+            and args[0].lower() in ["up", "u"]
+            and self.game_logic.check_victory()
+        ):
             print("\n🎉 VICTORY! 🎉")
             print("You have escaped with the Amulet of Yendor!")
             print("You win the game!")
@@ -190,7 +199,9 @@ class CLIEngine:
             try:
                 damage = int(args[1])
                 self.game_logic.player.hp = max(0, self.game_logic.player.hp - damage)
-                print(f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
+                print(
+                    f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}"
+                )
 
                 # 死亡チェック
                 if self.game_logic.player.hp <= 0:
@@ -203,8 +214,12 @@ class CLIEngine:
         elif debug_cmd == "hp" and len(args) > 1:
             try:
                 hp = int(args[1])
-                self.game_logic.player.hp = max(0, min(hp, self.game_logic.player.max_hp))
-                print(f"Player HP set to: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
+                self.game_logic.player.hp = max(
+                    0, min(hp, self.game_logic.player.max_hp)
+                )
+                print(
+                    f"Player HP set to: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}"
+                )
 
                 # 死亡チェック
                 if self.game_logic.player.hp <= 0:
@@ -218,7 +233,9 @@ class CLIEngine:
             try:
                 count = int(args[1])
                 self.game_logic.player.monsters_killed += count
-                print(f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}")
+                print(
+                    f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}"
+                )
                 return True
             except ValueError:
                 print("Invalid kill count value")
@@ -226,14 +243,24 @@ class CLIEngine:
         elif debug_cmd == "spawn":
             # 周囲にモンスターを生成
             floor_data = self.game_logic.get_current_floor_data()
-            if floor_data and hasattr(floor_data, 'monster_spawner'):
+            if floor_data and hasattr(floor_data, "monster_spawner"):
                 from pyrogue.entities.actors.monster import Monster
+
                 x = self.game_logic.player.x + 1
                 y = self.game_logic.player.y
                 test_monster = Monster(
-                    x=x, y=y, name="Test Bat", char='b', hp=4, max_hp=4,
-                    attack=2, defense=1, level=1, exp_value=10,
-                    view_range=3, color=(255, 255, 255)
+                    x=x,
+                    y=y,
+                    name="Test Bat",
+                    char="b",
+                    hp=4,
+                    max_hp=4,
+                    attack=2,
+                    defense=1,
+                    level=1,
+                    exp_value=10,
+                    view_range=3,
+                    color=(255, 255, 255),
                 )
                 floor_data.monster_spawner.monsters.append(test_monster)
                 print(f"Spawned Test Bat at ({x}, {y})")
@@ -242,7 +269,9 @@ class CLIEngine:
                 print("Could not spawn monster")
                 return False
         else:
-            print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")
+            print(
+                "Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'"
+            )
             return False
 
     def handle_move(self, direction: str) -> bool:
@@ -250,9 +279,11 @@ class CLIEngine:
         移動コマンドを処理。
 
         Args:
+        ----
             direction: 移動方向（north, south, east, west）
 
         Returns:
+        -------
             コマンドが成功したかどうか
 
         """
@@ -293,9 +324,11 @@ class CLIEngine:
         攻撃コマンドを処理。
 
         Args:
+        ----
             _target: 攻撃対象（省略可能、現在未使用）
 
         Returns:
+        -------
             コマンドが成功したかどうか
 
         """
@@ -331,9 +364,11 @@ class CLIEngine:
         アイテム使用コマンドを処理。
 
         Args:
+        ----
             item_name: 使用するアイテム名
 
         Returns:
+        -------
             コマンドが成功したかどうか
 
         """
@@ -345,11 +380,15 @@ class CLIEngine:
             for item in inventory.items:
                 if item.name.lower() == item_name.lower():
                     # 新しいeffectシステムを使用
-                    context = type("EffectContext", (), {
-                        "player": self.game_logic.player,
-                        "dungeon": self.game_logic.get_current_floor_data(),
-                        "game_screen": self
-                    })()
+                    context = type(
+                        "EffectContext",
+                        (),
+                        {
+                            "player": self.game_logic.player,
+                            "dungeon": self.game_logic.get_current_floor_data(),
+                            "game_screen": self,
+                        },
+                    )()
 
                     success = self.game_logic.player.use_item(item, context=context)
                     if success:
@@ -369,7 +408,8 @@ class CLIEngine:
         """
         アイテム取得コマンドを処理。
 
-        Returns:
+        Returns
+        -------
             コマンドが成功したかどうか
 
         """
@@ -390,9 +430,11 @@ class CLIEngine:
         階段使用コマンドを処理。
 
         Args:
+        ----
             direction: 階段の方向（up/down）
 
         Returns:
+        -------
             コマンドが成功したかどうか
 
         """
@@ -409,9 +451,11 @@ class CLIEngine:
                 print(f"Used stairs {direction}")
 
                 # 勝利条件チェック（B1Fから上に脱出してアミュレットを持っている場合）
-                if (direction.lower() in ["up", "u"] and
-                    self.game_logic.dungeon_manager.current_floor == 1 and
-                    self.game_logic.check_victory()):
+                if (
+                    direction.lower() in ["up", "u"]
+                    and self.game_logic.dungeon_manager.current_floor == 1
+                    and self.game_logic.check_victory()
+                ):
                     print("\n🎉 VICTORY! 🎉")
                     print("You have escaped with the Amulet of Yendor!")
                     print("You win the game!")
@@ -565,14 +609,16 @@ class CLIEngine:
             print(f"Deepest Floor: {player.deepest_floor}")
             print(f"Turns Played: {player.turns_played}")
             print(f"Score: {player.calculate_score()}")
-            print(f"Has Amulet: {'Yes' if getattr(player, 'has_amulet', False) else 'No'}")
+            print(
+                f"Has Amulet: {'Yes' if getattr(player, 'has_amulet', False) else 'No'}"
+            )
 
             # 現在の足下のタイルを表示
             floor_data = self.game_logic.get_current_floor_data()
             if floor_data:
                 current_tile = floor_data.tiles[player.y, player.x]
                 print(f"Current tile: {current_tile.__class__.__name__}")
-                if hasattr(current_tile, 'char'):
+                if hasattr(current_tile, "char"):
                     print(f"Tile char: '{current_tile.char}'")
 
         except Exception as e:

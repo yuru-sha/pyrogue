@@ -22,7 +22,8 @@ class GameContext:
     各マネージャーが必要とする共有データへのアクセスを提供し、
     依存関係を明確にします。
 
-    Attributes:
+    Attributes
+    ----------
         player: プレイヤーオブジェクト
         inventory: インベントリオブジェクト
         dungeon_manager: ダンジョン管理オブジェクト
@@ -39,12 +40,13 @@ class GameContext:
         dungeon_manager: DungeonManager,
         message_log: list[str],
         engine: Any = None,
-        game_screen: Any = None
+        game_screen: Any = None,
     ) -> None:
         """
         ゲームコンテキストを初期化。
 
         Args:
+        ----
             player: プレイヤーオブジェクト
             inventory: インベントリオブジェクト
             dungeon_manager: ダンジョン管理オブジェクト
@@ -74,6 +76,7 @@ class GameContext:
         メッセージログにメッセージを追加。
 
         Args:
+        ----
             message: 追加するメッセージ
 
         """

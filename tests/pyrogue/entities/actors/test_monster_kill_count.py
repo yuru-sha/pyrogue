@@ -1,13 +1,11 @@
 """モンスター討伐数のテストスクリプト"""
 
-import pytest
 from pyrogue.core.game_logic import GameLogic
 from pyrogue.entities.actors.monster import Monster
 
 
 def test_monster_kill_count():
     """モンスター討伐数が正しくカウントされるかテスト"""
-
     # GameLogicを初期化
     game_logic = GameLogic()
     game_logic.setup_new_game()
@@ -19,7 +17,7 @@ def test_monster_kill_count():
         x=game_logic.player.x + 1,
         y=game_logic.player.y,
         name="Test Bat",
-        char='b',
+        char="b",
         hp=1,  # 1発で倒せるように
         max_hp=1,
         attack=1,
@@ -27,19 +25,21 @@ def test_monster_kill_count():
         level=1,
         exp_value=10,
         view_range=3,
-        color=(255, 255, 255)
+        color=(255, 255, 255),
     )
 
     # モンスターをフロアに追加
     floor_data = game_logic.get_current_floor_data()
-    if floor_data and hasattr(floor_data, 'monster_spawner'):
+    if floor_data and hasattr(floor_data, "monster_spawner"):
         floor_data.monster_spawner.monsters.append(test_monster)
         print(f"テストモンスターを ({test_monster.x}, {test_monster.y}) に配置")
 
     print(f"戦闘前討伐数: {game_logic.player.monsters_killed}")
 
     # 戦闘を実行
-    success = game_logic.combat_manager.handle_player_attack(test_monster, game_logic.context)
+    success = game_logic.combat_manager.handle_player_attack(
+        test_monster, game_logic.context
+    )
 
     print(f"戦闘後討伐数: {game_logic.player.monsters_killed}")
     print(f"戦闘成功: {success}")

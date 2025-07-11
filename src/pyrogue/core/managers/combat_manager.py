@@ -26,7 +26,8 @@ class CombatManager:
     プレイヤーとモンスター間の戦闘処理、ダメージ計算、
     経験値獲得、死亡処理を担当します。
 
-    Attributes:
+    Attributes
+    ----------
         context: ゲームコンテキスト
 
     """
@@ -39,10 +40,12 @@ class CombatManager:
         プレイヤーがモンスターと戦闘。
 
         Args:
+        ----
             monster: 攻撃対象のモンスター
             context: ゲームコンテキスト
 
         Returns:
+        -------
             戦闘が発生した場合True
 
         """
@@ -56,7 +59,7 @@ class CombatManager:
         context.add_message(f"You attack the {monster.name} for {damage} damage!")
 
         # モンスター分裂判定（ダメージを受けた時）
-        if monster.hp > 0 and hasattr(context, 'monster_ai_manager'):
+        if monster.hp > 0 and hasattr(context, "monster_ai_manager"):
             context.monster_ai_manager.split_monster_on_damage(monster, context)
 
         # モンスターの死亡判定
@@ -74,6 +77,7 @@ class CombatManager:
         モンスターがプレイヤーを攻撃。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             context: ゲームコンテキスト
 
@@ -94,11 +98,14 @@ class CombatManager:
         if player.hp <= 0:
             self._handle_player_death(context, f"Killed by {monster.name}")
 
-    def _handle_special_attack_effects(self, monster: Monster, context: GameContext) -> None:
+    def _handle_special_attack_effects(
+        self, monster: Monster, context: GameContext
+    ) -> None:
         """
         モンスターの特殊攻撃効果を処理。
 
         Args:
+        ----
             monster: 攻撃したモンスター
             context: ゲームコンテキスト
 
@@ -106,12 +113,18 @@ class CombatManager:
         player = context.player
 
         # 幻覚を引き起こすモンスターの攻撃（30%の確率）
-        if hasattr(monster, 'ai_pattern') and monster.ai_pattern in ['hallucinogenic', 'psychic']:
+        if hasattr(monster, "ai_pattern") and monster.ai_pattern in [
+            "hallucinogenic",
+            "psychic",
+        ]:
             if random.random() < 0.3:
                 from pyrogue.entities.actors.status_effects import HallucinationEffect
+
                 hallucination = HallucinationEffect(duration=6)
                 player.status_effects.add_effect(hallucination)
-                context.add_message(f"The {monster.name}'s attack makes you see strange visions!")
+                context.add_message(
+                    f"The {monster.name}'s attack makes you see strange visions!"
+                )
 
         # その他の特殊攻撃効果もここに追加可能
         # 例：毒攻撃、麻痺攻撃など
@@ -121,10 +134,12 @@ class CombatManager:
         ダメージを計算。
 
         Args:
+        ----
             attacker: 攻撃者
             defender: 防御者
 
         Returns:
+        -------
             計算されたダメージ
 
         """
@@ -165,9 +180,11 @@ class CombatManager:
         エンティティの攻撃力を取得。
 
         Args:
+        ----
             entity: 攻撃者エンティティ
 
         Returns:
+        -------
             攻撃力
 
         """
@@ -182,9 +199,11 @@ class CombatManager:
         エンティティの防御力を取得。
 
         Args:
+        ----
             entity: 防御者エンティティ
 
         Returns:
+        -------
             防御力
 
         """
@@ -199,6 +218,7 @@ class CombatManager:
         モンスターの死亡処理。
 
         Args:
+        ----
             monster: 死亡したモンスター
             context: ゲームコンテキスト
 
@@ -230,10 +250,12 @@ class CombatManager:
         モンスター撃破時の経験値を計算。
 
         Args:
+        ----
             monster: 撃破されたモンスター
             player: プレイヤー
 
         Returns:
+        -------
             獲得経験値
 
         """
@@ -253,6 +275,7 @@ class CombatManager:
         レベルアップチェック。
 
         Args:
+        ----
             player: プレイヤー
             context: ゲームコンテキスト
 
@@ -287,9 +310,11 @@ class CombatManager:
         指定レベルに必要な経験値を計算。
 
         Args:
+        ----
             level: 目標レベル
 
         Returns:
+        -------
             必要経験値
 
         """
@@ -302,6 +327,7 @@ class CombatManager:
         モンスターのドロップアイテム処理。
 
         Args:
+        ----
             monster: 死亡したモンスター
             context: ゲームコンテキスト
 
@@ -320,11 +346,14 @@ class CombatManager:
             floor_data.item_spawner.items.append(gold)
             context.add_message(f"The {monster.name} dropped {gold_amount} gold!")
 
-    def _handle_player_death(self, context: GameContext, death_cause: str = "Unknown") -> None:
+    def _handle_player_death(
+        self, context: GameContext, death_cause: str = "Unknown"
+    ) -> None:
         """
         プレイヤーの死亡処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
             death_cause: 死因
 
@@ -336,7 +365,7 @@ class CombatManager:
         game_logger.info(f"Player died in combat: {death_cause}")
 
         # スコアを記録（GameLogicに委譲）
-        if hasattr(context, 'game_logic') and context.game_logic:
+        if hasattr(context, "game_logic") and context.game_logic:
             context.game_logic.record_game_over(death_cause)
 
         # ゲームオーバー処理をエンジンに通知
@@ -350,12 +379,14 @@ class CombatManager:
         指定座標への攻撃が可能かチェック。
 
         Args:
+        ----
             attacker: 攻撃者
             x: 目標X座標
             y: 目標Y座標
             context: ゲームコンテキスト
 
         Returns:
+        -------
             攻撃可能な場合True
 
         """
@@ -370,9 +401,11 @@ class CombatManager:
         戦闘統計情報を取得。
 
         Args:
+        ----
             player: プレイヤー
 
         Returns:
+        -------
             戦闘統計辞書
 
         """
