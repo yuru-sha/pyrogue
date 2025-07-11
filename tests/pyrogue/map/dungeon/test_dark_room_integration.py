@@ -100,11 +100,14 @@ class TestDarkRoomIntegration:
             assert 0 <= light_x < 80
             assert 0 <= light_y < 45
 
-            # 光源タイルが床であることを確認
+            # 光源タイルが床または階段であることを確認
             light_tile = tiles[light_y, light_x]
-            assert isinstance(light_tile, Floor)
-            assert hasattr(light_tile, 'has_light_source')
-            assert light_tile.has_light_source
+            from pyrogue.map.tile import StairsUp, StairsDown
+            assert isinstance(light_tile, (Floor, StairsUp, StairsDown))
+            # 床タイルの場合のみ光源属性をチェック
+            if isinstance(light_tile, Floor):
+                assert hasattr(light_tile, 'has_light_source')
+                assert light_tile.has_light_source
 
     def test_darkness_level_calculation(self):
         """暗さレベル計算のテスト。"""

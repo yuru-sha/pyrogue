@@ -236,8 +236,8 @@ class IsolatedRoomBuilder:
             return
 
         # 最小スパニングツリーで部屋を接続
-        connected_rooms = {rooms[0]}
-        unconnected_rooms = set(rooms[1:])
+        connected_rooms = [rooms[0]]
+        unconnected_rooms = rooms[1:]
 
         while unconnected_rooms:
             # 最も近い部屋ペアを見つける
@@ -259,7 +259,7 @@ class IsolatedRoomBuilder:
                 room1.connected_rooms.add(room2.id)
                 room2.connected_rooms.add(room1.id)
 
-                connected_rooms.add(room2)
+                connected_rooms.append(room2)
                 unconnected_rooms.remove(room2)
 
     def _calculate_room_distance(self, room1: Room, room2: Room) -> float:

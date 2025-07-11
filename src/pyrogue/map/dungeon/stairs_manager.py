@@ -363,7 +363,13 @@ class StairsManager:
 
         if not floor_positions:
             game_logger.warning("No floor tiles found for maze stairs placement")
-            return (1, 1), (1, 2)
+            # 強制的に2つの位置に床を作成して階段を配置
+            height, width = tiles.shape
+            pos1 = (min(1, width-1), min(1, height-1))
+            pos2 = (min(2, width-1), min(1, height-1))
+            tiles[pos1[1], pos1[0]] = Floor()
+            tiles[pos2[1], pos2[0]] = Floor()
+            floor_positions = [pos1, pos2]
 
         # 上り階段の配置
         up_stairs_pos = None
@@ -378,8 +384,16 @@ class StairsManager:
         # デフォルト位置を設定
         if not up_stairs_pos:
             up_stairs_pos = (1, 1)
+            # デフォルト位置に床と階段を強制配置
+            if floor > 1:
+                tiles[up_stairs_pos[1], up_stairs_pos[0]] = StairsUp()
+                self.stairs_placed.append(("up", up_stairs_pos, "maze"))
+
         if not down_stairs_pos and floor < GameConstants.MAX_FLOORS:
             down_stairs_pos = (1, 2)
+            # デフォルト位置に床と階段を強制配置
+            tiles[down_stairs_pos[1], down_stairs_pos[0]] = StairsDown()
+            self.stairs_placed.append(("down", down_stairs_pos, "maze"))
 
         game_logger.debug(f"Placed maze stairs: up={up_stairs_pos}, down={down_stairs_pos}")
         return up_stairs_pos, down_stairs_pos

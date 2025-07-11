@@ -180,7 +180,10 @@ class DarkRoomBuilder:
             for x in range(dark_room.x + 1, dark_room.x + dark_room.width - 1):
                 if (0 <= y < tiles.shape[0] and 0 <= x < tiles.shape[1] and
                     isinstance(tiles[y, x], Floor)):
-                    candidates.append((x, y))
+                    # 階段タイルでないことを確認
+                    from pyrogue.map.tile import StairsUp, StairsDown
+                    if not isinstance(tiles[y, x], (StairsUp, StairsDown)):
+                        candidates.append((x, y))
 
         if not candidates:
             return None

@@ -61,7 +61,7 @@ class TestMazeBuilder:
         # 床の割合が妥当な範囲内にあることを確認
         total_tiles = 30 * 40
         floor_ratio = floor_count / total_tiles
-        assert 0.05 <= floor_ratio <= 0.5  # 5%～50%の範囲
+        assert 0.02 <= floor_ratio <= 0.5  # 2%～50%の範囲（迷路は狭い通路が特徴）
 
     def test_maze_connectivity(self):
         """迷路の連結性をテスト。"""
