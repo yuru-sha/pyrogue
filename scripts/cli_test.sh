@@ -130,14 +130,20 @@ main() {
     run_test "インベントリ表示テスト" "inventory\nquit" "INVENTORY"
     run_test "初期装備確認テスト" "inventory\nquit" "Dagger.*equipped"
 
-    # 5. ゲームオーバーテスト
+    # 5. アイテムシステムテスト
+    log_info "=== アイテムシステムテスト ==="
+    run_test "ゴールド配置テスト" "status\ndebug gold 100\nquit" "Placed 100 gold at your location"
+    run_test "ゴールドオートピックアップテスト" "debug gold 77\nlook\nn\ne\ns\nw\nstatus\nquit" "Gold: 7[0-9]"
+    run_test "ゴールド取得確認テスト" "debug gold 99\nn\ns\nstatus\nquit" "Gold: 99"
+
+    # 6. ゲームオーバーテスト
     log_info "=== ゲームオーバーテスト ==="
     run_test "HP直接設定死亡テスト" "status\ndebug hp 0\nquit" "You have died"
     run_test "ダメージによる死亡テスト" "status\ndebug damage 999\nquit" "You have died"
     run_test "段階的ダメージテスト" "status\ndebug damage 10\nstatus\ndebug damage 5\nstatus\nquit" "HP: 5/20"
     run_test "ゲームオーバー表示テスト" "debug hp 0\nquit" "GAME OVER"
 
-    # 6. イェンダーのアミュレットテスト
+    # 7. イェンダーのアミュレットテスト
     log_info "=== イェンダーのアミュレットテスト ==="
     run_test "アミュレットデバッグ取得テスト" "debug yendor\nquit" "You now possess the Amulet of Yendor"
     run_test "アミュレット効果確認テスト" "debug yendor\nstatus\nquit" "Has Amulet: Yes"
@@ -145,7 +151,7 @@ main() {
     run_test "勝利条件テスト" "debug yendor\nstairs up\nquit" "You have escaped with the Amulet of Yendor"
     run_test "階層テレポートテスト" "debug floor 26\nstatus\ndebug floor 1\nstatus\nquit" "Floor: B1F"
 
-    # 6. 統合動作テスト
+    # 8. 統合動作テスト
     log_info "=== 統合動作テスト ==="
     run_test "複合操作テスト" "help\nstatus\ninventory\nlook\nn\ne\nstatus\nquit" "PLAYER STATUS"
 

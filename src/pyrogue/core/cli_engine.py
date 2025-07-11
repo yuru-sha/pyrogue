@@ -45,6 +45,11 @@ class CLICommandContext(CommandContext):
         """プレイヤーへのアクセス。"""
         return self.engine.game_logic.player
 
+    @property
+    def dungeon_manager(self):
+        """ダンジョンマネージャーへのアクセス。"""
+        return self.engine.game_logic.dungeon_manager
+
     def add_message(self, message: str) -> None:
         """メッセージの追加。"""
         print(message)

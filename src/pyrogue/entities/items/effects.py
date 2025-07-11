@@ -17,6 +17,25 @@ from pyrogue.entities.actors.status_effects import (
 )
 
 
+def _add_message_safe(context, message: str) -> None:
+    """コンテキストに安全にメッセージを追加するヘルパー関数。"""
+    if hasattr(context, "add_message"):
+        context.add_message(message)
+    elif hasattr(context, "game_screen") and hasattr(
+        context.game_screen, "message_log"
+    ):
+        context.game_screen.message_log.append(message)
+
+
+def _get_floor_data_safe(context):
+    """コンテキストから安全にフロアデータを取得するヘルパー関数。"""
+    if hasattr(context, "dungeon_manager"):
+        return context.dungeon_manager.get_current_floor_data()
+    elif hasattr(context, "dungeon"):
+        return context.dungeon
+    return None
+
+
 class EffectContext(Protocol):
     """Context protocol defining what effects can access."""
 
@@ -35,7 +54,9 @@ class EffectContext(Protocol):
         """Access to the game screen for UI updates."""
         ...
 
-    def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
+    def add_message(
+        self, message: str, color: tuple[int, int, int] = (255, 255, 255)
+    ) -> None:
         """Add a message to the game log."""
         ...
 
@@ -60,7 +81,6 @@ class InstantEffect(Effect):
     """Base class for effects that apply immediately."""
 
 
-
 class HealingEffect(InstantEffect):
     """Heals the player for a specified amount."""
 
@@ -75,11 +95,9 @@ class HealingEffect(InstantEffect):
         actual_heal = player.hp - old_hp
 
         if actual_heal > 0:
-            context.add_message(
-                f"You feel better! (+{actual_heal} HP)"
-            )
+            _add_message_safe(context, f"You feel better! (+{actual_heal} HP)")
             return True
-        context.add_message("You are already at full health.")
+        _add_message_safe(context, "You are already at full health.")
         return False
 
 
@@ -93,27 +111,30 @@ class TeleportEffect(InstantEffect):
 
     def apply(self, context: EffectContext) -> bool:
         player = context.player
-        dungeon = context.dungeon
+        floor_data = _get_floor_data_safe(context)
+
+        if not floor_data:
+            return False
 
         # Find a random walkable tile
         max_attempts = 100
-        height, width = dungeon.tiles.shape
+        height, width = floor_data.tiles.shape
         for _ in range(max_attempts):
             x = random.randint(0, width - 1)
             y = random.randint(0, height - 1)
 
-            if dungeon.tiles[y][x].walkable and not dungeon.get_blocking_entity_at(
-                x, y
-            ):
+            if floor_data.tiles[y][
+                x
+            ].walkable and not floor_data.get_blocking_entity_at(x, y):
                 old_x, old_y = player.x, player.y
                 player.x, player.y = x, y
 
-                context.add_message(
-                    f"You teleport from ({old_x}, {old_y}) to ({x}, {y})!"
+                _add_message_safe(
+                    context, f"You teleport from ({old_x}, {old_y}) to ({x}, {y})!"
                 )
                 return True
 
-        context.add_message("The teleportation fails!")
+        _add_message_safe(context, "The teleportation fails!")
         return False
 
 
@@ -126,17 +147,18 @@ class MagicMappingEffect(InstantEffect):
         )
 
     def apply(self, context: EffectContext) -> bool:
-        dungeon = context.dungeon
+        floor_data = _get_floor_data_safe(context)
+
+        if not floor_data:
+            return False
 
         # Reveal all tiles
-        height, width = dungeon.tiles.shape
+        height, width = floor_data.tiles.shape
         for y in range(height):
             for x in range(width):
-                dungeon.explored[y][x] = True
+                floor_data.explored[y][x] = True
 
-        context.add_message(
-            "The dungeon layout is revealed to your mind!"
-        )
+        _add_message_safe(context, "The dungeon layout is revealed to your mind!")
         return True
 
 
@@ -157,21 +179,21 @@ class IdentifyEffect(InstantEffect):
             if hasattr(item, "item_type") and hasattr(item, "name"):
                 # 未識別のアイテムのみ処理
                 if not player.identification.is_identified(item.name, item.item_type):
-                    was_identified = player.identification.identify_item(item.name, item.item_type)
+                    was_identified = player.identification.identify_item(
+                        item.name, item.item_type
+                    )
                     if was_identified:
                         unidentified_count += 1
                         # 識別メッセージを追加
-                        msg = player.identification.get_identification_message(item.name, item.item_type)
-                        context.add_message(msg)
+                        msg = player.identification.get_identification_message(
+                            item.name, item.item_type
+                        )
+                        _add_message_safe(context, msg)
 
         if unidentified_count > 0:
-            context.add_message(
-                f"You identify {unidentified_count} item(s)!"
-            )
+            _add_message_safe(context, f"You identify {unidentified_count} item(s)!")
         else:
-            context.add_message(
-                "All your items are already known to you."
-            )
+            _add_message_safe(context, "All your items are already known to you.")
 
         return True
 
@@ -192,11 +214,9 @@ class NutritionEffect(InstantEffect):
 
         hunger_gained = player.hunger - old_hunger
         if hunger_gained > 0:
-            context.add_message(
-                f"You feel satisfied. (+{hunger_gained} hunger)"
-            )
+            _add_message_safe(context, f"You feel satisfied. (+{hunger_gained} hunger)")
             return True
-        context.add_message("You are already full.")
+        _add_message_safe(context, "You are already full.")
         return False
 
 
@@ -225,12 +245,12 @@ class RemoveCurseEffect(InstantEffect):
                 cursed_count += 1
 
         if cursed_count > 0:
-            context.add_message(
-                f"You feel the curse lift from {cursed_count} item(s)!"
+            _add_message_safe(
+                context, f"You feel the curse lift from {cursed_count} item(s)!"
             )
         else:
-            context.add_message(
-                "You don't feel any curses upon your belongings."
+            _add_message_safe(
+                context, "You don't feel any curses upon your belongings."
             )
 
         return True
@@ -249,22 +269,23 @@ class EnchantWeaponEffect(InstantEffect):
         weapon = player.inventory.get_equipped_weapon()
 
         if not weapon:
-            context.add_message(
-                "You need to be wielding a weapon to enchant it!"
+            _add_message_safe(
+                context, "You need to be wielding a weapon to enchant it!"
             )
             return False
 
         # Check enchantment limit (max +9)
         if weapon.enchantment >= 9:
-            context.add_message(
-                "Your weapon glows briefly, but nothing happens."
+            _add_message_safe(
+                context, "Your weapon glows briefly, but nothing happens."
             )
             return False
 
         weapon.enchantment += 1
         enchant_text = f"+{weapon.enchantment}" if weapon.enchantment > 0 else ""
-        context.add_message(
-            f"Your {weapon.name} glows with magical energy! (now {enchant_text} {weapon.name})"
+        _add_message_safe(
+            context,
+            f"Your {weapon.name} glows with magical energy! (now {enchant_text} {weapon.name})",
         )
         return True
 
@@ -282,22 +303,21 @@ class EnchantArmorEffect(InstantEffect):
         armor = player.inventory.get_equipped_armor()
 
         if not armor:
-            context.add_message(
-                "You need to be wearing armor to enchant it!"
-            )
+            _add_message_safe(context, "You need to be wearing armor to enchant it!")
             return False
 
         # Check enchantment limit (max +9)
         if armor.enchantment >= 9:
-            context.add_message(
-                "Your armor gleams briefly, but nothing happens."
+            _add_message_safe(
+                context, "Your armor gleams briefly, but nothing happens."
             )
             return False
 
         armor.enchantment += 1
         enchant_text = f"+{armor.enchantment}" if armor.enchantment > 0 else ""
-        context.add_message(
-            f"Your {armor.name} shimmers with protective magic! (now {enchant_text} {armor.name})"
+        _add_message_safe(
+            context,
+            f"Your {armor.name} shimmers with protective magic! (now {enchant_text} {armor.name})",
         )
         return True
 
@@ -316,8 +336,8 @@ class LightEffect(InstantEffect):
         player = context.player
         player.apply_light_effect(self.duration, self.radius)
 
-        context.add_message(
-            "A brilliant light surrounds you, expanding your vision!"
+        _add_message_safe(
+            context, "A brilliant light surrounds you, expanding your vision!"
         )
         return True
 
@@ -325,7 +345,9 @@ class LightEffect(InstantEffect):
 class StatusEffectApplication(InstantEffect):
     """Applies a status effect to the player."""
 
-    def __init__(self, status_effect_class, name: str, description: str, **kwargs) -> None:
+    def __init__(
+        self, status_effect_class, name: str, description: str, **kwargs
+    ) -> None:
         super().__init__(name=name, description=description)
         self.status_effect_class = status_effect_class
         self.kwargs = kwargs
@@ -336,9 +358,7 @@ class StatusEffectApplication(InstantEffect):
 
         player.status_effects.add_effect(status_effect)
 
-        context.add_message(
-            f"You are affected by {status_effect.name}!"
-        )
+        _add_message_safe(context, f"You are affected by {status_effect.name}!")
         return True
 
 
@@ -351,7 +371,7 @@ class PoisonPotionEffect(StatusEffectApplication):
             name="Poison",
             description=f"Poisons you for {duration} turns",
             duration=duration,
-            damage=damage
+            damage=damage,
         )
 
 
@@ -363,7 +383,7 @@ class ParalysisPotionEffect(StatusEffectApplication):
             status_effect_class=ParalysisEffect,
             name="Paralysis",
             description=f"Paralyzes you for {duration} turns",
-            duration=duration
+            duration=duration,
         )
 
 
@@ -375,7 +395,7 @@ class ConfusionPotionEffect(StatusEffectApplication):
             status_effect_class=ConfusionEffect,
             name="Confusion",
             description=f"Confuses you for {duration} turns",
-            duration=duration
+            duration=duration,
         )
 
 
@@ -387,7 +407,7 @@ class HallucinationPotionEffect(StatusEffectApplication):
             status_effect_class=HallucinationEffect,
             name="Hallucination",
             description=f"Causes hallucinations for {duration} turns",
-            duration=duration
+            duration=duration,
         )
 
 
