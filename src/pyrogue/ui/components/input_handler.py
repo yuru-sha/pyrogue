@@ -314,6 +314,12 @@ class InputHandler:
 
         プレイヤーの周囲8方向をチェックし、NPCがいる場合は対話を開始する。
         """
+        # NPCシステムの有効性をチェック
+        from pyrogue.constants import FeatureConstants
+        if not FeatureConstants.ENABLE_NPC_SYSTEM:
+            self.game_screen.game_logic.add_message("NPCs are not available in this version.")
+            return
+
         player = self.game_screen.player
         if not player:
             return

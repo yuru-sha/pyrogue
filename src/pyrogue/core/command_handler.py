@@ -69,15 +69,19 @@ class CommonCommandHandler:
     def __init__(self, context: CommandContext):
         self.context = context
 
-    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
+    def handle_command(
+        self, command: str, args: list[str] | None = None
+    ) -> CommandResult:
         """
         コマンドを処理し、結果を返す。
 
         Args:
+        ----
             command: 実行するコマンド
             args: コマンドの引数リスト
 
         Returns:
+        -------
             CommandResult: コマンド実行結果
         """
         if args is None:
@@ -118,6 +122,10 @@ class CommonCommandHandler:
             self.context.display_game_state()
             return CommandResult(True)
 
+        # デバッグコマンド
+        elif command == "debug":
+            return self._handle_debug_command(args)
+
         # システムコマンド
         elif command in ["quit", "exit", "q"]:
             return CommandResult(True, "Goodbye!", should_quit=True)
@@ -149,7 +157,9 @@ class CommonCommandHandler:
             elif direction in ["west", "w"]:
                 dx, dy = -1, 0
             else:
-                return CommandResult(False, "Invalid direction. Use north/south/east/west")
+                return CommandResult(
+                    False, "Invalid direction. Use north/south/east/west"
+                )
         else:
             return CommandResult(False, "Usage: move <direction> or use n/s/e/w")
 
@@ -265,9 +275,145 @@ Available Commands:
   System:
     help - Show this help
     quit/exit/q - Quit game
+
+  Debug:
+    debug yendor - Get Amulet of Yendor
+    debug floor <number> - Teleport to floor
+    debug pos <x> <y> - Teleport to position
+    debug hp <value> - Set HP to value
+    debug damage <value> - Take damage
         """
         self.context.add_message(help_text.strip())
         return CommandResult(True)
+
+    def _handle_debug_command(self, args: list[str]) -> CommandResult:
+        """
+        デバッグコマンドの処理。
+
+        Args:
+        ----
+            args: コマンド引数
+
+        Returns:
+        -------
+            コマンド実行結果
+        """
+        if not args:
+            self.context.add_message(
+                "Debug commands: yendor, floor <number>, pos <x> <y>, hp <value>, damage <value>"
+            )
+            return CommandResult(True)
+
+        debug_cmd = args[0].lower()
+
+        if debug_cmd == "yendor":
+            # イェンダーのアミュレットを付与
+            player = self.context.player
+            player.has_amulet = True
+            self.context.add_message("You now possess the Amulet of Yendor!")
+
+            # B1Fに脱出階段を生成
+            from pyrogue.entities.items.amulet import AmuletOfYendor
+
+            amulet = AmuletOfYendor(0, 0)  # 位置は関係ない
+            game_logic = self.context.game_logic
+
+            # 現在B1Fにいる場合は、階段を生成してプレイヤーを配置
+            if game_logic.dungeon_manager.current_floor == 1:
+                b1f_data = game_logic.dungeon_manager.get_floor(1)
+                if b1f_data:
+                    stairs_pos = amulet._place_escape_stairs_on_floor(b1f_data)
+                    if stairs_pos:
+                        player.x, player.y = stairs_pos
+                        self.context.add_message(
+                            f"You are teleported to the escape stairs at ({stairs_pos[0]}, {stairs_pos[1]})"
+                        )
+            else:
+                amulet._create_escape_stairs(self.context)
+
+            return CommandResult(True)
+
+        elif debug_cmd == "floor" and len(args) > 1:
+            try:
+                floor_num = int(args[1])
+                game_logic = self.context.game_logic
+                game_logic.dungeon_manager.set_current_floor(floor_num)
+
+                # プレイヤーの位置を新しい階層に設定
+                floor_data = game_logic.dungeon_manager.get_current_floor_data()
+                if floor_data:
+                    player = self.context.player
+                    # 適当な位置を探す
+                    spawn_pos = game_logic.dungeon_manager.get_player_spawn_position(
+                        floor_data
+                    )
+                    player.x, player.y = spawn_pos
+                    player.update_deepest_floor(floor_num)
+
+                self.context.add_message(f"Teleported to floor B{floor_num}F")
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Floor teleport failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "pos" and len(args) > 2:
+            try:
+                x = int(args[1])
+                y = int(args[2])
+                player = self.context.player
+                player.x = x
+                player.y = y
+                self.context.add_message(f"Player teleported to ({x}, {y})")
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Position teleport failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "hp" and len(args) > 1:
+            try:
+                hp_value = int(args[1])
+                player = self.context.player
+                player.hp = max(0, hp_value)
+                self.context.add_message(f"Player HP set to {player.hp}")
+
+                # 死亡チェック
+                if player.hp <= 0:
+                    self.context.add_message("You have died!")
+                    self.context.add_message("GAME OVER")
+                    # 死亡処理
+                    if hasattr(self.context, "game_logic") and self.context.game_logic:
+                        self.context.game_logic.record_game_over("Debug death")
+
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"HP set failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "damage" and len(args) > 1:
+            try:
+                damage_value = int(args[1])
+                player = self.context.player
+                player.hp = max(0, player.hp - damage_value)
+                self.context.add_message(
+                    f"Player takes {damage_value} damage! HP: {player.hp}"
+                )
+
+                # 死亡チェック
+                if player.hp <= 0:
+                    self.context.add_message("You have died!")
+                    self.context.add_message("GAME OVER")
+                    # 死亡処理
+                    if hasattr(self.context, "game_logic") and self.context.game_logic:
+                        self.context.game_logic.record_game_over("Debug damage")
+
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Damage failed: {e}")
+                return CommandResult(False)
+
+        else:
+            self.context.add_message("Unknown debug command")
+            return CommandResult(False)
 
 
 class GUICommandContext(CommandContext):
@@ -293,14 +439,11 @@ class GUICommandContext(CommandContext):
     def display_player_status(self) -> None:
         """プレイヤーステータスの表示。"""
         # GUIでは常時表示されているため何もしない
-        pass
 
     def display_inventory(self) -> None:
         """インベントリの表示。"""
         # GUIでは別画面で処理されるため何もしない
-        pass
 
     def display_game_state(self) -> None:
         """ゲーム状態の表示。"""
         # GUIでは常時表示されているため何もしない
-        pass

@@ -83,8 +83,12 @@ class Engine:
         self.message_log: list[str] = []  # メッセージログを追加
         self.state_manager = StateManager()
 
-        # 対話マネージャーを初期化
-        self.dialogue_manager = DialogueManager()
+        # 対話マネージャーを初期化（NPCシステムが有効な場合のみ）
+        from pyrogue.constants import FeatureConstants
+        if FeatureConstants.ENABLE_NPC_SYSTEM:
+            self.dialogue_manager = DialogueManager()
+        else:
+            self.dialogue_manager = None
 
         # セーブマネージャーを初期化
         self.save_manager = SaveManager()

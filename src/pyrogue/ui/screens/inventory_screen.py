@@ -225,17 +225,26 @@ class InventoryScreen(Screen):
 
             # d: ドロップ
             if event.sym == tcod.event.KeySym.D:
-                if self.game_screen.game_logic.can_drop_item_at(
-                    self.game_screen.game_logic.player.x,
-                    self.game_screen.game_logic.player.y,
-                ):
-                    # アイテムをプレイヤーの位置に配置
-                    selected_item.x = self.game_screen.game_logic.player.x
-                    selected_item.y = self.game_screen.game_logic.player.y
+                # 呪われた装備中のアイテムかチェック
+                if (self.game_screen.game_logic.inventory.is_equipped(selected_item) and
+                    hasattr(selected_item, 'cursed') and selected_item.cursed):
+                    self.game_screen.game_logic.add_message(
+                        f"You cannot drop the cursed {selected_item.name}! You must first remove the curse."
+                    )
+                else:
+                    # 装備中のアイテムの場合は先に装備解除メッセージを表示
+                    if self.game_screen.game_logic.inventory.is_equipped(selected_item):
+                        self.game_screen.game_logic.add_message(
+                            f"You first unequip the {selected_item.name}."
+                        )
 
-                    # アイテムを地面に追加
-                    current_floor = self.game_screen.game_logic.get_current_floor_data()
-                    if current_floor.item_spawner.add_item(selected_item):
+                    # ドロップ処理を実行
+                    if self.game_screen.game_logic.drop_item_at(
+                        selected_item,
+                        self.game_screen.game_logic.player.x,
+                        self.game_screen.game_logic.player.y,
+                    ):
+                        # インベントリからアイテムを削除（remove_itemが装備スロットもクリア）
                         self.game_screen.game_logic.inventory.remove_item(selected_item)
                         self.game_screen.game_logic.add_message(
                             f"You drop the {selected_item.name}."
@@ -250,10 +259,6 @@ class InventoryScreen(Screen):
                             )
                     else:
                         self.game_screen.game_logic.add_message(
-                            "You cannot drop items here. Something is blocking the way."
+                            "You cannot drop items here."
                         )
-                else:
-                    self.game_screen.game_logic.add_message(
-                        "You cannot drop items here. There is already an item or obstacle."
-                    )
                 return

@@ -13,7 +13,7 @@ import numpy as np
 
 from pyrogue.constants import GameConstants
 from pyrogue.map.dungeon.room_builder import Room
-from pyrogue.map.tile import StairsDown, StairsUp
+from pyrogue.map.tile import Floor, StairsDown, StairsUp
 from pyrogue.utils import game_logger
 
 
@@ -64,6 +64,81 @@ class StairsManager:
         )
 
         return up_stairs_pos, down_stairs_pos
+
+    def place_stairs_for_maze(
+        self,
+        floor: int,
+        tiles: np.ndarray
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
+        """
+        迷路専用の階段配置。
+
+        Args:
+            floor: 階層番号
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            (上り階段位置, 下り階段位置) のタプル
+        """
+        self.stairs_placed = []
+
+        # 迷路では部屋がないので、通路のFloorタイルから適切な位置を探す
+        floor_positions = self._find_floor_positions(tiles)
+
+        if not floor_positions:
+            # フォールバック: 任意の位置に配置
+            up_pos = (1, 1)
+            down_pos = (tiles.shape[1] - 2, tiles.shape[0] - 2)
+        else:
+            # 上り階段: 最初の方の位置
+            up_pos = floor_positions[0]
+            # 下り階段: 最後の方の位置（距離を離す）
+            down_pos = floor_positions[-1] if len(floor_positions) > 1 else floor_positions[0]
+
+            # もし同じ位置なら、別の位置を探す
+            if up_pos == down_pos and len(floor_positions) > 1:
+                down_pos = floor_positions[len(floor_positions) // 2]
+
+        # 上り階段を配置（1階は不要）
+        if floor > 1:
+            tiles[up_pos[1], up_pos[0]] = StairsUp()
+            self.stairs_placed.append(("up", up_pos, "maze"))
+            game_logger.debug(f"Placed up stairs at {up_pos} in maze")
+        else:
+            # 1階では上り階段の代わりにプレイヤー開始位置として記録
+            game_logger.debug(f"Set player start position at {up_pos} on floor 1")
+
+        # 下り階段を配置（最下層は不要）
+        if floor < GameConstants.MAX_FLOORS:
+            tiles[down_pos[1], down_pos[0]] = StairsDown()
+            self.stairs_placed.append(("down", down_pos, "maze"))
+            game_logger.debug(f"Placed down stairs at {down_pos} in maze")
+        else:
+            # 最下層では下り階段の代わりにエンディング位置として記録
+            game_logger.debug(f"Set ending position at {down_pos} on floor {floor}")
+
+        game_logger.info(
+            f"Placed maze stairs on floor {floor}: up at {up_pos}, down at {down_pos}"
+        )
+
+        return up_pos, down_pos
+
+    def _find_floor_positions(self, tiles: np.ndarray) -> list[tuple[int, int]]:
+        """
+        Floorタイルの位置を検索。
+
+        Args:
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            Floorタイルの位置リスト
+        """
+        positions = []
+        for y in range(tiles.shape[0]):
+            for x in range(tiles.shape[1]):
+                if isinstance(tiles[y, x], Floor):
+                    positions.append((x, y))
+        return positions
 
     def _place_up_stairs(
         self,
@@ -336,6 +411,127 @@ class StairsManager:
     def reset(self) -> None:
         """マネージャーの状態をリセット。"""
         self.stairs_placed = []
+
+    def place_stairs_for_maze(
+        self,
+        floor: int,
+        tiles: np.ndarray
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
+        """
+        迷路階層用の階段を配置。
+
+        Args:
+            floor: 階層番号
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            (上り階段位置, 下り階段位置) のタプル
+
+        """
+        # 床タイルの位置を収集
+        floor_positions = []
+        height, width = tiles.shape
+        for y in range(height):
+            for x in range(width):
+                if isinstance(tiles[y, x], Floor):
+                    floor_positions.append((x, y))
+
+        if not floor_positions:
+            game_logger.warning("No floor tiles found for maze stairs placement")
+            # 強制的に2つの位置に床を作成して階段を配置
+            height, width = tiles.shape
+            pos1 = (min(1, width-1), min(1, height-1))
+            pos2 = (min(2, width-1), min(1, height-1))
+            tiles[pos1[1], pos1[0]] = Floor()
+            tiles[pos2[1], pos2[0]] = Floor()
+            floor_positions = [pos1, pos2]
+
+        # 上り階段の配置
+        up_stairs_pos = None
+        if floor > 1:
+            up_stairs_pos = self._place_maze_stairs(floor_positions, tiles, "up")
+
+        # 下り階段の配置
+        down_stairs_pos = None
+        if floor < GameConstants.MAX_FLOORS:
+            down_stairs_pos = self._place_maze_stairs(floor_positions, tiles, "down", up_stairs_pos)
+
+        # デフォルト位置を設定
+        if not up_stairs_pos:
+            up_stairs_pos = (1, 1)
+            # デフォルト位置に床と階段を強制配置
+            if floor > 1:
+                tiles[up_stairs_pos[1], up_stairs_pos[0]] = StairsUp()
+                self.stairs_placed.append(("up", up_stairs_pos, "maze"))
+
+        if not down_stairs_pos and floor < GameConstants.MAX_FLOORS:
+            down_stairs_pos = (1, 2)
+            # デフォルト位置に床と階段を強制配置
+            tiles[down_stairs_pos[1], down_stairs_pos[0]] = StairsDown()
+            self.stairs_placed.append(("down", down_stairs_pos, "maze"))
+
+        game_logger.debug(f"Placed maze stairs: up={up_stairs_pos}, down={down_stairs_pos}")
+        return up_stairs_pos, down_stairs_pos
+
+    def _place_maze_stairs(
+        self,
+        floor_positions: list[tuple[int, int]],
+        tiles: np.ndarray,
+        stairs_type: str,
+        avoid_position: tuple[int, int] | None = None
+    ) -> tuple[int, int] | None:
+        """
+        迷路内の階段を配置。
+
+        Args:
+            floor_positions: 利用可能な床位置のリスト
+            tiles: ダンジョンのタイル配列
+            stairs_type: 階段の種類（"up" または "down"）
+            avoid_position: 避けるべき位置
+
+        Returns:
+            階段位置、または None
+
+        """
+        # 階段配置に適した位置を選択
+        # 迷路の場合、デッドエンドや角の位置を優先
+        preferred_positions = []
+
+        for x, y in floor_positions:
+            # 回避位置をチェック
+            if avoid_position and (x, y) == avoid_position:
+                continue
+
+            # 隣接する床タイルの数をカウント
+            adjacent_floors = 0
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx, ny = x + dx, y + dy
+                if (0 <= nx < tiles.shape[1] and 0 <= ny < tiles.shape[0] and
+                    isinstance(tiles[ny, nx], Floor)):
+                    adjacent_floors += 1
+
+            # デッドエンド（隣接する床が1つ）を優先
+            if adjacent_floors == 1:
+                preferred_positions.append((x, y))
+
+        # 優先位置がない場合は通常の床位置を使用
+        if not preferred_positions:
+            preferred_positions = [pos for pos in floor_positions if pos != avoid_position]
+
+        if not preferred_positions:
+            return None
+
+        # ランダムに選択
+        position = random.choice(preferred_positions)
+
+        # 階段を配置
+        if stairs_type == "up":
+            tiles[position[1], position[0]] = StairsUp()
+        else:
+            tiles[position[1], position[0]] = StairsDown()
+
+        self.stairs_placed.append((stairs_type, position, "maze"))
+        return position
 
     def get_statistics(self) -> dict:
         """階段配置の統計情報を取得。"""

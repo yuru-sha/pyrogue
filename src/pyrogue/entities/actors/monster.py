@@ -22,7 +22,8 @@ class Monster(Actor):
     ダンジョン内の敵モンスターを表現し、ステータス管理、
     移動、戦闘、AI行動などの機能を提供します。
 
-    Attributes:
+    Attributes
+    ----------
         char: 表示文字（A-Z）
         exp_value: 倒した時の経験値
         view_range: 視界範囲
@@ -30,14 +31,28 @@ class Monster(Actor):
 
     """
 
-    def __init__(self, char: str, x: int, y: int, name: str, level: int,
-                 hp: int, max_hp: int, attack: int, defense: int, exp_value: int,
-                 view_range: int, color: tuple[int, int, int], is_hostile: bool = True,
-                 ai_pattern: str = "basic") -> None:
+    def __init__(
+        self,
+        char: str,
+        x: int,
+        y: int,
+        name: str,
+        level: int,
+        hp: int,
+        max_hp: int,
+        attack: int,
+        defense: int,
+        exp_value: int,
+        view_range: int,
+        color: tuple[int, int, int],
+        is_hostile: bool = True,
+        ai_pattern: str = "basic",
+    ) -> None:
         """
         モンスターの初期化。
 
         Args:
+        ----
             char: 表示文字（A-Z）
             x: モンスターのX座標
             y: モンスターのY座標
@@ -91,18 +106,20 @@ class Monster(Actor):
         # システムの初期化
         self.status_effects = StatusEffectManager()
 
-    # move, take_damage, is_dead, heal は基底クラスから継承
+    # move, take_damage, is_dead, heal, is_alive は基底クラスから継承
 
     def can_see_player(self, player_x: int, player_y: int, fov_map: Any) -> bool:
         """
         プレイヤーが視界内にいるかチェック。
 
         Args:
+        ----
             player_x: プレイヤーのX座標
             player_y: プレイヤーのY座標
             fov_map: FOVマップオブジェクト
 
         Returns:
+        -------
             視界内にプレイヤーがいる場合True
 
         """
@@ -120,10 +137,12 @@ class Monster(Actor):
         最適な移動方向を決定します。斜め移動も含まれます。
 
         Args:
+        ----
             player_x: プレイヤーのX座標
             player_y: プレイヤーのY座標
 
         Returns:
+        -------
             (dx, dy)形式の移動方向ベクトル
 
         """
@@ -145,7 +164,8 @@ class Monster(Actor):
         8方向（上下左右＋斜め4方向）からランダムに1つを選択して
         移動方向を返します。待機する場合は(0,0)を返すことも可能です。
 
-        Returns:
+        Returns
+        -------
             (dx, dy)形式のランダムな移動方向ベクトル
 
         """
@@ -170,6 +190,7 @@ class Monster(Actor):
         効果が切れた状態異常は自動的に削除されます。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -180,9 +201,11 @@ class Monster(Actor):
         指定された状態異常があるかどうかを判定。
 
         Args:
+        ----
             name: 判定する状態異常の名前
 
         Returns:
+        -------
             状態異常が存在する場合はTrue、そうでなければFalse
 
         """

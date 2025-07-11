@@ -76,6 +76,7 @@ class GameScreen:
         """
         新しいゲームをセットアップ。
         """
+        self.game_logic.reset_game()
         self.game_logic.setup_new_game()
         self.fov_manager.update_fov()
 

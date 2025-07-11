@@ -18,6 +18,7 @@
 from .corridor_builder import Corridor, CorridorBuilder
 from .director import DungeonDirector
 from .door_manager import DoorManager
+from .maze_builder import MazeBuilder
 from .room_builder import Room, RoomBuilder
 from .special_room_builder import SpecialRoomBuilder
 from .stairs_manager import StairsManager
@@ -28,6 +29,7 @@ __all__ = [
     "CorridorBuilder",
     "DoorManager",
     "DungeonDirector",
+    "MazeBuilder",
     "Room",
     "RoomBuilder",
     "SpecialRoomBuilder",

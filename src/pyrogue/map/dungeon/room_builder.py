@@ -29,6 +29,7 @@ class Room:
     connected_rooms: set = None
     doors: list = None
     id: int = None
+    is_isolated: bool = False
 
     def __post_init__(self):
         if self.connected_rooms is None:

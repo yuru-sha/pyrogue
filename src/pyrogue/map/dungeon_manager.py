@@ -12,6 +12,7 @@
     - フロア間移動のサポート
 
 Example:
+-------
     >>> dungeon_manager = DungeonManager()
     >>> floor_data = dungeon_manager.get_floor(1)
     >>> dungeon_manager.set_current_floor(2)
@@ -43,7 +44,8 @@ class FloorData:
 
     各階層の状態（タイル、エンティティ、探索状況）を保持します。
 
-    Attributes:
+    Attributes
+    ----------
         tiles: ダンジョンタイルの2次元配列
         up_pos: 上り階段の位置 (x, y)
         down_pos: 下り階段の位置 (x, y)
@@ -72,6 +74,7 @@ class FloorData:
         フロアデータを初期化。
 
         Args:
+        ----
             floor_number: 階層番号
             tiles: ダンジョンタイルの2次元配列
             up_pos: 上り階段の位置
@@ -102,6 +105,97 @@ class FloorData:
             # フォールバック：最初の部屋の中央
             self.start_pos = (0, 0)  # デフォルト値
 
+    def is_valid_position(self, x: int, y: int) -> bool:
+        """
+        指定された位置が有効な範囲内かチェック。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            有効な座標の場合True
+        """
+        return 0 <= x < self.tiles.shape[1] and 0 <= y < self.tiles.shape[0]
+
+    def get_tile(self, x: int, y: int):
+        """
+        指定位置のタイルを取得。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            タイルインスタンス、無効な座標の場合None
+        """
+        if self.is_valid_position(x, y):
+            return self.tiles[y, x]
+        return None
+
+    def set_tile_walkable(self, x: int, y: int, walkable: bool) -> None:
+        """
+        指定位置のタイルの通行可能性を設定。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+            walkable: 通行可能かどうか
+        """
+        if self.is_valid_position(x, y):
+            tile = self.tiles[y, x]
+            if hasattr(tile, "walkable"):
+                tile.walkable = walkable
+
+    def set_tile(self, x: int, y: int, tile_type: str) -> None:
+        """
+        指定位置のタイルを設定。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+            tile_type: タイルタイプ
+        """
+        if self.is_valid_position(x, y):
+            # タイルタイプに応じたタイルインスタンスを作成
+            from pyrogue.map.tile import Door, Floor, Wall
+
+            if tile_type == "Door":
+                self.tiles[y, x] = Door()
+            elif tile_type == "Floor":
+                self.tiles[y, x] = Floor()
+            elif tile_type == "Wall":
+                self.tiles[y, x] = Wall()
+
+    def get_stairs_up_position(self) -> tuple[int, int] | None:
+        """上り階段の位置を取得。"""
+        return self.up_pos
+
+    def get_stairs_down_position(self) -> tuple[int, int] | None:
+        """下り階段の位置を取得。"""
+        return self.down_pos
+
+    @property
+    def monsters(self):
+        """現在のフロアのモンスターリストを取得。"""
+        return self.monster_spawner.monsters
+
+    @property
+    def items(self):
+        """現在のフロアのアイテムリストを取得。"""
+        return self.item_spawner.items
+
+    @property
+    def traps(self):
+        """現在のフロアのトラップリストを取得。"""
+        return self.trap_manager.traps
+
 
 class DungeonManager:
     """
@@ -116,7 +210,8 @@ class DungeonManager:
         - プレイヤーの移動履歴追跡
         - 階層状態の永続化サポート
 
-    Attributes:
+    Attributes
+    ----------
         current_floor: 現在の階層番号
         previous_floor: 前回いた階層番号
         floors: 生成済み階層データのキャッシュ
@@ -130,6 +225,7 @@ class DungeonManager:
         ダンジョンマネージャーを初期化。
 
         Args:
+        ----
             dungeon_width: ダンジョンの幅
             dungeon_height: ダンジョンの高さ
 
@@ -147,9 +243,11 @@ class DungeonManager:
         階層が存在しない場合は新しく生成します。
 
         Args:
+        ----
             floor_number: 取得する階層番号
 
         Returns:
+        -------
             指定された階層のFloorDataインスタンス
 
         """
@@ -163,9 +261,11 @@ class DungeonManager:
         現在の階層を設定し、そのデータを返す。
 
         Args:
+        ----
             floor_number: 設定する階層番号
 
         Returns:
+        -------
             設定された階層のFloorDataインスタンス
 
         """
@@ -177,7 +277,8 @@ class DungeonManager:
         """
         現在の階層データを取得。
 
-        Returns:
+        Returns
+        -------
             現在の階層のFloorDataインスタンス
 
         """
@@ -187,7 +288,8 @@ class DungeonManager:
         """
         階段を下りて次の階層に移動。
 
-        Returns:
+        Returns
+        -------
             移動先階層のFloorDataインスタンス
 
         """
@@ -197,7 +299,8 @@ class DungeonManager:
         """
         階段を上って前の階層に移動。
 
-        Returns:
+        Returns
+        -------
             移動先階層のFloorDataインスタンス。1階より上には移動できない場合はNone
 
         """
@@ -212,9 +315,11 @@ class DungeonManager:
         前の階層との関係に基づいて適切な位置を返します。
 
         Args:
+        ----
             floor_data: 移動先の階層データ
 
         Returns:
+        -------
             プレイヤーのスポーン位置 (x, y)
 
         """
@@ -239,6 +344,7 @@ class DungeonManager:
         指定階層の探索状態を更新。
 
         Args:
+        ----
             floor_number: 更新する階層番号
             explored: 新しい探索済み領域のブール配列
 
@@ -251,6 +357,7 @@ class DungeonManager:
         新しい階層を生成。
 
         Args:
+        ----
             floor_number: 生成する階層番号
 
         """
@@ -300,12 +407,13 @@ class DungeonManager:
         trap_manager: TrapManager,
         tiles: np.ndarray,
         rooms: list,
-        floor_number: int
+        floor_number: int,
     ) -> None:
         """
         トラップを生成して配置。
 
         Args:
+        ----
             trap_manager: トラップ管理インスタンス
             tiles: ダンジョンタイルの2次元配列
             rooms: 部屋のリスト
@@ -352,7 +460,7 @@ class DungeonManager:
                             trap_class = random.choices(
                                 [trap_type for trap_type, _ in trap_types],
                                 weights=[weight for _, weight in trap_types],
-                                k=1
+                                k=1,
                             )[0]
 
                             # トラップを作成して追加
@@ -366,7 +474,8 @@ class DungeonManager:
         """
         セーブ/ロード用のシリアライズ可能なデータを取得。
 
-        Returns:
+        Returns
+        -------
             シリアライズ可能な階層データの辞書
 
         """
@@ -393,6 +502,7 @@ class DungeonManager:
         シリアライズされたデータから状態を復元。
 
         Args:
+        ----
             data: シリアライズされたデータ
 
         """

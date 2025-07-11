@@ -10,11 +10,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pyrogue.core.managers.combat_manager import CombatManager
+from pyrogue.core.managers.floor_manager import FloorManager
 from pyrogue.core.managers.game_context import GameContext
+from pyrogue.core.managers.item_manager import ItemManager
 from pyrogue.core.managers.monster_ai_manager import MonsterAIManager
+from pyrogue.core.managers.movement_manager import MovementManager
 from pyrogue.core.managers.turn_manager import TurnManager
 from pyrogue.core.score_manager import ScoreManager
-from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.actors.player import Player
 from pyrogue.map.dungeon_manager import DungeonManager
 
@@ -31,7 +33,8 @@ class GameLogic:
     各責務を専用のマネージャーに委譲し、
     自身はマネージャー間の調整役に徹します。
 
-    Attributes:
+    Attributes
+    ----------
         engine: ゲームエンジンインスタンス
         player: プレイヤーインスタンス
         inventory: プレイヤーのインベントリ
@@ -54,6 +57,7 @@ class GameLogic:
         ゲームロジックを初期化。
 
         Args:
+        ----
             engine: ゲームエンジンインスタンス（CLIモードではNone）
             dungeon_width: ダンジョンの幅
             dungeon_height: ダンジョンの高さ
@@ -79,7 +83,7 @@ class GameLogic:
             inventory=self.inventory,
             dungeon_manager=self.dungeon_manager,
             message_log=self.message_log,
-            engine=engine
+            engine=engine,
         )
 
         # 各マネージャーを初期化
@@ -88,15 +92,32 @@ class GameLogic:
         self.monster_ai_manager = MonsterAIManager()
         self.score_manager = ScoreManager()
 
+        # 新しいマネージャーを初期化
+        self.movement_manager = MovementManager(self.context)
+        self.item_manager = ItemManager(self.context)
+        self.floor_manager = FloorManager(self.context)
+
         # コンテキストにマネージャーへの参照を追加
         self.context.monster_ai_manager = self.monster_ai_manager
         self.context.game_logic = self
+        self.context.combat_manager = self.combat_manager
+        self.context.turn_manager = self.turn_manager
+        self.context.movement_manager = self.movement_manager
+        self.context.item_manager = self.item_manager
+        self.context.floor_manager = self.floor_manager
 
         # GameScreen参照（段階的移行用）
         self.game_screen: GameScreen | None = None
 
+        # 初期化状態を追跡
+        self._is_initialized = False
+
     def setup_new_game(self) -> None:
         """新しいゲームをセットアップ。"""
+        # 重複初期化を防ぐ
+        if self._is_initialized:
+            return
+
         # 初期装備の設定
         self._setup_initial_equipment()
 
@@ -109,6 +130,31 @@ class GameLogic:
             self.player.x, self.player.y = floor_data.start_pos
 
         self.add_message("You enter the dungeon. Your quest begins!")
+
+        # 初期化完了をマーク
+        self._is_initialized = True
+
+    def reset_game(self) -> None:
+        """ゲームの状態をリセット。"""
+        self._is_initialized = False
+
+        # プレイヤーの状態をリセット
+        self.player = Player(x=0, y=0)
+        self.inventory = self.player.inventory
+
+        # メッセージログをクリア
+        self.message_log.clear()
+        self.message_log.extend(
+            [
+                "Welcome to PyRogue!",
+                "Use vi keys (hjklyubn), arrow keys, or numpad (1-9) to move.",
+                "Press ESC to return to menu.",
+            ]
+        )
+
+        # コンテキストを更新
+        self.context.player = self.player
+        self.context.inventory = self.inventory
 
     def _setup_initial_equipment(self) -> None:
         """初期装備を設定。"""
@@ -137,60 +183,29 @@ class GameLogic:
         self.game_screen = game_screen
         self.context.game_screen = game_screen
 
-    # 移動処理（MovementManagerに委譲予定）
+    # 移動処理（MovementManagerに委譲）
     def handle_player_move(self, dx: int, dy: int) -> bool:
         """
         プレイヤーの移動処理。
 
         Args:
+        ----
             dx: X方向の移動量
             dy: Y方向の移動量
 
         Returns:
+        -------
             移動が成功した場合True
 
         """
-        # ターン管理から行動可能かチェック
-        if not self.turn_manager.can_act(self.player):
-            self.add_message("You are paralyzed and cannot move!")
-            return False
+        # MovementManagerに処理を委譲
+        result = self.movement_manager.handle_player_move(dx, dy)
 
-        # 混乱状態のチェック
-        if self.turn_manager.is_confused(self.player):
-            # ランダムな方向に移動
-            import random
-            dx = random.randint(-1, 1)
-            dy = random.randint(-1, 1)
-            self.add_message("You are confused and move randomly!")
+        # 成功した場合はターン進行
+        if result:
+            self.turn_manager.process_turn(self.context)
 
-        new_x = self.player.x + dx
-        new_y = self.player.y + dy
-
-        # 移動可能性チェック
-        if not self._can_move_to(new_x, new_y):
-            return False
-
-        # 斜め移動の場合、角抜け（Corner Cutting）を防止（一時的に無効化）
-        # if dx != 0 and dy != 0:  # 斜め移動
-        #     if not self._can_diagonal_move(self.player.x, self.player.y, dx, dy):
-        #         return False
-
-        # モンスターとの戦闘チェック
-        monster = self._get_monster_at(new_x, new_y)
-        if monster:
-            return self.combat_manager.handle_player_combat(monster, self.context)
-
-        # 移動実行
-        self.player.x = new_x
-        self.player.y = new_y
-
-        # 移動後の処理
-        self._handle_post_move_events()
-
-        # ターン進行
-        self.turn_manager.process_turn(self.context)
-
-        return True
+        return result
 
     def _can_move_to(self, x: int, y: int) -> bool:
         """移動可能性をチェック。"""
@@ -199,9 +214,12 @@ class GameLogic:
             return False
 
         # 境界チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
             return False
 
         # タイルチェック
@@ -216,12 +234,14 @@ class GameLogic:
         一方でも通行可能な場合は移動を許可（通常のローグライク動作）。
 
         Args:
+        ----
             from_x: 移動元X座標
             from_y: 移動元Y座標
             dx: X方向の移動量
             dy: Y方向の移動量
 
         Returns:
+        -------
             斜め移動が可能な場合True
 
         """
@@ -273,7 +293,8 @@ class GameLogic:
             return
 
         items_at_pos = [
-            item for item in floor_data.item_spawner.items
+            item
+            for item in floor_data.item_spawner.items
             if item.x == self.player.x and item.y == self.player.y
         ]
 
@@ -299,40 +320,77 @@ class GameLogic:
             elif isinstance(tile, StairsUp):
                 self.add_message("You see stairs leading up. Press '<' to ascend.")
 
-    # アイテム処理（ItemManagerに委譲予定）
+    # アイテム処理（ItemManagerに委譲）
     def handle_get_item(self) -> str | None:
         """アイテム取得処理。"""
+        return self.item_manager.handle_get_item()
+
+    def can_drop_item_at(self, x: int, y: int) -> bool:
+        """
+        指定した位置にアイテムをドロップできるかチェック。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            ドロップ可能な場合True
+        """
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 座標の境界チェック
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
+            return False
+
+        # タイルが歩行可能かチェック
+        tile = floor_data.tiles[y, x]
+        if not getattr(tile, "walkable", False):
+            return False
+
+        # モンスターがいないかチェック
+        if self._get_monster_at(x, y):
+            return False
+
+        return True
+
+    def drop_item_at(self, item, x: int, y: int) -> bool:
+        """
+        指定した位置にアイテムをドロップ。
+
+        Args:
+        ----
+            item: ドロップするアイテム
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            ドロップが成功した場合True
+        """
+        if not self.can_drop_item_at(x, y):
+            return False
+
         floor_data = self.get_current_floor_data()
         if not floor_data or not hasattr(floor_data, "item_spawner"):
-            return None
+            return False
 
-        items_at_pos = [
-            item for item in floor_data.item_spawner.items
-            if item.x == self.player.x and item.y == self.player.y
-        ]
+        # アイテムの位置を設定
+        item.x = x
+        item.y = y
 
-        if not items_at_pos:
-            return None
+        # アイテムスポナーに追加
+        floor_data.item_spawner.items.append(item)
 
-        # 最初のアイテムを取得
-        item = items_at_pos[0]
-
-        # ゴールドの場合は直接プレイヤーのゴールドに追加
-        if hasattr(item, "item_type") and item.item_type == "GOLD":
-            self.player.gold += getattr(item, "amount", 1)
-            floor_data.item_spawner.items.remove(item)
-            message = f"You picked up {getattr(item, 'amount', 1)} gold."
-            self.add_message(message)
-            return message
-
-        # 通常のアイテムはインベントリに追加
-        if self.inventory.add_item(item):
-            floor_data.item_spawner.items.remove(item)
-            message = f"You picked up {item.name}."
-            self.add_message(message)
-            return message
-        self.add_message("Your inventory is full!")
-        return None
+        return True
 
     # 階段処理（FloorManagerに委譲予定）
     def descend_stairs(self) -> bool:
@@ -344,6 +402,7 @@ class GameLogic:
         tile = floor_data.tiles[self.player.y, self.player.x]
 
         from pyrogue.map.tile import StairsDown
+
         if not isinstance(tile, StairsDown):
             self.add_message("There are no stairs here!")
             return False
@@ -352,6 +411,7 @@ class GameLogic:
         next_floor = self.dungeon_manager.current_floor + 1
 
         from pyrogue.constants import GameConstants
+
         if next_floor > GameConstants.MAX_FLOORS:
             self.add_message("You have reached the deepest part of the dungeon!")
             return False
@@ -378,6 +438,7 @@ class GameLogic:
         tile = floor_data.tiles[self.player.y, self.player.x]
 
         from pyrogue.map.tile import StairsUp
+
         if not isinstance(tile, StairsUp):
             self.add_message("There are no stairs here!")
             return False
@@ -438,15 +499,19 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
             return False
 
         tile = floor_data.tiles[y, x]
 
         # ドアタイルかチェック
         from pyrogue.map.tile import Door
+
         if isinstance(tile, Door) and tile.door_state == "closed":
             tile.toggle()  # ドアを開く
             self.add_message("You open the door.")
@@ -463,15 +528,19 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
             return False
 
         tile = floor_data.tiles[y, x]
 
         # ドアタイルかチェック
         from pyrogue.map.tile import Door
+
         if isinstance(tile, Door) and tile.door_state == "open":
             # モンスターやプレイヤーがドアの上にいないかチェック
             if not self._is_position_occupied(x, y):
@@ -507,18 +576,23 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
             return False
 
         tile = floor_data.tiles[y, x]
 
         # 隠しドアかチェック
         from pyrogue.map.tile import SecretDoor
+
         if isinstance(tile, SecretDoor) and tile.door_state == "secret":
             # 発見成功率はプレイヤーレベルに依存（基本30% + レベル*5%）
             import random
+
             success_rate = min(80, 30 + self.player.level * 5)
 
             if random.randint(1, 100) <= success_rate:
@@ -545,14 +619,7 @@ class GameLogic:
 
     def handle_use_item(self, item_name: str) -> bool:
         """アイテム使用処理。"""
-        # 簡単な実装：名前でアイテムを検索して使用
-        for item in self.player.inventory.items:
-            if item.name.lower() == item_name.lower():
-                # アイテム使用ロジック（簡単な実装）
-                self.add_message(f"You use {item.name}")
-                return True
-        self.add_message(f"You don't have {item_name}")
-        return False
+        return self.item_manager.handle_use_item(item_name)
 
     def handle_combat(self) -> bool:
         """戦闘処理。"""
@@ -580,144 +647,27 @@ class GameLogic:
 
     def handle_stairs_up(self) -> bool:
         """上り階段の処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        tile = floor_data.tiles[self.player.y][self.player.x]
-        if hasattr(tile, 'char') and tile.char == '<':
-            success = self.dungeon_manager.move_to_floor(
-                self.dungeon_manager.current_floor - 1
-            )
-            if success:
-                self.add_message("You climb up the stairs")
-                return True
-
-        self.add_message("There are no stairs up here")
-        return False
+        return self.floor_manager.handle_stairs_up()
 
     def handle_stairs_down(self) -> bool:
         """下り階段の処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        tile = floor_data.tiles[self.player.y][self.player.x]
-        if hasattr(tile, 'char') and tile.char == '>':
-            success = self.dungeon_manager.move_to_floor(
-                self.dungeon_manager.current_floor + 1
-            )
-            if success:
-                self.add_message("You climb down the stairs")
-                return True
-
-        self.add_message("There are no stairs down here")
-        return False
+        return self.floor_manager.handle_stairs_down()
 
     def handle_open_door(self) -> bool:
         """扉を開く処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 隣接する扉を検索
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-
-                x = self.player.x + dx
-                y = self.player.y + dy
-
-                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
-                    tile = floor_data.tiles[y][x]
-                    if hasattr(tile, 'char') and tile.char == '+':
-                        # 扉を開く
-                        from pyrogue.map.tile import Floor
-                        floor_data.tiles[y][x] = Floor()
-                        self.add_message("You open the door")
-                        return True
-
-        self.add_message("No door to open nearby")
-        return False
+        return self.floor_manager.handle_open_door()
 
     def handle_close_door(self) -> bool:
         """扉を閉じる処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 隣接する開いた扉を検索
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-
-                x = self.player.x + dx
-                y = self.player.y + dy
-
-                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
-                    tile = floor_data.tiles[y][x]
-                    if hasattr(tile, 'char') and tile.char == '.':
-                        # モンスターがいないことを確認
-                        if not floor_data.get_monster_at(x, y):
-                            # 扉を閉じる
-                            from pyrogue.map.tile import Door
-                            floor_data.tiles[y][x] = Door()
-                            self.add_message("You close the door")
-                            return True
-
-        self.add_message("No door to close nearby")
-        return False
+        return self.floor_manager.handle_close_door()
 
     def handle_search(self) -> bool:
         """隠し扉の探索処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 隣接する壁を検索
-        found_secret = False
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-
-                x = self.player.x + dx
-                y = self.player.y + dy
-
-                if 0 <= x < len(floor_data.tiles[0]) and 0 <= y < len(floor_data.tiles):
-                    tile = floor_data.tiles[y][x]
-                    # 隠し扉の発見処理（簡単な実装）
-                    if hasattr(tile, 'char') and tile.char == '#':
-                        import random
-                        if random.random() < 0.1:  # 10%の確率で隠し扉発見
-                            from pyrogue.map.tile import Door
-                            floor_data.tiles[y][x] = Door()
-                            self.add_message("You found a secret door!")
-                            found_secret = True
-
-        if not found_secret:
-            self.add_message("You search but find nothing")
-
-        return found_secret
+        return self.floor_manager.handle_search()
 
     def handle_disarm_trap(self) -> bool:
         """トラップ解除の処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 現在位置でのトラップ解除
-        trap = floor_data.get_trap_at(self.player.x, self.player.y)
-        if trap and not trap.is_revealed:
-            # トラップを解除
-            trap.disarm(self)
-            self.add_message("You disarm the trap")
-            return True
-
-        self.add_message("No trap to disarm here")
-        return False
+        return self.floor_manager.handle_disarm_trap()
 
     # ユーティリティメソッド
     def add_message(self, message: str) -> None:
@@ -736,7 +686,10 @@ class GameLogic:
 
         # デフォルトの探索状態を返す
         import numpy as np
-        return np.full((self.dungeon_manager.height, self.dungeon_manager.width), False, dtype=bool)
+
+        return np.full(
+            (self.dungeon_manager.height, self.dungeon_manager.width), False, dtype=bool
+        )
 
     def update_explored_tiles(self, visible_tiles) -> None:
         """探索済みタイルを更新。"""
@@ -758,7 +711,9 @@ class GameLogic:
                 x, y = player.x + dx, player.y + dy
                 monster = self._get_monster_at(x, y)
                 if monster:
-                    return self.combat_manager.handle_player_combat(monster, self.context)
+                    return self.combat_manager.handle_player_attack(
+                        monster, self.context
+                    )
 
         return False
 
@@ -798,7 +753,7 @@ class GameLogic:
             self.player,
             death_cause=death_cause,
             game_result="death",
-            player_name="Player"
+            player_name="Player",
         )
 
     def record_victory(self) -> None:
@@ -807,7 +762,7 @@ class GameLogic:
             self.player,
             death_cause="Victory",
             game_result="victory",
-            player_name="Player"
+            player_name="Player",
         )
 
     def get_high_score(self) -> int:

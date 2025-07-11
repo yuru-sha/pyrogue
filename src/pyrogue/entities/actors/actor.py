@@ -18,7 +18,8 @@ class Actor(ABC):
     位置、HP、基本ステータス、移動、ダメージ処理、状態異常管理など
     の共通機能を提供します。
 
-    Attributes:
+    Attributes
+    ----------
         x: アクターのX座標
         y: アクターのY座標
         name: アクターの名前
@@ -31,12 +32,23 @@ class Actor(ABC):
 
     """
 
-    def __init__(self, x: int, y: int, name: str, hp: int, max_hp: int,
-                 attack: int, defense: int, level: int, is_hostile: bool = True) -> None:
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        name: str,
+        hp: int,
+        max_hp: int,
+        attack: int,
+        defense: int,
+        level: int,
+        is_hostile: bool = True,
+    ) -> None:
         """
         アクターの初期化。
 
         Args:
+        ----
             x: アクターのX座標
             y: アクターのY座標
             name: アクターの名前
@@ -58,12 +70,12 @@ class Actor(ABC):
         self.level = level
         self.is_hostile = is_hostile
 
-
     def move(self, dx: int, dy: int) -> None:
         """
         指定した方向にアクターを移動。
 
         Args:
+        ----
             dx: X軸方向の移動量
             dy: Y軸方向の移動量
 
@@ -79,6 +91,7 @@ class Actor(ABC):
         HPは0未満にはなりません。
 
         Args:
+        ----
             amount: 受けるダメージ量
 
         """
@@ -91,6 +104,7 @@ class Actor(ABC):
         指定された量だけHPを回復します。最大HPを超えて回復することはありません。
 
         Args:
+        ----
             amount: 回復するHP量
 
         """
@@ -100,21 +114,35 @@ class Actor(ABC):
         """
         アクターが死亡しているかチェック。
 
-        Returns:
+        Returns
+        -------
             HPが0以下の場合True
 
         """
         return self.hp <= 0
+
+    @property
+    def is_alive(self) -> bool:
+        """
+        アクターが生存しているかどうかを返す。
+
+        Returns
+        -------
+            生存している場合True、死亡している場合False
+        """
+        return not self.is_dead()
 
     def get_distance_to(self, x: int, y: int) -> float:
         """
         指定した座標までの距離を計算。
 
         Args:
+        ----
             x: 目標のX座標
             y: 目標のY座標
 
         Returns:
+        -------
             ユークリッド距離
 
         """
@@ -128,6 +156,7 @@ class Actor(ABC):
         サブクラスで実装してください。
 
         Args:
+        ----
             context: 効果適用のためのコンテキスト
 
         """
@@ -140,9 +169,11 @@ class Actor(ABC):
         サブクラスで実装してください。
 
         Args:
+        ----
             name: 判定する状態異常の名前
 
         Returns:
+        -------
             状態異常が存在する場合はTrue、そうでなければFalse
 
         """
