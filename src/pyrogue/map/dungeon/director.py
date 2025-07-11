@@ -11,6 +11,7 @@ import numpy as np
 
 from pyrogue.map.dungeon.corridor_builder import CorridorBuilder
 from pyrogue.map.dungeon.door_manager import DoorManager
+from pyrogue.map.dungeon.maze_builder import MazeBuilder
 from pyrogue.map.dungeon.room_builder import RoomBuilder
 from pyrogue.map.dungeon.section_based_builder import BSPDungeonBuilder
 from pyrogue.map.dungeon.special_room_builder import SpecialRoomBuilder
@@ -59,6 +60,7 @@ class DungeonDirector:
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
         self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=8)
+        self.maze_builder = MazeBuilder(width, height, complexity=0.75)
         self.corridor_builder = CorridorBuilder(width, height)
         self.door_manager = DoorManager()
         self.special_room_builder = SpecialRoomBuilder(floor)
@@ -68,6 +70,9 @@ class DungeonDirector:
         # フラグ: セクションベースシステムを使用するか
         # 新しいダンジョン生成システムを使用したい場合は True に設定
         self.use_section_based = True
+
+        # ダンジョンタイプの決定
+        self.dungeon_type = self._determine_dungeon_type(floor)
 
         game_logger.debug(f"DungeonDirector initialized for floor {floor} ({width}x{height})")
 
@@ -83,26 +88,44 @@ class DungeonDirector:
 
         try:
             if self.use_section_based:
-                # BSPベースシステムを使用
-                # 1. BSPで部屋と通路を生成
-                self.rooms = self.bsp_builder.build_dungeon(self.tiles)
-                game_logger.debug(f"Generated {len(self.rooms)} rooms using BSP system")
+                if self.dungeon_type == "maze":
+                    # 迷路階層を生成
+                    self.rooms = self.maze_builder.build_dungeon(self.tiles)
+                    game_logger.debug(f"Generated maze dungeon (no rooms)")
 
-                # 2. 特別部屋の処理
-                self.special_room_builder.process_special_rooms(self.rooms)
+                    # 特別部屋の処理はスキップ（迷路には部屋が存在しない）
+                    # ドアの配置もスキップ
 
-                # 3. ドアの配置
-                self.door_manager.place_doors(self.rooms, [], self.tiles)
+                    # 階段の配置（迷路専用）
+                    start_pos, end_pos = self.stairs_manager.place_stairs_for_maze(
+                        self.floor, self.tiles
+                    )
 
-                # 4. 階段の配置
-                start_pos, end_pos = self.stairs_manager.place_stairs(
-                    self.rooms, self.floor, self.tiles
-                )
+                    # 最終検証（迷路専用）
+                    self.validation_manager.validate_maze_dungeon(
+                        start_pos, end_pos, self.tiles
+                    )
+                else:
+                    # BSPベースシステムを使用
+                    # 1. BSPで部屋と通路を生成
+                    self.rooms = self.bsp_builder.build_dungeon(self.tiles)
+                    game_logger.debug(f"Generated {len(self.rooms)} rooms using BSP system")
 
-                # 5. 最終検証
-                self.validation_manager.validate_dungeon(
-                    self.rooms, [], start_pos, end_pos, self.tiles
-                )
+                    # 2. 特別部屋の処理
+                    self.special_room_builder.process_special_rooms(self.rooms)
+
+                    # 3. ドアの配置
+                    self.door_manager.place_doors(self.rooms, [], self.tiles)
+
+                    # 4. 階段の配置
+                    start_pos, end_pos = self.stairs_manager.place_stairs(
+                        self.rooms, self.floor, self.tiles
+                    )
+
+                    # 5. 最終検証
+                    self.validation_manager.validate_dungeon(
+                        self.rooms, [], start_pos, end_pos, self.tiles
+                    )
             else:
                 # 従来のシステムを使用
                 # 1. 基本部屋構造の生成
@@ -253,6 +276,8 @@ class DungeonDirector:
         # 各ビルダーコンポーネントもリセット
         for builder in [
             self.room_builder,
+            self.bsp_builder,
+            self.maze_builder,
             self.corridor_builder,
             self.door_manager,
             self.special_room_builder,
@@ -261,3 +286,35 @@ class DungeonDirector:
         ]:
             if hasattr(builder, "reset"):
                 builder.reset()
+
+    def _determine_dungeon_type(self, floor: int) -> str:
+        """
+        階層に基づいてダンジョンタイプを決定。
+
+        Args:
+            floor: 階層番号
+
+        Returns:
+            ダンジョンタイプ文字列
+
+        """
+        import random
+
+        # 特定の階層で迷路を生成する確率
+        # 浅い階層では低確率、深い階層では高確率
+        if floor <= 5:
+            maze_probability = 0.1  # 10%の確率
+        elif floor <= 15:
+            maze_probability = 0.2  # 20%の確率
+        else:
+            maze_probability = 0.3  # 30%の確率
+
+        # 特定の階層は必ず迷路にする（例：7階、13階、19階）
+        if floor in [7, 13, 19]:
+            return "maze"
+
+        # 確率に基づいて決定
+        if random.random() < maze_probability:
+            return "maze"
+        else:
+            return "bsp"  # BSPベースのダンジョン

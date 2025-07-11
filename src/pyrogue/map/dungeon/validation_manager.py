@@ -451,6 +451,261 @@ class ValidationManager:
             "warnings": self.warnings
         }
 
+    def validate_maze_dungeon(
+        self,
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
+        tiles: np.ndarray
+    ) -> bool:
+        """
+        迷路階層を検証。
+
+        Args:
+            start_pos: 上り階段の位置
+            end_pos: 下り階段の位置
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            検証が成功した場合True
+
+        Raises:
+            ValidationError: 検証に失敗した場合
+
+        """
+        self.validation_results = []
+        self.warnings = []
+
+        try:
+            # 1. 基本的な境界検証
+            self._validate_boundary_constraints([], [], tiles)
+
+            # 2. 迷路専用の連結性検証
+            self._validate_maze_connectivity(start_pos, end_pos, tiles)
+
+            # 3. 階段配置の検証
+            self._validate_stairs_placement_for_maze(start_pos, end_pos, tiles)
+
+            # 4. 迷路構造の検証
+            self._validate_maze_structure(tiles)
+
+            # 検証結果の確認
+            failed_tests = [r for r in self.validation_results if not r["passed"]]
+            if failed_tests:
+                errors = "; ".join([r["message"] for r in failed_tests])
+                game_logger.error(f"Maze validation failed: {errors}")
+                raise ValidationError(f"Maze validation failed: {errors}")
+
+            game_logger.info("Maze validation passed successfully")
+            return True
+
+        except Exception as e:
+            game_logger.error(f"Maze validation error: {e}")
+            raise ValidationError(f"Maze validation failed: {e}")
+
+    def _validate_maze_connectivity(
+        self,
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
+        tiles: np.ndarray
+    ) -> None:
+        """
+        迷路の連結性を検証。
+
+        Args:
+            start_pos: 上り階段の位置
+            end_pos: 下り階段の位置
+            tiles: ダンジョンのタイル配列
+
+        """
+        # 階段間の経路の存在を確認
+        if start_pos and end_pos:
+            path_exists = self._find_path_between_positions(start_pos, end_pos, tiles)
+            if path_exists:
+                self._add_result("maze_connectivity", True, "Stairs are connected")
+            else:
+                self._add_result("maze_connectivity", False, "Stairs are not connected")
+        else:
+            self._add_result("maze_connectivity", True, "No stairs to connect")
+
+    def _validate_stairs_placement_for_maze(
+        self,
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
+        tiles: np.ndarray
+    ) -> None:
+        """
+        迷路階層の階段配置を検証。
+
+        Args:
+            start_pos: 上り階段の位置
+            end_pos: 下り階段の位置
+            tiles: ダンジョンのタイル配列
+
+        """
+        issues = []
+
+        # 上り階段の検証
+        if start_pos:
+            x, y = start_pos
+            if (0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]):
+                if not isinstance(tiles[y, x], StairsUp):
+                    issues.append("Up stairs position mismatch")
+            else:
+                issues.append("Up stairs position out of bounds")
+
+        # 下り階段の検証
+        if end_pos:
+            x, y = end_pos
+            if (0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]):
+                if not isinstance(tiles[y, x], StairsDown):
+                    issues.append("Down stairs position mismatch")
+            else:
+                issues.append("Down stairs position out of bounds")
+
+        if issues:
+            self._add_result("maze_stairs_placement", False, "; ".join(issues))
+        else:
+            self._add_result("maze_stairs_placement", True, "Stairs placed correctly in maze")
+
+    def _validate_maze_structure(self, tiles: np.ndarray) -> None:
+        """
+        迷路構造を検証。
+
+        Args:
+            tiles: ダンジョンのタイル配列
+
+        """
+        height, width = tiles.shape
+        floor_count = 0
+        wall_count = 0
+
+        for y in range(height):
+            for x in range(width):
+                if isinstance(tiles[y, x], Floor):
+                    floor_count += 1
+                elif isinstance(tiles[y, x], Wall):
+                    wall_count += 1
+
+        # 迷路の密度をチェック（床の割合が10%～40%の範囲）
+        total_tiles = height * width
+        floor_ratio = floor_count / total_tiles
+
+        if floor_ratio < 0.1:
+            self._add_result("maze_structure", False, f"Too few corridors: {floor_ratio:.2%}")
+        elif floor_ratio > 0.4:
+            self._add_result("maze_structure", False, f"Too many corridors: {floor_ratio:.2%}")
+        else:
+            self._add_result("maze_structure", True, f"Good maze density: {floor_ratio:.2%}")
+
+        # 連結性の確認
+        connected_floor_count = self._count_connected_floors(tiles)
+        if connected_floor_count < floor_count * 0.9:
+            self._add_result("maze_structure", False, "Maze has disconnected areas")
+        else:
+            self._add_result("maze_structure", True, "Maze is well connected")
+
+    def _count_connected_floors(self, tiles: np.ndarray) -> int:
+        """
+        連結された床タイルの数を数える。
+
+        Args:
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            最大連結成分の床タイル数
+
+        """
+        height, width = tiles.shape
+        visited = np.zeros((height, width), dtype=bool)
+        max_component_size = 0
+
+        for y in range(height):
+            for x in range(width):
+                if isinstance(tiles[y, x], Floor) and not visited[y, x]:
+                    component_size = self._flood_fill_count(tiles, visited, x, y)
+                    max_component_size = max(max_component_size, component_size)
+
+        return max_component_size
+
+    def _flood_fill_count(self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int) -> int:
+        """
+        フラッドフィルで連結成分のサイズを数える。
+
+        Args:
+            tiles: ダンジョンのタイル配列
+            visited: 訪問済みフラグ配列
+            start_x: 開始X座標
+            start_y: 開始Y座標
+
+        Returns:
+            連結成分のサイズ
+
+        """
+        height, width = tiles.shape
+        count = 0
+        stack = [(start_x, start_y)]
+
+        while stack:
+            x, y = stack.pop()
+            if (x < 0 or x >= width or y < 0 or y >= height or
+                visited[y, x] or not isinstance(tiles[y, x], Floor)):
+                continue
+
+            visited[y, x] = True
+            count += 1
+
+            # 4方向に探索
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                stack.append((x + dx, y + dy))
+
+        return count
+
+    def _find_path_between_positions(
+        self,
+        start_pos: tuple[int, int],
+        end_pos: tuple[int, int],
+        tiles: np.ndarray
+    ) -> bool:
+        """
+        2つの位置間のパスが存在するかチェック。
+
+        Args:
+            start_pos: 開始位置
+            end_pos: 終了位置
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            パスが存在する場合True
+
+        """
+        if not start_pos or not end_pos:
+            return False
+
+        height, width = tiles.shape
+        visited = set()
+        stack = [start_pos]
+
+        while stack:
+            x, y = stack.pop()
+            if (x, y) == end_pos:
+                return True
+
+            if (x, y) in visited:
+                continue
+
+            visited.add((x, y))
+
+            # 4方向をチェック
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nx, ny = x + dx, y + dy
+                if (0 <= nx < width and 0 <= ny < height and
+                    (nx, ny) not in visited):
+                    # 通行可能なタイルかチェック
+                    if (isinstance(tiles[ny, nx], (Floor, StairsUp, StairsDown))):
+                        stack.append((nx, ny))
+
+        return False
+
     def reset(self) -> None:
         """マネージャーの状態をリセット。"""
         self.validation_results = []

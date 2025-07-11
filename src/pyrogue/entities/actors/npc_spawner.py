@@ -55,6 +55,11 @@ class NPCSpawner:
             rooms: 部屋のリスト
 
         """
+        # NPCシステムの有効性をチェック
+        from pyrogue.constants import FeatureConstants
+        if not FeatureConstants.ENABLE_NPC_SYSTEM:
+            return
+
         # 特別な部屋にNPCを配置
         self._spawn_special_room_npcs(dungeon_tiles, rooms)
 
