@@ -102,6 +102,92 @@ class FloorData:
             # フォールバック：最初の部屋の中央
             self.start_pos = (0, 0)  # デフォルト値
 
+    def is_valid_position(self, x: int, y: int) -> bool:
+        """
+        指定された位置が有効な範囲内かチェック。
+
+        Args:
+            x: X座標
+            y: Y座標
+
+        Returns:
+            有効な座標の場合True
+        """
+        return (0 <= x < self.tiles.shape[1] and
+                0 <= y < self.tiles.shape[0])
+
+    def get_tile(self, x: int, y: int):
+        """
+        指定位置のタイルを取得。
+
+        Args:
+            x: X座標
+            y: Y座標
+
+        Returns:
+            タイルインスタンス、無効な座標の場合None
+        """
+        if self.is_valid_position(x, y):
+            return self.tiles[y, x]
+        return None
+
+    def set_tile_walkable(self, x: int, y: int, walkable: bool) -> None:
+        """
+        指定位置のタイルの通行可能性を設定。
+
+        Args:
+            x: X座標
+            y: Y座標
+            walkable: 通行可能かどうか
+        """
+        if self.is_valid_position(x, y):
+            tile = self.tiles[y, x]
+            if hasattr(tile, 'walkable'):
+                tile.walkable = walkable
+
+    def set_tile(self, x: int, y: int, tile_type: str) -> None:
+        """
+        指定位置のタイルを設定。
+
+        Args:
+            x: X座標
+            y: Y座標
+            tile_type: タイルタイプ
+        """
+        if self.is_valid_position(x, y):
+            # タイルタイプに応じたタイルインスタンスを作成
+            from pyrogue.map.tile import Door, Floor, Wall
+
+            if tile_type == "Door":
+                self.tiles[y, x] = Door()
+            elif tile_type == "Floor":
+                self.tiles[y, x] = Floor()
+            elif tile_type == "Wall":
+                self.tiles[y, x] = Wall()
+
+    def get_stairs_up_position(self) -> tuple[int, int] | None:
+        """上り階段の位置を取得。"""
+        return self.up_pos
+
+    def get_stairs_down_position(self) -> tuple[int, int] | None:
+        """下り階段の位置を取得。"""
+        return self.down_pos
+
+    @property
+    def monsters(self):
+        """現在のフロアのモンスターリストを取得。"""
+        return self.monster_spawner.monsters
+
+    @property
+    def items(self):
+        """現在のフロアのアイテムリストを取得。"""
+        return self.item_spawner.items
+
+    @property
+    def traps(self):
+        """現在のフロアのトラップリストを取得。"""
+        return self.trap_manager.traps
+
 
 class DungeonManager:
     """

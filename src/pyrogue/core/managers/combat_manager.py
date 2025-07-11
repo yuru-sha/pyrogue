@@ -34,7 +34,7 @@ class CombatManager:
     def __init__(self) -> None:
         """戦闘マネージャーを初期化。"""
 
-    def handle_player_combat(self, monster: Monster, context: GameContext) -> bool:
+    def handle_player_attack(self, monster: Monster, context: GameContext) -> bool:
         """
         プレイヤーがモンスターと戦闘。
 

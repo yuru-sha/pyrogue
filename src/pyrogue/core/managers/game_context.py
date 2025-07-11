@@ -61,8 +61,13 @@ class GameContext:
         self.game_screen = game_screen
 
         # マネージャーへの参照（他のマネージャーから設定される）
-        self.monster_ai_manager = None
-        self.game_logic = None
+        self.monster_ai_manager: Any = None
+        self.game_logic: Any = None
+        self.combat_manager: Any = None
+        self.turn_manager: Any = None
+        self.movement_manager: Any = None
+        self.item_manager: Any = None
+        self.floor_manager: Any = None
 
     def add_message(self, message: str) -> None:
         """

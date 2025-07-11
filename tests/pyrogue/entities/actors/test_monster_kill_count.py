@@ -39,7 +39,7 @@ def test_monster_kill_count():
     print(f"戦闘前討伐数: {game_logic.player.monsters_killed}")
 
     # 戦闘を実行
-    success = game_logic.combat_manager.handle_player_combat(test_monster, game_logic.context)
+    success = game_logic.combat_manager.handle_player_attack(test_monster, game_logic.context)
 
     print(f"戦闘後討伐数: {game_logic.player.monsters_killed}")
     print(f"戦闘成功: {success}")

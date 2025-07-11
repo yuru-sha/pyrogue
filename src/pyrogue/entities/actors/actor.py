@@ -105,6 +105,16 @@ class Actor(ABC):
 
         """
         return self.hp <= 0
+    
+    @property
+    def is_alive(self) -> bool:
+        """
+        アクターが生存しているかどうかを返す。
+        
+        Returns:
+            生存している場合True、死亡している場合False
+        """
+        return not self.is_dead()
 
     def get_distance_to(self, x: int, y: int) -> float:
         """

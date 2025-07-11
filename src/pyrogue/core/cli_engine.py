@@ -565,6 +565,7 @@ class CLIEngine:
             print(f"Deepest Floor: {player.deepest_floor}")
             print(f"Turns Played: {player.turns_played}")
             print(f"Score: {player.calculate_score()}")
+            print(f"Has Amulet: {'Yes' if getattr(player, 'has_amulet', False) else 'No'}")
 
             # 現在の足下のタイルを表示
             floor_data = self.game_logic.get_current_floor_data()

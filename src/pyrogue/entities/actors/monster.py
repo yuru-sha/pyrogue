@@ -91,7 +91,7 @@ class Monster(Actor):
         # システムの初期化
         self.status_effects = StatusEffectManager()
 
-    # move, take_damage, is_dead, heal は基底クラスから継承
+    # move, take_damage, is_dead, heal, is_alive は基底クラスから継承
 
     def can_see_player(self, player_x: int, player_y: int, fov_map: Any) -> bool:
         """

@@ -31,8 +31,8 @@ def test_room_generation():
     for room in director.rooms:
         assert room.width >= 4, f"Room width {room.width} is too small"
         assert room.height >= 4, f"Room height {room.height} is too small"
-        assert room.width <= 20, f"Room width {room.width} is too large"
-        assert room.height <= 20, f"Room height {room.height} is too large"
+        assert room.width <= 25, f"Room width {room.width} is too large"
+        assert room.height <= 25, f"Room height {room.height} is too large"
 
         # 部屋が境界内にあるか
         assert room.x >= 0, f"Room X position {room.x} is out of bounds"

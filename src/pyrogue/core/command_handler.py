@@ -274,6 +274,8 @@ Available Commands:
     debug yendor - Get Amulet of Yendor
     debug floor <number> - Teleport to floor
     debug pos <x> <y> - Teleport to position
+    debug hp <value> - Set HP to value
+    debug damage <value> - Take damage
         """
         self.context.add_message(help_text.strip())
         return CommandResult(True)
@@ -289,7 +291,7 @@ Available Commands:
             コマンド実行結果
         """
         if not args:
-            self.context.add_message("Debug commands: yendor, floor <number>")
+            self.context.add_message("Debug commands: yendor, floor <number>, pos <x> <y>, hp <value>, damage <value>")
             return CommandResult(True)
 
         debug_cmd = args[0].lower()
@@ -350,6 +352,46 @@ Available Commands:
                 return CommandResult(True)
             except Exception as e:
                 self.context.add_message(f"Position teleport failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "hp" and len(args) > 1:
+            try:
+                hp_value = int(args[1])
+                player = self.context.player
+                player.hp = max(0, hp_value)
+                self.context.add_message(f"Player HP set to {player.hp}")
+                
+                # 死亡チェック
+                if player.hp <= 0:
+                    self.context.add_message("You have died!")
+                    self.context.add_message("GAME OVER")
+                    # 死亡処理
+                    if hasattr(self.context, 'game_logic') and self.context.game_logic:
+                        self.context.game_logic.record_game_over("Debug death")
+                
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"HP set failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "damage" and len(args) > 1:
+            try:
+                damage_value = int(args[1])
+                player = self.context.player
+                player.hp = max(0, player.hp - damage_value)
+                self.context.add_message(f"Player takes {damage_value} damage! HP: {player.hp}")
+                
+                # 死亡チェック
+                if player.hp <= 0:
+                    self.context.add_message("You have died!")
+                    self.context.add_message("GAME OVER")
+                    # 死亡処理
+                    if hasattr(self.context, 'game_logic') and self.context.game_logic:
+                        self.context.game_logic.record_game_over("Debug damage")
+                
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Damage failed: {e}")
                 return CommandResult(False)
 
         else:
