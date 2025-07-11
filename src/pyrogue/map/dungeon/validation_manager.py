@@ -455,7 +455,8 @@ class ValidationManager:
         self,
         start_pos: tuple[int, int],
         end_pos: tuple[int, int],
-        tiles: np.ndarray
+        tiles: np.ndarray,
+        floor: int = 1
     ) -> bool:
         """
         迷路階層を検証。
@@ -464,6 +465,7 @@ class ValidationManager:
             start_pos: 上り階段の位置
             end_pos: 下り階段の位置
             tiles: ダンジョンのタイル配列
+            floor: 階層番号
 
         Returns:
             検証が成功した場合True
@@ -480,10 +482,10 @@ class ValidationManager:
             self._validate_boundary_constraints([], [], tiles)
 
             # 2. 迷路専用の連結性検証
-            self._validate_maze_connectivity(start_pos, end_pos, tiles)
+            self._validate_maze_connectivity(start_pos, end_pos, tiles, floor)
 
             # 3. 階段配置の検証
-            self._validate_stairs_placement_for_maze(start_pos, end_pos, tiles)
+            self._validate_stairs_placement_for_maze(start_pos, end_pos, tiles, floor)
 
             # 4. 迷路構造の検証
             self._validate_maze_structure(tiles)
@@ -506,7 +508,8 @@ class ValidationManager:
         self,
         start_pos: tuple[int, int],
         end_pos: tuple[int, int],
-        tiles: np.ndarray
+        tiles: np.ndarray,
+        floor: int = 1
     ) -> None:
         """
         迷路の連結性を検証。
@@ -515,8 +518,16 @@ class ValidationManager:
             start_pos: 上り階段の位置
             end_pos: 下り階段の位置
             tiles: ダンジョンのタイル配列
+            floor: 階層番号
 
         """
+        from pyrogue.constants import GameConstants
+
+        # 1階や最下層では階段が片方しかないので、連結性チェックをスキップ
+        if floor == 1 or floor == GameConstants.MAX_FLOORS:
+            self._add_result("maze_connectivity", True, "Single floor, no connectivity check needed")
+            return
+
         # 階段間の経路の存在を確認
         if start_pos and end_pos:
             path_exists = self._find_path_between_positions(start_pos, end_pos, tiles)
@@ -531,7 +542,8 @@ class ValidationManager:
         self,
         start_pos: tuple[int, int],
         end_pos: tuple[int, int],
-        tiles: np.ndarray
+        tiles: np.ndarray,
+        floor: int = 1
     ) -> None:
         """
         迷路階層の階段配置を検証。
@@ -540,12 +552,15 @@ class ValidationManager:
             start_pos: 上り階段の位置
             end_pos: 下り階段の位置
             tiles: ダンジョンのタイル配列
+            floor: 階層番号
 
         """
+        from pyrogue.constants import GameConstants
+
         issues = []
 
-        # 上り階段の検証
-        if start_pos:
+        # 上り階段の検証（1階では不要）
+        if floor > 1 and start_pos:
             x, y = start_pos
             if (0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]):
                 if not isinstance(tiles[y, x], StairsUp):
@@ -553,8 +568,8 @@ class ValidationManager:
             else:
                 issues.append("Up stairs position out of bounds")
 
-        # 下り階段の検証
-        if end_pos:
+        # 下り階段の検証（最下層では不要）
+        if floor < GameConstants.MAX_FLOORS and end_pos:
             x, y = end_pos
             if (0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]):
                 if not isinstance(tiles[y, x], StairsDown):

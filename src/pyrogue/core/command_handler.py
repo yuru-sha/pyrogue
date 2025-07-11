@@ -118,6 +118,10 @@ class CommonCommandHandler:
             self.context.display_game_state()
             return CommandResult(True)
 
+        # デバッグコマンド
+        elif command == "debug":
+            return self._handle_debug_command(args)
+
         # システムコマンド
         elif command in ["quit", "exit", "q"]:
             return CommandResult(True, "Goodbye!", should_quit=True)
@@ -265,9 +269,92 @@ Available Commands:
   System:
     help - Show this help
     quit/exit/q - Quit game
+
+  Debug:
+    debug yendor - Get Amulet of Yendor
+    debug floor <number> - Teleport to floor
+    debug pos <x> <y> - Teleport to position
         """
         self.context.add_message(help_text.strip())
         return CommandResult(True)
+
+    def _handle_debug_command(self, args: list[str]) -> CommandResult:
+        """
+        デバッグコマンドの処理。
+
+        Args:
+            args: コマンド引数
+
+        Returns:
+            コマンド実行結果
+        """
+        if not args:
+            self.context.add_message("Debug commands: yendor, floor <number>")
+            return CommandResult(True)
+
+        debug_cmd = args[0].lower()
+
+        if debug_cmd == "yendor":
+            # イェンダーのアミュレットを付与
+            player = self.context.player
+            player.has_amulet = True
+            self.context.add_message("You now possess the Amulet of Yendor!")
+
+            # B1Fに脱出階段を生成
+            from pyrogue.entities.items.amulet import AmuletOfYendor
+            amulet = AmuletOfYendor(0, 0)  # 位置は関係ない
+            game_logic = self.context.game_logic
+
+            # 現在B1Fにいる場合は、階段を生成してプレイヤーを配置
+            if game_logic.dungeon_manager.current_floor == 1:
+                b1f_data = game_logic.dungeon_manager.get_floor(1)
+                if b1f_data:
+                    stairs_pos = amulet._place_escape_stairs_on_floor(b1f_data)
+                    if stairs_pos:
+                        player.x, player.y = stairs_pos
+                        self.context.add_message(f"You are teleported to the escape stairs at ({stairs_pos[0]}, {stairs_pos[1]})")
+            else:
+                amulet._create_escape_stairs(self.context)
+
+            return CommandResult(True)
+
+        elif debug_cmd == "floor" and len(args) > 1:
+            try:
+                floor_num = int(args[1])
+                game_logic = self.context.game_logic
+                game_logic.dungeon_manager.set_current_floor(floor_num)
+
+                # プレイヤーの位置を新しい階層に設定
+                floor_data = game_logic.dungeon_manager.get_current_floor_data()
+                if floor_data:
+                    player = self.context.player
+                    # 適当な位置を探す
+                    spawn_pos = game_logic.dungeon_manager.get_player_spawn_position(floor_data)
+                    player.x, player.y = spawn_pos
+                    player.update_deepest_floor(floor_num)
+
+                self.context.add_message(f"Teleported to floor B{floor_num}F")
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Floor teleport failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "pos" and len(args) > 2:
+            try:
+                x = int(args[1])
+                y = int(args[2])
+                player = self.context.player
+                player.x = x
+                player.y = y
+                self.context.add_message(f"Player teleported to ({x}, {y})")
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Position teleport failed: {e}")
+                return CommandResult(False)
+
+        else:
+            self.context.add_message("Unknown debug command")
+            return CommandResult(False)
 
 
 class GUICommandContext(CommandContext):

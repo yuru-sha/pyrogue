@@ -107,7 +107,7 @@ class DungeonDirector:
 
                     # 最終検証（迷路専用）
                     self.validation_manager.validate_maze_dungeon(
-                        start_pos, end_pos, self.tiles
+                        start_pos, end_pos, self.tiles, self.floor
                     )
                 else:
                     # BSPベースシステムを使用

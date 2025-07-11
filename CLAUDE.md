@@ -19,11 +19,14 @@ PyRogueは現在、**完全に機能する本格的なローグライクゲー�
 - ✅ **完全なアイテム識別システム**（オリジナルRogue風）
 - ✅ **多様なモンスターAI**（逃走、特殊攻撃、分裂等）
 - ✅ **強化された飢餓システム**（戦闘能力に影響するペナルティ）
+- ✅ **環境変数設定システム**（.envファイル対応、開発・運用設定の分離）
+- ✅ **完全なインベントリ管理**（装備制限、オリジナルRogue準拠のドロップ動作）
 
 ### 技術スタック
 - **Python 3.12**: 最新のPython機能を活用
 - **TCOD >=19.0.0**: 描画、入力処理、視界計算
 - **NumPy >=1.26.3**: 数値計算・配列操作
+- **python-dotenv >=1.0.0**: 環境変数管理
 - **UV**: 高速パッケージ管理
 
 ## ディレクトリ構造
@@ -39,8 +42,11 @@ pyrogue/
 │
 ├── src/pyrogue/           # Main source code
 │   ├── main.py           # Application entry point
-│   ├── config.py         # Game configuration (deprecated)
 │   ├── constants.py      # Game constants (recommended)
+│   │
+│   ├── config/           # Configuration management
+│   │   ├── env.py        # Environment variables management
+│   │   └── legacy.py     # Legacy configuration (backward compatibility)
 │   │
 │   ├── core/             # Game engine and core systems
 │   │   ├── engine.py     # Main game engine (GUI mode)
@@ -131,6 +137,7 @@ make ci-checks  # CI検証（リント・型チェック・テスト）
 - **保守性**: 明確な型ヒント、包括的なドキュメント
 
 ### 主要コンポーネント
+- **Config**: 環境変数管理、設定システム
 - **Core**: ゲームエンジン、状態管理、入力処理
 - **Entities**: プレイヤー、モンスター、アイテム、魔法、トラップ
 - **Map**: ダンジョン生成、タイル定義、階層管理
@@ -189,6 +196,17 @@ make ci-checks  # CI検証（リント・型チェック・テスト）
 - **d**: トラップ解除
 - **z**: 魔法書（spellbook）
 - **Tab**: FOV表示切り替え
+
+### インベントリ操作（iキーでアクセス）
+- **↑/↓**: アイテム選択
+- **u**: アイテム使用
+- **e**: 装備・装備解除
+- **r**: 装備解除のみ
+- **d**: アイテムドロップ（装備中は自動的に装備解除）
+- **?**: ヘルプ表示切り替え
+- **ESC**: インベントリを閉じる
+
+**注意**: 呪われたアイテムは装備解除・ドロップ不可
 
 ### セーブ・ロード
 - **Ctrl+S**: ゲームセーブ

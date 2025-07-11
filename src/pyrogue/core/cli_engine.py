@@ -163,17 +163,26 @@ class CLIEngine:
         if result.message:
             print(result.message)
 
+        # 階段コマンド成功後の勝利チェック
+        if (result.success and cmd == "stairs" and len(args) > 0 and
+            args[0].lower() in ["up", "u"] and self.game_logic.check_victory()):
+            print("\n🎉 VICTORY! 🎉")
+            print("You have escaped with the Amulet of Yendor!")
+            print("You win the game!")
+            self.running = False
+            return True
+
         if result.should_quit:
             return False
         elif not result.success:
-            return None
+            return False
 
         return True
 
     def handle_debug_command(self, args: list[str]) -> bool:
         """デバッグコマンドを処理。"""
         if not args:
-            return None
+            return False
 
         debug_cmd = args[0].lower()
 
@@ -190,7 +199,7 @@ class CLIEngine:
                 return True
             except ValueError:
                 print("Invalid damage value")
-                return None
+                return False
         elif debug_cmd == "hp" and len(args) > 1:
             try:
                 hp = int(args[1])
@@ -204,7 +213,7 @@ class CLIEngine:
                 return True
             except ValueError:
                 print("Invalid HP value")
-                return None
+                return False
         elif debug_cmd == "kill" and len(args) > 1:
             try:
                 count = int(args[1])
@@ -213,7 +222,7 @@ class CLIEngine:
                 return True
             except ValueError:
                 print("Invalid kill count value")
-                return None
+                return False
         elif debug_cmd == "spawn":
             # 周囲にモンスターを生成
             floor_data = self.game_logic.get_current_floor_data()
@@ -231,10 +240,10 @@ class CLIEngine:
                 return True
             else:
                 print("Could not spawn monster")
-                return None
+                return False
         else:
             print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")
-            return None
+            return False
 
     def handle_move(self, direction: str) -> bool:
         """
@@ -279,12 +288,12 @@ class CLIEngine:
             print(f"Error moving: {e}")
             return False
 
-    def handle_attack(self, target: str | None) -> bool:
+    def handle_attack(self, _target: str | None = None) -> bool:
         """
         攻撃コマンドを処理。
 
         Args:
-            target: 攻撃対象（省略可能）
+            _target: 攻撃対象（省略可能、現在未使用）
 
         Returns:
             コマンドが成功したかどうか
@@ -306,7 +315,7 @@ class CLIEngine:
 
                     monster = current_floor.monster_spawner.get_monster_at(x, y)
                     if monster:
-                        self.game_logic.handle_combat(monster)
+                        self.game_logic.handle_combat()
                         print(f"Attacked {monster.name}!")
                         self.display_game_state()
                         return True
@@ -398,6 +407,17 @@ class CLIEngine:
 
             if success:
                 print(f"Used stairs {direction}")
+
+                # 勝利条件チェック（B1Fから上に脱出してアミュレットを持っている場合）
+                if (direction.lower() in ["up", "u"] and
+                    self.game_logic.dungeon_manager.current_floor == 1 and
+                    self.game_logic.check_victory()):
+                    print("\n🎉 VICTORY! 🎉")
+                    print("You have escaped with the Amulet of Yendor!")
+                    print("You win the game!")
+                    self.running = False
+                    return success
+
                 self.display_game_state()
                 self.display_recent_messages()
             else:
@@ -427,7 +447,6 @@ class CLIEngine:
                 return
 
             player = self.game_logic.player
-            floor_data = self.game_logic.get_current_floor_data()
 
             print("\n" + "=" * 50)
             print(f"Floor: B{self.game_logic.dungeon_manager.current_floor}F")
@@ -547,6 +566,14 @@ class CLIEngine:
             print(f"Turns Played: {player.turns_played}")
             print(f"Score: {player.calculate_score()}")
 
+            # 現在の足下のタイルを表示
+            floor_data = self.game_logic.get_current_floor_data()
+            if floor_data:
+                current_tile = floor_data.tiles[player.y, player.x]
+                print(f"Current tile: {current_tile.__class__.__name__}")
+                if hasattr(current_tile, 'char'):
+                    print(f"Tile char: '{current_tile.char}'")
+
         except Exception as e:
             print(f"Error displaying player status: {e}")
 
@@ -593,16 +620,13 @@ class CLIEngine:
     def update_game_state(self) -> None:
         """ゲーム状態を更新。"""
         try:
-            # ゲームオーバー・勝利条件をチェック
+            # ゲームオーバー条件のみをチェック
+            # 勝利条件は ascend_stairs メソッド内でのみチェックする
             if self.game_logic.check_player_death():
                 print("\nGAME OVER!")
                 print(
                     f"You died on floor B{self.game_logic.dungeon_manager.current_floor}F."
                 )
-                self.running = False
-            elif self.game_logic.check_victory():
-                print("\nVICTORY!")
-                print("You escaped with the Amulet of Yendor!")
                 self.running = False
 
         except Exception as e:

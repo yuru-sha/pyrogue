@@ -65,6 +65,81 @@ class StairsManager:
 
         return up_stairs_pos, down_stairs_pos
 
+    def place_stairs_for_maze(
+        self,
+        floor: int,
+        tiles: np.ndarray
+    ) -> tuple[tuple[int, int], tuple[int, int]]:
+        """
+        迷路専用の階段配置。
+
+        Args:
+            floor: 階層番号
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            (上り階段位置, 下り階段位置) のタプル
+        """
+        self.stairs_placed = []
+
+        # 迷路では部屋がないので、通路のFloorタイルから適切な位置を探す
+        floor_positions = self._find_floor_positions(tiles)
+
+        if not floor_positions:
+            # フォールバック: 任意の位置に配置
+            up_pos = (1, 1)
+            down_pos = (tiles.shape[1] - 2, tiles.shape[0] - 2)
+        else:
+            # 上り階段: 最初の方の位置
+            up_pos = floor_positions[0]
+            # 下り階段: 最後の方の位置（距離を離す）
+            down_pos = floor_positions[-1] if len(floor_positions) > 1 else floor_positions[0]
+
+            # もし同じ位置なら、別の位置を探す
+            if up_pos == down_pos and len(floor_positions) > 1:
+                down_pos = floor_positions[len(floor_positions) // 2]
+
+        # 上り階段を配置（1階は不要）
+        if floor > 1:
+            tiles[up_pos[1], up_pos[0]] = StairsUp()
+            self.stairs_placed.append(("up", up_pos, "maze"))
+            game_logger.debug(f"Placed up stairs at {up_pos} in maze")
+        else:
+            # 1階では上り階段の代わりにプレイヤー開始位置として記録
+            game_logger.debug(f"Set player start position at {up_pos} on floor 1")
+
+        # 下り階段を配置（最下層は不要）
+        if floor < GameConstants.MAX_FLOORS:
+            tiles[down_pos[1], down_pos[0]] = StairsDown()
+            self.stairs_placed.append(("down", down_pos, "maze"))
+            game_logger.debug(f"Placed down stairs at {down_pos} in maze")
+        else:
+            # 最下層では下り階段の代わりにエンディング位置として記録
+            game_logger.debug(f"Set ending position at {down_pos} on floor {floor}")
+
+        game_logger.info(
+            f"Placed maze stairs on floor {floor}: up at {up_pos}, down at {down_pos}"
+        )
+
+        return up_pos, down_pos
+
+    def _find_floor_positions(self, tiles: np.ndarray) -> list[tuple[int, int]]:
+        """
+        Floorタイルの位置を検索。
+
+        Args:
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+            Floorタイルの位置リスト
+        """
+        positions = []
+        for y in range(tiles.shape[0]):
+            for x in range(tiles.shape[1]):
+                if isinstance(tiles[y, x], Floor):
+                    positions.append((x, y))
+        return positions
+
     def _place_up_stairs(
         self,
         rooms: list[Room],

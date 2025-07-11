@@ -94,8 +94,12 @@ class ItemSpawner:
 
         # Spawn Amulet of Yendor on floor 26
         if self.floor == 26:
-            room = random.choice(rooms)
-            x, y = self._find_valid_position(dungeon_tiles, room)
+            if not rooms:
+                x, y = self._find_valid_position_anywhere(dungeon_tiles)
+            else:
+                room = random.choice(rooms)
+                x, y = self._find_valid_position(dungeon_tiles, room)
+
             if x is not None and y is not None:
                 amulet = AmuletOfYendor(x=x, y=y)
                 self.items.append(amulet)
@@ -103,8 +107,13 @@ class ItemSpawner:
 
         # Spawn regular items
         for _ in range(total_items):
-            room = random.choice(rooms)
-            x, y = self._find_valid_position(dungeon_tiles, room)
+            # 迷路階層など部屋がない場合は床タイルから直接選択
+            if not rooms:
+                x, y = self._find_valid_position_anywhere(dungeon_tiles)
+            else:
+                room = random.choice(rooms)
+                x, y = self._find_valid_position(dungeon_tiles, room)
+
             if x is None or y is None:
                 continue
 
@@ -164,6 +173,33 @@ class ItemSpawner:
             y = y1 + random.randint(1, height - 2)  # Avoid walls
 
             # Check if position is valid
+            if dungeon_tiles[y, x].walkable and not self._is_position_occupied(x, y):
+                return x, y
+
+        return None, None
+
+    def _find_valid_position_anywhere(
+        self, dungeon_tiles: np.ndarray
+    ) -> tuple[int | None, int | None]:
+        """
+        ダンジョン全体でアイテムの有効な配置位置を検索。
+
+        迷路階層など部屋がない場合に使用します。
+
+        Args:
+            dungeon_tiles: ダンジョンのタイル配列
+
+        Returns:
+            有効な位置の(x, y)座標。見つからない場合は(None, None)
+        """
+        height, width = dungeon_tiles.shape
+
+        # 最大50回試行して有効な位置を探す
+        for _ in range(50):
+            x = random.randint(1, width - 2)
+            y = random.randint(1, height - 2)
+
+            # 歩行可能で占有されていない位置をチェック
             if dungeon_tiles[y, x].walkable and not self._is_position_occupied(x, y):
                 return x, y
 

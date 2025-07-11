@@ -358,9 +358,17 @@ class GameLogic:
         # 通常のアイテムはインベントリに追加
         if self.inventory.add_item(item):
             floor_data.item_spawner.items.remove(item)
-            message = f"You picked up {item.name}."
-            self.add_message(message)
-            return message
+
+            # アイテムのpick_upメッセージを取得
+            pickup_message = getattr(item, 'pick_up', lambda: f"You picked up {item.name}.")()
+            self.add_message(pickup_message)
+
+            # イェンダーのアミュレットの場合は即座に効果を適用
+            from pyrogue.entities.items.amulet import AmuletOfYendor
+            if isinstance(item, AmuletOfYendor):
+                item.apply_effect(self.context)
+
+            return pickup_message
         self.add_message("Your inventory is full!")
         return None
 
@@ -670,39 +678,11 @@ class GameLogic:
 
     def handle_stairs_up(self) -> bool:
         """上り階段の処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        tile = floor_data.tiles[self.player.y][self.player.x]
-        if hasattr(tile, 'char') and tile.char == '<':
-            success = self.dungeon_manager.move_to_floor(
-                self.dungeon_manager.current_floor - 1
-            )
-            if success:
-                self.add_message("You climb up the stairs")
-                return True
-
-        self.add_message("There are no stairs up here")
-        return False
+        return self.ascend_stairs()
 
     def handle_stairs_down(self) -> bool:
         """下り階段の処理。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        tile = floor_data.tiles[self.player.y][self.player.x]
-        if hasattr(tile, 'char') and tile.char == '>':
-            success = self.dungeon_manager.move_to_floor(
-                self.dungeon_manager.current_floor + 1
-            )
-            if success:
-                self.add_message("You climb down the stairs")
-                return True
-
-        self.add_message("There are no stairs down here")
-        return False
+        return self.descend_stairs()
 
     def handle_open_door(self) -> bool:
         """扉を開く処理。"""
