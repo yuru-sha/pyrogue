@@ -7,6 +7,7 @@ from typing import Any
 
 import tcod.event
 
+from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
 from pyrogue.core.game_states import GameStates
 
 
@@ -37,7 +38,13 @@ class StateManager:
 
     def __init__(self):
         # We don't need to instantiate InputHandler since we handle each state directly
-        pass
+        self.command_handler = None
+
+    def set_command_handler(self, game_screen) -> None:
+        """GameScreenからのコマンドハンドラー設定。"""
+        if game_screen:
+            context = GUICommandContext(game_screen)
+            self.command_handler = CommonCommandHandler(context)
 
     def handle_input(
         self, event: tcod.event.KeyDown, current_state: GameStates, context: Any
@@ -114,4 +121,64 @@ class StateManager:
             GameStates.TARGETING,
         ):
             return GameStates.PLAYERS_TURN
+        return None
+
+    def try_handle_with_command_handler(
+        self, event: tcod.event.KeyDown
+    ) -> bool:
+        """
+        共通コマンドハンドラーでの処理を試行。
+
+        Args:
+            event: キーイベント
+
+        Returns:
+            bool: コマンドハンドラーで処理された場合True
+        """
+        if not self.command_handler:
+            return False
+
+        # キーイベントをコマンドに変換
+        command = self._key_to_command(event)
+        if not command:
+            return False
+
+        # コマンドハンドラーで処理
+        result = self.command_handler.handle_command(command)
+        return result.success
+
+    def _key_to_command(self, event: tcod.event.KeyDown) -> str | None:
+        """キーイベントをコマンド文字列に変換。"""
+        key = event.sym
+
+        # 移動キー - 文字コードで比較
+        if key in (ord('h'), tcod.event.KeySym.LEFT):
+            return "west"
+        elif key in (ord('j'), tcod.event.KeySym.DOWN):
+            return "south"
+        elif key in (ord('k'), tcod.event.KeySym.UP):
+            return "north"
+        elif key in (ord('l'), tcod.event.KeySym.RIGHT):
+            return "east"
+        elif key == ord('y'):
+            return "move northwest"
+        elif key == ord('u'):
+            return "move northeast"
+        elif key == ord('b'):
+            return "move southwest"
+        elif key == ord('n'):
+            return "move southeast"
+
+        # アクションキー
+        elif key == ord('g'):
+            return "get"
+        elif key == ord('o'):
+            return "open"
+        elif key == ord('c'):
+            return "close"
+        elif key == ord('s'):
+            return "search"
+        elif key == ord('d'):
+            return "disarm"
+
         return None

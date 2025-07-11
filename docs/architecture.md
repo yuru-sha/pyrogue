@@ -214,8 +214,8 @@ class StateManager:
 - 新しい状態の追加が容易
 
 ### 4. Command Pattern
-**適用場所**: 状態異常、魔法効果
-**実装**: `src/pyrogue/entities/actors/status_effects.py`
+**適用場所**: 状態異常、魔法効果、コマンド統一化
+**実装**: `src/pyrogue/entities/actors/status_effects.py`, `src/pyrogue/core/command_handler.py`
 
 ```python
 class StatusEffect:
@@ -229,10 +229,30 @@ class PoisonEffect(StatusEffect):
         actor.take_damage(damage)
 ```
 
+**コマンド統一化の実装**:
+```python
+class CommonCommandHandler:
+    def handle_command(self, command: str, args: list[str] = None) -> CommandResult:
+        """共通コマンド処理"""
+        if command == "move":
+            return self._handle_move_command(args)
+        elif command == "get":
+            return self._handle_get_item()
+        # 他のコマンド処理...
+
+class CommandContext(Protocol):
+    """コマンド実行環境の抽象化"""
+    @property
+    def game_logic(self) -> GameLogic: ...
+    def add_message(self, message: str) -> None: ...
+```
+
 **利点**:
 - 効果の実行と定義を分離
 - 新しい効果の追加が容易
 - 効果の組み合わせが可能
+- **GUIとCLIで統一されたコマンド処理**
+- **コマンド実行環境の抽象化**
 
 ## データフロー
 
@@ -386,6 +406,120 @@ class DungeonManager:
             self.floors[floor_number] = self.generate_floor(floor_number)
         return self.floors[floor_number]
 ```
+
+## コマンド統一化アーキテクチャ
+
+### 概要
+PyRogueは、GUIとCLIの両エンジンで統一されたコマンド処理を実現するアーキテクチャを採用しています。これにより、インターフェースに関係なく一貫したゲーム操作を提供します。
+
+### アーキテクチャ構成
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Interface Layer                          │
+│  ┌─────────────────┐      ┌─────────────────┐               │
+│  │   CLI Engine    │      │   GUI Engine    │               │
+│  │ CLICommandContext │    │ GUICommandContext │             │
+│  └─────────────────┘      └─────────────────┘               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Command Handler Layer                        │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │          CommonCommandHandler                          │ │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐     │ │
+│  │  │   Movement  │ │   Actions   │ │ Information │     │ │
+│  │  │   Commands  │ │   Commands  │ │   Commands  │     │ │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘     │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Business Logic Layer                      │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │                 GameLogic                               │ │
+│  │  handle_player_move() handle_get_item()                │ │
+│  │  handle_combat() handle_use_item() ...                 │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 主要コンポーネント
+
+#### 1. CommandContext (抽象化レイヤー)
+```python
+class CommandContext(Protocol):
+    """コマンド実行環境の統一インターフェース"""
+    @property
+    def game_logic(self) -> GameLogic: ...
+    @property
+    def player(self) -> Player: ...
+    def add_message(self, message: str) -> None: ...
+    def display_player_status(self) -> None: ...
+    def display_inventory(self) -> None: ...
+    def display_game_state(self) -> None: ...
+```
+
+#### 2. CommonCommandHandler (共通処理レイヤー)
+```python
+class CommonCommandHandler:
+    """GUIとCLIで共通のコマンド処理"""
+    def handle_command(self, command: str, args: list[str]) -> CommandResult:
+        # 統一されたコマンド処理ロジック
+        if command in ["move", "north", "south", "east", "west"]:
+            return self._handle_move_command(command, args)
+        elif command in ["get", "pickup", "g"]:
+            return self._handle_get_item()
+        # ... 他のコマンド処理
+```
+
+#### 3. 実装クラス
+- **CLICommandContext**: CLI環境での実装
+- **GUICommandContext**: GUI環境での実装
+
+### 統一されたコマンドセット
+
+| カテゴリ | コマンド | エイリアス | 説明 |
+|----------|----------|------------|------|
+| **移動** | move \<direction\> | north/n, south/s, east/e, west/w | 方向移動 |
+| **アクション** | get | g | アイテム取得 |
+| | use \<item\> | u | アイテム使用 |
+| | attack | a | 攻撃 |
+| | open | o | 扉を開く |
+| | close | c | 扉を閉じる |
+| | search | s | 隠し扉探索 |
+| | disarm | d | トラップ解除 |
+| | stairs \<up/down\> | | 階段使用 |
+| **情報** | status | stat | ステータス表示 |
+| | inventory | inv, i | インベントリ表示 |
+| | look | l | 周囲確認 |
+| **システム** | help | | ヘルプ表示 |
+| | quit | exit, q | ゲーム終了 |
+
+### キー入力の統一化
+
+#### GUI環境でのキー→コマンド変換
+```python
+def _key_to_command(self, event: tcod.event.KeyDown) -> str | None:
+    """キーイベントをコマンド文字列に変換"""
+    key = event.sym
+
+    # viキー + 矢印キー対応
+    if key in (ord('h'), tcod.event.KeySym.LEFT):
+        return "west"
+    elif key in (ord('j'), tcod.event.KeySym.DOWN):
+        return "south"
+    # ... 他のキーマッピング
+```
+
+### 利点
+
+1. **一貫性**: GUIとCLIで同じコマンドセット
+2. **保守性**: コマンド処理の共通化によりバグ修正が一箇所で完了
+3. **拡張性**: 新しいコマンドの追加が両環境で自動適用
+4. **テスト性**: 共通ロジックの単一テストで両環境をカバー
 
 ## 拡張性の設計
 
