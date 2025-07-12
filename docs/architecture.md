@@ -1,3 +1,6 @@
+---
+cache_control: {"type": "ephemeral"}
+---
 # PyRogue - アーキテクチャ設計書
 
 ## 概要

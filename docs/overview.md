@@ -1,3 +1,6 @@
+---
+cache_control: {"type": "ephemeral"}
+---
 # PyRogue - プロジェクト概要
 
 ## 概要

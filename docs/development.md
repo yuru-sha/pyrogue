@@ -1,3 +1,6 @@
+---
+cache_control: {"type": "ephemeral"}
+---
 # PyRogue 開発者ガイド
 
 このドキュメントでは、PyRogueの開発に必要な情報を提供します。

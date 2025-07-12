@@ -1,0 +1,70 @@
+{
+  "env": {
+    "CLAUDE_CACHE": "./.ccache"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./agent-send.sh:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(echo:*)",
+      "Bash(if:*)",
+      "Bash([ -f ./tmp/worker*_done.txt ]*)",
+      "Bash(*worker*_done.txt*)",
+      "Bash(mkdir:*)",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(grep:*)",
+      "Bash(chmod:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(chmod 777 *)",
+      "Bash(chmod -R 777 *)",
+      "Bash(curl * | sh)",
+      "Bash(wget * | sh)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | bash)",
+      "Bash(git config --global *)",
+      "Bash(npm config set *)",
+      "Bash(sudo *)",
+      "Bash(su *)",
+      "Bash(killall -9 *)",
+      "Bash(iptables -F)",
+      "Bash(ufw disable)",
+      "Bash(systemctl *)",
+      "Bash(service *)",
+      "Bash(dd if=/dev/zero *)",
+      "Bash(dd if=/dev/urandom *)",
+      "Bash(shred *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/deny-check.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/activity-logger.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/ai-logger.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,3 +1,6 @@
+---
+cache_control: {"type": "ephemeral"}
+---
 # PyRogue 品質保証ガイド
 
 ## 概要
