@@ -138,26 +138,26 @@ class ItemManager:
             self.context.add_message(f"You don't have a {item_name}.")
             return False
 
-        # アイテムの使用処理
-        if hasattr(item, "use"):
-            try:
-                # アイテムの使用
-                result = item.use(self.context.player, self.context)
+        # Player.use_item()を使用して統一された処理を行う
+        try:
+            # 使用メッセージを表示（"You read", "You drink", "You eat"など）
+            if hasattr(item, "use"):
+                use_message = item.use()
+                self.context.add_message(use_message)
 
-                if result:
-                    # 使用成功時の処理
-                    self._handle_item_use_success(item)
-                    return True
-                else:
-                    # 使用失敗時の処理
-                    self._handle_item_use_failure(item)
-                    return False
-
-            except Exception as e:
-                self.context.add_message(f"Failed to use {item_name}: {e!s}")
+            # Player.use_itemで効果適用とアイテム削除を実行
+            success = self.context.player.use_item(item, self.context)
+            
+            if success:
+                # 使用成功時の追加処理
+                return True
+            else:
+                # 使用失敗時の処理
+                self.context.add_message(f"The {item_name} has no effect.")
                 return False
-        else:
-            self.context.add_message(f"You can't use the {item_name}.")
+
+        except Exception as e:
+            self.context.add_message(f"Failed to use {item_name}: {e!s}")
             return False
 
     def _handle_item_use_success(self, item: Item) -> None:
