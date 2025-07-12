@@ -4,12 +4,11 @@ NPCSpawner のテストモジュール。
 NPC配置システムの機能テストを提供します。
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
-import numpy as np
+from unittest.mock import Mock
 
+import numpy as np
+from pyrogue.entities.actors.npc import NPCDisposition, NPCType
 from pyrogue.entities.actors.npc_spawner import NPCSpawner
-from pyrogue.entities.actors.npc import NPCType, NPCDisposition
 
 
 class TestNPCSpawner:
@@ -45,21 +44,29 @@ class TestNPCSpawner:
         spawner = NPCSpawner(floor=1)
 
         # 特別な部屋とNPCタイプの対応
-        assert spawner._get_npc_type_for_special_room('treasure_room') == NPCType.MERCHANT
-        assert spawner._get_npc_type_for_special_room('shrine') == NPCType.PRIEST
-        assert spawner._get_npc_type_for_special_room('laboratory') == NPCType.MAGE
-        assert spawner._get_npc_type_for_special_room('library') == NPCType.MAGE
-        assert spawner._get_npc_type_for_special_room('armory') == NPCType.GUARD
+        assert (
+            spawner._get_npc_type_for_special_room("treasure_room") == NPCType.MERCHANT
+        )
+        assert spawner._get_npc_type_for_special_room("shrine") == NPCType.PRIEST
+        assert spawner._get_npc_type_for_special_room("laboratory") == NPCType.MAGE
+        assert spawner._get_npc_type_for_special_room("library") == NPCType.MAGE
+        assert spawner._get_npc_type_for_special_room("armory") == NPCType.GUARD
 
         # 存在しない部屋タイプ
-        assert spawner._get_npc_type_for_special_room('unknown_room') is None
+        assert spawner._get_npc_type_for_special_room("unknown_room") is None
 
     def test_get_random_npc_type(self):
         """ランダムNPCタイプ取得のテスト。"""
         spawner = NPCSpawner(floor=1)
 
         # 複数回実行して有効なタイプが返されることを確認
-        valid_types = [NPCType.MERCHANT, NPCType.VILLAGER, NPCType.GUARD, NPCType.PRIEST, NPCType.MAGE]
+        valid_types = [
+            NPCType.MERCHANT,
+            NPCType.VILLAGER,
+            NPCType.GUARD,
+            NPCType.PRIEST,
+            NPCType.MAGE,
+        ]
 
         for _ in range(10):
             npc_type = spawner._get_random_npc_type()
@@ -70,13 +77,15 @@ class TestNPCSpawner:
         spawner = NPCSpawner(floor=1)
 
         # 5x5のテストダンジョン（0=床、1=壁）
-        dungeon_tiles = np.array([
-            [1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 1],
-            [1, 0, 0, 0, 1],
-            [1, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1]
-        ])
+        dungeon_tiles = np.array(
+            [
+                [1, 1, 1, 1, 1],
+                [1, 0, 0, 0, 1],
+                [1, 0, 0, 0, 1],
+                [1, 0, 0, 0, 1],
+                [1, 1, 1, 1, 1],
+            ]
+        )
 
         # 有効な位置（床タイル）
         assert spawner._is_valid_position(1, 1, dungeon_tiles) == True
@@ -172,7 +181,7 @@ class TestNPCSpawner:
         # 特別な部屋のモック
         special_room = Mock()
         special_room.is_special = True
-        special_room.room_type = 'treasure_room'
+        special_room.room_type = "treasure_room"
         special_room.x = 2
         special_room.y = 2
         special_room.width = 4

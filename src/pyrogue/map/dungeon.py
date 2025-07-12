@@ -5,6 +5,7 @@
 ファサードを提供し、既存コードとの後方互換性を保ちます。
 
 Example:
+-------
     >>> generator = DungeonGenerator(width=80, height=50, floor=1)
     >>> tiles, start_pos, end_pos = generator.generate()
 
@@ -26,7 +27,8 @@ class DungeonGenerator:
     既存のAPIを維持しながら、新しいBuilder Patternベースの
     ダンジョン生成システムを使用します。
 
-    Attributes:
+    Attributes
+    ----------
         width: ダンジョンの幅
         height: ダンジョンの高さ
         floor: 階層番号
@@ -41,6 +43,7 @@ class DungeonGenerator:
         ダンジョンジェネレーターを初期化。
 
         Args:
+        ----
             width: ダンジョンの幅
             height: ダンジョンの高さ
             floor: 階層番号
@@ -59,13 +62,16 @@ class DungeonGenerator:
         self.start_pos = None
         self.end_pos = None
 
-        game_logger.debug(f"DungeonGenerator initialized for floor {floor} ({width}x{height})")
+        game_logger.debug(
+            f"DungeonGenerator initialized for floor {floor} ({width}x{height})"
+        )
 
     def generate(self) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
         """
         ダンジョンを生成。
 
-        Returns:
+        Returns
+        -------
             (tiles, start_pos, end_pos) のタプル
 
         """
@@ -88,7 +94,8 @@ class DungeonGenerator:
         """
         ダンジョン生成の統計情報を取得。
 
-        Returns:
+        Returns
+        -------
             生成統計の辞書
 
         """
@@ -98,7 +105,8 @@ class DungeonGenerator:
         """
         ダンジョン検証レポートを取得。
 
-        Returns:
+        Returns
+        -------
             検証レポートの辞書
 
         """
@@ -139,7 +147,8 @@ class DungeonGenerator:
         """
         デバッグ情報を取得。
 
-        Returns:
+        Returns
+        -------
             デバッグ情報の辞書
 
         """
@@ -158,13 +167,17 @@ class DungeonGenerator:
             info["room_builder_stats"] = self.director.room_builder.get_statistics()
 
         if hasattr(self.director.corridor_builder, "get_statistics"):
-            info["corridor_builder_stats"] = self.director.corridor_builder.get_statistics()
+            info[
+                "corridor_builder_stats"
+            ] = self.director.corridor_builder.get_statistics()
 
         if hasattr(self.director.door_manager, "get_statistics"):
             info["door_manager_stats"] = self.director.door_manager.get_statistics()
 
         if hasattr(self.director.special_room_builder, "get_statistics"):
-            info["special_room_builder_stats"] = self.director.special_room_builder.get_statistics()
+            info[
+                "special_room_builder_stats"
+            ] = self.director.special_room_builder.get_statistics()
 
         if hasattr(self.director.stairs_manager, "get_statistics"):
             info["stairs_manager_stats"] = self.director.stairs_manager.get_statistics()

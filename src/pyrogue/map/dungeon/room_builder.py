@@ -72,7 +72,8 @@ class RoomBuilder:
     3x3グリッドシステムでの部屋配置、適切なサイズ計算、
     Gone Room（通路のみのセル）の管理を担当します。
 
-    Attributes:
+    Attributes
+    ----------
         width: ダンジョンの幅
         height: ダンジョンの高さ
         floor: 現在の階層
@@ -87,6 +88,7 @@ class RoomBuilder:
         部屋ビルダーを初期化。
 
         Args:
+        ----
             width: ダンジョンの幅
             height: ダンジョンの高さ
             floor: 階層番号
@@ -112,7 +114,8 @@ class RoomBuilder:
         """
         3x3グリッドで部屋を生成。
 
-        Returns:
+        Returns
+        -------
             生成された部屋のリスト
 
         """
@@ -136,7 +139,8 @@ class RoomBuilder:
         """
         Gone Room（通路のみのセル）を作成するかどうかを判定。
 
-        Returns:
+        Returns
+        -------
             Gone Roomを作成する場合True
 
         """
@@ -147,10 +151,12 @@ class RoomBuilder:
         指定されたグリッド位置に部屋を生成。
 
         Args:
+        ----
             grid_x: グリッドのX座標
             grid_y: グリッドのY座標
 
         Returns:
+        -------
             生成された部屋
 
         """
@@ -187,7 +193,7 @@ class RoomBuilder:
             y=room_y,
             width=room_width,
             height=room_height,
-            id=self.room_counter
+            id=self.room_counter,
         )
 
         game_logger.debug(
@@ -202,9 +208,11 @@ class RoomBuilder:
         部屋のグリッド位置を取得。
 
         Args:
+        ----
             room: 対象の部屋
 
         Returns:
+        -------
             (grid_x, grid_y) のタプル
 
         """
@@ -217,14 +225,18 @@ class RoomBuilder:
 
         return grid_x, grid_y
 
-    def get_adjacent_grid_positions(self, grid_pos: tuple[int, int]) -> list[tuple[int, int]]:
+    def get_adjacent_grid_positions(
+        self, grid_pos: tuple[int, int]
+    ) -> list[tuple[int, int]]:
         """
         隣接するグリッド位置を取得。
 
         Args:
+        ----
             grid_pos: 基準となるグリッド位置
 
         Returns:
+        -------
             隣接するグリッド位置のリスト
 
         """
@@ -239,22 +251,25 @@ class RoomBuilder:
                 new_x = grid_x + dx
                 new_y = grid_y + dy
 
-                if (0 <= new_x < self.grid_width and
-                    0 <= new_y < self.grid_height):
+                if 0 <= new_x < self.grid_width and 0 <= new_y < self.grid_height:
                     adjacent.append((new_x, new_y))
 
         return adjacent
 
-    def find_room_at_grid(self, rooms: list[Room], grid_x: int, grid_y: int) -> Room | None:
+    def find_room_at_grid(
+        self, rooms: list[Room], grid_x: int, grid_y: int
+    ) -> Room | None:
         """
         指定されたグリッド位置の部屋を検索。
 
         Args:
+        ----
             rooms: 部屋のリスト
             grid_x: グリッドのX座標
             grid_y: グリッドのY座標
 
         Returns:
+        -------
             見つかった部屋、または None
 
         """
@@ -265,18 +280,18 @@ class RoomBuilder:
         return None
 
     def calculate_room_dimensions(
-        self,
-        grid_pos: tuple[int, int],
-        is_special: bool = False
+        self, grid_pos: tuple[int, int], is_special: bool = False
     ) -> tuple[int, int, int, int]:
         """
         グリッド位置に基づいて部屋の寸法を計算。
 
         Args:
+        ----
             grid_pos: グリッド位置
             is_special: 特別な部屋かどうか
 
         Returns:
+        -------
             (x, y, width, height) のタプル
 
         """

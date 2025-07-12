@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyrogue.entities.actors.player import Player
@@ -42,7 +42,7 @@ class ScoreEntry:
         self.game_result = game_result
         self.timestamp = timestamp
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """辞書形式で返す"""
         return {
             "player_name": self.player_name,
@@ -58,7 +58,7 @@ class ScoreEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> "ScoreEntry":
+    def from_dict(cls, data: dict) -> ScoreEntry:
         """辞書から作成"""
         return cls(
             player_name=data["player_name"],
@@ -79,7 +79,7 @@ class ScoreManager:
 
     def __init__(self, score_file: str = "data/scores.json") -> None:
         self.score_file = score_file
-        self.scores: List[ScoreEntry] = []
+        self.scores: list[ScoreEntry] = []
         self.load_scores()
 
     def load_scores(self) -> None:
@@ -88,7 +88,7 @@ class ScoreManager:
             return
 
         try:
-            with open(self.score_file, "r", encoding="utf-8") as f:
+            with open(self.score_file, encoding="utf-8") as f:
                 data = json.load(f)
                 self.scores = [ScoreEntry.from_dict(entry) for entry in data]
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
@@ -101,8 +101,13 @@ class ScoreManager:
             os.makedirs(os.path.dirname(self.score_file), exist_ok=True)
 
             with open(self.score_file, "w", encoding="utf-8") as f:
-                json.dump([entry.to_dict() for entry in self.scores], f, indent=2, ensure_ascii=False)
-        except (IOError, OSError):
+                json.dump(
+                    [entry.to_dict() for entry in self.scores],
+                    f,
+                    indent=2,
+                    ensure_ascii=False,
+                )
+        except OSError:
             pass  # ファイル保存に失敗してもゲームは続行
 
     def add_score(
@@ -133,7 +138,7 @@ class ScoreManager:
         self.scores = self.scores[:100]
         self.save_scores()
 
-    def get_top_scores(self, limit: int = 10) -> List[ScoreEntry]:
+    def get_top_scores(self, limit: int = 10) -> list[ScoreEntry]:
         """上位スコアを取得"""
         return self.scores[:limit]
 
@@ -159,7 +164,9 @@ class ScoreManager:
 
         lines = ["Top Scores:"]
         lines.append("-" * 80)
-        lines.append(f"{'Rank':<4} {'Name':<12} {'Score':<8} {'Lv':<3} {'Floor':<5} {'Gold':<6} {'Kills':<5} {'Result':<8} {'Date':<16}")
+        lines.append(
+            f"{'Rank':<4} {'Name':<12} {'Score':<8} {'Lv':<3} {'Floor':<5} {'Gold':<6} {'Kills':<5} {'Result':<8} {'Date':<16}"
+        )
         lines.append("-" * 80)
 
         for i, entry in enumerate(self.get_top_scores(limit)):

@@ -27,7 +27,8 @@ class NPCSpawner:
     ダンジョン生成時に適切な場所にNPCを配置し、
     フロアごとのNPC管理を行います。
 
-    Attributes:
+    Attributes
+    ----------
         floor: 現在のフロア番号
         npcs: 生成されたNPCのリスト
         occupied_positions: 占有されている位置のセット
@@ -39,6 +40,7 @@ class NPCSpawner:
         NPCSpawnerの初期化。
 
         Args:
+        ----
             floor: 現在のフロア番号
 
         """
@@ -51,12 +53,14 @@ class NPCSpawner:
         ダンジョンにNPCを配置する。
 
         Args:
+        ----
             dungeon_tiles: ダンジョンタイルの配列
             rooms: 部屋のリスト
 
         """
         # NPCシステムの有効性をチェック
         from pyrogue.constants import FeatureConstants
+
         if not FeatureConstants.ENABLE_NPC_SYSTEM:
             return
 
@@ -66,11 +70,14 @@ class NPCSpawner:
         # 通常の部屋にNPCを配置
         self._spawn_regular_room_npcs(dungeon_tiles, rooms)
 
-    def _spawn_special_room_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
+    def _spawn_special_room_npcs(
+        self, dungeon_tiles: np.ndarray, rooms: list[Room]
+    ) -> None:
         """
         特別な部屋にNPCを配置する。
 
         Args:
+        ----
             dungeon_tiles: ダンジョンタイルの配列
             rooms: 部屋のリスト
 
@@ -89,11 +96,14 @@ class NPCSpawner:
                         self.npcs.append(npc)
                         self.occupied_positions.add(position)
 
-    def _spawn_regular_room_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
+    def _spawn_regular_room_npcs(
+        self, dungeon_tiles: np.ndarray, rooms: list[Room]
+    ) -> None:
         """
         通常の部屋にNPCを配置する。
 
         Args:
+        ----
             dungeon_tiles: ダンジョンタイルの配列
             rooms: 部屋のリスト
 
@@ -127,9 +137,11 @@ class NPCSpawner:
         特別な部屋の種類に応じたNPCタイプを取得する。
 
         Args:
+        ----
             room_type: 部屋の種類
 
         Returns:
+        -------
             対応するNPCタイプ、またはNone
 
         """
@@ -147,29 +159,31 @@ class NPCSpawner:
         """
         ランダムなNPCタイプを取得する。
 
-        Returns:
+        Returns
+        -------
             ランダムなNPCタイプ
 
         """
         # 一般的なNPCタイプの重み付き選択
         npc_types = [
-            (NPCType.MERCHANT, 0.4),    # 商人は比較的多い
-            (NPCType.VILLAGER, 0.3),    # 村人も多い
-            (NPCType.GUARD, 0.2),       # 警備員は中程度
-            (NPCType.PRIEST, 0.05),     # 僧侶は少ない
-            (NPCType.MAGE, 0.05),       # 魔術師は少ない
+            (NPCType.MERCHANT, 0.4),  # 商人は比較的多い
+            (NPCType.VILLAGER, 0.3),  # 村人も多い
+            (NPCType.GUARD, 0.2),  # 警備員は中程度
+            (NPCType.PRIEST, 0.05),  # 僧侶は少ない
+            (NPCType.MAGE, 0.05),  # 魔術師は少ない
         ]
 
         return random.choices(
             [npc_type for npc_type, _ in npc_types],
-            weights=[weight for _, weight in npc_types]
+            weights=[weight for _, weight in npc_types],
         )[0]
 
     def _calculate_npc_count(self) -> int:
         """
         フロアレベルに応じたNPC数を計算する。
 
-        Returns:
+        Returns
+        -------
             配置するNPC数
 
         """
@@ -181,15 +195,19 @@ class NPCSpawner:
 
         return max(0, base_count + variation)
 
-    def _get_random_position_in_room(self, room: Room, dungeon_tiles: np.ndarray) -> tuple[int, int] | None:
+    def _get_random_position_in_room(
+        self, room: Room, dungeon_tiles: np.ndarray
+    ) -> tuple[int, int] | None:
         """
         部屋内のランダムな位置を取得する。
 
         Args:
+        ----
             room: 部屋オブジェクト
             dungeon_tiles: ダンジョンタイルの配列
 
         Returns:
+        -------
             有効な位置のタプル、またはNone
 
         """
@@ -214,11 +232,13 @@ class NPCSpawner:
         位置が有効かどうかをチェックする。
 
         Args:
+        ----
             x: X座標
             y: Y座標
             dungeon_tiles: ダンジョンタイルの配列
 
         Returns:
+        -------
             位置が有効な場合はTrue
 
         """
@@ -235,17 +255,20 @@ class NPCSpawner:
         # 実際の実装では、タイルの種類に応じて適切な値をチェック
         return dungeon_tiles[y, x] == 0  # 0 = 床タイル（実装により異なる）
 
-    def _create_npc(self, npc_type: NPCType, position: tuple[int, int],
-                   room_type: str | None = None) -> NPC | None:
+    def _create_npc(
+        self, npc_type: NPCType, position: tuple[int, int], room_type: str | None = None
+    ) -> NPC | None:
         """
         NPCを作成する。
 
         Args:
+        ----
             npc_type: NPCの種類
             position: 配置位置
             room_type: 部屋の種類（オプション）
 
         Returns:
+        -------
             作成されたNPC、またはNone
 
         """
@@ -329,7 +352,8 @@ class NPCSpawner:
         """
         商人用のインベントリを作成する。
 
-        Returns:
+        Returns
+        -------
             商人用のインベントリ
 
         """
@@ -340,20 +364,16 @@ class NPCSpawner:
             # 武器
             Weapon(x=0, y=0, name="Iron Sword", attack_bonus=5),
             Weapon(x=0, y=0, name="Steel Dagger", attack_bonus=3),
-
             # 防具
             Armor(x=0, y=0, name="Leather Armor", defense_bonus=2),
             Armor(x=0, y=0, name="Chain Mail", defense_bonus=4),
-
             # ポーション（簡単なダミー効果を使用）
             # 一時的にコメントアウト - 実際の効果システムが実装されるまで
             # Potion(x=0, y=0, name="Healing Potion", effect=dummy_effect),
             # Potion(x=0, y=0, name="Mana Potion", effect=dummy_effect),
-
             # 巻物 - 一時的にコメントアウト（effectパラメータが必要）
             # Scroll(x=0, y=0, name="Scroll of Teleportation", effect=dummy_effect),
             # Scroll(x=0, y=0, name="Scroll of Identify", effect=dummy_effect),
-
             # 食料 - 一時的にコメントアウト（effectパラメータが必要）
             # Food(x=0, y=0, name="Bread", effect=dummy_effect),
             # Food(x=0, y=0, name="Cheese", effect=dummy_effect),
@@ -397,7 +417,8 @@ class NPCSpawner:
         """
         生成されたNPCのリストを取得する。
 
-        Returns:
+        Returns
+        -------
             NPCのリスト
 
         """
@@ -408,10 +429,12 @@ class NPCSpawner:
         指定された位置にいるNPCを取得する。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             指定位置にいるNPC、またはNone
 
         """

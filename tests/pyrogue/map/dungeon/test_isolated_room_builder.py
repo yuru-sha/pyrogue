@@ -4,12 +4,13 @@
 このテストは、孤立部屋群の生成システムが正常に動作することを確認します。
 """
 
-import pytest
 import numpy as np
-
-from pyrogue.map.dungeon.isolated_room_builder import IsolatedRoomBuilder, IsolatedRoomGroup
+from pyrogue.map.dungeon.isolated_room_builder import (
+    IsolatedRoomBuilder,
+    IsolatedRoomGroup,
+)
 from pyrogue.map.dungeon.room_builder import Room
-from pyrogue.map.tile import Floor, Wall, SecretDoor
+from pyrogue.map.tile import Floor, SecretDoor, Wall
 
 
 class TestIsolatedRoomBuilder:
@@ -78,7 +79,9 @@ class TestIsolatedRoomBuilder:
 
         # 重複しない部屋
         non_overlapping_room = Room(25, 25, 6, 5)
-        assert not builder._room_overlaps_with_existing(non_overlapping_room, existing_rooms)
+        assert not builder._room_overlaps_with_existing(
+            non_overlapping_room, existing_rooms
+        )
 
     def test_room_distance_calculation(self):
         """部屋間距離計算のテスト。"""
@@ -92,7 +95,9 @@ class TestIsolatedRoomBuilder:
         # 中心点間の距離を計算
         center1 = room1.center()
         center2 = room2.center()
-        expected_distance = ((center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2) ** 0.5
+        expected_distance = (
+            (center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2
+        ) ** 0.5
 
         assert abs(distance - expected_distance) < 0.01
 
@@ -109,11 +114,15 @@ class TestIsolatedRoomBuilder:
 
         # 既存の部屋をタイルに配置
         for y in range(existing_room.y + 1, existing_room.y + existing_room.height - 1):
-            for x in range(existing_room.x + 1, existing_room.x + existing_room.width - 1):
+            for x in range(
+                existing_room.x + 1, existing_room.x + existing_room.width - 1
+            ):
                 tiles[y, x] = Floor()
 
         # 孤立部屋群を生成
-        isolated_groups = builder.generate_isolated_rooms(tiles, existing_rooms, max_groups=1)
+        isolated_groups = builder.generate_isolated_rooms(
+            tiles, existing_rooms, max_groups=1
+        )
 
         # 結果を検証
         assert len(isolated_groups) >= 0  # 生成される可能性がある
@@ -166,9 +175,8 @@ class TestIsolatedRoomBuilder:
             x, y = access_point
 
             # アクセスポイントが部屋の境界上にあるかチェック
-            is_on_boundary = (
-                (x == room.x or x == room.x + room.width - 1) or
-                (y == room.y or y == room.y + room.height - 1)
+            is_on_boundary = (x == room.x or x == room.x + room.width - 1) or (
+                y == room.y or y == room.y + room.height - 1
             )
             assert is_on_boundary
 

@@ -53,11 +53,13 @@ class StateManager:
         Handle input based on current state.
 
         Args:
+        ----
             event: The key event
             current_state: Current game state
             context: Context object (screen instance)
 
         Returns:
+        -------
             Tuple of (continue_game, new_state)
 
         """
@@ -123,16 +125,16 @@ class StateManager:
             return GameStates.PLAYERS_TURN
         return None
 
-    def try_handle_with_command_handler(
-        self, event: tcod.event.KeyDown
-    ) -> bool:
+    def try_handle_with_command_handler(self, event: tcod.event.KeyDown) -> bool:
         """
         共通コマンドハンドラーでの処理を試行。
 
         Args:
+        ----
             event: キーイベント
 
         Returns:
+        -------
             bool: コマンドハンドラーで処理された場合True
         """
         if not self.command_handler:
@@ -152,33 +154,33 @@ class StateManager:
         key = event.sym
 
         # 移動キー - 文字コードで比較
-        if key in (ord('h'), tcod.event.KeySym.LEFT):
+        if key in (ord("h"), tcod.event.KeySym.LEFT):
             return "west"
-        elif key in (ord('j'), tcod.event.KeySym.DOWN):
+        elif key in (ord("j"), tcod.event.KeySym.DOWN):
             return "south"
-        elif key in (ord('k'), tcod.event.KeySym.UP):
+        elif key in (ord("k"), tcod.event.KeySym.UP):
             return "north"
-        elif key in (ord('l'), tcod.event.KeySym.RIGHT):
+        elif key in (ord("l"), tcod.event.KeySym.RIGHT):
             return "east"
-        elif key == ord('y'):
+        elif key == ord("y"):
             return "move northwest"
-        elif key == ord('u'):
+        elif key == ord("u"):
             return "move northeast"
-        elif key == ord('b'):
+        elif key == ord("b"):
             return "move southwest"
-        elif key == ord('n'):
+        elif key == ord("n"):
             return "move southeast"
 
         # アクションキー
-        elif key == ord('g'):
+        elif key == ord("g"):
             return "get"
-        elif key == ord('o'):
+        elif key == ord("o"):
             return "open"
-        elif key == ord('c'):
+        elif key == ord("c"):
             return "close"
-        elif key == ord('s'):
+        elif key == ord("s"):
             return "search"
-        elif key == ord('d'):
+        elif key == ord("d"):
             return "disarm"
 
         return None

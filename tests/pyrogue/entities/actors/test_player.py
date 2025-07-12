@@ -4,11 +4,10 @@ Player クラスのテストモジュール。
 基本的なプレイヤー機能のテストを提供します。
 """
 
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from pyrogue.entities.actors.player import Player
-from pyrogue.entities.items.item import Weapon, Armor, Ring, Potion, Scroll, Food, Gold
+from pyrogue.entities.items.item import Gold
 
 
 class TestPlayer:
@@ -201,7 +200,7 @@ class TestPlayer:
         player.update_status_effects(mock_context)
 
         # status_effects.update_effects が呼び出されることを確認
-        assert hasattr(player.status_effects, 'update_effects')
+        assert hasattr(player.status_effects, "update_effects")
 
     def test_player_attack_and_defense_calculation(self):
         """プレイヤーの攻撃力・防御力計算テスト。"""

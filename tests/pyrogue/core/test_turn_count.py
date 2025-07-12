@@ -1,12 +1,10 @@
 """ターン数カウントのテストスクリプト"""
 
-import pytest
 from pyrogue.core.game_logic import GameLogic
 
 
 def test_turn_count():
     """ターン数が正しくカウントされるかテスト"""
-
     # GameLogicを初期化
     game_logic = GameLogic()
     game_logic.setup_new_game()

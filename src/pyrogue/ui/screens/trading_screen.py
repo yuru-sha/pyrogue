@@ -25,7 +25,8 @@ class TradingScreen(Screen):
     NPCとの取引を表示し、プレイヤーの売買を処理します。
     TradingManagerと連携して取引の実行を管理します。
 
-    Attributes:
+    Attributes
+    ----------
         trading_manager: 取引管理システム
         npc_id: 取引中のNPC ID
         view_mode: 表示モード（"buy" or "sell"）
@@ -34,11 +35,14 @@ class TradingScreen(Screen):
 
     """
 
-    def __init__(self, engine: Engine, trading_manager: TradingManager, npc_id: str) -> None:
+    def __init__(
+        self, engine: Engine, trading_manager: TradingManager, npc_id: str
+    ) -> None:
         """
         TradingScreenの初期化。
 
         Args:
+        ----
             engine: ゲームエンジン
             trading_manager: 取引管理システム
             npc_id: 取引中のNPC ID
@@ -93,9 +97,11 @@ class TradingScreen(Screen):
         キーダウンイベントを処理する。
 
         Args:
+        ----
             key: キーダウンイベント
 
         Returns:
+        -------
             次の画面（Noneの場合は現在の画面を維持）
 
         """
@@ -105,6 +111,7 @@ class TradingScreen(Screen):
             # ESCキーで取引を終了
             self.trading_manager.end_trading()
             from pyrogue.ui.screens.game_screen import GameScreen
+
             return GameScreen(self.engine)
 
         if not self.current_items:
@@ -114,7 +121,9 @@ class TradingScreen(Screen):
         if key_sym == tcod.event.K_UP:
             self.selected_item = max(0, self.selected_item - 1)
         elif key_sym == tcod.event.K_DOWN:
-            self.selected_item = min(len(self.current_items) - 1, self.selected_item + 1)
+            self.selected_item = min(
+                len(self.current_items) - 1, self.selected_item + 1
+            )
 
         # 左右キーで表示モード切り替え
         elif key_sym == tcod.event.K_LEFT:
@@ -163,6 +172,7 @@ class TradingScreen(Screen):
         画面を描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -176,18 +186,14 @@ class TradingScreen(Screen):
                 console.width // 2,
                 console.height // 2,
                 "No merchant available.",
-                alignment=tcod.CENTER
+                alignment=tcod.CENTER,
             )
             return
 
         # タイトルを表示
         title = f"Trading with {npc.name}"
         console.print(
-            console.width // 2,
-            2,
-            title,
-            fg=tcod.white,
-            alignment=tcod.CENTER
+            console.width // 2, 2, title, fg=tcod.white, alignment=tcod.CENTER
         )
 
         # プレイヤーの金貨を表示
@@ -197,7 +203,7 @@ class TradingScreen(Screen):
             4,
             f"Your Gold: {player.gold}",
             fg=tcod.yellow,
-            alignment=tcod.CENTER
+            alignment=tcod.CENTER,
         )
 
         # モード表示
@@ -214,6 +220,7 @@ class TradingScreen(Screen):
         モードタブを描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -226,39 +233,22 @@ class TradingScreen(Screen):
 
         # 購入タブ
         buy_color = tcod.yellow if self.view_mode == "buy" else tcod.gray
-        console.print(
-            center_x - 8,
-            y,
-            buy_text,
-            fg=buy_color,
-            alignment=tcod.CENTER
-        )
+        console.print(center_x - 8, y, buy_text, fg=buy_color, alignment=tcod.CENTER)
 
         # 売却タブ
         sell_color = tcod.yellow if self.view_mode == "sell" else tcod.gray
-        console.print(
-            center_x + 8,
-            y,
-            sell_text,
-            fg=sell_color,
-            alignment=tcod.CENTER
-        )
+        console.print(center_x + 8, y, sell_text, fg=sell_color, alignment=tcod.CENTER)
 
         # 現在のモードを明示
         mode_text = f"Mode: {self.view_mode.upper()}"
-        console.print(
-            center_x,
-            y + 1,
-            mode_text,
-            fg=tcod.white,
-            alignment=tcod.CENTER
-        )
+        console.print(center_x, y + 1, mode_text, fg=tcod.white, alignment=tcod.CENTER)
 
     def _render_item_list(self, console: tcod.Console) -> None:
         """
         アイテムリストを描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -270,7 +260,7 @@ class TradingScreen(Screen):
                 start_y + 2,
                 "No items available.",
                 fg=tcod.gray,
-                alignment=tcod.CENTER
+                alignment=tcod.CENTER,
             )
             return
 
@@ -281,7 +271,7 @@ class TradingScreen(Screen):
             start_y,
             header_text,
             fg=tcod.white,
-            alignment=tcod.CENTER
+            alignment=tcod.CENTER,
         )
 
         # アイテムリスト
@@ -308,11 +298,7 @@ class TradingScreen(Screen):
 
             # アイテムを描画
             console.print(
-                console.width // 2,
-                y,
-                item_text,
-                fg=fg_color,
-                alignment=tcod.CENTER
+                console.width // 2, y, item_text, fg=fg_color, alignment=tcod.CENTER
             )
 
             # 画面に収まる範囲でのみ表示
@@ -324,6 +310,7 @@ class TradingScreen(Screen):
         操作方法を描画する。
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -333,7 +320,7 @@ class TradingScreen(Screen):
             "Controls:",
             "↑/↓: Navigate items  ←/→: Switch modes  Tab: Switch modes",
             "Enter: Execute trade  1-9: Quick trade",
-            "Esc: Exit trading"
+            "Esc: Exit trading",
         ]
 
         for i, line in enumerate(help_lines):
@@ -342,7 +329,7 @@ class TradingScreen(Screen):
                 help_y + i,
                 line,
                 fg=tcod.dark_gray,
-                alignment=tcod.CENTER
+                alignment=tcod.CENTER,
             )
 
     def _get_color_for_item(self, item) -> tuple[int, int, int]:
@@ -350,9 +337,11 @@ class TradingScreen(Screen):
         アイテムの種類に応じた色を取得する。
 
         Args:
+        ----
             item: アイテム
 
         Returns:
+        -------
             RGB色のタプル
 
         """
@@ -366,13 +355,13 @@ class TradingScreen(Screen):
         if "weapon" in class_name:
             return (192, 192, 192)  # 銀色
         if "armor" in class_name:
-            return (139, 69, 19)    # 茶色
+            return (139, 69, 19)  # 茶色
         if "potion" in class_name:
-            return (255, 0, 255)    # マゼンタ
+            return (255, 0, 255)  # マゼンタ
         if "scroll" in class_name:
-            return (255, 255, 0)    # 黄色
+            return (255, 255, 0)  # 黄色
         if "food" in class_name:
-            return (165, 42, 42)    # 茶色
+            return (165, 42, 42)  # 茶色
         if "ring" in class_name:
-            return (255, 215, 0)    # 金色
+            return (255, 215, 0)  # 金色
         return (128, 128, 128)  # グレー

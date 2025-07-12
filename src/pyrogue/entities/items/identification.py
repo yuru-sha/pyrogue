@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional
 
 
 class ItemIdentification:
@@ -21,27 +20,74 @@ class ItemIdentification:
         self.identified_rings: set[str] = set()
 
         # 未識別名マッピング（プレイ毎にランダム化）
-        self.potion_appearances: Dict[str, str] = {}
-        self.scroll_appearances: Dict[str, str] = {}
-        self.ring_appearances: Dict[str, str] = {}
+        self.potion_appearances: dict[str, str] = {}
+        self.scroll_appearances: dict[str, str] = {}
+        self.ring_appearances: dict[str, str] = {}
 
         # 未識別名のプール
         self.potion_colors = [
-            "red", "blue", "green", "yellow", "purple", "orange", "pink", "brown",
-            "black", "white", "gray", "cyan", "magenta", "silver", "gold", "clear"
+            "red",
+            "blue",
+            "green",
+            "yellow",
+            "purple",
+            "orange",
+            "pink",
+            "brown",
+            "black",
+            "white",
+            "gray",
+            "cyan",
+            "magenta",
+            "silver",
+            "gold",
+            "clear",
         ]
 
         self.scroll_words = [
-            "ZELGO MER", "JUYED AWK YACC", "NR 9", "XIXAXA XOXAXA", "PRIRUTSENIE",
-            "ELBIB YLOH", "VERR YED HORRE", "VENZAR BORGAVVE", "THARR", "YUM YUM",
-            "KERNOD WEL", "ELAM EBOW", "DUAM XNAHT", "ANDOVA BEGARIN", "KIRJE",
-            "VE FORBRYDERNE", "CHATRANG", "VELOX NEB", "FOOBIE BLETCH", "TEMOV"
+            "ZELGO MER",
+            "JUYED AWK YACC",
+            "NR 9",
+            "XIXAXA XOXAXA",
+            "PRIRUTSENIE",
+            "ELBIB YLOH",
+            "VERR YED HORRE",
+            "VENZAR BORGAVVE",
+            "THARR",
+            "YUM YUM",
+            "KERNOD WEL",
+            "ELAM EBOW",
+            "DUAM XNAHT",
+            "ANDOVA BEGARIN",
+            "KIRJE",
+            "VE FORBRYDERNE",
+            "CHATRANG",
+            "VELOX NEB",
+            "FOOBIE BLETCH",
+            "TEMOV",
         ]
 
         self.ring_materials = [
-            "wooden", "granite", "opal", "clay", "coral", "black onyx", "moonstone",
-            "tiger eye", "pearl", "glass", "agate", "sapphire", "ruby", "diamond",
-            "jacinth", "obsidian", "jade", "amber", "jet", "bronze"
+            "wooden",
+            "granite",
+            "opal",
+            "clay",
+            "coral",
+            "black onyx",
+            "moonstone",
+            "tiger eye",
+            "pearl",
+            "glass",
+            "agate",
+            "sapphire",
+            "ruby",
+            "diamond",
+            "jacinth",
+            "obsidian",
+            "jade",
+            "amber",
+            "jet",
+            "bronze",
         ]
 
         self._initialize_appearances()
@@ -49,7 +95,12 @@ class ItemIdentification:
     def _initialize_appearances(self) -> None:
         """未識別名をランダムに割り当て"""
         # ポーション名のシャッフル
-        potion_names = ["Healing Potion", "Mana Potion", "Poison Potion", "Strength Potion"]
+        potion_names = [
+            "Healing Potion",
+            "Mana Potion",
+            "Poison Potion",
+            "Strength Potion",
+        ]
         available_colors = self.potion_colors.copy()
         random.shuffle(available_colors)
 
@@ -58,9 +109,15 @@ class ItemIdentification:
                 self.potion_appearances[potion_name] = available_colors[i]
 
         # 巻物名のシャッフル
-        scroll_names = ["Scroll of Identify", "Scroll of Teleportation", "Scroll of Magic Mapping",
-                       "Scroll of Light", "Scroll of Remove Curse", "Scroll of Enchant Weapon",
-                       "Scroll of Enchant Armor"]
+        scroll_names = [
+            "Scroll of Identify",
+            "Scroll of Teleportation",
+            "Scroll of Magic Mapping",
+            "Scroll of Light",
+            "Scroll of Remove Curse",
+            "Scroll of Enchant Weapon",
+            "Scroll of Enchant Armor",
+        ]
         available_words = self.scroll_words.copy()
         random.shuffle(available_words)
 
@@ -69,7 +126,12 @@ class ItemIdentification:
                 self.scroll_appearances[scroll_name] = available_words[i]
 
         # 指輪名のシャッフル
-        ring_names = ["Ring of Strength", "Ring of Protection", "Ring of Dexterity", "Ring of Regeneration"]
+        ring_names = [
+            "Ring of Strength",
+            "Ring of Protection",
+            "Ring of Dexterity",
+            "Ring of Regeneration",
+        ]
         available_materials = self.ring_materials.copy()
         random.shuffle(available_materials)
 
@@ -91,7 +153,7 @@ class ItemIdentification:
                 return item_name
             elif item_name in self.scroll_appearances:
                 words = self.scroll_appearances[item_name]
-                return f"scroll labeled \"{words}\""
+                return f'scroll labeled "{words}"'
 
         elif item_type == "RING":
             if item_name in self.identified_rings:

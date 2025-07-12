@@ -4,12 +4,13 @@ DialogueManager のテストモジュール。
 会話システムの機能テストを提供します。
 """
 
-import pytest
 from unittest.mock import Mock
-from pathlib import Path
 
 from pyrogue.core.managers.dialogue_manager import (
-    DialogueManager, DialogueNode, DialogueChoice, DialogueAction
+    DialogueAction,
+    DialogueChoice,
+    DialogueManager,
+    DialogueNode,
 )
 
 
@@ -165,11 +166,9 @@ class TestDialogueManager:
                 speaker="Test NPC",
                 choices=[
                     DialogueChoice(
-                        text="Test choice",
-                        next_node=None,
-                        action=DialogueAction.END
+                        text="Test choice", next_node=None, action=DialogueAction.END
                     )
-                ]
+                ],
             )
         ]
 
@@ -246,7 +245,7 @@ class TestDialogueManager:
             text="Test choice",
             next_node="test_node",
             action=DialogueAction.CONTINUE,
-            condition="test_condition"
+            condition="test_condition",
         )
 
         assert choice.text == "Test choice"
@@ -261,7 +260,7 @@ class TestDialogueManager:
             speaker="Test Speaker",
             choices=[choice],
             action=DialogueAction.CONTINUE,
-            condition="test_condition"
+            condition="test_condition",
         )
 
         assert node.id == "test_node"

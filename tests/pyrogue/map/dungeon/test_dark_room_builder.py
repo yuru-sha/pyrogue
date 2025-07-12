@@ -4,10 +4,8 @@
 このテストは、暗い部屋生成システムが正常に動作することを確認します。
 """
 
-import pytest
 import numpy as np
-
-from pyrogue.map.dungeon.dark_room_builder import DarkRoomBuilder, DarkRoom
+from pyrogue.map.dungeon.dark_room_builder import DarkRoom, DarkRoomBuilder
 from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Floor, Wall
 
@@ -140,9 +138,9 @@ class TestDarkRoomBuilder:
 
         # 光源タイルが設定されているかチェック
         light_tile = tiles[light_y, light_x]
-        assert hasattr(light_tile, 'has_light_source')
+        assert hasattr(light_tile, "has_light_source")
         assert light_tile.has_light_source
-        assert hasattr(light_tile, 'light_radius')
+        assert hasattr(light_tile, "light_radius")
         assert light_tile.light_radius > 0
 
     def test_darkness_level_detection(self):
@@ -298,7 +296,10 @@ class TestDarkRoom:
         slightly_dark_room = DarkRoom(20, 10, 8, 6, darkness_level=0.3)
 
         # より暗い部屋の方が視界が狭い
-        assert very_dark_room.base_visibility_range <= slightly_dark_room.base_visibility_range
+        assert (
+            very_dark_room.base_visibility_range
+            <= slightly_dark_room.base_visibility_range
+        )
 
     def test_dark_room_inheritance(self):
         """暗い部屋の継承テスト。"""

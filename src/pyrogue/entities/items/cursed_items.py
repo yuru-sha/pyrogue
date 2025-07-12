@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import random
-from typing import List
 
 from pyrogue.entities.items.item import Armor, Ring, Weapon
 
@@ -47,10 +46,12 @@ class CursedItemGenerator:
         呪われた武器を生成
 
         Args:
+        ----
             x: 生成位置X
             y: 生成位置Y
 
         Returns:
+        -------
             呪われた武器
         """
         name, attack_penalty = random.choice(cls.CURSED_WEAPONS)
@@ -65,10 +66,12 @@ class CursedItemGenerator:
         呪われた防具を生成
 
         Args:
+        ----
             x: 生成位置X
             y: 生成位置Y
 
         Returns:
+        -------
             呪われた防具
         """
         name, defense_penalty = random.choice(cls.CURSED_ARMORS)
@@ -83,10 +86,12 @@ class CursedItemGenerator:
         呪われた指輪を生成
 
         Args:
+        ----
             x: 生成位置X
             y: 生成位置Y
 
         Returns:
+        -------
             呪われた指輪
         """
         name, effect, penalty = random.choice(cls.CURSED_RINGS)
@@ -101,9 +106,11 @@ class CursedItemGenerator:
         既存のアイテムを呪う
 
         Args:
+        ----
             item: 呪うアイテム
 
         Returns:
+        -------
             呪いの適用に成功したかどうか
         """
         if item.cursed:
@@ -144,10 +151,12 @@ class CursedItemGenerator:
         ランダムな呪われたアイテムを生成
 
         Args:
+        ----
             x: 生成位置X
             y: 生成位置Y
 
         Returns:
+        -------
             ランダムな呪われたアイテム
         """
         item_type = random.choice(["weapon", "armor", "ring"])

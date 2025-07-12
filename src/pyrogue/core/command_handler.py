@@ -282,6 +282,7 @@ Available Commands:
     debug pos <x> <y> - Teleport to position
     debug hp <value> - Set HP to value
     debug damage <value> - Take damage
+    debug gold <amount> - Place gold at current position
         """
         self.context.add_message(help_text.strip())
         return CommandResult(True)
@@ -300,7 +301,7 @@ Available Commands:
         """
         if not args:
             self.context.add_message(
-                "Debug commands: yendor, floor <number>, pos <x> <y>, hp <value>, damage <value>"
+                "Debug commands: yendor, floor <number>, pos <x> <y>, hp <value>, damage <value>, gold <amount>"
             )
             return CommandResult(True)
 
@@ -409,6 +410,34 @@ Available Commands:
                 return CommandResult(True)
             except Exception as e:
                 self.context.add_message(f"Damage failed: {e}")
+                return CommandResult(False)
+
+        elif debug_cmd == "gold" and len(args) > 1:
+            try:
+                gold_amount = int(args[1])
+                player = self.context.player
+
+                # プレイヤーの位置にゴールドアイテムを配置
+                from pyrogue.entities.items.item import Gold
+
+                gold_item = Gold(player.x, player.y, gold_amount)
+
+                # 現在のフロアにアイテムを追加
+                if hasattr(self.context, "dungeon_manager"):
+                    floor_data = self.context.dungeon_manager.get_current_floor_data()
+                    if floor_data:
+                        floor_data.items.append(gold_item)
+                        self.context.add_message(
+                            f"Placed {gold_amount} gold at your location."
+                        )
+                    else:
+                        self.context.add_message("Failed to get floor data.")
+                else:
+                    self.context.add_message("Dungeon manager not available.")
+
+                return CommandResult(True)
+            except Exception as e:
+                self.context.add_message(f"Gold placement failed: {e}")
                 return CommandResult(False)
 
         else:

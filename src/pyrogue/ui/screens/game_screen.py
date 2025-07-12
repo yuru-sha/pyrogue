@@ -29,7 +29,8 @@ class GameScreen:
     各責務を専用のコンポーネントに委譲し、
     自身はコンポーネント間の調整役に徹します。
 
-    Attributes:
+    Attributes
+    ----------
         engine: ゲームエンジンインスタンス
         game_logic: ゲームロジック管理インスタンス
         renderer: 描画処理コンポーネント
@@ -46,6 +47,7 @@ class GameScreen:
         ゲームスクリーンを初期化。
 
         Args:
+        ----
             engine: メインゲームエンジンのインスタンス（CLIモードの場合はNone）
 
         """
@@ -92,6 +94,7 @@ class GameScreen:
         画面の描画（レンダラーに委譲）。
 
         Args:
+        ----
             console: TCODコンソール
 
         """
@@ -106,6 +109,7 @@ class GameScreen:
         キー入力の処理（入力ハンドラーに委譲）。
 
         Args:
+        ----
             event: TCODキーイベント
 
         """
@@ -116,6 +120,7 @@ class GameScreen:
         ターゲット選択モードのキー入力処理（入力ハンドラーに委譲）。
 
         Args:
+        ----
             event: TCODキーイベント
 
         """
@@ -125,7 +130,8 @@ class GameScreen:
         """
         ゲーム状態を保存（セーブ・ロードマネージャーに委譲）。
 
-        Returns:
+        Returns
+        -------
             保存に成功した場合True
 
         """
@@ -135,7 +141,8 @@ class GameScreen:
         """
         ゲーム状態を読み込み（セーブ・ロードマネージャーに委譲）。
 
-        Returns:
+        Returns
+        -------
             読み込みに成功した場合True
 
         """
@@ -159,6 +166,7 @@ class GameScreen:
 
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
+
         class DungeonProxy:
             def __init__(self, game_screen):
                 self.game_screen = game_screen

@@ -29,6 +29,7 @@ class InventoryScreen(Screen):
         画面を描画
 
         Args:
+        ----
             console: 描画対象のコンソール
 
         """
@@ -55,9 +56,16 @@ class InventoryScreen(Screen):
 
             # 装備状態を表示
             equipped = self.game_screen.game_logic.inventory.equipped
-            if (isinstance(item, Weapon) and equipped["weapon"] == item) or \
-               (isinstance(item, Armor) and equipped["armor"] == item) or \
-               (isinstance(item, Ring) and (equipped["ring_left"] == item or equipped["ring_right"] == item)):
+            if (
+                (isinstance(item, Weapon) and equipped["weapon"] == item)
+                or (isinstance(item, Armor) and equipped["armor"] == item)
+                or (
+                    isinstance(item, Ring)
+                    and (
+                        equipped["ring_left"] == item or equipped["ring_right"] == item
+                    )
+                )
+            ):
                 item_text += " (equipped)"
                 fg = tcod.green if i != self.selected_index else tcod.yellow
 
@@ -105,6 +113,7 @@ class InventoryScreen(Screen):
         インベントリ画面のキー入力を処理。
 
         Args:
+        ----
             event: キーボードイベント
 
         """
@@ -159,7 +168,9 @@ class InventoryScreen(Screen):
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # アイテムを使用
                     player = self.game_screen.game_logic.player
-                    success = player.use_item(selected_item, self.game_screen.game_logic)
+                    success = player.use_item(
+                        selected_item, self.game_screen.game_logic
+                    )
 
                     if success:
                         # 使用成功時に識別
@@ -174,8 +185,12 @@ class InventoryScreen(Screen):
                             self.game_screen.game_logic.add_message(msg)
 
                         # 選択インデックスを調整
-                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
-                            self.selected_index = max(0, len(self.game_screen.game_logic.inventory.items) - 1)
+                        if self.selected_index >= len(
+                            self.game_screen.game_logic.inventory.items
+                        ):
+                            self.selected_index = max(
+                                0, len(self.game_screen.game_logic.inventory.items) - 1
+                            )
                     else:
                         self.game_screen.game_logic.add_message(
                             f"You cannot use the {selected_item.get_display_name(player.identification)}."
@@ -195,10 +210,16 @@ class InventoryScreen(Screen):
                     equipped = self.game_screen.game_logic.inventory.equipped
                     unequipped = False
 
-                    if isinstance(selected_item, Weapon) and equipped["weapon"] == selected_item:
+                    if (
+                        isinstance(selected_item, Weapon)
+                        and equipped["weapon"] == selected_item
+                    ):
                         self.game_screen.game_logic.inventory.unequip("weapon")
                         unequipped = True
-                    elif isinstance(selected_item, Armor) and equipped["armor"] == selected_item:
+                    elif (
+                        isinstance(selected_item, Armor)
+                        and equipped["armor"] == selected_item
+                    ):
                         self.game_screen.game_logic.inventory.unequip("armor")
                         unequipped = True
                     elif isinstance(selected_item, Ring):
@@ -226,8 +247,11 @@ class InventoryScreen(Screen):
             # d: ドロップ
             if event.sym == tcod.event.KeySym.D:
                 # 呪われた装備中のアイテムかチェック
-                if (self.game_screen.game_logic.inventory.is_equipped(selected_item) and
-                    hasattr(selected_item, 'cursed') and selected_item.cursed):
+                if (
+                    self.game_screen.game_logic.inventory.is_equipped(selected_item)
+                    and hasattr(selected_item, "cursed")
+                    and selected_item.cursed
+                ):
                     self.game_screen.game_logic.add_message(
                         f"You cannot drop the cursed {selected_item.name}! You must first remove the curse."
                     )

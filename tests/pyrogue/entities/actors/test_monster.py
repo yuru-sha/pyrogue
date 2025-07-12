@@ -4,7 +4,6 @@ Monster クラスのテストモジュール。
 基本的なモンスター機能のテストを提供します。
 """
 
-import pytest
 from unittest.mock import Mock
 
 from pyrogue.entities.actors.monster import Monster
@@ -16,10 +15,10 @@ class TestMonster:
     def test_monster_initialization(self):
         """モンスターの初期化テスト。"""
         monster = Monster(
-            char='A',
+            char="A",
             x=10,
             y=15,
-            name='Ant',
+            name="Ant",
             level=1,
             hp=20,
             max_hp=20,
@@ -28,14 +27,14 @@ class TestMonster:
             exp_value=10,
             view_range=5,
             color=(255, 0, 0),
-            is_hostile=True
+            is_hostile=True,
         )
 
         # 基本属性の確認
-        assert monster.char == 'A'
+        assert monster.char == "A"
         assert monster.x == 10
         assert monster.y == 15
-        assert monster.name == 'Ant'
+        assert monster.name == "Ant"
         assert monster.level == 1
         assert monster.hp == 20
         assert monster.max_hp == 20
@@ -52,9 +51,18 @@ class TestMonster:
     def test_monster_move(self):
         """モンスターの移動テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 正の移動
@@ -75,9 +83,18 @@ class TestMonster:
     def test_monster_take_damage(self):
         """モンスターのダメージ処理テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 通常のダメージ
@@ -100,9 +117,18 @@ class TestMonster:
     def test_monster_heal(self):
         """モンスターの回復処理テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=10, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=10,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 通常の回復
@@ -116,9 +142,18 @@ class TestMonster:
     def test_monster_death(self):
         """モンスターの死亡判定テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=5, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=5,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 生存状態
@@ -135,9 +170,18 @@ class TestMonster:
     def test_monster_vision(self):
         """モンスターの視界判定テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # モックFOVマップ
@@ -145,12 +189,18 @@ class TestMonster:
         mock_fov.transparent = {}
 
         # 視界内でプレイヤーが見える場合
-        player_x, player_y = 12, 17  # 距離: sqrt((12-10)^2 + (17-15)^2) = sqrt(8) ≈ 2.83 < 5
+        player_x, player_y = (
+            12,
+            17,
+        )  # 距離: sqrt((12-10)^2 + (17-15)^2) = sqrt(8) ≈ 2.83 < 5
         mock_fov.transparent[player_y, player_x] = True
         assert monster.can_see_player(player_x, player_y, mock_fov)
 
         # 視界外のプレイヤー
-        player_x, player_y = 20, 25  # 距離: sqrt((20-10)^2 + (25-15)^2) = sqrt(200) ≈ 14.14 > 5
+        player_x, player_y = (
+            20,
+            25,
+        )  # 距離: sqrt((20-10)^2 + (25-15)^2) = sqrt(200) ≈ 14.14 > 5
         mock_fov.transparent[player_y, player_x] = True
         assert not monster.can_see_player(player_x, player_y, mock_fov)
 
@@ -162,9 +212,18 @@ class TestMonster:
     def test_monster_move_towards_player(self):
         """モンスターのプレイヤー追跡移動テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 右上にプレイヤーがいる場合
@@ -190,16 +249,30 @@ class TestMonster:
     def test_monster_random_move(self):
         """モンスターのランダム移動テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 8方向の可能な移動
         valid_moves = [
-            (-1, -1), (0, -1), (1, -1),
-            (-1, 0), (1, 0),
-            (-1, 1), (0, 1), (1, 1)
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+            (-1, 0),
+            (1, 0),
+            (-1, 1),
+            (0, 1),
+            (1, 1),
         ]
 
         # 複数回実行してランダムな移動を確認
@@ -212,9 +285,18 @@ class TestMonster:
     def test_monster_status_effects(self):
         """モンスターの状態異常テスト。"""
         monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0)
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
         )
 
         # 初期状態
@@ -228,24 +310,42 @@ class TestMonster:
         monster.update_status_effects(mock_context)
 
         # status_effects.update_effects が呼び出されることを確認
-        assert hasattr(monster.status_effects, 'update_effects')
+        assert hasattr(monster.status_effects, "update_effects")
 
     def test_monster_hostility(self):
         """モンスターの敵対性テスト。"""
         # 敵対的なモンスター
         hostile_monster = Monster(
-            char='A', x=10, y=15, name='Ant', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(255, 0, 0),
-            is_hostile=True
+            char="A",
+            x=10,
+            y=15,
+            name="Ant",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(255, 0, 0),
+            is_hostile=True,
         )
         assert hostile_monster.is_hostile is True
 
         # 非敵対的なモンスター
         friendly_monster = Monster(
-            char='B', x=10, y=15, name='Butterfly', level=1,
-            hp=20, max_hp=20, attack=5, defense=2,
-            exp_value=10, view_range=5, color=(0, 255, 0),
-            is_hostile=False
+            char="B",
+            x=10,
+            y=15,
+            name="Butterfly",
+            level=1,
+            hp=20,
+            max_hp=20,
+            attack=5,
+            defense=2,
+            exp_value=10,
+            view_range=5,
+            color=(0, 255, 0),
+            is_hostile=False,
         )
         assert friendly_monster.is_hostile is False

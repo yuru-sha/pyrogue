@@ -25,7 +25,8 @@ class FOVManager:
 
     プレイヤーの視界計算、可視範囲の管理、探索済みエリアの更新を担当します。
 
-    Attributes:
+    Attributes
+    ----------
         game_screen: メインのゲームスクリーンへの参照
         fov_enabled: FOV表示の有効/無効フラグ
         fov_map: FOV計算用のマップ
@@ -39,6 +40,7 @@ class FOVManager:
         FOVマネージャーを初期化。
 
         Args:
+        ----
             game_screen: メインのゲームスクリーンインスタンス
 
         """
@@ -49,15 +51,14 @@ class FOVManager:
 
         # FOV計算用のマップを初期化
         self.fov_map = tcod.map.Map(
-            width=game_screen.dungeon_width,
-            height=game_screen.dungeon_height
+            width=game_screen.dungeon_width, height=game_screen.dungeon_height
         )
 
         # 可視範囲を初期化
         self.visible = np.full(
             (game_screen.dungeon_height, game_screen.dungeon_width),
             fill_value=False,
-            dtype=bool
+            dtype=bool,
         )
 
     def update_fov(self) -> None:
@@ -93,11 +94,11 @@ class FOVManager:
         # 全てのタイルを透明（通行可能）として初期化
         transparent = np.ones(
             (self.game_screen.dungeon_height, self.game_screen.dungeon_width),
-            dtype=bool
+            dtype=bool,
         )
         walkable = np.ones(
             (self.game_screen.dungeon_height, self.game_screen.dungeon_width),
-            dtype=bool
+            dtype=bool,
         )
 
         # 壁と閉じたドアは不透明で通行不可
@@ -121,6 +122,7 @@ class FOVManager:
         指定座標からのFOVを計算。
 
         Args:
+        ----
             x: プレイヤーのX座標
             y: プレイヤーのY座標
 
@@ -132,7 +134,9 @@ class FOVManager:
         effective_radius = self._calculate_effective_fov_radius(x, y)
 
         # FOV計算
-        self.fov_map.compute_fov(x, y, radius=effective_radius, algorithm=libtcodpy.FOV_SHADOW)
+        self.fov_map.compute_fov(
+            x, y, radius=effective_radius, algorithm=libtcodpy.FOV_SHADOW
+        )
 
         # 結果を可視範囲配列にコピー
         self.visible[:] = self.fov_map.fov[:]
@@ -145,10 +149,12 @@ class FOVManager:
         暗い部屋での効果的なFOV半径を計算。
 
         Args:
+        ----
             x: プレイヤーのX座標
             y: プレイヤーのY座標
 
         Returns:
+        -------
             効果的なFOV半径
         """
         # 現在の階層データを取得
@@ -157,8 +163,8 @@ class FOVManager:
             return self.base_fov_radius
 
         # ダンジョンディレクターから暗い部屋情報を取得
-        dungeon_director = getattr(floor_data, 'dungeon_director', None)
-        if not dungeon_director or not hasattr(dungeon_director, 'dark_room_builder'):
+        dungeon_director = getattr(floor_data, "dungeon_director", None)
+        if not dungeon_director or not hasattr(dungeon_director, "dark_room_builder"):
             return self.base_fov_radius
 
         dark_room_builder = dungeon_director.dark_room_builder
@@ -170,10 +176,7 @@ class FOVManager:
 
         # 暗い部屋での視界範囲を計算
         return dark_room_builder.get_visibility_range_at(
-            x, y,
-            getattr(floor_data, 'rooms', []),
-            has_light,
-            light_radius
+            x, y, getattr(floor_data, "rooms", []), has_light, light_radius
         )
 
     def _player_has_light_source(self, player) -> bool:
@@ -181,15 +184,17 @@ class FOVManager:
         プレイヤーが光源を持っているかチェック。
 
         Args:
+        ----
             player: プレイヤーオブジェクト
 
         Returns:
+        -------
             光源を持っている場合True
         """
         # プレイヤーのインベントリから光源アイテムを検索
-        if hasattr(player, 'inventory') and hasattr(player.inventory, 'items'):
+        if hasattr(player, "inventory") and hasattr(player.inventory, "items"):
             for item in player.inventory.items:
-                if hasattr(item, 'get_light_radius') and item.get_light_radius() > 0:
+                if hasattr(item, "get_light_radius") and item.get_light_radius() > 0:
                     return True
 
         return False
@@ -199,16 +204,18 @@ class FOVManager:
         プレイヤーの光源半径を取得。
 
         Args:
+        ----
             player: プレイヤーオブジェクト
 
         Returns:
+        -------
             光源半径
         """
         max_radius = 0
 
-        if hasattr(player, 'inventory') and hasattr(player.inventory, 'items'):
+        if hasattr(player, "inventory") and hasattr(player.inventory, "items"):
             for item in player.inventory.items:
-                if hasattr(item, 'get_light_radius'):
+                if hasattr(item, "get_light_radius"):
                     radius = item.get_light_radius()
                     max_radius = max(max_radius, radius)
 
@@ -218,7 +225,8 @@ class FOVManager:
         """
         FOV表示の有効/無効を切り替え。
 
-        Returns:
+        Returns
+        -------
             現在のFOV状態のメッセージ
 
         """
@@ -234,6 +242,7 @@ class FOVManager:
         FOV半径を設定。
 
         Args:
+        ----
             radius: 新しい視界半径
 
         """
@@ -245,14 +254,19 @@ class FOVManager:
         指定座標が現在視界内にあるかチェック。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             視界内にある場合True
 
         """
-        if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
+        if not (
+            0 <= x < self.game_screen.dungeon_width
+            and 0 <= y < self.game_screen.dungeon_height
+        ):
             return False
         return self.visible[y, x]
 
@@ -261,13 +275,18 @@ class FOVManager:
         指定座標が探索済みかチェック。
 
         Args:
+        ----
             x: X座標
             y: Y座標
 
         Returns:
+        -------
             探索済みの場合True
 
         """
-        if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
+        if not (
+            0 <= x < self.game_screen.dungeon_width
+            and 0 <= y < self.game_screen.dungeon_height
+        ):
             return False
         return self.game_screen.game_logic.get_explored_tiles()[y, x]

@@ -5,6 +5,7 @@
 渡り制御を管理するためのEnumを提供します。
 
 Example:
+-------
     >>> if game.state == GameStates.PLAYERS_TURN:
     ...     handle_player_input()
 

@@ -32,7 +32,8 @@ class SaveManager:
     パーマデス機能を維持しながら、ゲーム状態の保存と復元を行います。
     セーブデータの整合性チェックと改ざん防止機能も提供します。
 
-    Attributes:
+    Attributes
+    ----------
         save_dir: セーブデータディレクトリのパス
         save_file: メインセーブファイルのパス
         backup_file: バックアップセーブファイルのパス
@@ -45,6 +46,7 @@ class SaveManager:
         SaveManagerを初期化。
 
         Args:
+        ----
             save_dir: セーブデータを保存するディレクトリ
 
         """
@@ -63,9 +65,11 @@ class SaveManager:
         ゲーム状態を保存。
 
         Args:
+        ----
             game_data: 保存するゲームデータ
 
         Returns:
+        -------
             bool: 保存に成功した場合はTrue
 
         """
@@ -114,7 +118,8 @@ class SaveManager:
         """
         ゲーム状態を読み込み。
 
-        Returns:
+        Returns
+        -------
             Optional[Dict[str, Any]]: 読み込んだゲームデータ。失敗時はNone
 
         """
@@ -125,13 +130,17 @@ class SaveManager:
         try:
             # セーブファイルの整合性チェック
             if not self._verify_checksum():
-                game_logger.warning("Save file integrity check failed - potential tampering detected")
+                game_logger.warning(
+                    "Save file integrity check failed - potential tampering detected"
+                )
                 # チェックサム検証失敗時もバックアップを試行
                 if self.backup_file.exists():
                     try:
                         with open(self.backup_file, "rb") as f:
                             game_data = pickle.load(f)
-                        game_logger.info("Game loaded from backup file after checksum failure")
+                        game_logger.info(
+                            "Game loaded from backup file after checksum failure"
+                        )
                         return game_data
                     except Exception as backup_error:
                         game_logger.error(f"Backup file also corrupted: {backup_error}")
@@ -208,6 +217,7 @@ class SaveManager:
         プレイヤー死亡時にパーマデスを発動。
 
         Args:
+        ----
             game_data: 現在のゲームデータ
 
         """
@@ -221,7 +231,8 @@ class SaveManager:
         """
         セーブファイルが存在するかチェック。
 
-        Returns:
+        Returns
+        -------
             bool: セーブファイルが存在する場合はTrue
 
         """
@@ -231,7 +242,8 @@ class SaveManager:
         """
         セーブファイルの情報を取得。
 
-        Returns:
+        Returns
+        -------
             Optional[Dict[str, Any]]: セーブファイルの情報。存在しない場合はNone
 
         """
@@ -250,7 +262,8 @@ class SaveManager:
         """
         セーブデータを手動で削除。
 
-        Returns:
+        Returns
+        -------
             bool: 削除に成功した場合はTrue
 
         """
@@ -266,9 +279,11 @@ class SaveManager:
         ファイルのSHA256チェックサムを計算。
 
         Args:
+        ----
             file_path: チェックサムを計算するファイルのパス
 
         Returns:
+        -------
             SHA256チェックサムの16進数表現
 
         """
@@ -304,7 +319,8 @@ class SaveManager:
         """
         セーブファイルの整合性をチェックサムで検証。
 
-        Returns:
+        Returns
+        -------
             bool: チェックサムが一致する場合はTrue
 
         """
@@ -322,7 +338,9 @@ class SaveManager:
             # チェックサムを比較
             is_valid = stored_checksum == current_checksum
             if not is_valid:
-                game_logger.warning(f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}")
+                game_logger.warning(
+                    f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}"
+                )
 
             return is_valid
 

@@ -5,11 +5,8 @@
 正常に動作することを確認します。
 """
 
-import pytest
 
-from pyrogue.entities.items.light_items import (
-    Torch, Lantern, LightRing, LightManager
-)
+from pyrogue.entities.items.light_items import Lantern, LightManager, LightRing, Torch
 
 
 class TestTorch:

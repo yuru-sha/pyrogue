@@ -23,7 +23,8 @@ class TurnManager:
     ゲームのターン進行、モンスターターン処理、
     ステータス異常の経過、満腹度システムを担当します。
 
-    Attributes:
+    Attributes
+    ----------
         turn_count: 経過ターン数
 
     """
@@ -37,6 +38,7 @@ class TurnManager:
         1ターンの処理を実行。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -67,6 +69,7 @@ class TurnManager:
         プレイヤーのステータス異常を処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -92,7 +95,7 @@ class TurnManager:
                     context.add_message("You died from poison!")
 
                     # 毒死時のゲームオーバー処理
-                    if hasattr(context, 'game_logic') and context.game_logic:
+                    if hasattr(context, "game_logic") and context.game_logic:
                         context.game_logic.record_game_over("Poison")
 
                     if context.engine and hasattr(context.engine, "game_over"):
@@ -117,6 +120,7 @@ class TurnManager:
         モンスターターンを処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -143,6 +147,7 @@ class TurnManager:
         モンスターのステータス異常を処理。
 
         Args:
+        ----
             monster: 処理するモンスター
 
         """
@@ -168,6 +173,7 @@ class TurnManager:
         満腹度システムを処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -191,26 +197,44 @@ class TurnManager:
         # ダメージ処理
         self._process_hunger_damage(context, player)
 
-    def _handle_hunger_state_changes(self, context: GameContext, old_hunger: int, new_hunger: int) -> None:
+    def _handle_hunger_state_changes(
+        self, context: GameContext, old_hunger: int, new_hunger: int
+    ) -> None:
         """
         飢餓状態変化のメッセージを処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
             old_hunger: 変化前の満腹度
             new_hunger: 変化後の満腹度
 
         """
         # 状態が変化した場合のメッセージ
-        if old_hunger >= HungerConstants.FULL_THRESHOLD and new_hunger < HungerConstants.FULL_THRESHOLD:
+        if (
+            old_hunger >= HungerConstants.FULL_THRESHOLD
+            and new_hunger < HungerConstants.FULL_THRESHOLD
+        ):
             context.add_message("You are no longer full.")
-        elif old_hunger >= HungerConstants.CONTENT_THRESHOLD and new_hunger < HungerConstants.CONTENT_THRESHOLD:
+        elif (
+            old_hunger >= HungerConstants.CONTENT_THRESHOLD
+            and new_hunger < HungerConstants.CONTENT_THRESHOLD
+        ):
             context.add_message("You are starting to feel peckish.")
-        elif old_hunger >= HungerConstants.HUNGRY_THRESHOLD and new_hunger < HungerConstants.HUNGRY_THRESHOLD:
+        elif (
+            old_hunger >= HungerConstants.HUNGRY_THRESHOLD
+            and new_hunger < HungerConstants.HUNGRY_THRESHOLD
+        ):
             context.add_message("You are getting hungry.")
-        elif old_hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD and new_hunger < HungerConstants.VERY_HUNGRY_THRESHOLD:
+        elif (
+            old_hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD
+            and new_hunger < HungerConstants.VERY_HUNGRY_THRESHOLD
+        ):
             context.add_message("You are very hungry and feel weakened!")
-        elif old_hunger >= HungerConstants.STARVING_THRESHOLD and new_hunger < HungerConstants.STARVING_THRESHOLD:
+        elif (
+            old_hunger >= HungerConstants.STARVING_THRESHOLD
+            and new_hunger < HungerConstants.STARVING_THRESHOLD
+        ):
             context.add_message("You are starving! Your strength is failing!")
 
     def _apply_full_bonus_effects(self, context: GameContext, player) -> None:
@@ -218,6 +242,7 @@ class TurnManager:
         満腹時のボーナス効果を適用。
 
         Args:
+        ----
             context: ゲームコンテキスト
             player: プレイヤー
 
@@ -225,13 +250,19 @@ class TurnManager:
         import random
 
         # HP自然回復
-        if player.hp < player.max_hp and random.random() < HungerConstants.FULL_HP_REGEN_CHANCE:
+        if (
+            player.hp < player.max_hp
+            and random.random() < HungerConstants.FULL_HP_REGEN_CHANCE
+        ):
             player.hp = min(player.max_hp, player.hp + 1)
             context.add_message("You feel refreshed!")
 
         # MP回復ボーナス
         if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            if player.mp < player.max_mp and random.random() < HungerConstants.FULL_MP_REGEN_BONUS:
+            if (
+                player.mp < player.max_mp
+                and random.random() < HungerConstants.FULL_MP_REGEN_BONUS
+            ):
                 player.mp = min(player.max_mp, player.mp + 1)
                 context.add_message("Your magical energy flows strongly!")
 
@@ -240,14 +271,16 @@ class TurnManager:
         飢餓によるダメージを処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
             player: プレイヤー
 
         """
         # 飢餓状態でのダメージ
-        if (player.hunger <= HungerConstants.STARVING_THRESHOLD and
-            self.turn_count % HungerConstants.STARVING_DAMAGE_INTERVAL == 0):
-
+        if (
+            player.hunger <= HungerConstants.STARVING_THRESHOLD
+            and self.turn_count % HungerConstants.STARVING_DAMAGE_INTERVAL == 0
+        ):
             damage = HungerConstants.STARVING_DAMAGE
             player.hp = max(0, player.hp - damage)
             context.add_message(f"Starvation deals {damage} damage!")
@@ -255,7 +288,7 @@ class TurnManager:
             if player.hp <= 0:
                 context.add_message("You died of starvation!")
                 # 飢餓死時のゲームオーバー処理
-                if hasattr(context, 'game_logic') and context.game_logic:
+                if hasattr(context, "game_logic") and context.game_logic:
                     context.game_logic.record_game_over("Starvation")
 
                 if context.engine and hasattr(context.engine, "game_over"):
@@ -264,9 +297,10 @@ class TurnManager:
                     context.engine.game_over(player_stats, final_floor, "Starvation")
 
         # 非常に空腹状態でのダメージ
-        elif (player.hunger <= HungerConstants.VERY_HUNGRY_THRESHOLD and
-              self.turn_count % HungerConstants.VERY_HUNGRY_DAMAGE_INTERVAL == 0):
-
+        elif (
+            player.hunger <= HungerConstants.VERY_HUNGRY_THRESHOLD
+            and self.turn_count % HungerConstants.VERY_HUNGRY_DAMAGE_INTERVAL == 0
+        ):
             damage = 1
             player.hp = max(0, player.hp - damage)
             context.add_message(f"Extreme hunger weakens you for {damage} damage!")
@@ -274,7 +308,7 @@ class TurnManager:
             if player.hp <= 0:
                 context.add_message("You collapsed from hunger!")
                 # 飢餓死時のゲームオーバー処理
-                if hasattr(context, 'game_logic') and context.game_logic:
+                if hasattr(context, "game_logic") and context.game_logic:
                     context.game_logic.record_game_over("Hunger")
 
                 if context.engine and hasattr(context.engine, "game_over"):
@@ -287,6 +321,7 @@ class TurnManager:
         MP自然回復を処理。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -296,9 +331,10 @@ class TurnManager:
             return
 
         # MP回復（一定ターンごと、満腹度が十分な場合のみ）
-        if (self.turn_count % MagicConstants.MP_RECOVERY_INTERVAL == 0 and
-            player.hunger > HungerConstants.HUNGRY_THRESHOLD):
-
+        if (
+            self.turn_count % MagicConstants.MP_RECOVERY_INTERVAL == 0
+            and player.hunger > HungerConstants.HUNGRY_THRESHOLD
+        ):
             if player.mp < player.max_mp:
                 recovery = MagicConstants.MP_RECOVERY_RATE
                 old_mp = player.mp
@@ -312,6 +348,7 @@ class TurnManager:
         ターン終了時の状態チェック。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -322,20 +359,24 @@ class TurnManager:
             game_logger.info("Player died during turn processing")
             if context.engine and hasattr(context.engine, "state"):
                 from pyrogue.core.game_states import GameStates
+
                 context.engine.state = GameStates.GAME_OVER
 
     def get_turn_statistics(self) -> dict:
         """
         ターン統計情報を取得。
 
-        Returns:
+        Returns
+        -------
             ターン統計辞書
 
         """
         return {
             "turn_count": self.turn_count,
-            "next_hunger_decrease": HungerConstants.HUNGER_DECREASE_INTERVAL - (self.turn_count % HungerConstants.HUNGER_DECREASE_INTERVAL),
-            "next_mp_recovery": MagicConstants.MP_RECOVERY_INTERVAL - (self.turn_count % MagicConstants.MP_RECOVERY_INTERVAL),
+            "next_hunger_decrease": HungerConstants.HUNGER_DECREASE_INTERVAL
+            - (self.turn_count % HungerConstants.HUNGER_DECREASE_INTERVAL),
+            "next_mp_recovery": MagicConstants.MP_RECOVERY_INTERVAL
+            - (self.turn_count % MagicConstants.MP_RECOVERY_INTERVAL),
         }
 
     def reset_turn_count(self) -> None:
@@ -348,6 +389,7 @@ class TurnManager:
         指定ターン数を一度に進める（休憩などで使用）。
 
         Args:
+        ----
             count: 進めるターン数
             context: ゲームコンテキスト
 
@@ -364,9 +406,11 @@ class TurnManager:
         エンティティが行動可能かチェック。
 
         Args:
+        ----
             entity: チェック対象のエンティティ
 
         Returns:
+        -------
             行動可能な場合True
 
         """
@@ -386,9 +430,11 @@ class TurnManager:
         エンティティが混乱状態かチェック。
 
         Args:
+        ----
             entity: チェック対象のエンティティ
 
         Returns:
+        -------
             混乱状態の場合True
 
         """

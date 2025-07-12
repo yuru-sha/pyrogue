@@ -65,7 +65,7 @@ class GameOverScreen:
 
         # 統計情報
         stats_y = title_y + 5
-        score = self.player_stats.get('score', 0)
+        score = self.player_stats.get("score", 0)
         stats_info = [
             f"Final Score: {score}",
             f"Final Level: {self.player_stats.get('level', 1)}",

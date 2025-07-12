@@ -8,13 +8,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from pyrogue.entities.items.base_item import BaseItem
 from pyrogue.utils import game_logger
-
-if TYPE_CHECKING:
-    from pyrogue.entities.actors.player import Player
 
 
 @dataclass
@@ -35,20 +31,20 @@ class LightSource(ABC):
         """
         光源を使用。
 
-        Returns:
+        Returns
+        -------
             使用可能な場合True
         """
-        pass
 
     @abstractmethod
     def is_depleted(self) -> bool:
         """
         光源が使い切られているかチェック。
 
-        Returns:
+        Returns
+        -------
             使い切られている場合True
         """
-        pass
 
 
 class Torch(BaseItem, LightSource):
@@ -63,6 +59,7 @@ class Torch(BaseItem, LightSource):
         たいまつを初期化。
 
         Args:
+        ----
             duration: 燃焼時間（ターン数）
         """
         BaseItem.__init__(
@@ -72,15 +69,11 @@ class Torch(BaseItem, LightSource):
             weight=3,
             value=10,
             stackable=True,
-            max_stack=5
+            max_stack=5,
         )
 
         LightSource.__init__(
-            self,
-            name="Torch",
-            light_radius=4,
-            duration=duration,
-            intensity=0.8
+            self, name="Torch", light_radius=4, duration=duration, intensity=0.8
         )
 
         self.remaining_duration = duration
@@ -102,6 +95,7 @@ class Torch(BaseItem, LightSource):
         燃料を消費。
 
         Args:
+        ----
             turns: 消費するターン数
         """
         if self.is_lit:
@@ -129,6 +123,7 @@ class Lantern(BaseItem, LightSource):
         ランタンを初期化。
 
         Args:
+        ----
             duration: 燃料持続時間（ターン数）
         """
         BaseItem.__init__(
@@ -137,15 +132,11 @@ class Lantern(BaseItem, LightSource):
             description="A reliable lantern that provides bright light",
             weight=5,
             value=50,
-            stackable=False
+            stackable=False,
         )
 
         LightSource.__init__(
-            self,
-            name="Lantern",
-            light_radius=6,
-            duration=duration,
-            intensity=1.0
+            self, name="Lantern", light_radius=6, duration=duration, intensity=1.0
         )
 
         self.remaining_duration = duration
@@ -167,6 +158,7 @@ class Lantern(BaseItem, LightSource):
         燃料を消費。
 
         Args:
+        ----
             turns: 消費するターン数
         """
         if self.is_lit:
@@ -194,6 +186,7 @@ class LightRing(BaseItem, LightSource):
         光る指輪を初期化。
 
         Args:
+        ----
             light_radius: 光の範囲
         """
         BaseItem.__init__(
@@ -202,7 +195,7 @@ class LightRing(BaseItem, LightSource):
             description="A magical ring that glows with eternal light",
             weight=1,
             value=200,
-            stackable=False
+            stackable=False,
         )
 
         LightSource.__init__(
@@ -210,7 +203,7 @@ class LightRing(BaseItem, LightSource):
             name="Ring of Light",
             light_radius=light_radius,
             duration=-1,  # 無限
-            intensity=0.6
+            intensity=0.6,
         )
 
         self.is_equipped = False
@@ -247,6 +240,7 @@ class LightManager:
         光源を追加。
 
         Args:
+        ----
             light_source: 追加する光源
         """
         if light_source not in self.active_light_sources:
@@ -258,6 +252,7 @@ class LightManager:
         光源を削除。
 
         Args:
+        ----
             light_source: 削除する光源
         """
         if light_source in self.active_light_sources:
@@ -268,13 +263,14 @@ class LightManager:
         """
         すべての光源の合計光量を取得。
 
-        Returns:
+        Returns
+        -------
             合計光の範囲
         """
         max_radius = 0
 
         for light_source in self.active_light_sources:
-            if hasattr(light_source, 'get_light_radius'):
+            if hasattr(light_source, "get_light_radius"):
                 radius = light_source.get_light_radius()
                 max_radius = max(max_radius, radius)
 
@@ -284,7 +280,8 @@ class LightManager:
         """
         有効な光源があるかチェック。
 
-        Returns:
+        Returns
+        -------
             有効な光源がある場合True
         """
         return self.get_total_light_radius() > 0
@@ -294,12 +291,13 @@ class LightManager:
         すべての光源の燃料を消費。
 
         Args:
+        ----
             turns: 消費するターン数
         """
         depleted_sources = []
 
         for light_source in self.active_light_sources:
-            if hasattr(light_source, 'consume_fuel'):
+            if hasattr(light_source, "consume_fuel"):
                 light_source.consume_fuel(turns)
 
                 if light_source.is_depleted():
@@ -313,13 +311,17 @@ class LightManager:
         """
         現在の光の強度を取得。
 
-        Returns:
+        Returns
+        -------
             光の強度（0.0-1.0）
         """
         max_intensity = 0.0
 
         for light_source in self.active_light_sources:
-            if hasattr(light_source, 'get_light_radius') and light_source.get_light_radius() > 0:
+            if (
+                hasattr(light_source, "get_light_radius")
+                and light_source.get_light_radius() > 0
+            ):
                 max_intensity = max(max_intensity, light_source.intensity)
 
         return max_intensity

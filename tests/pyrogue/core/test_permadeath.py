@@ -9,10 +9,7 @@ Permadeath機能のテストモジュール。
 import json
 import pickle
 import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import patch
 
 from pyrogue.core.save_manager import SaveManager
 
@@ -283,7 +280,7 @@ class TestPermadeathSystem:
             assert loaded_data["player_stats"]["level"] == 5  # バックアップの内容
             assert loaded_data["current_floor"] == 3
 
-    @patch('pyrogue.core.save_manager.game_logger')
+    @patch("pyrogue.core.save_manager.game_logger")
     def test_error_handling(self, mock_logger):
         """エラーハンドリングのテスト。"""
         with tempfile.TemporaryDirectory() as temp_dir:

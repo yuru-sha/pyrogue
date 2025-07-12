@@ -6,6 +6,7 @@ JSON形式のログ、ファイルローテーション、カスタムログレ�
 NumPyオブジェクトのシリアル化などの機能を提供します。
 
 Example:
+-------
     >>> from pyrogue.utils import game_logger
     >>> game_logger.info("Game started", {"player": "test"})
     >>> game_logger.error("Critical error", {"error_code": 500})
@@ -23,7 +24,8 @@ def setup_game_logger() -> logging.Logger:
     """
     シンプルなゲームロガーを設定。
 
-    Returns:
+    Returns
+    -------
         設定されたロガーインスタンス
 
     """

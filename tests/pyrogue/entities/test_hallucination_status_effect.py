@@ -5,15 +5,18 @@
 視覚混乱システム、ポーション効果、モンスター攻撃による発症を検証します。
 """
 
-import pytest
 from unittest.mock import Mock, patch
 
-from pyrogue.entities.actors.status_effects import HallucinationEffect, StatusEffectManager
-from pyrogue.entities.items.effects import HallucinationPotionEffect, EffectContext
-from pyrogue.entities.actors.player import Player
-from pyrogue.entities.actors.monster import Monster
+import pytest
 from pyrogue.core.managers.combat_manager import CombatManager
 from pyrogue.core.managers.game_context import GameContext
+from pyrogue.entities.actors.monster import Monster
+from pyrogue.entities.actors.player import Player
+from pyrogue.entities.actors.status_effects import (
+    HallucinationEffect,
+    StatusEffectManager,
+)
+from pyrogue.entities.items.effects import EffectContext, HallucinationPotionEffect
 
 
 class TestHallucinationStatusEffect:
@@ -178,14 +181,26 @@ class TestMonsterHallucinationAttack:
         """精神攻撃モンスターの幻覚攻撃テスト。"""
         # 精神攻撃モンスターを作成
         psychic_monster = Monster(
-            char="@", x=11, y=10, name="Dream Eater", level=7, hp=15, max_hp=15,
-            attack=9, defense=3, exp_value=12, view_range=6, color=(255, 20, 147),
-            ai_pattern="psychic"
+            char="@",
+            x=11,
+            y=10,
+            name="Dream Eater",
+            level=7,
+            hp=15,
+            max_hp=15,
+            attack=9,
+            defense=3,
+            exp_value=12,
+            view_range=6,
+            color=(255, 20, 147),
+            ai_pattern="psychic",
         )
 
         # 確実に幻覚効果が発動するようにモック
-        with patch('random.random', return_value=0.1):  # 30%より低い値
-            self.combat_manager._handle_special_attack_effects(psychic_monster, self.context)
+        with patch("random.random", return_value=0.1):  # 30%より低い値
+            self.combat_manager._handle_special_attack_effects(
+                psychic_monster, self.context
+            )
 
         # 幻覚状態異常が追加されたかチェック
         assert self.player.status_effects.has_effect("Hallucination")
@@ -197,14 +212,26 @@ class TestMonsterHallucinationAttack:
         """幻覚性モンスターの攻撃テスト。"""
         # 幻覚性モンスターを作成
         hallucinogenic_monster = Monster(
-            char="f", x=11, y=10, name="Phantom Fungus", level=5, hp=10, max_hp=10,
-            attack=6, defense=2, exp_value=8, view_range=4, color=(138, 43, 226),
-            ai_pattern="hallucinogenic"
+            char="f",
+            x=11,
+            y=10,
+            name="Phantom Fungus",
+            level=5,
+            hp=10,
+            max_hp=10,
+            attack=6,
+            defense=2,
+            exp_value=8,
+            view_range=4,
+            color=(138, 43, 226),
+            ai_pattern="hallucinogenic",
         )
 
         # 確実に幻覚効果が発動するようにモック
-        with patch('random.random', return_value=0.1):  # 30%より低い値
-            self.combat_manager._handle_special_attack_effects(hallucinogenic_monster, self.context)
+        with patch("random.random", return_value=0.1):  # 30%より低い値
+            self.combat_manager._handle_special_attack_effects(
+                hallucinogenic_monster, self.context
+            )
 
         # 幻覚状態異常が追加されたかチェック
         assert self.player.status_effects.has_effect("Hallucination")
@@ -213,9 +240,19 @@ class TestMonsterHallucinationAttack:
         """通常モンスターは幻覚を引き起こさないテスト。"""
         # 通常モンスターを作成
         normal_monster = Monster(
-            char="O", x=11, y=10, name="Orc", level=5, hp=12, max_hp=12,
-            attack=10, defense=3, exp_value=8, view_range=5, color=(0, 200, 0),
-            ai_pattern="basic"
+            char="O",
+            x=11,
+            y=10,
+            name="Orc",
+            level=5,
+            hp=12,
+            max_hp=12,
+            attack=10,
+            defense=3,
+            exp_value=8,
+            view_range=5,
+            color=(0, 200, 0),
+            ai_pattern="basic",
         )
 
         self.combat_manager._handle_special_attack_effects(normal_monster, self.context)
@@ -226,14 +263,26 @@ class TestMonsterHallucinationAttack:
     def test_hallucination_attack_probability(self):
         """幻覚攻撃の確率テスト。"""
         psychic_monster = Monster(
-            char="@", x=11, y=10, name="Dream Eater", level=7, hp=15, max_hp=15,
-            attack=9, defense=3, exp_value=12, view_range=6, color=(255, 20, 147),
-            ai_pattern="psychic"
+            char="@",
+            x=11,
+            y=10,
+            name="Dream Eater",
+            level=7,
+            hp=15,
+            max_hp=15,
+            attack=9,
+            defense=3,
+            exp_value=12,
+            view_range=6,
+            color=(255, 20, 147),
+            ai_pattern="psychic",
         )
 
         # 確率が高すぎて発動しない場合
-        with patch('random.random', return_value=0.8):  # 30%より高い値
-            self.combat_manager._handle_special_attack_effects(psychic_monster, self.context)
+        with patch("random.random", return_value=0.8):  # 30%より高い値
+            self.combat_manager._handle_special_attack_effects(
+                psychic_monster, self.context
+            )
 
         # 幻覚状態異常は追加されない
         assert not self.player.status_effects.has_effect("Hallucination")
@@ -256,8 +305,8 @@ class TestVisualConfusionSystem:
         # 幻覚状態を検出
         assert player.status_effects.has_effect("Hallucination")
 
-    @patch('pyrogue.ui.components.game_renderer.random.choice')
-    @patch('pyrogue.ui.components.game_renderer.random.randint')
+    @patch("pyrogue.ui.components.game_renderer.random.choice")
+    @patch("pyrogue.ui.components.game_renderer.random.randint")
     def test_hallucination_character_randomization(self, mock_randint, mock_choice):
         """幻覚時の文字ランダム化テスト。"""
         from pyrogue.ui.components.game_renderer import GameRenderer
@@ -267,14 +316,14 @@ class TestVisualConfusionSystem:
         renderer = GameRenderer(game_screen)
 
         # ランダム値をモック
-        mock_choice.return_value = 'X'
+        mock_choice.return_value = "X"
         mock_randint.side_effect = [200, 100, 50]  # RGB値
 
         # 幻覚文字を取得
         char = renderer._get_hallucination_char()
         color = renderer._get_hallucination_color()
 
-        assert char == 'X'
+        assert char == "X"
         assert color == (200, 100, 50)
 
         # ランダム関数が呼ばれた

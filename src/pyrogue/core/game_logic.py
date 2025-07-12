@@ -264,62 +264,6 @@ class GameLogic:
 
         return floor_data.monster_spawner.get_monster_at(x, y)
 
-    def _handle_post_move_events(self) -> None:
-        """移動後のイベント処理。"""
-        # トラップチェック
-        self._check_traps()
-
-        # アイテム自動取得
-        self._auto_pickup_gold_only()
-
-        # 階段チェック
-        self._check_stairs()
-
-    def _check_traps(self) -> None:
-        """トラップチェック。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, "trap_manager"):
-            return
-
-        # トラップ処理はTrapManagerに委譲
-        trap_manager = floor_data.trap_manager
-        if hasattr(trap_manager, "check_player_traps"):
-            trap_manager.check_player_traps(self.player, self.context)
-
-    def _auto_pickup_gold_only(self) -> None:
-        """金貨の自動取得。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, "item_spawner"):
-            return
-
-        items_at_pos = [
-            item
-            for item in floor_data.item_spawner.items
-            if item.x == self.player.x and item.y == self.player.y
-        ]
-
-        for item in items_at_pos:
-            if hasattr(item, "item_type") and item.item_type == "GOLD":
-                self.player.gold += getattr(item, "amount", 1)
-                floor_data.item_spawner.items.remove(item)
-                self.add_message(f"You picked up {getattr(item, 'amount', 1)} gold.")
-
-    def _check_stairs(self) -> None:
-        """階段の存在チェック。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return
-
-        tile = floor_data.tiles[self.player.y, self.player.x]
-
-        if hasattr(tile, "__class__"):
-            from pyrogue.map.tile import StairsDown, StairsUp
-
-            if isinstance(tile, StairsDown):
-                self.add_message("You see stairs leading down. Press '>' to descend.")
-            elif isinstance(tile, StairsUp):
-                self.add_message("You see stairs leading up. Press '<' to ascend.")
-
     # アイテム処理（ItemManagerに委譲）
     def handle_get_item(self) -> str | None:
         """アイテム取得処理。"""

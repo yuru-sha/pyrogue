@@ -4,9 +4,7 @@
 迷路階層生成システムの動作確認を行う。
 """
 
-import pytest
 import numpy as np
-
 from pyrogue.map.dungeon.maze_builder import MazeBuilder
 from pyrogue.map.tile import Floor, Wall
 
@@ -51,8 +49,7 @@ class TestMazeBuilder:
 
         # 床タイルの数をカウント
         floor_count = sum(
-            1 for y in range(30) for x in range(40)
-            if isinstance(tiles[y, x], Floor)
+            1 for y in range(30) for x in range(40) if isinstance(tiles[y, x], Floor)
         )
 
         # 床タイルが存在することを確認
@@ -91,9 +88,12 @@ class TestMazeBuilder:
                 # 4方向をチェック
                 for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                     nx, ny = x + dx, y + dy
-                    if (0 <= nx < 30 and 0 <= ny < 20 and
-                        isinstance(tiles[ny, nx], Floor) and
-                        (nx, ny) not in visited):
+                    if (
+                        0 <= nx < 30
+                        and 0 <= ny < 20
+                        and isinstance(tiles[ny, nx], Floor)
+                        and (nx, ny) not in visited
+                    ):
                         stack.append((nx, ny))
 
             # 大部分の床タイルが連結していることを確認
@@ -113,11 +113,15 @@ class TestMazeBuilder:
 
         # 床タイルの数をカウント
         floor_count_low = sum(
-            1 for y in range(20) for x in range(30)
+            1
+            for y in range(20)
+            for x in range(30)
             if isinstance(tiles_low[y, x], Floor)
         )
         floor_count_high = sum(
-            1 for y in range(20) for x in range(30)
+            1
+            for y in range(20)
+            for x in range(30)
             if isinstance(tiles_high[y, x], Floor)
         )
 

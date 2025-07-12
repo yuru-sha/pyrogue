@@ -113,11 +113,11 @@ class HungerConstants:
 
     # 満腹度レベル
     MAX_HUNGER: int = 100
-    FULL_THRESHOLD: int = 80      # 満腹状態（ボーナス効果）
-    CONTENT_THRESHOLD: int = 60   # 満足状態（通常）
-    HUNGRY_THRESHOLD: int = 30    # 空腹状態（軽微なペナルティ）
+    FULL_THRESHOLD: int = 80  # 満腹状態（ボーナス効果）
+    CONTENT_THRESHOLD: int = 60  # 満足状態（通常）
+    HUNGRY_THRESHOLD: int = 30  # 空腹状態（軽微なペナルティ）
     VERY_HUNGRY_THRESHOLD: int = 15  # 非常に空腹（中程度のペナルティ）
-    STARVING_THRESHOLD: int = 5   # 飢餓状態（重大なペナルティ）
+    STARVING_THRESHOLD: int = 5  # 飢餓状態（重大なペナルティ）
 
     # 満腹度減少
     HUNGER_DECREASE_RATE: int = 1  # ターンあたりの減少量
@@ -129,17 +129,17 @@ class HungerConstants:
     VERY_HUNGRY_DAMAGE_INTERVAL: int = 8  # 非常に空腹時のダメージ間隔
 
     # 飢餓ペナルティ
-    HUNGRY_ATTACK_PENALTY: int = 1     # 空腹時の攻撃力ペナルティ
+    HUNGRY_ATTACK_PENALTY: int = 1  # 空腹時の攻撃力ペナルティ
     VERY_HUNGRY_ATTACK_PENALTY: int = 2  # 非常に空腹時の攻撃力ペナルティ
-    STARVING_ATTACK_PENALTY: int = 4   # 飢餓時の攻撃力ペナルティ
+    STARVING_ATTACK_PENALTY: int = 4  # 飢餓時の攻撃力ペナルティ
 
-    HUNGRY_DEFENSE_PENALTY: int = 1    # 空腹時の防御力ペナルティ
+    HUNGRY_DEFENSE_PENALTY: int = 1  # 空腹時の防御力ペナルティ
     VERY_HUNGRY_DEFENSE_PENALTY: int = 2  # 非常に空腹時の防御力ペナルティ
     STARVING_DEFENSE_PENALTY: int = 3  # 飢餓時の防御力ペナルティ
 
     # 飢餓ボーナス
     FULL_HP_REGEN_CHANCE: float = 0.05  # 満腹時のHP自然回復確率
-    FULL_MP_REGEN_BONUS: float = 0.15   # 満腹時のMP回復ボーナス確率
+    FULL_MP_REGEN_BONUS: float = 0.15  # 満腹時のMP回復ボーナス確率
 
 
 @dataclass(frozen=True)
@@ -169,8 +169,8 @@ class FeatureConstants:
 
     # NPCシステムの制御
     ENABLE_NPC_SYSTEM: bool = False  # NPCシステムを無効化（将来の拡張のため残す）
-    ENABLE_DIALOGUE: bool = False    # 対話システムを無効化
-    ENABLE_TRADING: bool = False     # 取引システムを無効化
+    ENABLE_DIALOGUE: bool = False  # 対話システムを無効化
+    ENABLE_TRADING: bool = False  # 取引システムを無効化
 
 
 @dataclass(frozen=True)

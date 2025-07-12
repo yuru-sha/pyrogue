@@ -34,6 +34,7 @@ class MonsterAIManager:
         モンスターのAI処理を実行。
 
         Args:
+        ----
             monster: 処理するモンスター
             context: ゲームコンテキスト
 
@@ -45,7 +46,10 @@ class MonsterAIManager:
             return
 
         # 特殊能力のクールダウンを減少
-        if hasattr(monster, 'special_ability_cooldown') and monster.special_ability_cooldown > 0:
+        if (
+            hasattr(monster, "special_ability_cooldown")
+            and monster.special_ability_cooldown > 0
+        ):
             monster.special_ability_cooldown -= 1
 
         # 逃走判定
@@ -63,7 +67,10 @@ class MonsterAIManager:
                 return
 
             # 隣接している場合は特殊攻撃またはメレー攻撃
-            if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= 1.5:
+            if (
+                self._calculate_distance(monster.x, monster.y, player.x, player.y)
+                <= 1.5
+            ):
                 if self._can_use_special_attack(monster):
                     self._use_special_attack(monster, player, context)
                 else:
@@ -81,9 +88,11 @@ class MonsterAIManager:
         モンスターが行動可能かチェック。
 
         Args:
+        ----
             monster: チェック対象のモンスター
 
         Returns:
+        -------
             行動可能な場合True
 
         """
@@ -100,16 +109,20 @@ class MonsterAIManager:
 
         return True
 
-    def _can_monster_see_player(self, monster: Monster, player, context: GameContext) -> bool:
+    def _can_monster_see_player(
+        self, monster: Monster, player, context: GameContext
+    ) -> bool:
         """
         モンスターがプレイヤーを見ることができるかチェック。
 
         Args:
+        ----
             monster: モンスター
             player: プレイヤー
             context: ゲームコンテキスト
 
         Returns:
+        -------
             プレイヤーが見える場合True
 
         """
@@ -121,32 +134,40 @@ class MonsterAIManager:
             return False
 
         # 障害物チェック（壁越しには見えない）
-        return self._has_line_of_sight(monster.x, monster.y, player.x, player.y, context)
+        return self._has_line_of_sight(
+            monster.x, monster.y, player.x, player.y, context
+        )
 
     def _calculate_distance(self, x1: int, y1: int, x2: int, y2: int) -> float:
         """
         2点間の距離を計算。
 
         Args:
+        ----
             x1, y1: 点1の座標
             x2, y2: 点2の座標
 
         Returns:
+        -------
             ユークリッド距離
 
         """
         return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
 
-    def _has_line_of_sight(self, x1: int, y1: int, x2: int, y2: int, context: GameContext) -> bool:
+    def _has_line_of_sight(
+        self, x1: int, y1: int, x2: int, y2: int, context: GameContext
+    ) -> bool:
         """
         2点間に視界があるかチェック。
 
         Args:
+        ----
             x1, y1: 開始点の座標
             x2, y2: 終了点の座標
             context: ゲームコンテキスト
 
         Returns:
+        -------
             視界がある場合True
 
         """
@@ -158,24 +179,29 @@ class MonsterAIManager:
         points = self._get_line_points(x1, y1, x2, y2)
 
         for x, y in points[1:-1]:  # 開始点と終了点は除外
-            if (0 <= y < floor_data.tiles.shape[0] and
-                0 <= x < floor_data.tiles.shape[1]):
-
+            if (
+                0 <= y < floor_data.tiles.shape[0]
+                and 0 <= x < floor_data.tiles.shape[1]
+            ):
                 tile = floor_data.tiles[y, x]
                 if not getattr(tile, "transparent", True):
                     return False
 
         return True
 
-    def _get_line_points(self, x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
+    def _get_line_points(
+        self, x1: int, y1: int, x2: int, y2: int
+    ) -> list[tuple[int, int]]:
         """
         ブレゼンハム線分アルゴリズムで線上の点を取得。
 
         Args:
+        ----
             x1, y1: 開始点の座標
             x2, y2: 終了点の座標
 
         Returns:
+        -------
             線上の点のリスト
 
         """
@@ -207,6 +233,7 @@ class MonsterAIManager:
         モンスターがプレイヤーを追跡。
 
         Args:
+        ----
             monster: 追跡するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
@@ -244,6 +271,7 @@ class MonsterAIManager:
         モンスターがランダムに移動。
 
         Args:
+        ----
             monster: 移動するモンスター
             context: ゲームコンテキスト
 
@@ -255,17 +283,21 @@ class MonsterAIManager:
         # 移動実行
         self._try_move_monster(monster, dx, dy, context)
 
-    def _try_move_monster(self, monster: Monster, dx: int, dy: int, context: GameContext) -> bool:
+    def _try_move_monster(
+        self, monster: Monster, dx: int, dy: int, context: GameContext
+    ) -> bool:
         """
         モンスターの移動を試行。
 
         Args:
+        ----
             monster: 移動するモンスター
             dx: X方向の移動量
             dy: Y方向の移動量
             context: ゲームコンテキスト
 
         Returns:
+        -------
             移動が成功した場合True
 
         """
@@ -298,11 +330,13 @@ class MonsterAIManager:
         モンスターが指定座標に移動可能かチェック。
 
         Args:
+        ----
             x: 目標X座標
             y: 目標Y座標
             context: ゲームコンテキスト
 
         Returns:
+        -------
             移動可能な場合True
 
         """
@@ -311,9 +345,12 @@ class MonsterAIManager:
             return False
 
         # 境界チェック
-        if (x < 0 or y < 0 or
-            y >= floor_data.tiles.shape[0] or
-            x >= floor_data.tiles.shape[1]):
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
             return False
 
         # タイルチェック
@@ -339,6 +376,7 @@ class MonsterAIManager:
         モンスターがプレイヤーを攻撃。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             context: ゲームコンテキスト
 
@@ -352,9 +390,11 @@ class MonsterAIManager:
         モンスターが混乱状態かチェック。
 
         Args:
+        ----
             monster: チェック対象のモンスター
 
         Returns:
+        -------
             混乱状態の場合True
 
         """
@@ -373,10 +413,12 @@ class MonsterAIManager:
         モンスターの行動情報を取得。
 
         Args:
+        ----
             monster: 対象モンスター
             context: ゲームコンテキスト
 
         Returns:
+        -------
             行動情報辞書
 
         """
@@ -385,7 +427,9 @@ class MonsterAIManager:
         return {
             "can_act": self._can_monster_act(monster),
             "can_see_player": self._can_monster_see_player(monster, player, context),
-            "distance_to_player": self._calculate_distance(monster.x, monster.y, player.x, player.y),
+            "distance_to_player": self._calculate_distance(
+                monster.x, monster.y, player.x, player.y
+            ),
             "is_confused": self._is_confused(monster),
             "sight_range": getattr(monster, "sight_range", 8),
         }
@@ -395,6 +439,7 @@ class MonsterAIManager:
         モンスターの攻撃性を設定。
 
         Args:
+        ----
             monster: 対象モンスター
             aggressive: 攻撃的にするかどうか
 
@@ -410,6 +455,7 @@ class MonsterAIManager:
         全モンスターのAI処理を実行。
 
         Args:
+        ----
             context: ゲームコンテキスト
 
         """
@@ -431,30 +477,33 @@ class MonsterAIManager:
         モンスターが逃走すべきかチェック。
 
         Args:
+        ----
             monster: チェック対象のモンスター
 
         Returns:
+        -------
             逃走すべき場合True
 
         """
-        if not hasattr(monster, 'can_flee') or not monster.can_flee:
+        if not hasattr(monster, "can_flee") or not monster.can_flee:
             return False
 
         # HP比率による逃走判定
         hp_ratio = monster.hp / monster.max_hp
-        flee_threshold = getattr(monster, 'flee_threshold', 0.3)
+        flee_threshold = getattr(monster, "flee_threshold", 0.3)
 
         if hp_ratio <= flee_threshold:
             monster.is_fleeing = True
             return True
 
-        return getattr(monster, 'is_fleeing', False)
+        return getattr(monster, "is_fleeing", False)
 
     def _flee_from_player(self, monster: Monster, player, context: GameContext) -> None:
         """
         プレイヤーから逃走する。
 
         Args:
+        ----
             monster: 逃走するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
@@ -480,42 +529,52 @@ class MonsterAIManager:
         遠距離攻撃が使用可能かチェック。
 
         Args:
+        ----
             monster: チェック対象のモンスター
             player: プレイヤー
 
         Returns:
+        -------
             遠距離攻撃可能な場合True
 
         """
-        if not hasattr(monster, 'can_ranged_attack') or not monster.can_ranged_attack:
+        if not hasattr(monster, "can_ranged_attack") or not monster.can_ranged_attack:
             return False
 
-        if hasattr(monster, 'special_ability_cooldown') and monster.special_ability_cooldown > 0:
+        if (
+            hasattr(monster, "special_ability_cooldown")
+            and monster.special_ability_cooldown > 0
+        ):
             return False
 
         distance = self._calculate_distance(monster.x, monster.y, player.x, player.y)
-        ranged_range = getattr(monster, 'ranged_attack_range', 5)
+        ranged_range = getattr(monster, "ranged_attack_range", 5)
 
         # 射程内かつ隣接していない場合
         return 1.5 < distance <= ranged_range
 
-    def _use_ranged_attack(self, monster: Monster, player, context: GameContext) -> None:
+    def _use_ranged_attack(
+        self, monster: Monster, player, context: GameContext
+    ) -> None:
         """
         遠距離攻撃を実行。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
 
         """
-        damage = getattr(monster, 'ranged_attack_damage', monster.attack // 2)
+        damage = getattr(monster, "ranged_attack_damage", monster.attack // 2)
 
         # 攻撃命中判定
         if random.random() < 0.8:  # 80%の命中率
             actual_damage = max(1, damage - player.get_defense())
             player.take_damage(actual_damage)
-            context.add_message(f"{monster.name} shoots you for {actual_damage} damage!")
+            context.add_message(
+                f"{monster.name} shoots you for {actual_damage} damage!"
+            )
         else:
             context.add_message(f"{monster.name}'s ranged attack misses!")
 
@@ -529,40 +588,48 @@ class MonsterAIManager:
         特殊攻撃が使用可能かチェック。
 
         Args:
+        ----
             monster: チェック対象のモンスター
 
         Returns:
+        -------
             特殊攻撃可能な場合True
 
         """
-        if hasattr(monster, 'special_ability_cooldown') and monster.special_ability_cooldown > 0:
+        if (
+            hasattr(monster, "special_ability_cooldown")
+            and monster.special_ability_cooldown > 0
+        ):
             return False
 
         # 30%の確率で特殊攻撃を使用
         return random.random() < 0.3 and (
-            getattr(monster, 'can_steal_items', False) or
-            getattr(monster, 'can_steal_gold', False) or
-            getattr(monster, 'can_drain_level', False)
+            getattr(monster, "can_steal_items", False)
+            or getattr(monster, "can_steal_gold", False)
+            or getattr(monster, "can_drain_level", False)
         )
 
-    def _use_special_attack(self, monster: Monster, player, context: GameContext) -> None:
+    def _use_special_attack(
+        self, monster: Monster, player, context: GameContext
+    ) -> None:
         """
         特殊攻撃を実行。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
 
         """
         # アイテム盗取
-        if getattr(monster, 'can_steal_items', False):
+        if getattr(monster, "can_steal_items", False):
             self._steal_item(monster, player, context)
         # ゴールド盗取
-        elif getattr(monster, 'can_steal_gold', False):
+        elif getattr(monster, "can_steal_gold", False):
             self._steal_gold(monster, player, context)
         # レベル下げ攻撃
-        elif getattr(monster, 'can_drain_level', False):
+        elif getattr(monster, "can_drain_level", False):
             self._drain_level(monster, player, context)
         else:
             # 通常攻撃にフォールバック
@@ -576,6 +643,7 @@ class MonsterAIManager:
         アイテム盗取攻撃。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
@@ -593,13 +661,16 @@ class MonsterAIManager:
 
             game_logger.debug(f"{monster.name} stole {stolen_item.name} from player")
         else:
-            context.add_message(f"{monster.name} tries to steal from you, but you have nothing!")
+            context.add_message(
+                f"{monster.name} tries to steal from you, but you have nothing!"
+            )
 
     def _steal_gold(self, monster: Monster, player, context: GameContext) -> None:
         """
         ゴールド盗取攻撃。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
@@ -622,6 +693,7 @@ class MonsterAIManager:
         レベル下げ攻撃。
 
         Args:
+        ----
             monster: 攻撃するモンスター
             player: プレイヤー
             context: ゲームコンテキスト
@@ -639,8 +711,12 @@ class MonsterAIManager:
             player.attack = max(1, player.attack - 2)
             player.defense = max(0, player.defense - 1)
 
-            context.add_message(f"{monster.name} drains your life force! You feel weaker!")
-            game_logger.debug(f"{monster.name} drained player level from {player.level + 1} to {player.level}")
+            context.add_message(
+                f"{monster.name} drains your life force! You feel weaker!"
+            )
+            game_logger.debug(
+                f"{monster.name} drained player level from {player.level + 1} to {player.level}"
+            )
         else:
             # 通常ダメージを与える
             damage = max(1, monster.attack - player.get_defense())
@@ -652,15 +728,16 @@ class MonsterAIManager:
         ダメージを受けた時のモンスター分裂処理。
 
         Args:
+        ----
             monster: 分裂するモンスター
             context: ゲームコンテキスト
 
         """
-        if not getattr(monster, 'can_split', False):
+        if not getattr(monster, "can_split", False):
             return
 
         # 既に分裂している場合はスキップ
-        if getattr(monster, 'parent_monster', None) is not None:
+        if getattr(monster, "parent_monster", None) is not None:
             return
 
         # 分裂判定（30%の確率）
@@ -690,6 +767,7 @@ class MonsterAIManager:
 
             # 元のモンスターの属性をコピーして分裂体を作成
             from pyrogue.entities.actors.monster import Monster as MonsterClass
+
             split_monster = MonsterClass(
                 char=monster.char,
                 x=spawn_x,
@@ -703,7 +781,7 @@ class MonsterAIManager:
                 exp_value=monster.exp_value // 2,  # 経験値も半分
                 view_range=monster.view_range,
                 color=monster.color,
-                ai_pattern=monster.ai_pattern
+                ai_pattern=monster.ai_pattern,
             )
 
             # 親子関係を設定
