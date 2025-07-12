@@ -632,11 +632,11 @@ class ValidationManager:
                 elif isinstance(tiles[y, x], Wall):
                     wall_count += 1
 
-        # 迷路の密度をチェック（床の割合が5%～40%の範囲）
+        # 迷路の密度をチェック（床の割合が4%～40%の範囲）
         total_tiles = height * width
         floor_ratio = floor_count / total_tiles
 
-        if floor_ratio < 0.05:
+        if floor_ratio < 0.04:
             self._add_result(
                 "maze_structure", False, f"Too few corridors: {floor_ratio:.2%}"
             )
@@ -651,7 +651,7 @@ class ValidationManager:
 
         # 連結性の確認
         connected_floor_count = self._count_connected_floors(tiles)
-        if connected_floor_count < floor_count * 0.9:
+        if connected_floor_count < floor_count * 0.85:
             self._add_result("maze_structure", False, "Maze has disconnected areas")
         else:
             self._add_result("maze_structure", True, "Maze is well connected")

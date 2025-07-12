@@ -143,7 +143,7 @@ class MazeBuilder:
 
     def _remove_dead_ends(self, tiles: np.ndarray) -> None:
         """デッドエンドを部分的に除去。"""
-        dead_end_removal_rate = max(0.7, 1.0 - self.complexity)  # 最低70%は除去
+        dead_end_removal_rate = max(0.6, 1.0 - self.complexity)  # 最低60%は除去
 
         changed = True
         while changed:
@@ -171,22 +171,35 @@ class MazeBuilder:
         """連結性を保証。"""
         # フラッドフィルで最大の連結成分を見つける
         visited = np.zeros((self.height, self.width), dtype=bool)
-        largest_component = []
-        largest_size = 0
+        components = []
 
         for y in range(self.height):
             for x in range(self.width):
                 if isinstance(tiles[y, x], Floor) and not visited[y, x]:
                     component = self._flood_fill(tiles, visited, x, y)
-                    if len(component) > largest_size:
-                        largest_size = len(component)
-                        largest_component = component
+                    if component:
+                        components.append(component)
 
-        # 最大連結成分以外の床を壁に変換
+        if not components:
+            return
+
+        # 最大連結成分を特定
+        largest_component = max(components, key=len)
+
+        # 小さな孤立成分を最大成分に接続を試行
+        for component in components:
+            if component != largest_component and len(component) >= 3:
+                self._connect_component_to_largest(tiles, component, largest_component)
+
+        # 接続できなかった小さな成分は壁に変換
         for y in range(self.height):
             for x in range(self.width):
                 if isinstance(tiles[y, x], Floor) and (x, y) not in largest_component:
-                    tiles[y, x] = Wall()
+                    # 再度連結性をチェック
+                    if not self._is_connected_to_largest(
+                        tiles, x, y, largest_component
+                    ):
+                        tiles[y, x] = Wall()
 
     def _flood_fill(
         self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int
@@ -241,6 +254,69 @@ class MazeBuilder:
                     # 完全に孤立した床タイルを壁に変換
                     if floor_neighbors == 0:
                         tiles[y, x] = Wall()
+
+    def _connect_component_to_largest(
+        self,
+        tiles: np.ndarray,
+        component: list[tuple[int, int]],
+        largest_component: list[tuple[int, int]],
+    ) -> None:
+        """小さな成分を最大成分に接続を試行。"""
+        import random
+
+        # コンポーネントからランダムに点を選択
+        comp_point = random.choice(component)
+
+        # 最大成分の最寄りの点を見つける
+        min_distance = float("inf")
+        closest_point = None
+
+        for large_point in largest_component:
+            distance = abs(comp_point[0] - large_point[0]) + abs(
+                comp_point[1] - large_point[1]
+            )
+            if distance < min_distance:
+                min_distance = distance
+                closest_point = large_point
+
+        if closest_point and min_distance <= 4:  # 距離が4以下なら接続を試行
+            self._create_simple_path(tiles, comp_point, closest_point)
+
+    def _create_simple_path(
+        self, tiles: np.ndarray, start: tuple[int, int], end: tuple[int, int]
+    ) -> None:
+        """2点間に簡単なパスを作成。"""
+        x1, y1 = start
+        x2, y2 = end
+
+        # 水平移動
+        if x1 != x2:
+            step = 1 if x2 > x1 else -1
+            for x in range(x1, x2, step):
+                if 1 <= x < self.width - 1 and 1 <= y1 < self.height - 1:
+                    tiles[y1, x] = Floor()
+
+        # 垂直移動
+        if y1 != y2:
+            step = 1 if y2 > y1 else -1
+            for y in range(y1, y2, step):
+                if 1 <= x2 < self.width - 1 and 1 <= y < self.height - 1:
+                    tiles[y, x2] = Floor()
+
+    def _is_connected_to_largest(
+        self,
+        tiles: np.ndarray,
+        x: int,
+        y: int,
+        largest_component: list[tuple[int, int]],
+    ) -> bool:
+        """指定位置が最大成分に接続されているかチェック。"""
+        # 簡易チェック：隣接する4方向に最大成分の点があるか
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + dx, y + dy
+            if (nx, ny) in largest_component:
+                return True
+        return False
 
     def reset(self) -> None:
         """ビルダーの状態をリセット。"""

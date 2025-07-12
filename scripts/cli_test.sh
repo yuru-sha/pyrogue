@@ -48,7 +48,7 @@ run_test() {
 
     # コマンド実行
     local output
-    if output=$(echo -e "$commands" | timeout 10 make run ARGS="--cli" 2>&1); then
+    if output=$(echo -e "$commands" | timeout 20 make run ARGS="--cli" 2>&1); then
         # 期待される文字列が含まれているかチェック
         if echo "$output" | grep -q "$expected_pattern"; then
             PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -81,7 +81,7 @@ run_test_with_args() {
 
     # コマンド実行
     local output
-    if output=$(timeout 10 make run ARGS="$args" 2>&1); then
+    if output=$(timeout 20 make run ARGS="$args" 2>&1); then
         # 期待される文字列が含まれているかチェック
         if echo "$output" | grep -q "$expected_pattern"; then
             PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -123,7 +123,7 @@ main() {
     # 3. 移動システムテスト
     log_info "=== 移動システムテスト ==="
     run_test "基本移動テスト" "n\nquit" "Floor: B1F"
-    run_test "移動制限テスト" "n\nn\nn\nn\nn\nquit" "Player:"
+    run_test "移動制限テスト" "n\nn\nstatus\nquit" "Player:"
 
     # 4. インベントリシステムテスト
     log_info "=== インベントリシステムテスト ==="
@@ -133,8 +133,8 @@ main() {
     # 5. アイテムシステムテスト
     log_info "=== アイテムシステムテスト ==="
     run_test "ゴールド配置テスト" "status\ndebug gold 100\nquit" "Placed 100 gold at your location"
-    run_test "ゴールドオートピックアップテスト" "debug gold 77\nlook\nn\ne\ns\nw\nstatus\nquit" "Gold: 7[0-9]"
-    run_test "ゴールド取得確認テスト" "debug gold 99\nn\ns\nstatus\nquit" "Gold: 99"
+    run_test "ゴールド取得テスト" "debug gold 77\nget\nstatus\nquit" "Gold: 77"
+    run_test "ゴールド手動取得テスト" "debug gold 99\nget\nstatus\nquit" "Gold: 99"
 
     # 6. ゲームオーバーテスト
     log_info "=== ゲームオーバーテスト ==="

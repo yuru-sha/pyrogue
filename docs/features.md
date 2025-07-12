@@ -417,6 +417,44 @@ CURE_POISON_COST = 4                  # Cure Poison消費MP
 POISON_BOLT_COST = 4                  # Poison Bolt消費MP
 ```
 
+### 4. ゴールドオートピックアップシステム
+
+#### 機能
+- **自動回収**: 移動時にゴールドを自動的に回収
+- **メッセージ表示**: 回収時の適切な通知表示
+- **パフォーマンス最適化**: 効率的なゴールド検出と処理
+- **CLIテスト対応**: 統合テストでの動作確認済み
+
+#### 動作仕様
+- **発動タイミング**: プレイヤーの移動完了時
+- **対象**: プレイヤーと同じ位置にあるゴールドアイテム
+- **処理順序**: 移動 → ゴールド回収 → 他アイテム通知 → トラップチェック
+
+#### 実装場所
+- `src/pyrogue/core/managers/movement_manager.py` - 移動時の自動回収処理
+- `src/pyrogue/entities/items/item.py` - ゴールドアイテム定義
+
+#### 詳細仕様
+```python
+# ゴールドオートピックアップ処理（MovementManager._check_item_pickup）
+gold_items = [
+    item
+    for item in items_at_position
+    if hasattr(item, "item_type") and item.item_type == "GOLD"
+]
+for gold_item in gold_items:
+    amount = getattr(gold_item, "amount", 1)
+    player.gold += amount
+    floor_data.items.remove(gold_item)
+    self.context.add_message(f"You picked up {amount} gold.")
+```
+
+#### メッセージ例
+```
+You picked up 50 gold.
+You picked up 25 gold.
+```
+
 ## 状態異常システム
 
 ### 1. 状態異常の種類

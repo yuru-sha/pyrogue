@@ -50,39 +50,62 @@ pyrogue/
 
 ## 設定管理
 
-ゲームの設定は`config.py`で一元管理されています。設定は以下の方法で上書きできます：
+PyRogueでは.envファイルによる環境変数管理を採用しています。開発・運用設定の分離が可能です。
 
-1. 環境変数による設定：
+### 環境変数設定の手順
+
+1. **.envファイルの作成**：
 ```bash
-export PYROGUE_SCREEN_WIDTH=100
-export PYROGUE_SCREEN_HEIGHT=60
-make run
+# 設定テンプレートをコピー
+cp .env.example .env
+
+# .envファイルを編集
+vim .env  # または好みのエディタで編集
 ```
 
-2. コードでの設定：
-```python
-from pyrogue.config import GameConfig
+2. **環境変数による設定上書き**：
+```bash
+# 一時的な設定変更
+DEBUG=true WINDOW_WIDTH=100 make run
 
-config = GameConfig(
-    screen_width=100,
-    screen_height=60
-)
-engine = Engine(config)
+# 永続的な設定変更は.envファイルで行う
 ```
 
-### 利用可能な設定項目
+### 主要な環境変数
 
-| 設定項目 | 環境変数 | デフォルト値 | 説明 |
-|----------|----------|--------------|------|
-| 画面幅 | PYROGUE_SCREEN_WIDTH | 80 | ゲーム画面の幅（文字数） |
-| 画面高さ | PYROGUE_SCREEN_HEIGHT | 50 | ゲーム画面の高さ（文字数） |
-| マップ幅 | PYROGUE_MAP_WIDTH | 80 | ゲームマップの幅 |
-| マップ高さ | PYROGUE_MAP_HEIGHT | 43 | ゲームマップの高さ |
-| ダンジョン幅 | PYROGUE_DUNGEON_WIDTH | 80 | ダンジョンの幅 |
-| ダンジョン高さ | PYROGUE_DUNGEON_HEIGHT | 45 | ダンジョンの高さ |
-| タイトル | PYROGUE_TITLE | "PyRogue" | ウィンドウタイトル |
-| フォントパス | PYROGUE_FONT_PATH | "data/assets/fonts/dejavu10x10_gs_tc.png" | フォントファイルのパス |
-| デバッグモード | PYROGUE_DEBUG | false | デバッグモードの有効/無効 |
+| 環境変数 | デフォルト値 | 説明 | 用途 |
+|----------|--------------|------|------|
+| `DEBUG` | false | デバッグモード | 開発時の詳細ログ出力 |
+| `LOG_LEVEL` | INFO | ログレベル | DEBUG/INFO/WARNING/ERROR |
+| `WINDOW_WIDTH` | 80 | ウィンドウ幅（文字数） | 画面サイズ調整 |
+| `WINDOW_HEIGHT` | 50 | ウィンドウ高さ（文字数） | 画面サイズ調整 |
+| `FPS_LIMIT` | 60 | フレームレート制限 | パフォーマンス調整 |
+| `AUTO_SAVE_ENABLED` | true | オートセーブ機能 | セーブ頻度制御 |
+| `FONT_PATH` | auto | フォントファイルパス | 表示カスタマイズ |
+
+### 開発・運用環境の分離
+
+**開発環境設定例**（.env）：
+```bash
+DEBUG=true
+LOG_LEVEL=DEBUG
+WINDOW_WIDTH=100
+WINDOW_HEIGHT=60
+AUTO_SAVE_ENABLED=true
+```
+
+**運用環境設定例**：
+```bash
+DEBUG=false
+LOG_LEVEL=INFO
+WINDOW_WIDTH=80
+WINDOW_HEIGHT=50
+AUTO_SAVE_ENABLED=false
+```
+
+### 実装場所
+- `src/pyrogue/config/env.py` - 環境変数管理クラス
+- `src/pyrogue/config/legacy.py` - 後方互換性用レガシー設定
 
 ## 開発ワークフロー
 

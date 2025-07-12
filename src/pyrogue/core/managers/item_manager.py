@@ -64,7 +64,15 @@ class ItemManager:
         # 複数アイテムがある場合は最初のものを取得
         item = items_at_position[0]
 
-        # インベントリに追加を試行
+        # ゴールドの場合は特別処理
+        if hasattr(item, "item_type") and item.item_type == "GOLD":
+            amount = getattr(item, "amount", 1)
+            player.gold += amount
+            floor_data.items.remove(item)
+            self.context.add_message(f"You pick up {amount} gold pieces.")
+            return f"{amount} gold pieces"
+
+        # 通常のアイテムはインベントリに追加を試行
         if self._try_add_to_inventory(item):
             # フロアからアイテムを削除
             floor_data.items.remove(item)
