@@ -123,8 +123,9 @@ class TeleportEffect(InstantEffect):
             x = random.randint(0, width - 1)
             y = random.randint(0, height - 1)
 
-            if (floor_data.tiles[y][x].walkable and 
-                not floor_data.monster_spawner.get_monster_at(x, y)):
+            if floor_data.tiles[y][
+                x
+            ].walkable and not floor_data.monster_spawner.get_monster_at(x, y):
                 old_x, old_y = player.x, player.y
                 player.x, player.y = x, y
 

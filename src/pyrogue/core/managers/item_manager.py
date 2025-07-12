@@ -147,7 +147,7 @@ class ItemManager:
 
             # Player.use_itemで効果適用とアイテム削除を実行
             success = self.context.player.use_item(item, self.context)
-            
+
             if success:
                 # 使用成功時の追加処理
                 return True
