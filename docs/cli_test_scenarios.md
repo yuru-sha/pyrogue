@@ -1,3 +1,6 @@
+---
+cache_control: {"type": "ephemeral"}
+---
 # PyRogue CLIモード テストシナリオ記録
 
 ## 概要
