@@ -22,7 +22,7 @@ class InventoryScreen(Screen):
         super().__init__(game_screen.engine)
         self.game_screen = game_screen
         self.selected_index = 0
-        self.show_help = True
+        self.show_help = False
 
     def render(self, console: Console) -> None:
         """
@@ -127,11 +127,12 @@ class InventoryScreen(Screen):
 
         # ?でヘルプの表示/非表示を切り替え
         # 日本語キーボード対応のため、複数の方法で?キーを検出
+        unicode_char = getattr(event, 'text', getattr(event, 'unicode', ''))
         if (
             event.sym == tcod.event.KeySym.QUESTION
             or event.sym == tcod.event.KeySym.SLASH
-            or event.unicode == "?"
-            or event.unicode == "/"
+            or unicode_char == "?"
+            or unicode_char == "/"
         ):
             self.show_help = not self.show_help
             return
