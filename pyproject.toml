@@ -3,7 +3,10 @@ name = "pyrogue"
 version = "0.1.0"
 description = "A roguelike game built with Python and TCOD"
 authors = [
-    { name = "yuru-sha", email = "tomonori.iida@gmail.com" },
+    { name = "yuru-sha", email = "yurusha11@gmail.com" },
+]
+maintainers = [
+    { name = "yuru-sha", email = "yurusha11@gmail.com" },
 ]
 readme = "README.md"
 requires-python = ">=3.12"
