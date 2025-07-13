@@ -97,13 +97,22 @@ class FloorData:
         self.explored = explored
 
         # 開始位置を設定（1階では下り階段の位置、その他では上り階段の位置）
-        if up_pos is not None:
-            self.start_pos = up_pos
-        elif down_pos is not None:
-            self.start_pos = down_pos
+        if floor_number == 1:
+            # 1階では下り階段の位置を使用
+            if down_pos is not None:
+                self.start_pos = down_pos
+            else:
+                # フォールバック：(0, 0)ではなく適切な位置
+                self.start_pos = (1, 1)  # 最小限の安全な位置
         else:
-            # フォールバック：最初の部屋の中央
-            self.start_pos = (0, 0)  # デフォルト値
+            # 2階以降では上り階段の位置を使用
+            if up_pos is not None:
+                self.start_pos = up_pos
+            elif down_pos is not None:
+                self.start_pos = down_pos
+            else:
+                # フォールバック：適切な位置
+                self.start_pos = (1, 1)  # 最小限の安全な位置
 
     def is_valid_position(self, x: int, y: int) -> bool:
         """

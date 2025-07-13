@@ -36,8 +36,8 @@ def test_room_spacing():
 
 
 def test_stairs_placement():
-    """階段の配置ルールをテスト"""
-    director = DungeonDirector(80, 50, floor=1)
+    """階段の配置ルールをテスト（2階でテスト：上り階段と下り階段の両方が存在）"""
+    director = DungeonDirector(80, 50, floor=2)
     tiles, up_pos, down_pos = director.build_dungeon()
 
     # 上り階段と下り階段が別の部屋にあることを確認
@@ -107,9 +107,10 @@ def test_basic_dungeon_generation():
     # タイル配列が正しく生成されているか
     assert tiles.shape == (50, 80), f"Tiles shape is {tiles.shape}, expected (50, 80)"
 
-    # 階段位置が有効な範囲内か
-    assert 0 <= up_pos[0] < 80, f"Up stairs X position {up_pos[0]} is out of bounds"
-    assert 0 <= up_pos[1] < 50, f"Up stairs Y position {up_pos[1]} is out of bounds"
+    # 階段位置が有効な範囲内か（1階では上り階段がNone）
+    if up_pos is not None:
+        assert 0 <= up_pos[0] < 80, f"Up stairs X position {up_pos[0]} is out of bounds"
+        assert 0 <= up_pos[1] < 50, f"Up stairs Y position {up_pos[1]} is out of bounds"
     assert (
         0 <= down_pos[0] < 80
     ), f"Down stairs X position {down_pos[0]} is out of bounds"

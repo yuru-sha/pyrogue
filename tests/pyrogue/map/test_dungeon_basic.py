@@ -12,9 +12,10 @@ def test_dungeon_generation():
     # タイル配列が正しく生成されているか
     assert tiles.shape == (50, 80), f"Tiles shape is {tiles.shape}, expected (50, 80)"
 
-    # 階段位置が有効な範囲内か
-    assert 0 <= up_pos[0] < 80, f"Up stairs X position {up_pos[0]} is out of bounds"
-    assert 0 <= up_pos[1] < 50, f"Up stairs Y position {up_pos[1]} is out of bounds"
+    # 階段位置が有効な範囲内か（1階では上り階段がNone）
+    if up_pos is not None:
+        assert 0 <= up_pos[0] < 80, f"Up stairs X position {up_pos[0]} is out of bounds"
+        assert 0 <= up_pos[1] < 50, f"Up stairs Y position {up_pos[1]} is out of bounds"
     assert (
         0 <= down_pos[0] < 80
     ), f"Down stairs X position {down_pos[0]} is out of bounds"
@@ -82,8 +83,8 @@ def test_special_room_generation():
 
 
 def test_stairs_in_different_rooms():
-    """階段が異なる部屋にあることのテスト"""
-    director = DungeonDirector(80, 50, floor=1)
+    """階段が異なる部屋にあることのテスト（2階でテスト：上り階段と下り階段の両方が存在）"""
+    director = DungeonDirector(80, 50, floor=2)
     tiles, up_pos, down_pos = director.build_dungeon()
 
     up_room = None
@@ -91,13 +92,13 @@ def test_stairs_in_different_rooms():
 
     for room in director.rooms:
         # 階段が部屋内にあるかチェック
-        if (
+        if up_pos and (
             room.x < up_pos[0] < room.x + room.width
             and room.y < up_pos[1] < room.y + room.height
         ):
             up_room = room
 
-        if (
+        if down_pos and (
             room.x < down_pos[0] < room.x + room.width
             and room.y < down_pos[1] < room.y + room.height
         ):

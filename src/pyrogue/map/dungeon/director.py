@@ -63,7 +63,7 @@ class DungeonDirector:
 
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
-        self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=8)
+        self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=5)
         self.maze_builder = MazeBuilder(width, height, complexity=0.75)
         self.isolated_room_builder = IsolatedRoomBuilder(
             width, height, isolation_level=0.8

@@ -184,3 +184,6 @@ logs/
 
 # Claude Code settings
 .claude/settings.local.json
+
+# VSNotes settings
+.vsnotes/
