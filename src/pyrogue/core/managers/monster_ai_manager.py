@@ -653,13 +653,19 @@ class MonsterAIManager:
         items = player.inventory.items
         if items:
             stolen_item = random.choice(items)
-            player.inventory.remove_item(stolen_item)
-            context.add_message(f"{monster.name} steals your {stolen_item.name}!")
+            
+            # スタック可能アイテムの場合は1個だけ盗む
+            if stolen_item.stackable and stolen_item.stack_count > 1:
+                player.inventory.remove_item(stolen_item, 1)
+                context.add_message(f"{monster.name} steals one {stolen_item.name}!")
+                game_logger.debug(f"{monster.name} stole 1 {stolen_item.name} from player")
+            else:
+                player.inventory.remove_item(stolen_item)
+                context.add_message(f"{monster.name} steals your {stolen_item.name}!")
+                game_logger.debug(f"{monster.name} stole {stolen_item.name} from player")
 
             # モンスターが逃走を開始
             monster.is_fleeing = True
-
-            game_logger.debug(f"{monster.name} stole {stolen_item.name} from player")
         else:
             context.add_message(
                 f"{monster.name} tries to steal from you, but you have nothing!"

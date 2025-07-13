@@ -358,3 +358,38 @@ pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
 2. **Pull Request**: 修正案の提案
 3. **テスト**: 修正内容の検証
 4. **ドキュメント**: 変更内容の文書化
+
+## 変更履歴
+
+このセクションでは、主要なバグ修正と機能改善の履歴を記録します。
+
+### 2025-07-13: スタック可能アイテムの数量管理修正
+
+#### 問題の概要
+- **問題1**: インベントリでスタック可能アイテム（ヒーリングポーション等）を使用（u）すると、1個使用のつもりが全スタック（3個等）がインベントリから消失
+- **問題2**: スタック可能アイテムをドロップ（d）すると、1個だけドロップされ、残りがインベントリに残存
+
+#### 根本原因
+- `inventory.remove_item()`メソッドがスタック数量を考慮せず、アイテム全体を削除
+- ドロップ処理が`remove_item()`をデフォルト引数（count=1）で呼び出し
+
+#### 修正内容
+1. **`src/pyrogue/entities/actors/inventory.py`**
+   - `remove_item(item, count=1)`に数量パラメータを追加
+   - スタック可能アイテムの場合、count分だけstack_countを減算
+   - stack_countが0以下になった場合のみアイテム削除
+
+2. **`src/pyrogue/ui/screens/inventory_screen.py`**
+   - ドロップ処理で全スタック削除するよう修正：`remove_item(item, item.stack_count)`
+   - ドロップメッセージにスタック数を反映
+
+#### テスト結果
+- 230個の単体テスト: 229成功、1失敗（無関係なダンジョン生成問題）
+- 22個のCLI統合テスト: 全成功
+- スタック機能の動作確認: 完全に正常化
+
+#### 修正ファイル
+```
+src/pyrogue/entities/actors/inventory.py (lines 53-74)
+src/pyrogue/ui/screens/inventory_screen.py (lines 279-292)
+```

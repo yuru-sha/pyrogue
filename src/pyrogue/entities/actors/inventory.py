@@ -50,22 +50,46 @@ class Inventory:
         self.items.append(item)
         return True
 
-    def remove_item(self, item: Item) -> None:
+    def remove_item(self, item: Item, count: int = 1) -> int:
         """
         アイテムを削除
 
         Args:
         ----
             item: 削除するアイテム
+            count: 削除する数量（スタック可能アイテムの場合）
+
+        Returns:
+        -------
+            実際に削除された数量
+
+        Raises:
+        ------
+            ValueError: countが0以下の場合
 
         """
-        if item in self.items:
+        if count <= 0:
+            msg = f"Invalid count: {count}. Count must be positive."
+            raise ValueError(msg)
+
+        if item not in self.items:
+            return 0  # アイテムが存在しない場合は0を返す
+
+        if item.stackable and item.stack_count > count:
+            # スタック可能なアイテムで、削除数がスタック数より少ない場合
+            item.stack_count -= count
+            return count
+        else:
+            # スタック不可能、または削除数がスタック数以上の場合は完全削除
+            actual_removed = item.stack_count if item.stackable else 1
             self.items.remove(item)
 
             # 装備中のアイテムの場合は装備スロットもクリア
             for slot, equipped_item in self.equipped.items():
                 if equipped_item is item:
                     self.equipped[slot] = None
+            
+            return actual_removed
 
     def get_item(self, index: int) -> Item | None:
         """
