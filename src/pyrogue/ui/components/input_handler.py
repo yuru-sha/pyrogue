@@ -71,7 +71,8 @@ class InputHandler:
         """
         key = event.sym
         mod = event.mod
-        unicode_char = event.unicode
+        # TCOD 19.0.0+ では unicode の代わりに text 属性を使用
+        unicode_char = getattr(event, 'text', getattr(event, 'unicode', ''))
 
         # 移動コマンド（Vi-keys + 矢印キー + テンキー）
         movement_keys = {
@@ -140,14 +141,14 @@ class InputHandler:
 
         elif (
             key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT
-        ) or unicode_char == ">":
-            # 階段（下り） - Shift + . または >
+        ) or unicode_char == ">" or key == tcod.event.KeySym.GREATER:
+            # 階段（下り） - Shift + . または > （JIS配列対応）
             self.game_screen.game_logic.descend_stairs()
 
         elif (
             key == tcod.event.KeySym.COMMA and mod & tcod.event.Modifier.SHIFT
-        ) or unicode_char == "<":
-            # 階段（上り） - Shift + , または <
+        ) or unicode_char == "<" or key == tcod.event.KeySym.LESS:
+            # 階段（上り） - Shift + , または < （JIS配列対応）
             self.game_screen.game_logic.ascend_stairs()
 
         # セーブ・ロード（Ctrlキーの組み合わせを先にチェック）

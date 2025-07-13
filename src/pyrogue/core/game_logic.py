@@ -166,8 +166,9 @@ class GameLogic:
         self.context.inventory = self.inventory
 
     def _setup_initial_equipment(self) -> None:
-        """初期装備を設定。"""
-        from pyrogue.entities.items.item import Armor, Weapon
+        """初期装備と初期アイテムを設定。"""
+        from pyrogue.entities.items.item import Armor, Food, Potion, Scroll, Weapon
+        from pyrogue.entities.items.effects import HealingEffect, LightEffect, NutritionEffect
 
         # 初期武器: Dagger (攻撃力+2)
         dagger = Weapon(x=0, y=0, name="Dagger", attack_bonus=2)
@@ -179,7 +180,26 @@ class GameLogic:
         self.inventory.add_item(leather_armor)
         self.inventory.equip(leather_armor)
 
+        # 初期アイテム
+        
+        # Potion of Healing x2（HP10-15回復）
+        healing_potion1 = Potion(x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12))
+        healing_potion2 = Potion(x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12))
+        self.inventory.add_item(healing_potion1)
+        self.inventory.add_item(healing_potion2)
+        
+        # Food Ration x2（満腹度25回復）
+        food_ration1 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
+        food_ration2 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
+        self.inventory.add_item(food_ration1)
+        self.inventory.add_item(food_ration2)
+        
+        # Scroll of Light x1（視野拡大50ターン）
+        light_scroll = Scroll(x=0, y=0, name="Scroll of Light", effect=LightEffect(duration=50, radius=15))
+        self.inventory.add_item(light_scroll)
+        
         self.add_message("You are equipped with a Dagger and Leather Armor.")
+        self.add_message("You start with some basic supplies: potions, food, and a scroll.")
 
     # EffectContext用プロパティ
     @property
