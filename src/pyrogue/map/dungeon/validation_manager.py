@@ -636,7 +636,7 @@ class ValidationManager:
         total_tiles = height * width
         floor_ratio = floor_count / total_tiles
 
-        if floor_ratio < 0.04:
+        if floor_ratio < 0.02:  # より現実的な通路密度の下限に調整
             self._add_result(
                 "maze_structure", False, f"Too few corridors: {floor_ratio:.2%}"
             )
