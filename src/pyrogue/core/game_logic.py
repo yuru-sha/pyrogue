@@ -136,7 +136,13 @@ class GameLogic:
 
     def reset_game(self) -> None:
         """ゲームの状態をリセット。"""
+        import random
+        import time
+
         self._is_initialized = False
+
+        # ランダムシードを時間ベースで再初期化（新しいマップ生成のため）
+        random.seed(int(time.time() * 1000) % (2**31))
 
         # プレイヤーの状態をリセット
         self.player = Player(x=0, y=0)
@@ -151,6 +157,9 @@ class GameLogic:
                 "Press ESC to return to menu.",
             ]
         )
+
+        # ダンジョンマネージャーのキャッシュをクリア（新しいマップ生成のため）
+        self.dungeon_manager.clear_all_floors()
 
         # コンテキストを更新
         self.context.player = self.player

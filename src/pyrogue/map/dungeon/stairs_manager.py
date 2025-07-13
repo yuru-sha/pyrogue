@@ -34,6 +34,41 @@ class StairsManager:
         """階段マネージャーを初期化。"""
         self.stairs_placed = []
 
+    def _find_safe_fallback_position(self, tiles: np.ndarray) -> tuple[int, int]:
+        """
+        安全なフォールバック位置を動的に検索。
+
+        Args:
+        ----
+            tiles: ダンジョンのタイル配列
+
+        Returns:
+        -------
+            安全な座標のタプル (x, y)
+        """
+        height, width = tiles.shape
+
+        # 中央付近から適切な床タイルを探す
+        center_x, center_y = width // 2, height // 2
+
+        # 中央付近の床タイルを探索
+        search_radius = min(width, height) // 4
+        for radius in range(1, search_radius + 1):
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    x, y = center_x + dx, center_y + dy
+                    if (
+                        1 <= x < width - 1
+                        and 1 <= y < height - 1
+                        and isinstance(tiles[y, x], Floor)
+                    ):
+                        return (x, y)
+
+        # 最終フォールバック: ダンジョン境界内の安全な位置
+        fallback_x = max(2, min(width - 3, width // 4))
+        fallback_y = max(2, min(height - 3, height // 4))
+        return (fallback_x, fallback_y)
+
     def place_stairs(
         self, rooms: list[Room], floor: int, tiles: np.ndarray
     ) -> tuple[tuple[int, int], tuple[int, int]]:
@@ -86,8 +121,8 @@ class StairsManager:
         floor_positions = self._find_floor_positions(tiles)
 
         if not floor_positions:
-            # フォールバック: 任意の位置に配置
-            up_pos = (1, 1)
+            # フォールバック: 動的に安全な位置を検索
+            up_pos = self._find_safe_fallback_position(tiles)
             down_pos = (tiles.shape[1] - 2, tiles.shape[0] - 2)
         else:
             # 上り階段: 最初の方の位置
@@ -166,7 +201,7 @@ class StairsManager:
             if rooms:
                 start_room = rooms[0]
                 return start_room.center()
-            return (1, 1)  # フォールバック
+            return self._find_safe_fallback_position(tiles)  # 動的フォールバック
 
         # 上り階段用の部屋を選択
         up_stairs_room = self._select_stairs_room(rooms, "up", floor)
@@ -189,7 +224,7 @@ class StairsManager:
             self.stairs_placed.append(("up", center, fallback_room.id))
             return center
 
-        return (1, 1)  # 最終フォールバック
+        return self._find_safe_fallback_position(tiles)  # 動的最終フォールバック
 
     def _place_down_stairs(
         self, rooms: list[Room], floor: int, tiles: np.ndarray
@@ -233,7 +268,7 @@ class StairsManager:
             self.stairs_placed.append(("down", center, fallback_room.id))
             return center
 
-        return (1, 1)  # 最終フォールバック
+        return self._find_safe_fallback_position(tiles)  # 動的最終フォールバック
 
     def _select_stairs_room(
         self, rooms: list[Room], stairs_type: str, floor: int
