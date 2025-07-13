@@ -71,6 +71,7 @@ class InputHandler:
         """
         key = event.sym
         mod = event.mod
+        unicode_char = event.unicode
 
         # 移動コマンド（Vi-keys + 矢印キー + テンキー）
         movement_keys = {
@@ -137,12 +138,16 @@ class InputHandler:
             # トラップ解除
             self._handle_disarm_action()
 
-        elif key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT:
-            # 階段（下り） - Shift + .
+        elif (
+            key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT
+        ) or unicode_char == ">":
+            # 階段（下り） - Shift + . または >
             self.game_screen.game_logic.descend_stairs()
 
-        elif key == tcod.event.KeySym.COMMA and mod & tcod.event.Modifier.SHIFT:
-            # 階段（上り） - Shift + ,
+        elif (
+            key == tcod.event.KeySym.COMMA and mod & tcod.event.Modifier.SHIFT
+        ) or unicode_char == "<":
+            # 階段（上り） - Shift + , または <
             self.game_screen.game_logic.ascend_stairs()
 
         # セーブ・ロード（Ctrlキーの組み合わせを先にチェック）

@@ -126,7 +126,13 @@ class InventoryScreen(Screen):
             return
 
         # ?でヘルプの表示/非表示を切り替え
-        if event.sym == tcod.event.KeySym.QUESTION:
+        # 日本語キーボード対応のため、複数の方法で?キーを検出
+        if (
+            event.sym == tcod.event.KeySym.QUESTION
+            or event.sym == tcod.event.KeySym.SLASH
+            or event.unicode == "?"
+            or event.unicode == "/"
+        ):
             self.show_help = not self.show_help
             return
 
