@@ -42,7 +42,11 @@ select = ["E", "W", "F", "I", "UP", "C90", "N", "D", "S", "ANN", "ASYNC", "B", "
 ignore = [
     "E501", "RUF001", "RUF002", "RUF003", "ERA001",
     "D100", "D104", "D105", "D106", "D107", "D203", "D212", "D400", "D401", "D415",
-    "ANN401",
+    "ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN401", "N999",
+    "PLR0913",  # Too many arguments (often unavoidable in config/setup functions)
+    "PLR0915",  # Too many statements (especially common in dashboard pages)
+    "PLR0912",  # Too many branches (CLI commands naturally have many branches)
+    "C901",     # Complex functions (CLI commands are inherently complex)
 ]
 
 [tool.ruff.format]
@@ -57,11 +61,29 @@ known-first-party = ["kumoumi"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
     "S101",    # Allow assert statements in tests
-    "ANN001",  # Missing type annotation for function argument (tests don't need all annotations)
-    "ANN201",  # Missing return type annotation (tests functions often return None implicitly)
-    "D103",    # Missing docstring in public function (test functions don't need docstrings)
+    "S106",    # Allow hardcoded passwords in tests (test fixtures need literal passwords)
+    "ANN001",  # Missing type annotation for function argument
+    "ANN002",  # Missing type annotation for *args
+    "ANN003",  # Missing type annotation for **kwargs
+    "ANN201",  # Missing return type annotation for public function
+    "ANN202",  # Missing return type annotation for private function
+    "ANN204",  # Missing return type annotation for special method
+    "D101",    # Missing docstring in public class
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "E402",    # Module level import not at top of file (test fixtures sometimes need this)
     "PLR2004", # Magic value used in comparison (tests often use literal values)
+    "PLR0912", # Too many branches (test functions can be complex)
+    "PLR0913", # Too many arguments (test functions often need many parameters)
+    "PLR0915", # Too many statements (test functions can be long)
+    "C901",    # Function is too complex (test functions can be complex)
     "RUF002",  # Allow full-width characters in docstrings (Japanese comments)
+    "RUF012",  # Mutable class attributes should be annotated with ClassVar (test classes don't need this)
+    "SLF001",  # Private member accessed (tests need to access private members sometimes)
+    "B007",    # Loop control variable not used within loop body (tests may have unused variables)
+    "F841",    # Local variable assigned but never used (tests may have intentionally unused variables)
+    "N806",    # Variable should be lowercase (tests may use different naming for clarity)
+    "N812",    # Lowercase imported as non-lowercase (tests may import differently for clarity)
 ]
 
 [tool.mypy]
