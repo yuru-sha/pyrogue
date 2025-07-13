@@ -132,11 +132,16 @@ ui/
 │   ├── screen.py        # 画面基底クラス
 │   ├── menu_screen.py   # メインメニュー
 │   ├── game_screen.py   # ゲームプレイ画面
-│   └── inventory_screen.py # インベントリ画面
+│   ├── inventory_screen.py # インベントリ画面
+│   ├── magic_screen.py  # 魔法詠唱画面
+│   ├── game_over_screen.py # ゲームオーバー画面
+│   ├── victory_screen.py # 勝利画面
+│   └── dialogue_screen.py # NPC対話画面
 └── components/          # UI コンポーネント
     ├── fov_manager.py   # 視界管理
     ├── game_renderer.py # ゲーム描画
-    └── input_handler.py # 入力処理
+    ├── input_handler.py # 入力処理
+    └── save_load_manager.py # セーブ・ロード管理
 ```
 
 ## 設計パターンの活用
@@ -627,6 +632,314 @@ class Engine:
         # FOV表示、座標表示、無敵モードなど
         pass
 ```
+
+## UIシステム詳細設計
+
+### アーキテクチャ概要
+
+PyRogueのUIシステムは、**状態駆動型アーキテクチャ**と**責務分離による組み込み型設計**を採用しています。TCODライブラリを基盤とした文字ベースの描画システムで、レスポンシブ対応と高いユーザビリティを実現しています。
+
+### 主要設計原則
+
+1. **状態ベースの画面管理**: GameStates列挙型による明確な状態遷移
+2. **コンポーネント化**: 単一責務の原則に基づく機能分離
+3. **統一された入力処理**: Vi-keys、矢印キー、テンキーの包括的サポート
+4. **レスポンシブ描画**: ウィンドウサイズに適応する動的レイアウト
+
+### 画面システム
+
+#### Screen基底クラス設計
+
+```python
+class Screen:
+    """画面の基本クラス"""
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
+
+    def render(self, console: Console) -> None:
+        """画面を描画"""
+        raise NotImplementedError
+
+    def handle_key(self, key: tcod.event.KeyDown) -> Screen | None:
+        """キー入力を処理"""
+        raise NotImplementedError
+```
+
+**設計思想**:
+- 最小限のインターフェース定義
+- 各画面の独立性確保
+- エンジンへの参照による状態アクセス
+
+#### 画面クラス構成
+
+| 画面クラス | 責務 | 主要機能 |
+|------------|------|----------|
+| **MenuScreen** | メインメニュー表示 | アスキーアートタイトル、ナビゲーション |
+| **GameScreen** | ゲームプレイ統合管理 | コンポーネント統合、状態中継 |
+| **InventoryScreen** | インベントリ管理 | アイテム表示、装備操作、使用・ドロップ |
+| **MagicScreen** | 魔法詠唱メニュー | 魔法一覧、MP管理、ターゲット選択連携 |
+| **GameOverScreen** | ゲームオーバー表示 | 統計情報、スコア表示、死因表示 |
+| **VictoryScreen** | 勝利画面表示 | 最終スコア計算、達成統計表示 |
+
+### 状態管理システム
+
+#### GameStates列挙型
+
+```python
+class GameStates(Enum):
+    MENU = auto()                # メインメニュー表示中
+    PLAYERS_TURN = auto()        # プレイヤーの入力待ち
+    ENEMY_TURN = auto()          # 敵の行動処理中
+    PLAYER_DEAD = auto()         # プレイヤー死亡時の処理
+    GAME_OVER = auto()           # ゲームオーバー画面表示
+    VICTORY = auto()             # ゲーム勝利画面表示
+    SHOW_INVENTORY = auto()      # インベントリ一覧表示
+    DROP_INVENTORY = auto()      # アイテム破棄モード
+    SHOW_MAGIC = auto()          # 魔法一覧表示
+    TARGETING = auto()           # ターゲット選択モード
+    DIALOGUE = auto()            # NPC対話状態
+    LEVEL_UP = auto()           # レベルアップ時の選択
+    CHARACTER_SCREEN = auto()    # キャラクター情報表示
+    EXIT = auto()               # ゲーム終了シグナル
+```
+
+#### StateManager（入力ルーティング）
+
+```python
+class StateManager:
+    """異なるゲーム状態に対する入力処理を管理"""
+
+    def handle_input(self, event: tcod.event.KeyDown,
+                    current_state: GameStates,
+                    context: Any) -> tuple[bool, GameStates | None]:
+        # 状態別の入力処理を適切な画面に委譲
+        if current_state == GameStates.MENU:
+            new_state = context.handle_input(event)
+        elif current_state == GameStates.PLAYERS_TURN:
+            context.handle_key(event)
+        # ... 他の状態処理
+```
+
+**利点**:
+- 状態遷移の一元管理
+- 入力処理の責務分離
+- エスケープキーのフォールバック処理
+
+### UIコンポーネントシステム
+
+#### 1. GameRenderer（描画システム）
+
+```python
+class GameRenderer:
+    """ゲーム画面の描画処理を担当するクラス"""
+
+    def render(self, console: tcod.Console) -> None:
+        """レイヤー化描画"""
+        console.clear()
+        self._render_map(console)      # マップ層
+        self._render_status(console)   # ステータス層
+        self._render_messages(console) # メッセージ層
+```
+
+**主要機能**:
+- **レイヤー化描画**: マップ→ステータス→メッセージの順序描画
+- **FOV統合**: 可視/探索済み状態による動的描画制御
+- **マップオフセット**: ステータス行を考慮した座標調整
+- **エンティティ描画**: アイテム、モンスター、NPCの統合描画
+
+**色彩システム**:
+```python
+# 視界状態による色彩変化
+color = (130, 110, 50) if visible else (0, 0, 100)  # 壁
+color = (192, 192, 192) if visible else (64, 64, 64)  # 床
+```
+
+#### 2. InputHandler（入力処理システム）
+
+```python
+class InputHandler:
+    """入力処理システムの管理クラス"""
+
+    def handle_key(self, event: tcod.event.KeyDown) -> None:
+        if self.targeting_mode:
+            self._handle_targeting_key(event)
+        else:
+            self._handle_normal_key(event)
+```
+
+**入力マッピング**:
+```python
+movement_keys = {
+    # Vi-keys
+    ord('h'): (-1, 0),  ord('j'): (0, 1),   ord('k'): (0, -1),  ord('l'): (1, 0),
+    ord('y'): (-1, -1), ord('u'): (1, -1),  ord('b'): (-1, 1),  ord('n'): (1, 1),
+    # 矢印キー
+    tcod.event.KeySym.LEFT: (-1, 0), tcod.event.KeySym.RIGHT: (1, 0),
+    tcod.event.KeySym.UP: (0, -1),   tcod.event.KeySym.DOWN: (0, 1),
+    # テンキー
+    tcod.event.KeySym.KP_4: (-1, 0), tcod.event.KeySym.KP_6: (1, 0),
+    tcod.event.KeySym.KP_8: (0, -1), tcod.event.KeySym.KP_2: (0, 1),
+    tcod.event.KeySym.KP_7: (-1, -1), tcod.event.KeySym.KP_9: (1, -1),
+    tcod.event.KeySym.KP_1: (-1, 1), tcod.event.KeySym.KP_3: (1, 1),
+}
+```
+
+**特殊機能**:
+- **ターゲット選択モード**: 魔法詠唱時のターゲット指定
+- **修飾キー対応**: Ctrl+S/L（セーブ・ロード）、Shift+./,（階段）
+- **周囲検索**: ドア開閉、隠し扉探索、トラップ解除の8方向検索
+
+#### 3. FOVManager（視界管理システム）
+
+```python
+class FOVManager:
+    """FOV（視界）システムの管理クラス"""
+
+    def update_fov(self) -> None:
+        if not self.fov_enabled:
+            self.visible.fill(True)  # FOV無効時は全体可視
+            return
+
+        self._update_fov_map()
+        player = self.game_screen.player
+        if player:
+            self._compute_fov(player.x, player.y)
+```
+
+**技術詳細**:
+- **TCODアルゴリズム**: `libtcodpy.FOV_SHADOW`による高精度視界計算
+- **暗い部屋対応**: 光源アイテムによる視界半径変動
+- **探索システム**: 累積的な探索済みエリア管理
+- **透明度マップ**: 壁・ドアの状態による動的透明度設定
+
+**効果的FOV半径計算**:
+```python
+def _calculate_effective_fov_radius(self, x: int, y: int) -> int:
+    # 基本半径: 8
+    # 暗い部屋での制限: 2-3
+    # 光源アイテム使用時: 基本半径復帰
+    return dark_room_builder.get_visibility_range_at(
+        x, y, rooms, has_light, light_radius
+    )
+```
+
+#### 4. SaveLoadManager（状態永続化システム）
+
+```python
+class SaveLoadManager:
+    """セーブ・ロード処理の管理クラス"""
+
+    def save_game(self) -> bool:
+        save_data = self._create_save_data()
+        return self.save_manager.save_game(save_data)
+
+    def _create_save_data(self) -> dict[str, Any]:
+        return {
+            "player": self._serialize_player(player),
+            "inventory": self._serialize_inventory(inventory),
+            "current_floor": dungeon_manager.current_floor,
+            "floor_data": dungeon_manager.floor_data,
+            "message_log": game_logic.message_log,
+        }
+```
+
+**シリアライゼーション機能**:
+- プレイヤー状態の完全保存
+- インベントリ・装備情報の詳細保存
+- フロアデータの遅延読み込み対応
+- メッセージログの継続性確保
+
+### TCODライブラリ統合
+
+#### 初期化とコンテキスト管理
+
+```python
+class Engine:
+    def initialize(self) -> None:
+        # フォントとタイルセット
+        tileset = tcod.tileset.load_tilesheet(
+            "data/assets/fonts/dejavu10x10_gs_tc.png",
+            32, 8, tcod.tileset.CHARMAP_TCOD
+        )
+
+        # リサイズ対応コンテキスト
+        self.context = tcod.context.new(
+            columns=self.screen_width,
+            rows=self.screen_height,
+            tileset=tileset,
+            title=self.title,
+            vsync=True,
+            sdl_window_flags=tcod.context.SDL_WINDOW_RESIZABLE,
+        )
+```
+
+#### ウィンドウリサイズ対応
+
+```python
+def handle_resize(self, event: tcod.event.WindowEvent) -> None:
+    pixel_width = getattr(event, "width", 800)
+    pixel_height = getattr(event, "height", 600)
+
+    # 文字数計算
+    self.screen_width = max(MIN_SCREEN_WIDTH, pixel_width // font_width)
+    self.screen_height = max(MIN_SCREEN_HEIGHT, pixel_height // font_height)
+
+    # コンソール再作成
+    self.console = tcod.console.Console(self.screen_width, self.screen_height)
+
+    # 各画面のコンソール参照更新
+    self.menu_screen.update_console(self.console)
+    self.game_screen.update_console(self.console)
+```
+
+### パフォーマンス最適化
+
+#### 1. 描画最適化
+
+- **差分描画**: 変更されたタイルのみ更新
+- **FOVベース描画**: 視界外のエンティティ描画を省略
+- **レイヤー分離**: マップ、エンティティ、UIの独立レンダリング
+
+#### 2. メモリ効率
+
+- **遅延生成**: フロアデータの必要時生成
+- **状態キャッシュ**: 探索済みエリアの効率的格納
+- **リソース管理**: 不要なコンソール参照の適切な解放
+
+### ユーザビリティ設計
+
+#### 1. アクセシビリティ
+
+- **多様な入力方式**: Vi-keys、矢印キー、テンキーの包括サポート
+- **色彩コントラスト**: 視認性を考慮した色彩選択
+- **レスポンシブレイアウト**: 画面サイズに適応するUI要素配置
+
+#### 2. 操作の一貫性
+
+- **共通ナビゲーション**: 全画面での矢印キー+Enterパターン
+- **ESCキーの統一**: 一段階戻る動作の一貫性
+- **ヘルプ表示**: ?キーによるコンテキストヘルプ
+
+#### 3. 視覚的フィードバック
+
+- **選択状態の明示**: ハイライト表示による現在選択位置の明確化
+- **装備状態表示**: 装備中アイテムの視覚的区別
+- **ステータス色分け**: HP/MP残量による色彩変化
+
+### 既知の技術的課題
+
+#### 1. 入力処理の修正中問題
+- **場所**: `src/pyrogue/ui/components/input_handler.py`
+- **問題**: キーボード入力処理の一部で不具合
+- **影響**: 特定のキー組み合わせで期待通りの動作がしない
+
+#### 2. 大規模マップでのレンダリングパフォーマンス
+- **問題**: マップサイズ拡大時の描画処理負荷
+- **対策候補**: 視界ベースのカリング、タイル描画最適化
+
+#### 3. 複雑なゲーム状態のシリアライゼーション
+- **問題**: セーブデータの一貫性保証
+- **課題**: フロアデータ、エンティティ状態の完全復元
 
 ## まとめ
 
