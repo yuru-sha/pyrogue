@@ -229,13 +229,16 @@ class ItemManager:
             inventory.unequip(item)
             self.context.add_message(f"You unequip the {item_name}.")
 
-        # インベントリから削除
-        inventory.remove_item(item)
+        # インベントリから削除（スタック可能アイテムは全スタック削除）
+        if item.stackable and item.stack_count > 1:
+            inventory.remove_item(item, item.stack_count)
+            self.context.add_message(f"You drop {item.stack_count} {item_name}.")
+        else:
+            inventory.remove_item(item)
+            self.context.add_message(f"You drop the {item_name}.")
 
         # フロアに配置
         self._place_item_on_floor(item)
-
-        self.context.add_message(f"You drop the {item_name}.")
         return True
 
     def _place_item_on_floor(self, item: Item) -> None:

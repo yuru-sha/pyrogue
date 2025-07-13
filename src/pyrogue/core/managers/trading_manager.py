@@ -346,13 +346,19 @@ class TradingManager:
 
         # 取引実行
         if self.current_npc.sell_item(trade_item.item):
-            player.inventory.remove_item(trade_item.item)
+            # 指定された数量だけアイテムを削除
+            player.inventory.remove_item(trade_item.item, trade_item.quantity)
             player.gold += trade_item.price
 
             if self.context:
-                self.context.show_message(
-                    f"You sold {trade_item.item.name} for {trade_item.price} gold."
-                )
+                if trade_item.quantity > 1:
+                    self.context.show_message(
+                        f"You sold {trade_item.quantity} {trade_item.item.name} for {trade_item.price} gold."
+                    )
+                else:
+                    self.context.show_message(
+                        f"You sold {trade_item.item.name} for {trade_item.price} gold."
+                    )
                 self.context.update_display()
 
             # 取引可能なアイテムリストを更新

@@ -127,7 +127,7 @@ class InventoryScreen(Screen):
 
         # ?でヘルプの表示/非表示を切り替え
         # 日本語キーボード対応のため、複数の方法で?キーを検出
-        unicode_char = getattr(event, 'text', getattr(event, 'unicode', ''))
+        unicode_char = getattr(event, "text", getattr(event, "unicode", ""))
         if (
             event.sym == tcod.event.KeySym.QUESTION
             or event.sym == tcod.event.KeySym.SLASH
@@ -276,10 +276,7 @@ class InventoryScreen(Screen):
                         self.game_screen.game_logic.player.y,
                     ):
                         # インベントリからアイテムを削除（remove_itemが装備スロットもクリア）
-                        self.game_screen.game_logic.inventory.remove_item(selected_item)
-                        self.game_screen.game_logic.add_message(
-                            f"You drop the {selected_item.name}."
-                        )
+                        self._handle_drop_item(selected_item)
 
                         # 選択インデックスを調整
                         if self.selected_index >= len(
@@ -293,3 +290,24 @@ class InventoryScreen(Screen):
                             "You cannot drop items here."
                         )
                 return
+
+    def _handle_drop_item(self, item: Item) -> None:
+        """
+        アイテムドロップの処理を行う。
+
+        Args:
+        ----
+            item: ドロップするアイテム
+
+        """
+        # スタック可能アイテムの場合は全スタック削除
+        if item.stackable and item.stack_count > 1:
+            self.game_screen.game_logic.inventory.remove_item(item, item.stack_count)
+            self.game_screen.game_logic.add_message(
+                f"You drop {item.stack_count} {item.name}."
+            )
+        else:
+            self.game_screen.game_logic.inventory.remove_item(item)
+            self.game_screen.game_logic.add_message(
+                f"You drop the {item.name}."
+            )
