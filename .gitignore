@@ -186,4 +186,4 @@ logs/
 .claude/settings.local.json
 
 # VSNotes settings
-.vsnotes/
+docs/vsnotes/
