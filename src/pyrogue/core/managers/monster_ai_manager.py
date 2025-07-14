@@ -10,7 +10,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from pyrogue.constants import ProbabilityConstants
+from pyrogue.constants import CombatConstants, ProbabilityConstants
 from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class MonsterAIManager:
                 return
 
             # 隣接している場合は特殊攻撃またはメレー攻撃
-            if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= 1.5:
+            if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD:
                 if self._can_use_special_attack(monster):
                     self._use_special_attack(monster, player, context)
                 else:
@@ -223,7 +223,7 @@ class MonsterAIManager:
 
         """
         # プレイヤーとの距離が1の場合は攻撃
-        if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= 1.5:
+        if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD:
             self._monster_attack_player(monster, context)
             return
 
@@ -464,7 +464,7 @@ class MonsterAIManager:
 
         # HP比率による逃走判定
         hp_ratio = monster.hp / monster.max_hp
-        flee_threshold = getattr(monster, "flee_threshold", 0.3)
+        flee_threshold = getattr(monster, "flee_threshold", ProbabilityConstants.MONSTER_FLEE_THRESHOLD)
 
         if hp_ratio <= flee_threshold:
             monster.is_fleeing = True
@@ -522,7 +522,7 @@ class MonsterAIManager:
         ranged_range = getattr(monster, "ranged_attack_range", 5)
 
         # 射程内かつ隣接していない場合
-        return 1.5 < distance <= ranged_range
+        return CombatConstants.ADJACENT_DISTANCE_THRESHOLD < distance <= ranged_range
 
     def _use_ranged_attack(self, monster: Monster, player, context: GameContext) -> None:
         """
@@ -538,7 +538,7 @@ class MonsterAIManager:
         damage = getattr(monster, "ranged_attack_damage", monster.attack // 2)
 
         # 攻撃命中判定
-        if random.random() < 0.8:  # 80%の命中率
+        if random.random() < ProbabilityConstants.MONSTER_RANGED_ATTACK_HIT_RATE:  # 80%の命中率
             actual_damage = max(1, damage - player.get_defense())
             player.take_damage(actual_damage, context)
             context.add_message(f"{monster.name} shoots you for {actual_damage} damage!")
@@ -567,7 +567,7 @@ class MonsterAIManager:
             return False
 
         # 30%の確率で特殊攻撃を使用
-        return random.random() < 0.3 and (
+        return random.random() < ProbabilityConstants.MONSTER_SPECIAL_ATTACK_CHANCE and (
             getattr(monster, "can_steal_items", False)
             or getattr(monster, "can_steal_gold", False)
             or getattr(monster, "can_drain_level", False)
@@ -703,7 +703,7 @@ class MonsterAIManager:
             return
 
         # 分裂判定（30%の確率）
-        if random.random() > 0.3:
+        if random.random() > ProbabilityConstants.MONSTER_SPLIT_CHANCE:
             return
 
         floor_data = context.get_current_floor_data()

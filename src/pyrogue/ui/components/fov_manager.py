@@ -13,6 +13,7 @@ import numpy as np
 import tcod
 from tcod import libtcodpy
 
+from pyrogue.constants import GameConstants
 from pyrogue.map.tile import Wall
 
 if TYPE_CHECKING:
@@ -46,8 +47,8 @@ class FOVManager:
         """
         self.game_screen = game_screen
         self.fov_enabled = True
-        self.fov_radius = 8
-        self.base_fov_radius = 8  # 基本FOV半径
+        self.fov_radius = GameConstants.DEFAULT_FOV_RADIUS
+        self.base_fov_radius = GameConstants.DEFAULT_FOV_RADIUS  # 基本FOV半径
 
         # FOV計算用のマップを初期化
         self.fov_map = tcod.map.Map(width=game_screen.dungeon_width, height=game_screen.dungeon_height)
@@ -242,7 +243,7 @@ class FOVManager:
             radius: 新しい視界半径
 
         """
-        self.fov_radius = max(1, min(radius, 20))  # 1-20の範囲に制限
+        self.fov_radius = max(1, min(radius, GameConstants.MAX_FOV_RADIUS))  # 1-20の範囲に制限
         self.update_fov()
 
     def is_visible(self, x: int, y: int) -> bool:

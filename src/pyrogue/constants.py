@@ -50,6 +50,12 @@ class ProbabilityConstants:
     MONSTER_MOVE_CHANCE: float = 0.7  # モンスターが移動する確率
     MONSTER_SPAWN_BASE_CHANCE: float = 0.1  # 基本スポーン確率
 
+    # AI行動関連
+    MONSTER_FLEE_THRESHOLD: float = 0.3  # モンスターが逃走するHP閾値
+    MONSTER_SPECIAL_ATTACK_CHANCE: float = 0.3  # 特殊攻撃発動確率
+    MONSTER_SPLIT_CHANCE: float = 0.3  # 分裂確率
+    MONSTER_RANGED_ATTACK_HIT_RATE: float = 0.8  # 遠距離攻撃命中率
+
     # アイテム関連
     ITEM_SPAWN_BASE_CHANCE: float = 0.05  # 基本アイテムスポーン確率
     CURSED_ITEM_CHANCE: float = 0.1  # 呪われたアイテムの確率
@@ -73,6 +79,13 @@ class CombatConstants:
     BASE_ATTACK_DAMAGE: int = 1
     CRITICAL_HIT_MULTIPLIER: float = 2.0
     CRITICAL_HIT_CHANCE: float = 0.05
+
+    # 隣接判定
+    ADJACENT_DISTANCE_THRESHOLD: float = 1.5  # 隣接とみなす距離の閾値
+
+    # 戦闘効果
+    HALLUCINATION_EFFECT_CHANCE: float = 0.3  # 幻覚効果発動確率
+    GOLD_DROP_CHANCE: float = 0.3  # 金貨ドロップ確率
 
     # レベルアップ
     EXP_PER_LEVEL_BASE: int = 100

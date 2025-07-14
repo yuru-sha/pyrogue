@@ -11,6 +11,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from pyrogue.constants import ProbabilityConstants
 from pyrogue.entities.actors.actor import Actor
 from pyrogue.entities.actors.status_effects import StatusEffectManager
 
@@ -96,7 +97,7 @@ class Monster(Actor):
         self.split_children: list[Monster] = []
 
         # 逃走モンスター用の属性
-        self.flee_threshold = 0.3  # HP30%以下で逃走
+        self.flee_threshold = ProbabilityConstants.MONSTER_FLEE_THRESHOLD  # HP30%以下で逃走
         self.is_fleeing = False
 
         # 遠距離攻撃モンスター用の属性

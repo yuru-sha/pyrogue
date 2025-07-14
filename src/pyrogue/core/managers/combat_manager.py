@@ -119,7 +119,7 @@ class CombatManager:
             "hallucinogenic",
             "psychic",
         ]:
-            if random.random() < 0.3:
+            if random.random() < CombatConstants.HALLUCINATION_EFFECT_CHANCE:
                 from pyrogue.entities.actors.status_effects import HallucinationEffect
 
                 hallucination = HallucinationEffect(duration=6)
@@ -334,7 +334,7 @@ class CombatManager:
             return
 
         # 金貨ドロップの可能性
-        if random.random() < 0.3:  # 30%の確率で金貨ドロップ
+        if random.random() < CombatConstants.GOLD_DROP_CHANCE:  # 30%の確率で金貨ドロップ
             from pyrogue.entities.items.item import Gold
 
             gold_amount = random.randint(1, monster.level * 5)
