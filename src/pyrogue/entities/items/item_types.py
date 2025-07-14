@@ -127,9 +127,6 @@ FOODS = [
     FoodType("%", "Slime Mold", 1, 26, 80, 20, 600),
 ]
 
-# Special item: Amulet of Yendor
-AMULET = ItemType("&", "The Amulet of Yendor", 26, 26, 100, 1000)
-
 
 # Gold generation by floor
 def get_gold_amount(floor: int) -> int:
