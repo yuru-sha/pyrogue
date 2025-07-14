@@ -536,6 +536,11 @@ class DungeonManager:
             (TeleportTrap, 20),  # テレポート（稀）
         ]
 
+        # 迷路階層の場合（部屋がない場合）の対応
+        if not rooms:
+            self._spawn_traps_in_maze(trap_manager, tiles, trap_types, floor_number)
+            return
+
         # 階層が深いほどトラップの数を増加
         max_traps_per_room = min(3, 1 + floor_number // 5)
 
@@ -573,6 +578,60 @@ class DungeonManager:
                             break
 
                     attempts += 1
+
+    def _spawn_traps_in_maze(
+        self,
+        trap_manager: TrapManager,
+        tiles: np.ndarray,
+        trap_types: list,
+        floor_number: int,
+    ) -> None:
+        """
+        迷路階層でトラップを配置。
+
+        Args:
+        ----
+            trap_manager: トラップ管理インスタンス
+            tiles: ダンジョンタイルの2次元配列
+            trap_types: トラップの種類と重みのリスト
+            floor_number: 現在の階層番号
+
+        """
+        from pyrogue.map.tile import Floor
+
+        # 迷路の床タイル（通路）を全て取得
+        floor_positions = []
+        height, width = tiles.shape
+        
+        for y in range(height):
+            for x in range(width):
+                if isinstance(tiles[y, x], Floor):
+                    floor_positions.append((x, y))
+        
+        # 迷路での基本トラップ数を決定（通路数に応じて調整）
+        base_trap_count = max(2, len(floor_positions) // 50)  # 50床タイルごとに1つのトラップ
+        level_bonus = floor_number // 5  # 階層ボーナス
+        total_traps = min(base_trap_count + level_bonus, len(floor_positions) // 10)  # 最大密度制限
+        
+        # ランダムに配置位置を選択
+        random.shuffle(floor_positions)
+        
+        # トラップを配置
+        for i in range(min(total_traps, len(floor_positions))):
+            x, y = floor_positions[i]
+            
+            # 同じ位置に既にトラップがないことを確認
+            if trap_manager.get_trap_at(x, y) is None:
+                # 重み付き抽選でトラップタイプを選択
+                trap_class = random.choices(
+                    [trap_type for trap_type, _ in trap_types],
+                    weights=[weight for _, weight in trap_types],
+                    k=1,
+                )[0]
+                
+                # トラップを作成して追加
+                new_trap = trap_class(x, y)
+                trap_manager.add_trap(new_trap)
 
     def get_serializable_data(self) -> dict:
         """

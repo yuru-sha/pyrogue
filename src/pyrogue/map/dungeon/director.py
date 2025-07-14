@@ -64,7 +64,11 @@ class DungeonDirector:
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
         self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=5)
-        self.maze_builder = MazeBuilder(width, height, complexity=0.75)
+        
+        # 迷路階層の場合はより低い複雑度でより広い迷路を生成
+        maze_complexity = 0.5 if self._determine_dungeon_type(floor) == "maze" else 0.75
+        self.maze_builder = MazeBuilder(width, height, complexity=maze_complexity)
+        
         self.isolated_room_builder = IsolatedRoomBuilder(width, height, isolation_level=0.8)
         self.dark_room_builder = DarkRoomBuilder(darkness_intensity=0.8)
         self.corridor_builder = CorridorBuilder(width, height)
