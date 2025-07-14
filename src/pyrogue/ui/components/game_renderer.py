@@ -82,13 +82,17 @@ class GameRenderer:
                 tile = floor_data.tiles[y, x]
                 visible = game_screen.fov_manager.visible[y, x]
                 explored = game_screen.game_logic.get_explored_tiles()[y, x]
+                
+                # ウィザードモード時は全マップを表示
+                wizard_mode = game_screen.game_logic.is_wizard_mode()
+                should_render = visible or explored or wizard_mode
 
-                if visible or explored:
+                if should_render:
                     # タイルの描画（Y座標をオフセット）
-                    self._render_tile(console, x, y + map_offset_y, tile, visible)
+                    self._render_tile(console, x, y + map_offset_y, tile, visible, wizard_mode)
 
-                    # アイテムの描画
-                    if visible:
+                    # アイテムの描画（ウィザードモード時は全て表示）
+                    if visible or wizard_mode:
                         self._render_items_at(console, x, y, floor_data, map_offset_y)
 
                         # モンスターの描画
@@ -98,6 +102,10 @@ class GameRenderer:
 
                         # NPCの描画
                         self._render_npcs_at(console, x, y, floor_data, map_offset_y)
+                        
+                        # ウィザードモード時: トラップの描画
+                        if wizard_mode:
+                            self._render_traps_at(console, x, y, floor_data, map_offset_y)
 
         # プレイヤーの描画（Y座標をオフセット）
         player = game_screen.player
@@ -105,7 +113,7 @@ class GameRenderer:
             console.print(player.x, player.y + map_offset_y, "@", fg=(255, 255, 255))
 
     def _render_tile(
-        self, console: tcod.Console, x: int, y: int, tile: object, visible: bool
+        self, console: tcod.Console, x: int, y: int, tile: object, visible: bool, wizard_mode: bool = False
     ) -> None:
         """
         タイルの描画処理。
@@ -117,6 +125,7 @@ class GameRenderer:
             y: Y座標
             tile: タイルオブジェクト
             visible: 現在視界内かどうか
+            wizard_mode: ウィザードモード有効かどうか
 
         """
         if isinstance(tile, Wall):
@@ -132,13 +141,59 @@ class GameRenderer:
             char = "<"
             color = (255, 255, 255) if visible else (128, 128, 128)
         elif hasattr(tile, "char"):  # Door, SecretDoor等のタイル
-            char = tile.char
-            color = tile.light if visible else tile.dark
+            from pyrogue.map.tile import SecretDoor
+            
+            if isinstance(tile, SecretDoor) and wizard_mode and tile.door_state == "secret":
+                # ウィザードモード時の隠しドア表示（紫色で強調）
+                char = "S"  # Secret doorの頭文字
+                color = (255, 0, 255) if visible else (128, 0, 128)  # マゼンタ
+            else:
+                char = tile.char
+                color = tile.light if visible else tile.dark
         else:
             char = "?"
             color = (255, 0, 255) if visible else (128, 0, 128)
 
         console.print(x, y, char, fg=color)
+        
+    def _render_traps_at(
+        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
+    ) -> None:
+        """
+        ウィザードモード時の指定座標のトラップを描画。
+
+        Args:
+        ----
+            console: TCODコンソール
+            x: X座標
+            y: Y座標
+            floor_data: フロアデータ
+            map_offset_y: マップのYオフセット
+
+        """
+        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+            for trap in floor_data.trap_spawner.traps:
+                if trap.x == x and trap.y == y:
+                    # トラップタイプに応じた色分け
+                    if trap.name == "Pit Trap":
+                        color = (139, 69, 19)  # 茶色
+                        char = "P"
+                    elif trap.name == "Poison Needle Trap":
+                        color = (0, 255, 0)  # 緑色
+                        char = "N"
+                    elif trap.name == "Teleport Trap":
+                        color = (255, 0, 255)  # マゼンタ
+                        char = "T"
+                    else:
+                        color = (255, 255, 0)  # 黄色（汎用）
+                        char = "^"
+                    
+                    # 隠しトラップは薄い色で表示
+                    if trap.is_hidden:
+                        color = tuple(c // 2 for c in color)  # 色を半分に
+                        
+                    console.print(x, y + map_offset_y, char, fg=color)
+                    break  # 1つの座標に複数トラップがある場合は最初のもののみ表示
 
     def _render_items_at(
         self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int

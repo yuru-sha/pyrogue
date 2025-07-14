@@ -88,7 +88,7 @@ class TurnManager:
             if effect.name == "Poison":
                 # 毒ダメージ
                 damage = 1
-                player.hp = max(0, player.hp - damage)
+                player.take_damage(damage, context)
                 context.add_message(f"You take {damage} poison damage!")
 
                 if player.hp <= 0:
@@ -282,7 +282,7 @@ class TurnManager:
             and self.turn_count % HungerConstants.STARVING_DAMAGE_INTERVAL == 0
         ):
             damage = HungerConstants.STARVING_DAMAGE
-            player.hp = max(0, player.hp - damage)
+            player.take_damage(damage, context)
             context.add_message(f"Starvation deals {damage} damage!")
 
             if player.hp <= 0:
@@ -302,7 +302,7 @@ class TurnManager:
             and self.turn_count % HungerConstants.VERY_HUNGRY_DAMAGE_INTERVAL == 0
         ):
             damage = 1
-            player.hp = max(0, player.hp - damage)
+            player.take_damage(damage, context)
             context.add_message(f"Extreme hunger weakens you for {damage} damage!")
 
             if player.hp <= 0:

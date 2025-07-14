@@ -112,14 +112,15 @@ entities/
 
 ```
 map/
-├── dungeon.py            # ダンジョン生成ファサード
-├── dungeon_builder.py    # ダンジョン生成ロジック
-├── dungeon_manager.py    # マルチフロア管理
-├── tile.py              # タイル種別定義
-└── dungeon/             # Builder Pattern実装
-    ├── director.py      # ダンジョン生成ディレクター
-    ├── room_builder.py  # 部屋生成ビルダー
-    └── corridor_builder.py # 通路生成ビルダー
+├── dungeon.py               # ダンジョン生成ファサード
+├── dungeon_builder.py       # ダンジョン生成ロジック
+├── dungeon_manager.py       # マルチフロア管理
+├── tile.py                  # タイル種別定義
+└── dungeon/                # Builder Pattern実装
+    ├── director.py         # ダンジョン生成ディレクター
+    ├── section_based_builder.py # BSPダンジョン生成ビルダー
+    ├── maze_builder.py     # 迷路階層生成ビルダー
+    └── room_builder.py     # 部屋生成ビルダー
 ```
 
 #### 4. UI (ユーザーインターフェース)
@@ -151,19 +152,29 @@ ui/
 **実装**: `src/pyrogue/map/dungeon/`
 
 ```python
-# ダンジョン生成の段階的構築
+# BSPダンジョン生成の段階的構築
 class DungeonDirector:
     def __init__(self):
-        self.room_builder = RoomBuilder()
-        self.corridor_builder = CorridorBuilder()
-        self.door_manager = DoorManager()
+        self.bsp_builder = SectionBasedBuilder()
+        self.maze_builder = MazeBuilder()
 
     def build_dungeon(self, floor_number: int) -> Dungeon:
-        # 段階的にダンジョンを構築
-        self.room_builder.build_rooms()
-        self.corridor_builder.build_corridors()
-        self.door_manager.place_doors()
-        return self.room_builder.get_dungeon()
+        # フロア番号に応じてビルダーを選択
+        dungeon_type = self._determine_dungeon_type(floor_number)
+        
+        if dungeon_type == "maze":
+            return self.maze_builder.build(self.width, self.height)
+        else:
+            # BSPダンジョン生成
+            return self._build_bsp_dungeon()
+
+    def _build_bsp_dungeon(self) -> Dungeon:
+        # BSPアルゴリズムによる段階的構築
+        self.bsp_builder.initialize_bsp_tree()
+        self.bsp_builder.create_rooms_from_nodes()
+        self.bsp_builder.connect_rooms_with_corridors()
+        self.bsp_builder.place_doors_at_boundaries()
+        return self.bsp_builder.get_dungeon()
 ```
 
 **利点**:
@@ -261,6 +272,140 @@ class CommandContext(Protocol):
 - 効果の組み合わせが可能
 - **GUIとCLIで統一されたコマンド処理**
 - **コマンド実行環境の抽象化**
+
+## 新実装システムアーキテクチャ
+
+### 1. BSPダンジョン生成システム
+
+**概要**: RogueBasinチュートリアル準拠のBinary Space Partitioning実装
+
+```python
+class SectionBasedBuilder:
+    """BSPアルゴリズムによるダンジョン生成"""
+    
+    def build(self, width: int, height: int) -> np.ndarray:
+        # BSP木による再帰的空間分割
+        bsp = tcod.bsp.BSP(x=0, y=0, width=width, height=height)
+        bsp.split_recursive(depth=5, min_width=self._min_size, min_height=self._min_size)
+        
+        # 各葉ノードに部屋を生成
+        self._process_nodes(bsp, tiles)
+        
+        return tiles
+    
+    def _process_nodes(self, node: tcod.bsp.BSP, tiles: np.ndarray) -> None:
+        """ノード巡回による部屋生成と接続"""
+        if node.level == 0:  # 葉ノード
+            self._create_room(node, tiles)
+        else:  # 非葉ノード
+            self._connect_children(node, tiles)
+```
+
+**主要特徴**:
+- 再帰的空間分割による自然な部屋配置
+- 部屋中心間のL字型通路接続
+- 全部屋の接続保証
+
+### 2. 高度なドア配置システム
+
+**概要**: 戦術的に意味のある位置でのドア配置と重複防止
+
+```python
+class DoorPlacementSystem:
+    """戦術的ドア配置システム"""
+    
+    def _place_corridor_tile(self, tiles: np.ndarray, x: int, y: int) -> None:
+        if self._is_room_boundary_wall(x, y) and not self._has_adjacent_door(x, y):
+            door = self._create_random_door()  # 60%閉・30%開・10%隠し
+            tiles[y, x] = door
+            self.door_positions.add((x, y))
+    
+    def _is_room_boundary_wall(self, x: int, y: int) -> bool:
+        """部屋の境界（外周）突破判定"""
+        for room in self.rooms:
+            if self._is_wall_on_room_perimeter(x, y, room):
+                return True
+        return False
+    
+    def _has_adjacent_door(self, x: int, y: int) -> bool:
+        """隣接8方向のドア重複チェック"""
+        for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+            if (x + dx, y + dy) in self.door_positions:
+                return True
+        return False
+```
+
+**主要特徴**:
+- 部屋境界突破箇所のみでドア配置
+- 隣接8方向の重複ドア防止
+- 確率的ドア状態（クローズド・オープン・隠し扉）
+
+### 3. トラップ探索・解除システム
+
+**概要**: 安全な踏まずに処理システム
+
+```python
+class TrapSystem:
+    """トラップ探索・解除システム"""
+    
+    def search_trap(self, x: int, y: int) -> bool:
+        """隣接トラップの安全探索"""
+        for trap in floor_data.trap_spawner.traps:
+            if trap.x == x and trap.y == y and trap.is_hidden:
+                success_rate = min(90, 40 + player.level * 5)  # レベル依存成功率
+                if random.randint(1, 100) <= success_rate:
+                    trap.reveal()
+                    return True
+        return False
+    
+    def disarm_trap(self, x: int, y: int) -> bool:
+        """発見済みトラップの安全解除"""
+        for trap in floor_data.trap_spawner.traps:
+            if trap.x == x and trap.y == y and not trap.is_hidden:
+                return trap.disarm(context)  # 70%成功率、失敗時30%発動
+        return False
+```
+
+**主要特徴**:
+- 隣接8方向からの安全な探索・解除
+- プレイヤーレベル依存の成功率
+- 発見→解除の段階的処理
+
+### 4. ウィザードモード（デバッグシステム）
+
+**概要**: 包括的な開発・テスト支援システム
+
+```python
+class WizardMode:
+    """統合デバッグシステム"""
+    
+    def toggle_wizard_mode(self) -> None:
+        """ウィザードモード切り替え"""
+        self.wizard_mode = not self.wizard_mode
+        from pyrogue.config.env import get_debug_mode
+        if get_debug_mode():  # 環境変数連携
+            self.wizard_mode = True
+    
+    # 可視化機能
+    def render_with_wizard_info(self, console: tcod.Console) -> None:
+        if self.wizard_mode:
+            self._render_all_map()      # FOV無視全表示
+            self._render_hidden_doors() # 隠し扉表示
+            self._render_all_traps()    # 全トラップ表示
+    
+    # 無敵機能
+    def apply_damage_with_wizard_check(self, damage: int) -> None:
+        if self.wizard_mode:
+            context.add_message(f"[Wizard] Damage {damage} blocked!")
+        else:
+            player.hp -= damage
+```
+
+**主要特徴**:
+- 可視化（全マップ・隠し要素・エンティティ表示）
+- 無敵機能（ダメージ・トラップ無効化）
+- 操作機能（テレポート・レベルアップ・全回復・全探索）
+- 環境変数連携（DEBUG=true自動有効化）
 
 ## データフロー
 
