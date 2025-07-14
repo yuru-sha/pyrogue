@@ -69,9 +69,7 @@ class CommonCommandHandler:
     def __init__(self, context: CommandContext):
         self.context = context
 
-    def handle_command(
-        self, command: str, args: list[str] | None = None
-    ) -> CommandResult:
+    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
         """
         コマンドを処理し、結果を返す。
 
@@ -157,9 +155,7 @@ class CommonCommandHandler:
             elif direction in ["west", "w"]:
                 dx, dy = -1, 0
             else:
-                return CommandResult(
-                    False, "Invalid direction. Use north/south/east/west"
-                )
+                return CommandResult(False, "Invalid direction. Use north/south/east/west")
         else:
             return CommandResult(False, "Usage: move <direction> or use n/s/e/w")
 
@@ -345,9 +341,7 @@ Available Commands:
                 if floor_data:
                     player = self.context.player
                     # 適当な位置を探す
-                    spawn_pos = game_logic.dungeon_manager.get_player_spawn_position(
-                        floor_data
-                    )
+                    spawn_pos = game_logic.dungeon_manager.get_player_spawn_position(floor_data)
                     player.x, player.y = spawn_pos
                     player.update_deepest_floor(floor_num)
 
@@ -395,9 +389,7 @@ Available Commands:
                 damage_value = int(args[1])
                 player = self.context.player
                 player.hp = max(0, player.hp - damage_value)
-                self.context.add_message(
-                    f"Player takes {damage_value} damage! HP: {player.hp}"
-                )
+                self.context.add_message(f"Player takes {damage_value} damage! HP: {player.hp}")
 
                 # 死亡チェック
                 if player.hp <= 0:
@@ -427,9 +419,7 @@ Available Commands:
                     floor_data = self.context.dungeon_manager.get_current_floor_data()
                     if floor_data:
                         floor_data.items.append(gold_item)
-                        self.context.add_message(
-                            f"Placed {gold_amount} gold at your location."
-                        )
+                        self.context.add_message(f"Placed {gold_amount} gold at your location.")
                     else:
                         self.context.add_message("Failed to get floor data.")
                 else:

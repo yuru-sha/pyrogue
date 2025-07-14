@@ -62,9 +62,7 @@ class CorridorBuilder:
         self.height = height
         self.corridors = []
 
-    def connect_rooms_rogue_style(
-        self, rooms: list[Room], tiles: np.ndarray
-    ) -> list[Corridor]:
+    def connect_rooms_rogue_style(self, rooms: list[Room], tiles: np.ndarray) -> list[Corridor]:
         """
         オリジナルRogue式の部屋接続アルゴリズム。
 
@@ -104,9 +102,7 @@ class CorridorBuilder:
                     if unconnected_room.id in connected_rooms:
                         continue
 
-                    distance = self._calculate_distance(
-                        connected_room.center(), unconnected_room.center()
-                    )
+                    distance = self._calculate_distance(connected_room.center(), unconnected_room.center())
                     if distance < best_distance:
                         best_distance = distance
                         best_pair = (connected_room, unconnected_room)
@@ -123,14 +119,10 @@ class CorridorBuilder:
         # 追加の接続を作成（ランダムに）
         self._create_additional_connections(rooms, tiles)
 
-        game_logger.info(
-            f"Created {len(self.corridors)} corridors connecting {len(rooms)} rooms"
-        )
+        game_logger.info(f"Created {len(self.corridors)} corridors connecting {len(rooms)} rooms")
         return self.corridors
 
-    def _calculate_distance(
-        self, pos1: tuple[int, int], pos2: tuple[int, int]
-    ) -> float:
+    def _calculate_distance(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> float:
         """
         2点間の距離を計算。
 
@@ -146,9 +138,7 @@ class CorridorBuilder:
         """
         return ((pos2[0] - pos1[0]) ** 2 + (pos2[1] - pos1[1]) ** 2) ** 0.5
 
-    def _create_corridor_between_rooms(
-        self, room1: Room, room2: Room, tiles: np.ndarray
-    ) -> Corridor | None:
+    def _create_corridor_between_rooms(self, room1: Room, room2: Room, tiles: np.ndarray) -> Corridor | None:
         """
         2つの部屋を接続する通路を作成。
 
@@ -184,9 +174,7 @@ class CorridorBuilder:
 
         return None
 
-    def _find_connection_point(
-        self, from_room: Room, to_room: Room
-    ) -> tuple[int, int] | None:
+    def _find_connection_point(self, from_room: Room, to_room: Room) -> tuple[int, int] | None:
         """
         部屋の壁上で最適な接続点を見つける。
 
@@ -313,9 +301,7 @@ class CorridorBuilder:
 
         return True
 
-    def _create_additional_connections(
-        self, rooms: list[Room], tiles: np.ndarray
-    ) -> None:
+    def _create_additional_connections(self, rooms: list[Room], tiles: np.ndarray) -> None:
         """
         追加の接続を作成（ランダムに）。
 
@@ -366,7 +352,5 @@ class CorridorBuilder:
         return {
             "corridors_count": len(self.corridors),
             "total_length": total_length,
-            "average_length": total_length / len(self.corridors)
-            if self.corridors
-            else 0,
+            "average_length": total_length / len(self.corridors) if self.corridors else 0,
         }

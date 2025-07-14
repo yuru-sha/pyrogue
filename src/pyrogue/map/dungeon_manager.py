@@ -99,9 +99,7 @@ class FloorData:
         # 開始位置を設定
         if floor_number == 1:
             # 1階では階段から離れた安全な位置を動的に探す
-            self.start_pos = self._find_safe_start_position_for_floor1(
-                tiles, up_pos, down_pos
-            )
+            self.start_pos = self._find_safe_start_position_for_floor1(tiles, up_pos, down_pos)
         else:
             # 2階以降では上り階段の位置を使用
             if up_pos is not None:
@@ -226,7 +224,7 @@ class FloorData:
             安全な開始位置のタプル (x, y)
 
         """
-        from pyrogue.map.tile import Floor, StairsDown, StairsUp
+        from pyrogue.map.tile import Floor
 
         height, width = tiles.shape
 
@@ -592,9 +590,7 @@ class DungeonManager:
                     "floor_number": data.floor_number,
                     "up_pos": data.up_pos,
                     "down_pos": data.down_pos,
-                    "explored": data.explored.tolist()
-                    if data.explored is not None
-                    else None,
+                    "explored": data.explored.tolist() if data.explored is not None else None,
                 }
                 for floor_num, data in self.floors.items()
             },

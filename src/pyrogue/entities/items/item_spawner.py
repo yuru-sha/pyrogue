@@ -148,9 +148,7 @@ class ItemSpawner:
                 self.items.append(item)
                 self.occupied_positions.add((x, y))  # 位置を追加
 
-    def _find_valid_position(
-        self, dungeon_tiles: np.ndarray, room: Room
-    ) -> tuple[int | None, int | None]:
+    def _find_valid_position(self, dungeon_tiles: np.ndarray, room: Room) -> tuple[int | None, int | None]:
         """
         指定された部屋内でアイテムの有効な配置位置を検索。
 
@@ -182,9 +180,7 @@ class ItemSpawner:
 
         return None, None
 
-    def _find_valid_position_anywhere(
-        self, dungeon_tiles: np.ndarray
-    ) -> tuple[int | None, int | None]:
+    def _find_valid_position_anywhere(self, dungeon_tiles: np.ndarray) -> tuple[int | None, int | None]:
         """
         ダンジョン全体でアイテムの有効な配置位置を検索。
 
@@ -243,9 +239,7 @@ class ItemSpawner:
         if not available:
             return None
 
-        weapon_type = random.choices(
-            available, weights=[w.spawn_weight for w in available], k=1
-        )[0]
+        weapon_type = random.choices(available, weights=[w.spawn_weight for w in available], k=1)[0]
         bonus = random.randint(*weapon_type.bonus_range)
         return Weapon(0, 0, weapon_type.name, bonus)
 
@@ -265,9 +259,7 @@ class ItemSpawner:
         if not available:
             return None
 
-        armor_type = random.choices(
-            available, weights=[a.spawn_weight for a in available], k=1
-        )[0]
+        armor_type = random.choices(available, weights=[a.spawn_weight for a in available], k=1)[0]
         bonus = random.randint(*armor_type.bonus_range)
         return Armor(0, 0, armor_type.name, bonus)
 
@@ -287,9 +279,7 @@ class ItemSpawner:
         if not available:
             return None
 
-        ring_type = random.choices(
-            available, weights=[r.spawn_weight for r in available], k=1
-        )[0]
+        ring_type = random.choices(available, weights=[r.spawn_weight for r in available], k=1)[0]
         power = random.randint(*ring_type.power_range)
         return Ring(0, 0, ring_type.name, ring_type.effect, power)
 
@@ -308,9 +298,7 @@ class ItemSpawner:
         if not available:
             return None
 
-        scroll_type = random.choices(
-            available, weights=[s.spawn_weight for s in available], k=1
-        )[0]
+        scroll_type = random.choices(available, weights=[s.spawn_weight for s in available], k=1)[0]
         effect = self._get_scroll_effect(scroll_type.effect)
         return Scroll(0, 0, scroll_type.name, effect)
 
@@ -330,9 +318,7 @@ class ItemSpawner:
         if not available:
             return None
 
-        potion_type = random.choices(
-            available, weights=[p.spawn_weight for p in available], k=1
-        )[0]
+        potion_type = random.choices(available, weights=[p.spawn_weight for p in available], k=1)[0]
         effect = self._get_potion_effect(potion_type.effect, potion_type.power_range)
         return Potion(0, 0, potion_type.name, effect)
 
@@ -351,9 +337,7 @@ class ItemSpawner:
         if not available:
             return None
 
-        food_type = random.choices(
-            available, weights=[f.spawn_weight for f in available], k=1
-        )[0]
+        food_type = random.choices(available, weights=[f.spawn_weight for f in available], k=1)[0]
         effect = self._get_food_effect(food_type.nutrition)
         return Food(0, 0, food_type.name, effect)
 
@@ -440,9 +424,7 @@ class ItemSpawner:
         }
         return effect_map.get(effect_name, IDENTIFY)
 
-    def _get_potion_effect(
-        self, effect_name: str, power_range: tuple[int, int]
-    ) -> Effect:
+    def _get_potion_effect(self, effect_name: str, power_range: tuple[int, int]) -> Effect:
         """Map effect name to Effect object for potions."""
         power = random.randint(*power_range)
 

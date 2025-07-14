@@ -45,9 +45,7 @@ def setup_game_logger() -> logging.Logger:
 
     # Simple file handler
     handler = logging.FileHandler(log_dir / "game.log", encoding="utf-8")
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 

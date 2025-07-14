@@ -62,14 +62,10 @@ class FloorManager:
         if current_floor <= 1:
             # 勝利条件チェック
             if getattr(self.context.player, "has_amulet", False):
-                self.context.add_message(
-                    "You have escaped with the Amulet of Yendor! You win!"
-                )
+                self.context.add_message("You have escaped with the Amulet of Yendor! You win!")
                 self._handle_victory()
             else:
-                self.context.add_message(
-                    "You climb up the stairs and emerge from the dungeon!"
-                )
+                self.context.add_message("You climb up the stairs and emerge from the dungeon!")
                 self._handle_dungeon_exit()
             return True
 
@@ -467,14 +463,10 @@ class FloorManager:
                         if trap.x == x and trap.y == y and trap.is_discovered:
                             # トラップの解除を試行
                             if trap.disarm(player):
-                                self.context.add_message(
-                                    f"You successfully disarm the {trap.name}."
-                                )
+                                self.context.add_message(f"You successfully disarm the {trap.name}.")
                                 return True
                             else:
-                                self.context.add_message(
-                                    f"You fail to disarm the {trap.name}."
-                                )
+                                self.context.add_message(f"You fail to disarm the {trap.name}.")
                                 return False
 
         self.context.add_message("No traps to disarm here.")

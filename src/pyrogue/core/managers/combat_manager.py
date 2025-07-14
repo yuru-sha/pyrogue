@@ -86,9 +86,9 @@ class CombatManager:
 
         # モンスターの攻撃処理
         damage = self._calculate_damage(monster, player)
-        
+
         # ウィザードモード時はダメージを受けない（無敵モード）
-        if hasattr(context, 'game_logic') and context.game_logic.is_wizard_mode():
+        if hasattr(context, "game_logic") and context.game_logic.is_wizard_mode():
             context.add_message(f"[Wizard] The {monster.name} attacks you for {damage} damage, but you are invincible!")
         else:
             player.hp -= damage
@@ -102,9 +102,7 @@ class CombatManager:
         if player.hp <= 0:
             self._handle_player_death(context, f"Killed by {monster.name}")
 
-    def _handle_special_attack_effects(
-        self, monster: Monster, context: GameContext
-    ) -> None:
+    def _handle_special_attack_effects(self, monster: Monster, context: GameContext) -> None:
         """
         モンスターの特殊攻撃効果を処理。
 
@@ -126,9 +124,7 @@ class CombatManager:
 
                 hallucination = HallucinationEffect(duration=6)
                 player.status_effects.add_effect(hallucination)
-                context.add_message(
-                    f"The {monster.name}'s attack makes you see strange visions!"
-                )
+                context.add_message(f"The {monster.name}'s attack makes you see strange visions!")
 
         # その他の特殊攻撃効果もここに追加可能
         # 例：毒攻撃、麻痺攻撃など
@@ -302,10 +298,7 @@ class CombatManager:
                 player.max_mp += mp_gain
                 player.mp = min(player.mp + mp_gain, player.max_mp)
 
-            context.add_message(
-                f"Level up! You are now level {player.level}! "
-                f"(+{hp_gain} HP, +{mp_gain} MP)"
-            )
+            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP, +{mp_gain} MP)")
 
             game_logger.info(f"Player leveled up: {old_level} -> {player.level}")
 
@@ -350,9 +343,7 @@ class CombatManager:
             floor_data.item_spawner.items.append(gold)
             context.add_message(f"The {monster.name} dropped {gold_amount} gold!")
 
-    def _handle_player_death(
-        self, context: GameContext, death_cause: str = "Unknown"
-    ) -> None:
+    def _handle_player_death(self, context: GameContext, death_cause: str = "Unknown") -> None:
         """
         プレイヤーの死亡処理。
 

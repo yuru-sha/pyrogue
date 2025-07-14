@@ -32,9 +32,7 @@ class VictoryScreen:
         """コンソールの更新"""
         self.console = console
 
-    def set_victory_data(
-        self, player_stats: dict, final_floor: int, final_score: int
-    ) -> None:
+    def set_victory_data(self, player_stats: dict, final_floor: int, final_score: int) -> None:
         """勝利時のデータを設定"""
         self.player_stats = player_stats.copy()
         self.final_floor = final_floor

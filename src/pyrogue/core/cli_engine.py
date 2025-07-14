@@ -204,9 +204,7 @@ class CLIEngine:
             try:
                 damage = int(args[1])
                 self.game_logic.player.hp = max(0, self.game_logic.player.hp - damage)
-                print(
-                    f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}"
-                )
+                print(f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
 
                 # 死亡チェック
                 if self.game_logic.player.hp <= 0:
@@ -219,12 +217,8 @@ class CLIEngine:
         elif debug_cmd == "hp" and len(args) > 1:
             try:
                 hp = int(args[1])
-                self.game_logic.player.hp = max(
-                    0, min(hp, self.game_logic.player.max_hp)
-                )
-                print(
-                    f"Player HP set to: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}"
-                )
+                self.game_logic.player.hp = max(0, min(hp, self.game_logic.player.max_hp))
+                print(f"Player HP set to: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
 
                 # 死亡チェック
                 if self.game_logic.player.hp <= 0:
@@ -238,9 +232,7 @@ class CLIEngine:
             try:
                 count = int(args[1])
                 self.game_logic.player.monsters_killed += count
-                print(
-                    f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}"
-                )
+                print(f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}")
                 return True
             except ValueError:
                 print("Invalid kill count value")
@@ -274,9 +266,7 @@ class CLIEngine:
                 print("Could not spawn monster")
                 return False
         else:
-            print(
-                "Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'"
-            )
+            print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")
             return False
 
     def handle_move(self, direction: str) -> bool:
@@ -529,10 +519,7 @@ class CLIEngine:
                         continue
 
                     x, y = player.x + dx, player.y + dy
-                    if (
-                        0 <= y < floor_data.tiles.shape[0]
-                        and 0 <= x < floor_data.tiles.shape[1]
-                    ):
+                    if 0 <= y < floor_data.tiles.shape[0] and 0 <= x < floor_data.tiles.shape[1]:
                         tile = floor_data.tiles[y, x]
                         direction = self.get_direction_name(dx, dy)
                         tile_name = getattr(tile, "name", tile.__class__.__name__)
@@ -548,9 +535,7 @@ class CLIEngine:
             if nearby_enemies:
                 print("\nNearby enemies:")
                 for enemy in nearby_enemies:
-                    print(
-                        f"  {enemy.name} at ({enemy.x}, {enemy.y}) - HP: {enemy.hp}/{enemy.max_hp}"
-                    )
+                    print(f"  {enemy.name} at ({enemy.x}, {enemy.y}) - HP: {enemy.hp}/{enemy.max_hp}")
 
             # 周囲のアイテムを表示
             nearby_items = []
@@ -614,9 +599,7 @@ class CLIEngine:
             print(f"Deepest Floor: {player.deepest_floor}")
             print(f"Turns Played: {player.turns_played}")
             print(f"Score: {player.calculate_score()}")
-            print(
-                f"Has Amulet: {'Yes' if getattr(player, 'has_amulet', False) else 'No'}"
-            )
+            print(f"Has Amulet: {'Yes' if getattr(player, 'has_amulet', False) else 'No'}")
 
             # 現在の足下のタイルを表示
             floor_data = self.game_logic.get_current_floor_data()
@@ -655,16 +638,10 @@ class CLIEngine:
             # 装備情報を表示
             equipped = inventory.equipped
             print("\nEquipment:")
-            print(
-                f"  Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}"
-            )
+            print(f"  Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}")
             print(f"  Armor: {equipped['armor'].name if equipped['armor'] else 'None'}")
-            print(
-                f"  Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}"
-            )
-            print(
-                f"  Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}"
-            )
+            print(f"  Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}")
+            print(f"  Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}")
 
         except Exception as e:
             print(f"Error displaying inventory: {e}")
@@ -676,9 +653,7 @@ class CLIEngine:
             # 勝利条件は ascend_stairs メソッド内でのみチェックする
             if self.game_logic.check_player_death():
                 print("\nGAME OVER!")
-                print(
-                    f"You died on floor B{self.game_logic.dungeon_manager.current_floor}F."
-                )
+                print(f"You died on floor B{self.game_logic.dungeon_manager.current_floor}F.")
                 self.running = False
 
         except Exception as e:

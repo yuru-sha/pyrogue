@@ -23,9 +23,7 @@ class DarkRoom(Room):
     通常の部屋と異なり、照明なしでは視界が効かない。
     """
 
-    def __init__(
-        self, x: int, y: int, width: int, height: int, darkness_level: float = 1.0
-    ) -> None:
+    def __init__(self, x: int, y: int, width: int, height: int, darkness_level: float = 1.0) -> None:
         """
         暗い部屋を初期化。
 
@@ -46,9 +44,7 @@ class DarkRoom(Room):
         # 暗い部屋の視界範囲（光源なしの場合）
         self.base_visibility_range = max(1, int(3 * (1.0 - darkness_level)))
 
-        game_logger.debug(
-            f"DarkRoom created at ({x}, {y}): {width}x{height}, darkness={darkness_level}"
-        )
+        game_logger.debug(f"DarkRoom created at ({x}, {y}): {width}x{height}, darkness={darkness_level}")
 
 
 class DarkRoomBuilder:
@@ -71,13 +67,9 @@ class DarkRoomBuilder:
         self.dark_rooms: list[DarkRoom] = []
         self.light_sources: list[tuple[int, int]] = []  # 光源の位置
 
-        game_logger.info(
-            f"DarkRoomBuilder initialized: darkness_intensity={darkness_intensity}"
-        )
+        game_logger.info(f"DarkRoomBuilder initialized: darkness_intensity={darkness_intensity}")
 
-    def apply_darkness_to_rooms(
-        self, rooms: list[Room], darkness_probability: float = 0.3
-    ) -> list[DarkRoom]:
+    def apply_darkness_to_rooms(self, rooms: list[Room], darkness_probability: float = 0.3) -> list[DarkRoom]:
         """
         既存の部屋を暗い部屋に変換。
 
@@ -163,9 +155,7 @@ class DarkRoomBuilder:
 
         game_logger.info(f"Placed {len(self.light_sources)} light sources")
 
-    def _find_light_source_position(
-        self, dark_room: DarkRoom, tiles: np.ndarray
-    ) -> tuple[int, int] | None:
+    def _find_light_source_position(self, dark_room: DarkRoom, tiles: np.ndarray) -> tuple[int, int] | None:
         """
         光源の配置位置を見つける。
 
@@ -183,11 +173,7 @@ class DarkRoomBuilder:
 
         for y in range(dark_room.y + 1, dark_room.y + dark_room.height - 1):
             for x in range(dark_room.x + 1, dark_room.x + dark_room.width - 1):
-                if (
-                    0 <= y < tiles.shape[0]
-                    and 0 <= x < tiles.shape[1]
-                    and isinstance(tiles[y, x], Floor)
-                ):
+                if 0 <= y < tiles.shape[0] and 0 <= x < tiles.shape[1] and isinstance(tiles[y, x], Floor):
                     # 階段タイルでないことを確認
                     from pyrogue.map.tile import StairsDown, StairsUp
 
@@ -238,10 +224,7 @@ class DarkRoomBuilder:
         """
         for room in rooms:
             if isinstance(room, DarkRoom):
-                if (
-                    room.x <= x < room.x + room.width
-                    and room.y <= y < room.y + room.height
-                ):
+                if room.x <= x < room.x + room.width and room.y <= y < room.y + room.height:
                     return room.darkness_level
 
         return 0.0  # 通常の部屋は明るい
@@ -262,10 +245,7 @@ class DarkRoomBuilder:
         """
         for room in rooms:
             if isinstance(room, DarkRoom):
-                if (
-                    room.x <= x < room.x + room.width
-                    and room.y <= y < room.y + room.height
-                ):
+                if room.x <= x < room.x + room.width and room.y <= y < room.y + room.height:
                     return True
 
         return False
@@ -296,10 +276,7 @@ class DarkRoomBuilder:
         # 暗い部屋内かチェック
         for room in rooms:
             if isinstance(room, DarkRoom):
-                if (
-                    room.x <= x < room.x + room.width
-                    and room.y <= y < room.y + room.height
-                ):
+                if room.x <= x < room.x + room.width and room.y <= y < room.y + room.height:
                     if player_has_light:
                         # 光源を持っている場合は通常の視界範囲
                         return light_radius
@@ -310,9 +287,7 @@ class DarkRoomBuilder:
         # 通常の部屋では標準的な視界範囲
         return 8  # デフォルトのFOV範囲
 
-    def find_nearest_light_source(
-        self, x: int, y: int, max_distance: int = 10
-    ) -> tuple[int, int] | None:
+    def find_nearest_light_source(self, x: int, y: int, max_distance: int = 10) -> tuple[int, int] | None:
         """
         最も近い光源を見つける。
 
@@ -340,9 +315,7 @@ class DarkRoomBuilder:
 
         return nearest_light
 
-    def get_light_influence_at(
-        self, x: int, y: int, light_sources: list[tuple[int, int]] = None
-    ) -> float:
+    def get_light_influence_at(self, x: int, y: int, light_sources: list[tuple[int, int]] = None) -> float:
         """
         指定位置での光の影響度を取得。
 
@@ -383,10 +356,7 @@ class DarkRoomBuilder:
             "darkness_intensity": self.darkness_intensity,
             "dark_rooms_count": len(self.dark_rooms),
             "light_sources_count": len(self.light_sources),
-            "average_darkness_level": sum(
-                room.darkness_level for room in self.dark_rooms
-            )
-            / len(self.dark_rooms)
+            "average_darkness_level": sum(room.darkness_level for room in self.dark_rooms) / len(self.dark_rooms)
             if self.dark_rooms
             else 0.0,
         }

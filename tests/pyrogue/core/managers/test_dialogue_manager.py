@@ -164,11 +164,7 @@ class TestDialogueManager:
                 id="test_greeting",
                 text="Hello, this is a test dialogue!",
                 speaker="Test NPC",
-                choices=[
-                    DialogueChoice(
-                        text="Test choice", next_node=None, action=DialogueAction.END
-                    )
-                ],
+                choices=[DialogueChoice(text="Test choice", next_node=None, action=DialogueAction.END)],
             )
         ]
 

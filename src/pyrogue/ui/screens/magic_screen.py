@@ -63,9 +63,7 @@ class MagicScreen(Screen):
         console.clear()
 
         # タイトル
-        console.print(
-            x=2, y=1, string="Spellbook - Select a spell to cast", fg=(255, 255, 0)
-        )
+        console.print(x=2, y=1, string="Spellbook - Select a spell to cast", fg=(255, 255, 0))
 
         # MPの表示
         player = self.engine.game_screen.game_logic.player
@@ -79,9 +77,7 @@ class MagicScreen(Screen):
         # 魔法一覧
         spells = player.spellbook.known_spells
         if not spells:
-            console.print(
-                x=2, y=5, string="You don't know any spells yet.", fg=(128, 128, 128)
-            )
+            console.print(x=2, y=5, string="You don't know any spells yet.", fg=(128, 128, 128))
             console.print(x=2, y=7, string="Press ESC to return.", fg=(128, 128, 128))
             return
 
@@ -105,9 +101,7 @@ class MagicScreen(Screen):
             console.print(x=3, y=y, string=spell_text, fg=color)
 
             # 魔法の説明
-            console.print(
-                x=5, y=y + 1, string=f"   {spell.description}", fg=(192, 192, 192)
-            )
+            console.print(x=5, y=y + 1, string=f"   {spell.description}", fg=(192, 192, 192))
 
         # 操作説明
         console.print(
@@ -155,9 +149,7 @@ class MagicScreen(Screen):
 
             # MP不足チェック
             if player.mp < selected_spell.mp_cost:
-                self.engine.game_screen.game_logic.add_message(
-                    "You don't have enough MP!"
-                )
+                self.engine.game_screen.game_logic.add_message("You don't have enough MP!")
                 return
 
             # 攻撃魔法の場合はターゲット選択へ
@@ -184,9 +176,7 @@ class MagicScreen(Screen):
 
                 # MP不足チェック
                 if player.mp < selected_spell.mp_cost:
-                    self.engine.game_screen.game_logic.add_message(
-                        "You don't have enough MP!"
-                    )
+                    self.engine.game_screen.game_logic.add_message("You don't have enough MP!")
                     return
 
                 # 攻撃魔法の場合はターゲット選択へ

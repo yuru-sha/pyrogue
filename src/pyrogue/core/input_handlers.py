@@ -15,9 +15,7 @@ class InputHandler(ABC):
     """入力ハンドラーの基底クラス。"""
 
     @abstractmethod
-    def handle_input(
-        self, event: tcod.event.KeyDown, context: Any
-    ) -> GameStates | None:
+    def handle_input(self, event: tcod.event.KeyDown, context: Any) -> GameStates | None:
         """特定の状態における入力を処理。"""
 
     def handle_escape(self, current_state: GameStates) -> GameStates | None:

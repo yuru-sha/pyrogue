@@ -296,10 +296,7 @@ class TestDarkRoom:
         slightly_dark_room = DarkRoom(20, 10, 8, 6, darkness_level=0.3)
 
         # より暗い部屋の方が視界が狭い
-        assert (
-            very_dark_room.base_visibility_range
-            <= slightly_dark_room.base_visibility_range
-        )
+        assert very_dark_room.base_visibility_range <= slightly_dark_room.base_visibility_range
 
     def test_dark_room_inheritance(self):
         """暗い部屋の継承テスト。"""

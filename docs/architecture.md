@@ -161,7 +161,7 @@ class DungeonDirector:
     def build_dungeon(self, floor_number: int) -> Dungeon:
         # フロア番号に応じてビルダーを選択
         dungeon_type = self._determine_dungeon_type(floor_number)
-        
+
         if dungeon_type == "maze":
             return self.maze_builder.build(self.width, self.height)
         else:
@@ -282,17 +282,17 @@ class CommandContext(Protocol):
 ```python
 class SectionBasedBuilder:
     """BSPアルゴリズムによるダンジョン生成"""
-    
+
     def build(self, width: int, height: int) -> np.ndarray:
         # BSP木による再帰的空間分割
         bsp = tcod.bsp.BSP(x=0, y=0, width=width, height=height)
         bsp.split_recursive(depth=5, min_width=self._min_size, min_height=self._min_size)
-        
+
         # 各葉ノードに部屋を生成
         self._process_nodes(bsp, tiles)
-        
+
         return tiles
-    
+
     def _process_nodes(self, node: tcod.bsp.BSP, tiles: np.ndarray) -> None:
         """ノード巡回による部屋生成と接続"""
         if node.level == 0:  # 葉ノード
@@ -313,20 +313,20 @@ class SectionBasedBuilder:
 ```python
 class DoorPlacementSystem:
     """戦術的ドア配置システム"""
-    
+
     def _place_corridor_tile(self, tiles: np.ndarray, x: int, y: int) -> None:
         if self._is_room_boundary_wall(x, y) and not self._has_adjacent_door(x, y):
             door = self._create_random_door()  # 60%閉・30%開・10%隠し
             tiles[y, x] = door
             self.door_positions.add((x, y))
-    
+
     def _is_room_boundary_wall(self, x: int, y: int) -> bool:
         """部屋の境界（外周）突破判定"""
         for room in self.rooms:
             if self._is_wall_on_room_perimeter(x, y, room):
                 return True
         return False
-    
+
     def _has_adjacent_door(self, x: int, y: int) -> bool:
         """隣接8方向のドア重複チェック"""
         for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
@@ -347,7 +347,7 @@ class DoorPlacementSystem:
 ```python
 class TrapSystem:
     """トラップ探索・解除システム"""
-    
+
     def search_trap(self, x: int, y: int) -> bool:
         """隣接トラップの安全探索"""
         for trap in floor_data.trap_spawner.traps:
@@ -357,7 +357,7 @@ class TrapSystem:
                     trap.reveal()
                     return True
         return False
-    
+
     def disarm_trap(self, x: int, y: int) -> bool:
         """発見済みトラップの安全解除"""
         for trap in floor_data.trap_spawner.traps:
@@ -378,21 +378,21 @@ class TrapSystem:
 ```python
 class WizardMode:
     """統合デバッグシステム"""
-    
+
     def toggle_wizard_mode(self) -> None:
         """ウィザードモード切り替え"""
         self.wizard_mode = not self.wizard_mode
         from pyrogue.config.env import get_debug_mode
         if get_debug_mode():  # 環境変数連携
             self.wizard_mode = True
-    
+
     # 可視化機能
     def render_with_wizard_info(self, console: tcod.Console) -> None:
         if self.wizard_mode:
             self._render_all_map()      # FOV無視全表示
             self._render_hidden_doors() # 隠し扉表示
             self._render_all_traps()    # 全トラップ表示
-    
+
     # 無敵機能
     def apply_damage_with_wizard_check(self, damage: int) -> None:
         if self.wizard_mode:

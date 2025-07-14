@@ -21,9 +21,7 @@ def _add_message_safe(context, message: str) -> None:
     """コンテキストに安全にメッセージを追加するヘルパー関数。"""
     if hasattr(context, "add_message"):
         context.add_message(message)
-    elif hasattr(context, "game_screen") and hasattr(
-        context.game_screen, "message_log"
-    ):
+    elif hasattr(context, "game_screen") and hasattr(context.game_screen, "message_log"):
         context.add_message(message)
 
 
@@ -54,9 +52,7 @@ class EffectContext(Protocol):
         """Access to the game screen for UI updates."""
         ...
 
-    def add_message(
-        self, message: str, color: tuple[int, int, int] = (255, 255, 255)
-    ) -> None:
+    def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
         """Add a message to the game log."""
         ...
 
@@ -105,9 +101,7 @@ class TeleportEffect(InstantEffect):
     """Teleports the player to a random location."""
 
     def __init__(self) -> None:
-        super().__init__(
-            name="Teleport", description="Instantly moves you to a random location"
-        )
+        super().__init__(name="Teleport", description="Instantly moves you to a random location")
 
     def apply(self, context: EffectContext) -> bool:
         player = context.player
@@ -123,15 +117,11 @@ class TeleportEffect(InstantEffect):
             x = random.randint(0, width - 1)
             y = random.randint(0, height - 1)
 
-            if floor_data.tiles[y][
-                x
-            ].walkable and not floor_data.monster_spawner.get_monster_at(x, y):
+            if floor_data.tiles[y][x].walkable and not floor_data.monster_spawner.get_monster_at(x, y):
                 old_x, old_y = player.x, player.y
                 player.x, player.y = x, y
 
-                _add_message_safe(
-                    context, f"You teleport from ({old_x}, {old_y}) to ({x}, {y})!"
-                )
+                _add_message_safe(context, f"You teleport from ({old_x}, {old_y}) to ({x}, {y})!")
                 return True
 
         _add_message_safe(context, "The teleportation fails!")
@@ -142,9 +132,7 @@ class MagicMappingEffect(InstantEffect):
     """Reveals the entire dungeon map."""
 
     def __init__(self) -> None:
-        super().__init__(
-            name="Magic Mapping", description="Reveals the entire dungeon layout"
-        )
+        super().__init__(name="Magic Mapping", description="Reveals the entire dungeon layout")
 
     def apply(self, context: EffectContext) -> bool:
         floor_data = _get_floor_data_safe(context)
@@ -166,9 +154,7 @@ class IdentifyEffect(InstantEffect):
     """Identifies all items in the player's inventory."""
 
     def __init__(self) -> None:
-        super().__init__(
-            name="Identify", description="Reveals the true nature of your items"
-        )
+        super().__init__(name="Identify", description="Reveals the true nature of your items")
 
     def apply(self, context: EffectContext) -> bool:
         player = context.player
@@ -179,15 +165,11 @@ class IdentifyEffect(InstantEffect):
             if hasattr(item, "item_type") and hasattr(item, "name"):
                 # 未識別のアイテムのみ処理
                 if not player.identification.is_identified(item.name, item.item_type):
-                    was_identified = player.identification.identify_item(
-                        item.name, item.item_type
-                    )
+                    was_identified = player.identification.identify_item(item.name, item.item_type)
                     if was_identified:
                         unidentified_count += 1
                         # 識別メッセージを追加
-                        msg = player.identification.get_identification_message(
-                            item.name, item.item_type
-                        )
+                        msg = player.identification.get_identification_message(item.name, item.item_type)
                         _add_message_safe(context, msg)
 
         if unidentified_count > 0:
@@ -202,9 +184,7 @@ class NutritionEffect(InstantEffect):
     """Restores hunger/nutrition."""
 
     def __init__(self, nutrition_value: int) -> None:
-        super().__init__(
-            name="Nutrition", description=f"Restores {nutrition_value} hunger"
-        )
+        super().__init__(name="Nutrition", description=f"Restores {nutrition_value} hunger")
         self.nutrition_value = nutrition_value
 
     def apply(self, context: EffectContext) -> bool:
@@ -224,9 +204,7 @@ class RemoveCurseEffect(InstantEffect):
     """Removes curse from all items in the player's inventory."""
 
     def __init__(self) -> None:
-        super().__init__(
-            name="Remove Curse", description="Removes the curse from all your items"
-        )
+        super().__init__(name="Remove Curse", description="Removes the curse from all your items")
 
     def apply(self, context: EffectContext) -> bool:
         player = context.player
@@ -245,13 +223,9 @@ class RemoveCurseEffect(InstantEffect):
                 cursed_count += 1
 
         if cursed_count > 0:
-            _add_message_safe(
-                context, f"You feel the curse lift from {cursed_count} item(s)!"
-            )
+            _add_message_safe(context, f"You feel the curse lift from {cursed_count} item(s)!")
         else:
-            _add_message_safe(
-                context, "You don't feel any curses upon your belongings."
-            )
+            _add_message_safe(context, "You don't feel any curses upon your belongings.")
 
         return True
 
@@ -260,25 +234,19 @@ class EnchantWeaponEffect(InstantEffect):
     """Enchants the currently equipped weapon."""
 
     def __init__(self) -> None:
-        super().__init__(
-            name="Enchant Weapon", description="Magically enhances your weapon"
-        )
+        super().__init__(name="Enchant Weapon", description="Magically enhances your weapon")
 
     def apply(self, context: EffectContext) -> bool:
         player = context.player
         weapon = player.inventory.get_equipped_weapon()
 
         if not weapon:
-            _add_message_safe(
-                context, "You need to be wielding a weapon to enchant it!"
-            )
+            _add_message_safe(context, "You need to be wielding a weapon to enchant it!")
             return False
 
         # Check enchantment limit (max +9)
         if weapon.enchantment >= 9:
-            _add_message_safe(
-                context, "Your weapon glows briefly, but nothing happens."
-            )
+            _add_message_safe(context, "Your weapon glows briefly, but nothing happens.")
             return False
 
         weapon.enchantment += 1
@@ -294,9 +262,7 @@ class EnchantArmorEffect(InstantEffect):
     """Enchants the currently equipped armor."""
 
     def __init__(self) -> None:
-        super().__init__(
-            name="Enchant Armor", description="Magically enhances your armor"
-        )
+        super().__init__(name="Enchant Armor", description="Magically enhances your armor")
 
     def apply(self, context: EffectContext) -> bool:
         player = context.player
@@ -308,9 +274,7 @@ class EnchantArmorEffect(InstantEffect):
 
         # Check enchantment limit (max +9)
         if armor.enchantment >= 9:
-            _add_message_safe(
-                context, "Your armor gleams briefly, but nothing happens."
-            )
+            _add_message_safe(context, "Your armor gleams briefly, but nothing happens.")
             return False
 
         armor.enchantment += 1
@@ -326,9 +290,7 @@ class LightEffect(InstantEffect):
     """Creates a magical light that expands the player's vision for a limited time."""
 
     def __init__(self, duration: int = 50, radius: int = 15) -> None:
-        super().__init__(
-            name="Light", description=f"Illuminates a wide area for {duration} turns"
-        )
+        super().__init__(name="Light", description=f"Illuminates a wide area for {duration} turns")
         self.duration = duration
         self.radius = radius
 
@@ -336,18 +298,14 @@ class LightEffect(InstantEffect):
         player = context.player
         player.apply_light_effect(self.duration, self.radius)
 
-        _add_message_safe(
-            context, "A brilliant light surrounds you, expanding your vision!"
-        )
+        _add_message_safe(context, "A brilliant light surrounds you, expanding your vision!")
         return True
 
 
 class StatusEffectApplication(InstantEffect):
     """Applies a status effect to the player."""
 
-    def __init__(
-        self, status_effect_class, name: str, description: str, **kwargs
-    ) -> None:
+    def __init__(self, status_effect_class, name: str, description: str, **kwargs) -> None:
         super().__init__(name=name, description=description)
         self.status_effect_class = status_effect_class
         self.kwargs = kwargs

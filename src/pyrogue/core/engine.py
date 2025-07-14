@@ -160,12 +160,8 @@ class Engine:
         pixel_height = getattr(event, "height", 600)
 
         # ピクセルサイズをフォントサイズで割って文字数を計算
-        self.screen_width = max(
-            CONFIG.display.MIN_SCREEN_WIDTH, pixel_width // self.font_width
-        )  # 最小幅を保証
-        self.screen_height = max(
-            CONFIG.display.MIN_SCREEN_HEIGHT, pixel_height // self.font_height
-        )  # 最小高さを保証
+        self.screen_width = max(CONFIG.display.MIN_SCREEN_WIDTH, pixel_width // self.font_width)  # 最小幅を保証
+        self.screen_height = max(CONFIG.display.MIN_SCREEN_HEIGHT, pixel_height // self.font_height)  # 最小高さを保証
 
         # 新しいサイズでコンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
@@ -244,9 +240,7 @@ class Engine:
         finally:
             self.cleanup()
 
-    def _handle_input(
-        self, event: tcod.event.KeyDown
-    ) -> tuple[bool, GameStates | None]:
+    def _handle_input(self, event: tcod.event.KeyDown) -> tuple[bool, GameStates | None]:
         """
         キー入力イベントを処理。
 
@@ -302,9 +296,7 @@ class Engine:
         self.game_screen.setup_new_game()
         self.state = GameStates.PLAYERS_TURN
 
-    def game_over(
-        self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown"
-    ) -> None:
+    def game_over(self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown") -> None:
         """
         ゲームオーバー処理。
 
@@ -326,9 +318,7 @@ class Engine:
         }
         self.save_manager.trigger_permadeath_on_death(game_data)
 
-        self.game_over_screen.set_game_over_data(
-            player_stats, final_floor, cause_of_death
-        )
+        self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER
 
     def victory(self, player_stats: dict, final_floor: int) -> None:

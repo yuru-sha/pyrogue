@@ -149,9 +149,7 @@ class MovementManager:
             戦闘処理が成功した場合True
         """
         # 戦闘処理をCombatManagerに委譲
-        combat_result = self.context.combat_manager.handle_player_attack(
-            monster, self.context
-        )
+        combat_result = self.context.combat_manager.handle_player_attack(monster, self.context)
 
         if combat_result:
             # 戦闘成功時の処理
@@ -228,21 +226,13 @@ class MovementManager:
 
         # プレイヤーの位置にあるアイテムを探す
         player = self.context.player
-        items_at_position = [
-            item
-            for item in floor_data.items
-            if item.x == player.x and item.y == player.y
-        ]
+        items_at_position = [item for item in floor_data.items if item.x == player.x and item.y == player.y]
 
         if not items_at_position:
             return
 
         # ゴールドのオートピックアップ処理
-        gold_items = [
-            item
-            for item in items_at_position
-            if hasattr(item, "item_type") and item.item_type == "GOLD"
-        ]
+        gold_items = [item for item in items_at_position if hasattr(item, "item_type") and item.item_type == "GOLD"]
         for gold_item in gold_items:
             amount = getattr(gold_item, "amount", 1)
             player.gold += amount
@@ -254,13 +244,9 @@ class MovementManager:
         if items_at_position:
             if len(items_at_position) == 1:
                 item = items_at_position[0]
-                self.context.add_message(
-                    f"You see a {item.name} here. Press 'g' to get it."
-                )
+                self.context.add_message(f"You see a {item.name} here. Press 'g' to get it.")
             else:
-                self.context.add_message(
-                    f"You see {len(items_at_position)} items here. Press 'g' to get them."
-                )
+                self.context.add_message(f"You see {len(items_at_position)} items here. Press 'g' to get them.")
 
     def _check_stairs(self) -> None:
         """階段の処理。"""
@@ -278,9 +264,7 @@ class MovementManager:
         if isinstance(tile, StairsUp):
             self.context.add_message("You see stairs leading up. Press '<' to go up.")
         elif isinstance(tile, StairsDown):
-            self.context.add_message(
-                "You see stairs leading down. Press '>' to go down."
-            )
+            self.context.add_message("You see stairs leading down. Press '>' to go down.")
 
     def _check_traps(self) -> None:
         """トラップの処理。"""
@@ -292,13 +276,9 @@ class MovementManager:
 
         # トラップの発動チェック
         for trap in floor_data.traps:
-            if (
-                trap.x == player.x
-                and trap.y == player.y
-                and not getattr(trap, "is_triggered", False)
-            ):
+            if trap.x == player.x and trap.y == player.y and not getattr(trap, "is_triggered", False):
                 # ウィザードモード時はトラップが発動しない（無敵モード）
-                if hasattr(self.context, 'game_logic') and self.context.game_logic.is_wizard_mode():
+                if hasattr(self.context, "game_logic") and self.context.game_logic.is_wizard_mode():
                     self.context.add_message(f"[Wizard] {trap.name} detected but not triggered!")
                 else:
                     trap.activate(self.context)

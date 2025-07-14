@@ -197,9 +197,7 @@ class TurnManager:
         # ダメージ処理
         self._process_hunger_damage(context, player)
 
-    def _handle_hunger_state_changes(
-        self, context: GameContext, old_hunger: int, new_hunger: int
-    ) -> None:
+    def _handle_hunger_state_changes(self, context: GameContext, old_hunger: int, new_hunger: int) -> None:
         """
         飢餓状態変化のメッセージを処理。
 
@@ -211,30 +209,15 @@ class TurnManager:
 
         """
         # 状態が変化した場合のメッセージ
-        if (
-            old_hunger >= HungerConstants.FULL_THRESHOLD
-            and new_hunger < HungerConstants.FULL_THRESHOLD
-        ):
+        if old_hunger >= HungerConstants.FULL_THRESHOLD and new_hunger < HungerConstants.FULL_THRESHOLD:
             context.add_message("You are no longer full.")
-        elif (
-            old_hunger >= HungerConstants.CONTENT_THRESHOLD
-            and new_hunger < HungerConstants.CONTENT_THRESHOLD
-        ):
+        elif old_hunger >= HungerConstants.CONTENT_THRESHOLD and new_hunger < HungerConstants.CONTENT_THRESHOLD:
             context.add_message("You are starting to feel peckish.")
-        elif (
-            old_hunger >= HungerConstants.HUNGRY_THRESHOLD
-            and new_hunger < HungerConstants.HUNGRY_THRESHOLD
-        ):
+        elif old_hunger >= HungerConstants.HUNGRY_THRESHOLD and new_hunger < HungerConstants.HUNGRY_THRESHOLD:
             context.add_message("You are getting hungry.")
-        elif (
-            old_hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD
-            and new_hunger < HungerConstants.VERY_HUNGRY_THRESHOLD
-        ):
+        elif old_hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD and new_hunger < HungerConstants.VERY_HUNGRY_THRESHOLD:
             context.add_message("You are very hungry and feel weakened!")
-        elif (
-            old_hunger >= HungerConstants.STARVING_THRESHOLD
-            and new_hunger < HungerConstants.STARVING_THRESHOLD
-        ):
+        elif old_hunger >= HungerConstants.STARVING_THRESHOLD and new_hunger < HungerConstants.STARVING_THRESHOLD:
             context.add_message("You are starving! Your strength is failing!")
 
     def _apply_full_bonus_effects(self, context: GameContext, player) -> None:
@@ -250,19 +233,13 @@ class TurnManager:
         import random
 
         # HP自然回復
-        if (
-            player.hp < player.max_hp
-            and random.random() < HungerConstants.FULL_HP_REGEN_CHANCE
-        ):
+        if player.hp < player.max_hp and random.random() < HungerConstants.FULL_HP_REGEN_CHANCE:
             player.hp = min(player.max_hp, player.hp + 1)
             context.add_message("You feel refreshed!")
 
         # MP回復ボーナス
         if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            if (
-                player.mp < player.max_mp
-                and random.random() < HungerConstants.FULL_MP_REGEN_BONUS
-            ):
+            if player.mp < player.max_mp and random.random() < HungerConstants.FULL_MP_REGEN_BONUS:
                 player.mp = min(player.max_mp, player.mp + 1)
                 context.add_message("Your magical energy flows strongly!")
 
@@ -282,7 +259,11 @@ class TurnManager:
             and self.turn_count % HungerConstants.STARVING_DAMAGE_INTERVAL == 0
         ):
             damage = HungerConstants.STARVING_DAMAGE
-            player.take_damage(damage, context)
+            # 飢餓ダメージは防御力を無視して適用
+            if context and hasattr(context, "game_logic") and context.game_logic.is_wizard_mode():
+                context.add_message(f"[Wizard] Hunger damage {damage} blocked!")
+            else:
+                player.hp = max(0, player.hp - damage)
             context.add_message(f"Starvation deals {damage} damage!")
 
             if player.hp <= 0:
@@ -302,7 +283,11 @@ class TurnManager:
             and self.turn_count % HungerConstants.VERY_HUNGRY_DAMAGE_INTERVAL == 0
         ):
             damage = 1
-            player.take_damage(damage, context)
+            # 飢餓ダメージは防御力を無視して適用
+            if context and hasattr(context, "game_logic") and context.game_logic.is_wizard_mode():
+                context.add_message(f"[Wizard] Hunger damage {damage} blocked!")
+            else:
+                player.hp = max(0, player.hp - damage)
             context.add_message(f"Extreme hunger weakens you for {damage} damage!")
 
             if player.hp <= 0:

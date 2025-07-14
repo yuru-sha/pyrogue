@@ -73,15 +73,11 @@ class AmuletOfYendor(Item):
                 b1f_data = dungeon_manager.get_floor(1)
                 if b1f_data:
                     stairs_pos = self._place_escape_stairs_on_floor(b1f_data)
-                    context.add_message(
-                        "A magical staircase to the surface appears on the first floor!"
-                    )
+                    context.add_message("A magical staircase to the surface appears on the first floor!")
 
                     # 現在B1Fにいる場合は、階段の位置を知らせる
                     if dungeon_manager.current_floor == 1 and stairs_pos:
-                        context.add_message(
-                            f"The escape stairs appear at ({stairs_pos[0]}, {stairs_pos[1]})"
-                        )
+                        context.add_message(f"The escape stairs appear at ({stairs_pos[0]}, {stairs_pos[1]})")
 
         except Exception:
             # エラーが発生しても、アミュレット効果自体は成功扱い

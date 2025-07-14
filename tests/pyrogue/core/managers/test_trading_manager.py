@@ -414,9 +414,7 @@ class TestTradingManager:
         """TradeItemの作成テスト。"""
         weapon = Weapon(x=0, y=0, name="Test Sword", attack_bonus=5)
 
-        trade_item = TradeItem(
-            item=weapon, price=150, quantity=1, trade_type=TradeType.BUY
-        )
+        trade_item = TradeItem(item=weapon, price=150, quantity=1, trade_type=TradeType.BUY)
 
         assert trade_item.item == weapon
         assert trade_item.price == 150

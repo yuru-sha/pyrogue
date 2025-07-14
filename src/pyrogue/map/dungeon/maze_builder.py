@@ -40,9 +40,7 @@ class MazeBuilder:
         self.complexity = complexity
         self.rooms: list[Room] = []  # 迷路には部屋は存在しないが、互換性のため
 
-        game_logger.info(
-            f"MazeBuilder initialized: {width}x{height}, complexity={complexity}"
-        )
+        game_logger.info(f"MazeBuilder initialized: {width}x{height}, complexity={complexity}")
 
     def build_dungeon(self, tiles: np.ndarray) -> list[Room]:
         """
@@ -160,10 +158,7 @@ class MazeBuilder:
                                 floor_neighbors += 1
 
                         # デッドエンド（隣接する床が1つだけ）を除去
-                        if (
-                            floor_neighbors == 1
-                            and random.random() < dead_end_removal_rate
-                        ):
+                        if floor_neighbors == 1 and random.random() < dead_end_removal_rate:
                             tiles[y, x] = Wall()
                             changed = True
 
@@ -196,28 +191,17 @@ class MazeBuilder:
             for x in range(self.width):
                 if isinstance(tiles[y, x], Floor) and (x, y) not in largest_component:
                     # 再度連結性をチェック
-                    if not self._is_connected_to_largest(
-                        tiles, x, y, largest_component
-                    ):
+                    if not self._is_connected_to_largest(tiles, x, y, largest_component):
                         tiles[y, x] = Wall()
 
-    def _flood_fill(
-        self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int
-    ) -> list[tuple[int, int]]:
+    def _flood_fill(self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int) -> list[tuple[int, int]]:
         """フラッドフィルで連結成分を取得。"""
         component = []
         stack = [(start_x, start_y)]
 
         while stack:
             x, y = stack.pop()
-            if (
-                x < 0
-                or x >= self.width
-                or y < 0
-                or y >= self.height
-                or visited[y, x]
-                or isinstance(tiles[y, x], Wall)
-            ):
+            if x < 0 or x >= self.width or y < 0 or y >= self.height or visited[y, x] or isinstance(tiles[y, x], Wall):
                 continue
 
             visited[y, x] = True
@@ -272,9 +256,7 @@ class MazeBuilder:
         closest_point = None
 
         for large_point in largest_component:
-            distance = abs(comp_point[0] - large_point[0]) + abs(
-                comp_point[1] - large_point[1]
-            )
+            distance = abs(comp_point[0] - large_point[0]) + abs(comp_point[1] - large_point[1])
             if distance < min_distance:
                 min_distance = distance
                 closest_point = large_point
@@ -282,9 +264,7 @@ class MazeBuilder:
         if closest_point and min_distance <= 4:  # 距離が4以下なら接続を試行
             self._create_simple_path(tiles, comp_point, closest_point)
 
-    def _create_simple_path(
-        self, tiles: np.ndarray, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
+    def _create_simple_path(self, tiles: np.ndarray, start: tuple[int, int], end: tuple[int, int]) -> None:
         """2点間に簡単なパスを作成。"""
         x1, y1 = start
         x2, y2 = end

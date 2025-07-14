@@ -172,15 +172,15 @@ class InputHandler:
         elif key == ord("t") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+T で階段にテレポート
             self.game_screen.game_logic.wizard_teleport_to_stairs()
-            
+
         elif key == ord("u") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+U でレベルアップ
             self.game_screen.game_logic.wizard_level_up()
-            
+
         elif key == ord("h") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+H で完全回復
             self.game_screen.game_logic.wizard_heal_full()
-            
+
         elif key == ord("r") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+R で全マップ探索
             self.game_screen.game_logic.wizard_reveal_all()
@@ -213,15 +213,11 @@ class InputHandler:
         if key == tcod.event.KeySym.LEFT or key == ord("h"):
             self.targeting_x = max(0, self.targeting_x - 1)
         elif key == tcod.event.KeySym.RIGHT or key == ord("l"):
-            self.targeting_x = min(
-                self.game_screen.dungeon_width - 1, self.targeting_x + 1
-            )
+            self.targeting_x = min(self.game_screen.dungeon_width - 1, self.targeting_x + 1)
         elif key == tcod.event.KeySym.UP or key == ord("k"):
             self.targeting_y = max(0, self.targeting_y - 1)
         elif key == tcod.event.KeySym.DOWN or key == ord("j"):
-            self.targeting_y = min(
-                self.game_screen.dungeon_height - 1, self.targeting_y + 1
-            )
+            self.targeting_y = min(self.game_screen.dungeon_height - 1, self.targeting_y + 1)
 
         # ターゲット確定
         elif key == tcod.event.KeySym.RETURN:
@@ -270,7 +266,7 @@ class InputHandler:
 
         found_secret = False
         found_trap = False
-        
+
         # プレイヤーの周囲8方向をチェック
         for dy in [-1, 0, 1]:
             for dx in [-1, 0, 1]:
@@ -335,9 +331,7 @@ class InputHandler:
         """
         self.targeting_mode = False
         # ターゲット座標をゲームロジックに通知
-        self.game_screen.game_logic.handle_target_selection(
-            self.targeting_x, self.targeting_y
-        )
+        self.game_screen.game_logic.handle_target_selection(self.targeting_x, self.targeting_y)
 
     def _cancel_targeting(self) -> None:
         """
@@ -367,9 +361,7 @@ class InputHandler:
         from pyrogue.constants import FeatureConstants
 
         if not FeatureConstants.ENABLE_NPC_SYSTEM:
-            self.game_screen.game_logic.add_message(
-                "NPCs are not available in this version."
-            )
+            self.game_screen.game_logic.add_message("NPCs are not available in this version.")
             return
 
         player = self.game_screen.player

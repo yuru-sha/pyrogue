@@ -35,9 +35,7 @@ class TradingScreen(Screen):
 
     """
 
-    def __init__(
-        self, engine: Engine, trading_manager: TradingManager, npc_id: str
-    ) -> None:
+    def __init__(self, engine: Engine, trading_manager: TradingManager, npc_id: str) -> None:
         """
         TradingScreenの初期化。
 
@@ -121,9 +119,7 @@ class TradingScreen(Screen):
         if key_sym == tcod.event.K_UP:
             self.selected_item = max(0, self.selected_item - 1)
         elif key_sym == tcod.event.K_DOWN:
-            self.selected_item = min(
-                len(self.current_items) - 1, self.selected_item + 1
-            )
+            self.selected_item = min(len(self.current_items) - 1, self.selected_item + 1)
 
         # 左右キーで表示モード切り替え
         elif key_sym == tcod.event.K_LEFT:
@@ -192,9 +188,7 @@ class TradingScreen(Screen):
 
         # タイトルを表示
         title = f"Trading with {npc.name}"
-        console.print(
-            console.width // 2, 2, title, fg=tcod.white, alignment=tcod.CENTER
-        )
+        console.print(console.width // 2, 2, title, fg=tcod.white, alignment=tcod.CENTER)
 
         # プレイヤーの金貨を表示
         player = self.engine.player
@@ -297,9 +291,7 @@ class TradingScreen(Screen):
                 item_text = f"{prefix}{i + 1}. {item_name} - {price}g"
 
             # アイテムを描画
-            console.print(
-                console.width // 2, y, item_text, fg=fg_color, alignment=tcod.CENTER
-            )
+            console.print(console.width // 2, y, item_text, fg=fg_color, alignment=tcod.CENTER)
 
             # 画面に収まる範囲でのみ表示
             if y > console.height - 8:

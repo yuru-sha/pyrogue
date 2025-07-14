@@ -140,10 +140,7 @@ class NPC(Actor):
             会話可能な場合はTrue
 
         """
-        return (
-            self.disposition in [NPCDisposition.FRIENDLY, NPCDisposition.NEUTRAL]
-            and self.dialogue_id is not None
-        )
+        return self.disposition in [NPCDisposition.FRIENDLY, NPCDisposition.NEUTRAL] and self.dialogue_id is not None
 
     def has_quest(self, quest_id: str) -> bool:
         """

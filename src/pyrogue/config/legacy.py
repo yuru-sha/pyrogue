@@ -22,17 +22,13 @@ class DisplayConfig:
     """表示およびレンダリングの設定。"""
 
     SCREEN_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    SCREEN_HEIGHT: int = (
-        GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
-    )
+    SCREEN_HEIGHT: int = GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
     MAP_WIDTH: int = GameConstants.DUNGEON_WIDTH
     MAP_HEIGHT: int = GameConstants.MAP_DISPLAY_HEIGHT
     FONT_WIDTH: int = 10
     FONT_HEIGHT: int = 10
     MIN_SCREEN_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    MIN_SCREEN_HEIGHT: int = (
-        GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
-    )
+    MIN_SCREEN_HEIGHT: int = GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
 
 
 @dataclass

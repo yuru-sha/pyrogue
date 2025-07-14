@@ -44,9 +44,7 @@ class TestNPCSpawner:
         spawner = NPCSpawner(floor=1)
 
         # 特別な部屋とNPCタイプの対応
-        assert (
-            spawner._get_npc_type_for_special_room("treasure_room") == NPCType.MERCHANT
-        )
+        assert spawner._get_npc_type_for_special_room("treasure_room") == NPCType.MERCHANT
         assert spawner._get_npc_type_for_special_room("shrine") == NPCType.PRIEST
         assert spawner._get_npc_type_for_special_room("laboratory") == NPCType.MAGE
         assert spawner._get_npc_type_for_special_room("library") == NPCType.MAGE

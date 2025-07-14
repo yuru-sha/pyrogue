@@ -38,9 +38,7 @@ class IsolatedRoomGroup:
         self.is_discovered = False
         self.group_id = random.randint(1000, 9999)
 
-        game_logger.debug(
-            f"IsolatedRoomGroup created: {len(rooms)} rooms, {len(access_points)} access points"
-        )
+        game_logger.debug(f"IsolatedRoomGroup created: {len(rooms)} rooms, {len(access_points)} access points")
 
 
 class IsolatedRoomBuilder:
@@ -67,9 +65,7 @@ class IsolatedRoomBuilder:
         self.isolated_groups: list[IsolatedRoomGroup] = []
         self.used_areas: set[tuple[int, int]] = set()
 
-        game_logger.info(
-            f"IsolatedRoomBuilder initialized: {width}x{height}, isolation_level={isolation_level}"
-        )
+        game_logger.info(f"IsolatedRoomBuilder initialized: {width}x{height}, isolation_level={isolation_level}")
 
     def generate_isolated_rooms(
         self, tiles: np.ndarray, existing_rooms: list[Room], max_groups: int = 3
@@ -113,9 +109,7 @@ class IsolatedRoomBuilder:
                     if 0 <= x < self.width and 0 <= y < self.height:
                         self.used_areas.add((x, y))
 
-    def _generate_single_group(
-        self, tiles: np.ndarray, group_id: int
-    ) -> IsolatedRoomGroup | None:
+    def _generate_single_group(self, tiles: np.ndarray, group_id: int) -> IsolatedRoomGroup | None:
         """
         単一の孤立部屋群を生成。
 
@@ -189,9 +183,7 @@ class IsolatedRoomBuilder:
                     return False
         return True
 
-    def _generate_rooms_in_area(
-        self, area_x: int, area_y: int, area_width: int, area_height: int
-    ) -> list[Room]:
+    def _generate_rooms_in_area(self, area_x: int, area_y: int, area_width: int, area_height: int) -> list[Room]:
         """孤立エリア内に部屋を生成。"""
         rooms = []
         room_count = random.randint(2, 4)
@@ -217,9 +209,7 @@ class IsolatedRoomBuilder:
 
         return rooms
 
-    def _room_overlaps_with_existing(
-        self, new_room: Room, existing_rooms: list[Room]
-    ) -> bool:
+    def _room_overlaps_with_existing(self, new_room: Room, existing_rooms: list[Room]) -> bool:
         """新しい部屋が既存の部屋と重複するかチェック。"""
         for room in existing_rooms:
             if (
@@ -258,9 +248,7 @@ class IsolatedRoomBuilder:
 
             for connected_room in connected_rooms:
                 for unconnected_room in unconnected_rooms:
-                    distance = self._calculate_room_distance(
-                        connected_room, unconnected_room
-                    )
+                    distance = self._calculate_room_distance(connected_room, unconnected_room)
                     if distance < min_distance:
                         min_distance = distance
                         closest_pair = (connected_room, unconnected_room)
@@ -282,9 +270,7 @@ class IsolatedRoomBuilder:
         center2 = room2.center()
         return ((center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2) ** 0.5
 
-    def _create_corridor_between_rooms(
-        self, room1: Room, room2: Room, tiles: np.ndarray
-    ) -> None:
+    def _create_corridor_between_rooms(self, room1: Room, room2: Room, tiles: np.ndarray) -> None:
         """部屋間に通路を作成。"""
         start = room1.center()
         end = room2.center()
@@ -338,30 +324,22 @@ class IsolatedRoomBuilder:
 
         return access_points
 
-    def _connect_with_secret_passages(
-        self, tiles: np.ndarray, existing_rooms: list[Room]
-    ) -> None:
+    def _connect_with_secret_passages(self, tiles: np.ndarray, existing_rooms: list[Room]) -> None:
         """隠し通路でメインダンジョンに接続。"""
         for group in self.isolated_groups:
             # 孤立度に基づいて隠し通路の数を決定
-            secret_passages = max(
-                1, int(len(group.access_points) * (1.0 - self.isolation_level))
-            )
+            secret_passages = max(1, int(len(group.access_points) * (1.0 - self.isolation_level)))
 
             for i in range(min(secret_passages, len(group.access_points))):
                 access_point = group.access_points[i]
 
                 # 最も近いメインダンジョンの部屋を見つける
-                nearest_room = self._find_nearest_main_room(
-                    access_point, existing_rooms
-                )
+                nearest_room = self._find_nearest_main_room(access_point, existing_rooms)
                 if nearest_room:
                     # 隠し通路を作成
                     self._create_secret_passage(access_point, nearest_room, tiles)
 
-    def _find_nearest_main_room(
-        self, access_point: tuple[int, int], existing_rooms: list[Room]
-    ) -> Room | None:
+    def _find_nearest_main_room(self, access_point: tuple[int, int], existing_rooms: list[Room]) -> Room | None:
         """最も近いメインダンジョンの部屋を見つける。"""
         if not existing_rooms:
             return None
@@ -371,18 +349,14 @@ class IsolatedRoomBuilder:
 
         for room in existing_rooms:
             center = room.center()
-            distance = (
-                (access_point[0] - center[0]) ** 2 + (access_point[1] - center[1]) ** 2
-            ) ** 0.5
+            distance = ((access_point[0] - center[0]) ** 2 + (access_point[1] - center[1]) ** 2) ** 0.5
             if distance < min_distance:
                 min_distance = distance
                 nearest_room = room
 
         return nearest_room
 
-    def _create_secret_passage(
-        self, start: tuple[int, int], target_room: Room, tiles: np.ndarray
-    ) -> None:
+    def _create_secret_passage(self, start: tuple[int, int], target_room: Room, tiles: np.ndarray) -> None:
         """隠し通路を作成。"""
         # 目標部屋の境界上のランダムな点を選択
         target_walls = []
@@ -417,9 +391,7 @@ class IsolatedRoomBuilder:
 
         game_logger.debug(f"Created secret passage from {start} to {target}")
 
-    def _calculate_secret_path(
-        self, start_x: int, start_y: int, end_x: int, end_y: int
-    ) -> list[tuple[int, int]]:
+    def _calculate_secret_path(self, start_x: int, start_y: int, end_x: int, end_y: int) -> list[tuple[int, int]]:
         """隠し通路のパスを計算。"""
         path = []
         current_x, current_y = start_x, start_y
@@ -472,9 +444,7 @@ class IsolatedRoomBuilder:
     def get_statistics(self) -> dict:
         """生成統計を取得。"""
         total_rooms = sum(len(group.rooms) for group in self.isolated_groups)
-        total_access_points = sum(
-            len(group.access_points) for group in self.isolated_groups
-        )
+        total_access_points = sum(len(group.access_points) for group in self.isolated_groups)
 
         return {
             "builder_type": "IsolatedRooms",

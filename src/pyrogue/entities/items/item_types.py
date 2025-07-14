@@ -64,24 +64,24 @@ class FoodType(ItemType):
 
 # Weapon definitions - 階層に応じた段階的出現
 WEAPONS = [
-    WeaponType(")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),      # 序盤専用・初期装備
-    WeaponType(")", "Mace", 1, 10, 100, 8, 2, (-1, 3)),       # 序盤メイン武器
-    WeaponType(")", "Long Sword", 5, 20, 80, 15, 4, (-1, 4)), # 中盤メイン武器
-    WeaponType(")", "Short Bow", 8, 22, 70, 15, 3, (0, 3)),   # 中盤～終盤
-    WeaponType(")", "Battle Axe", 12, 26, 60, 25, 6, (-2, 5)),# 終盤武器
-    WeaponType(")", "Two-Handed Sword", 18, 26, 40, 40, 8, (-3, 6)), # 最終武器
+    WeaponType(")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),  # 序盤専用・初期装備
+    WeaponType(")", "Mace", 1, 10, 100, 8, 2, (-1, 3)),  # 序盤メイン武器
+    WeaponType(")", "Long Sword", 5, 20, 80, 15, 4, (-1, 4)),  # 中盤メイン武器
+    WeaponType(")", "Short Bow", 8, 22, 70, 15, 3, (0, 3)),  # 中盤～終盤
+    WeaponType(")", "Battle Axe", 12, 26, 60, 25, 6, (-2, 5)),  # 終盤武器
+    WeaponType(")", "Two-Handed Sword", 18, 26, 40, 40, 8, (-3, 6)),  # 最終武器
 ]
 
 # Armor definitions - 階層に応じた段階的出現
 ARMORS = [
-    ArmorType("[", "Leather Armor", 1, 8, 100, 20, 2, (0, 2)),     # 序盤専用・初期装備
-    ArmorType("[", "Studded Leather", 3, 12, 90, 25, 3, (0, 3)),   # 序盤～中盤移行
-    ArmorType("[", "Ring Mail", 5, 15, 80, 30, 4, (-1, 3)),        # 中盤序盤
-    ArmorType("[", "Scale Mail", 8, 18, 70, 40, 5, (-2, 4)),       # 中盤メイン
-    ArmorType("[", "Chain Mail", 10, 22, 60, 50, 6, (-2, 4)),      # 中盤～終盤
-    ArmorType("[", "Splint Mail", 15, 26, 50, 60, 7, (-3, 5)),     # 終盤防具
-    ArmorType("[", "Banded Mail", 18, 26, 40, 70, 8, (-3, 5)),     # 高級防具
-    ArmorType("[", "Plate Mail", 20, 26, 30, 80, 9, (-4, 6)),      # 最高級防具
+    ArmorType("[", "Leather Armor", 1, 8, 100, 20, 2, (0, 2)),  # 序盤専用・初期装備
+    ArmorType("[", "Studded Leather", 3, 12, 90, 25, 3, (0, 3)),  # 序盤～中盤移行
+    ArmorType("[", "Ring Mail", 5, 15, 80, 30, 4, (-1, 3)),  # 中盤序盤
+    ArmorType("[", "Scale Mail", 8, 18, 70, 40, 5, (-2, 4)),  # 中盤メイン
+    ArmorType("[", "Chain Mail", 10, 22, 60, 50, 6, (-2, 4)),  # 中盤～終盤
+    ArmorType("[", "Splint Mail", 15, 26, 50, 60, 7, (-3, 5)),  # 終盤防具
+    ArmorType("[", "Banded Mail", 18, 26, 40, 70, 8, (-3, 5)),  # 高級防具
+    ArmorType("[", "Plate Mail", 20, 26, 30, 80, 9, (-4, 6)),  # 最高級防具
 ]
 
 # Ring definitions
@@ -108,13 +108,9 @@ SCROLLS = [
 # Potion definitions
 POTIONS = [
     PotionType("!", "Potion of Healing", 1, 26, 100, 50, "healing", (10, 15)),
-    PotionType(
-        "!", "Potion of Extra Healing", 2, 26, 80, 100, "extra_healing", (20, 30)
-    ),
+    PotionType("!", "Potion of Extra Healing", 2, 26, 80, 100, "extra_healing", (20, 30)),
     PotionType("!", "Potion of Strength", 2, 26, 70, 80, "strength", (1, 2)),
-    PotionType(
-        "!", "Potion of Restore Strength", 2, 26, 70, 80, "restore_strength", (0, 0)
-    ),
+    PotionType("!", "Potion of Restore Strength", 2, 26, 70, 80, "restore_strength", (0, 0)),
     PotionType("!", "Potion of Haste Self", 3, 26, 60, 100, "haste_self", (5, 10)),
     PotionType("!", "Potion of See Invisible", 3, 26, 50, 100, "see_invisible", (0, 0)),
     PotionType("!", "Potion of Poison", 1, 26, 60, 30, "poison", (5, 10)),
@@ -163,9 +159,7 @@ def get_treasure_room_items(floor: int) -> list[ItemType]:
     # Valuable items (3-5 items)
     item_count = random.randint(3, 5)
     valuable_items = (
-        get_available_items(floor, WEAPONS)
-        + get_available_items(floor, ARMORS)
-        + get_available_items(floor, RINGS)
+        get_available_items(floor, WEAPONS) + get_available_items(floor, ARMORS) + get_available_items(floor, RINGS)
     )
     items.extend(random.choices(valuable_items, k=item_count))
 

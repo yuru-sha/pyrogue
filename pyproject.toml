@@ -38,8 +38,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
-line-length = 88
-exclude = ["docs/"]
+line-length = 120
+exclude = []
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "C90", "N", "D", "S", "ANN", "ASYNC", "B", "BLE", "ERA", "EXE", "FA", "FLY", "FURB", "G", "ICN", "LOG", "PIE", "PL", "PT", "PYI", "Q", "RET", "RSE", "RUF", "SIM", "SLF", "SLOT", "T10", "T20", "TCH", "TID", "TRY", "YTT"]
@@ -99,6 +99,11 @@ ignore_missing_imports = true
 # namespace_packages = true
 # explicit_package_bases = true
 # check_untyped_defs = true
+
+# 除外するディレクトリ
+exclude = [
+    "tests/",
+]
 
 [[tool.mypy.overrides]]
 module = [

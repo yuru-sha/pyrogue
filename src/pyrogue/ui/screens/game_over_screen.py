@@ -32,9 +32,7 @@ class GameOverScreen:
         """コンソールの更新"""
         self.console = console
 
-    def set_game_over_data(
-        self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown"
-    ) -> None:
+    def set_game_over_data(self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown") -> None:
         """ゲームオーバー時のデータを設定"""
         self.player_stats = player_stats.copy()
         self.final_floor = final_floor

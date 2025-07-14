@@ -48,8 +48,7 @@ class MonsterSpawner:
             available_positions = [
                 (x, y)
                 for x, y in room.inner
-                if isinstance(dungeon_tiles[y, x], Floor)
-                and (x, y) not in self.occupied_positions
+                if isinstance(dungeon_tiles[y, x], Floor) and (x, y) not in self.occupied_positions
             ]
 
             if not available_positions:
@@ -95,9 +94,7 @@ class MonsterSpawner:
 
         return None
 
-    def update_monsters(
-        self, player_x: int, player_y: int, dungeon_tiles: np.ndarray, fov_map: any
-    ) -> None:
+    def update_monsters(self, player_x: int, player_y: int, dungeon_tiles: np.ndarray, fov_map: any) -> None:
         """
         全モンスターの更新処理
 

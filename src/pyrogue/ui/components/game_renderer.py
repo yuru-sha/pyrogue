@@ -82,7 +82,7 @@ class GameRenderer:
                 tile = floor_data.tiles[y, x]
                 visible = game_screen.fov_manager.visible[y, x]
                 explored = game_screen.game_logic.get_explored_tiles()[y, x]
-                
+
                 # ウィザードモード時は全マップを表示
                 wizard_mode = game_screen.game_logic.is_wizard_mode()
                 should_render = visible or explored or wizard_mode
@@ -96,13 +96,11 @@ class GameRenderer:
                         self._render_items_at(console, x, y, floor_data, map_offset_y)
 
                         # モンスターの描画
-                        self._render_monsters_at(
-                            console, x, y, floor_data, map_offset_y
-                        )
+                        self._render_monsters_at(console, x, y, floor_data, map_offset_y)
 
                         # NPCの描画
                         self._render_npcs_at(console, x, y, floor_data, map_offset_y)
-                        
+
                         # ウィザードモード時: トラップの描画
                         if wizard_mode:
                             self._render_traps_at(console, x, y, floor_data, map_offset_y)
@@ -113,7 +111,13 @@ class GameRenderer:
             console.print(player.x, player.y + map_offset_y, "@", fg=(255, 255, 255))
 
     def _render_tile(
-        self, console: tcod.Console, x: int, y: int, tile: object, visible: bool, wizard_mode: bool = False
+        self,
+        console: tcod.Console,
+        x: int,
+        y: int,
+        tile: object,
+        visible: bool,
+        wizard_mode: bool = False,
     ) -> None:
         """
         タイルの描画処理。
@@ -142,7 +146,7 @@ class GameRenderer:
             color = (255, 255, 255) if visible else (128, 128, 128)
         elif hasattr(tile, "char"):  # Door, SecretDoor等のタイル
             from pyrogue.map.tile import SecretDoor
-            
+
             if isinstance(tile, SecretDoor) and wizard_mode and tile.door_state == "secret":
                 # ウィザードモード時の隠しドア表示（紫色で強調）
                 char = "S"  # Secret doorの頭文字
@@ -155,10 +159,8 @@ class GameRenderer:
             color = (255, 0, 255) if visible else (128, 0, 128)
 
         console.print(x, y, char, fg=color)
-        
-    def _render_traps_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+
+    def _render_traps_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         ウィザードモード時の指定座標のトラップを描画。
 
@@ -171,7 +173,7 @@ class GameRenderer:
             map_offset_y: マップのYオフセット
 
         """
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.x == x and trap.y == y:
                     # トラップタイプに応じた色分け
@@ -187,17 +189,15 @@ class GameRenderer:
                     else:
                         color = (255, 255, 0)  # 黄色（汎用）
                         char = "^"
-                    
+
                     # 隠しトラップは薄い色で表示
                     if trap.is_hidden:
                         color = tuple(c // 2 for c in color)  # 色を半分に
-                        
+
                     console.print(x, y + map_offset_y, char, fg=color)
                     break  # 1つの座標に複数トラップがある場合は最初のもののみ表示
 
-    def _render_items_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+    def _render_items_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         指定座標のアイテムを描画。
 
@@ -210,18 +210,12 @@ class GameRenderer:
             map_offset_y: マップのYオフセット
 
         """
-        items_at_pos = [
-            item
-            for item in floor_data.item_spawner.items
-            if item.x == x and item.y == y
-        ]
+        items_at_pos = [item for item in floor_data.item_spawner.items if item.x == x and item.y == y]
         if items_at_pos:
             item = items_at_pos[0]  # 最初のアイテムを描画
             console.print(x, y + map_offset_y, item.char, fg=item.color)
 
-    def _render_monsters_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+    def _render_monsters_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         指定座標のモンスターを描画。
 
@@ -329,9 +323,7 @@ class GameRenderer:
         for i, message in enumerate(recent_messages):
             console.print(0, message_y_start + i, message, fg=(255, 255, 255))
 
-    def _render_npcs_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+    def _render_npcs_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         指定した位置にいるNPCを描画。
 

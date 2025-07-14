@@ -140,9 +140,7 @@ class PoisonEffect(StatusEffect):
         context.player.hp = max(0, context.player.hp - self.damage)
 
         # メッセージを表示
-        context.add_message(
-            f"毒によって{self.damage}ダメージを受けた！"
-        )
+        context.add_message(f"毒によって{self.damage}ダメージを受けた！")
 
         # 継続ターン数を更新
         return self.update_duration()
@@ -166,9 +164,7 @@ class ParalysisEffect(StatusEffect):
             duration: 継続ターン数
 
         """
-        super().__init__(
-            name="Paralysis", description="麻痺状態：行動不能", duration=duration
-        )
+        super().__init__(name="Paralysis", description="麻痺状態：行動不能", duration=duration)
 
     def apply_per_turn(self, context: EffectContext) -> bool:
         """
@@ -252,9 +248,7 @@ class HallucinationEffect(StatusEffect):
             duration: 継続ターン数
 
         """
-        super().__init__(
-            name="Hallucination", description="幻覚状態：視覚混乱", duration=duration
-        )
+        super().__init__(name="Hallucination", description="幻覚状態：視覚混乱", duration=duration)
 
     def apply_per_turn(self, context: EffectContext) -> bool:
         """

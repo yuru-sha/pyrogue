@@ -59,12 +59,7 @@ class InventoryScreen(Screen):
             if (
                 (isinstance(item, Weapon) and equipped["weapon"] == item)
                 or (isinstance(item, Armor) and equipped["armor"] == item)
-                or (
-                    isinstance(item, Ring)
-                    and (
-                        equipped["ring_left"] == item or equipped["ring_right"] == item
-                    )
-                )
+                or (isinstance(item, Ring) and (equipped["ring_left"] == item or equipped["ring_right"] == item))
             ):
                 item_text += " (equipped)"
                 fg = tcod.green if i != self.selected_index else tcod.yellow
@@ -79,9 +74,7 @@ class InventoryScreen(Screen):
             5,
             f"Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}",
         )
-        console.print(
-            42, 6, f"Armor: {equipped['armor'].name if equipped['armor'] else 'None'}"
-        )
+        console.print(42, 6, f"Armor: {equipped['armor'].name if equipped['armor'] else 'None'}")
         console.print(
             42,
             7,
@@ -149,25 +142,17 @@ class InventoryScreen(Screen):
 
         # 選択中のアイテムに対する操作
         if len(self.game_screen.game_logic.inventory.items) > 0:
-            selected_item = self.game_screen.game_logic.inventory.items[
-                self.selected_index
-            ]
+            selected_item = self.game_screen.game_logic.inventory.items[self.selected_index]
 
             # e: 装備
             if event.sym == tcod.event.KeySym.E:
                 if isinstance(selected_item, (Weapon, Armor, Ring)):
                     if self.game_screen.game_logic.inventory.equip(selected_item):
-                        self.game_screen.game_logic.add_message(
-                            f"You equip the {selected_item.name}."
-                        )
+                        self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
                     else:
-                        self.game_screen.game_logic.add_message(
-                            f"You cannot equip the {selected_item.name}."
-                        )
+                        self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
                 else:
-                    self.game_screen.game_logic.add_message(
-                        f"You cannot equip the {selected_item.name}."
-                    )
+                    self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
                 return
 
             # u: 使用
@@ -175,9 +160,7 @@ class InventoryScreen(Screen):
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # アイテムを使用
                     player = self.game_screen.game_logic.player
-                    success = player.use_item(
-                        selected_item, self.game_screen.game_logic
-                    )
+                    success = player.use_item(selected_item, self.game_screen.game_logic)
 
                     if success:
                         # 使用成功時に識別
@@ -192,12 +175,8 @@ class InventoryScreen(Screen):
                             self.game_screen.game_logic.add_message(msg)
 
                         # 選択インデックスを調整
-                        if self.selected_index >= len(
-                            self.game_screen.game_logic.inventory.items
-                        ):
-                            self.selected_index = max(
-                                0, len(self.game_screen.game_logic.inventory.items) - 1
-                            )
+                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
+                            self.selected_index = max(0, len(self.game_screen.game_logic.inventory.items) - 1)
                     else:
                         self.game_screen.game_logic.add_message(
                             f"You cannot use the {selected_item.get_display_name(player.identification)}."
@@ -205,9 +184,7 @@ class InventoryScreen(Screen):
                 else:
                     player = self.game_screen.game_logic.player
                     display_name = selected_item.get_display_name(player.identification)
-                    self.game_screen.game_logic.add_message(
-                        f"You cannot use the {display_name}."
-                    )
+                    self.game_screen.game_logic.add_message(f"You cannot use the {display_name}.")
                 return
 
             # r: 装備解除
@@ -217,16 +194,10 @@ class InventoryScreen(Screen):
                     equipped = self.game_screen.game_logic.inventory.equipped
                     unequipped = False
 
-                    if (
-                        isinstance(selected_item, Weapon)
-                        and equipped["weapon"] == selected_item
-                    ):
+                    if isinstance(selected_item, Weapon) and equipped["weapon"] == selected_item:
                         self.game_screen.game_logic.inventory.unequip("weapon")
                         unequipped = True
-                    elif (
-                        isinstance(selected_item, Armor)
-                        and equipped["armor"] == selected_item
-                    ):
+                    elif isinstance(selected_item, Armor) and equipped["armor"] == selected_item:
                         self.game_screen.game_logic.inventory.unequip("armor")
                         unequipped = True
                     elif isinstance(selected_item, Ring):
@@ -238,17 +209,11 @@ class InventoryScreen(Screen):
                             unequipped = True
 
                     if unequipped:
-                        self.game_screen.game_logic.add_message(
-                            f"You unequip the {selected_item.name}."
-                        )
+                        self.game_screen.game_logic.add_message(f"You unequip the {selected_item.name}.")
                     else:
-                        self.game_screen.game_logic.add_message(
-                            f"The {selected_item.name} is not equipped."
-                        )
+                        self.game_screen.game_logic.add_message(f"The {selected_item.name} is not equipped.")
                 else:
-                    self.game_screen.game_logic.add_message(
-                        f"You cannot unequip the {selected_item.name}."
-                    )
+                    self.game_screen.game_logic.add_message(f"You cannot unequip the {selected_item.name}.")
                 return
 
             # d: ドロップ
@@ -265,9 +230,7 @@ class InventoryScreen(Screen):
                 else:
                     # 装備中のアイテムの場合は先に装備解除メッセージを表示
                     if self.game_screen.game_logic.inventory.is_equipped(selected_item):
-                        self.game_screen.game_logic.add_message(
-                            f"You first unequip the {selected_item.name}."
-                        )
+                        self.game_screen.game_logic.add_message(f"You first unequip the {selected_item.name}.")
 
                     # ドロップ処理を実行
                     if self.game_screen.game_logic.drop_item_at(
@@ -279,16 +242,10 @@ class InventoryScreen(Screen):
                         self._handle_drop_item(selected_item)
 
                         # 選択インデックスを調整
-                        if self.selected_index >= len(
-                            self.game_screen.game_logic.inventory.items
-                        ):
-                            self.selected_index = max(
-                                0, len(self.game_screen.game_logic.inventory.items) - 1
-                            )
+                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
+                            self.selected_index = max(0, len(self.game_screen.game_logic.inventory.items) - 1)
                     else:
-                        self.game_screen.game_logic.add_message(
-                            "You cannot drop items here."
-                        )
+                        self.game_screen.game_logic.add_message("You cannot drop items here.")
                 return
 
     def _handle_drop_item(self, item: Item) -> None:
@@ -303,11 +260,7 @@ class InventoryScreen(Screen):
         # スタック可能アイテムの場合は全スタック削除
         if item.stackable and item.stack_count > 1:
             self.game_screen.game_logic.inventory.remove_item(item, item.stack_count)
-            self.game_screen.game_logic.add_message(
-                f"You drop {item.stack_count} {item.name}."
-            )
+            self.game_screen.game_logic.add_message(f"You drop {item.stack_count} {item.name}.")
         else:
             self.game_screen.game_logic.inventory.remove_item(item)
-            self.game_screen.game_logic.add_message(
-                f"You drop the {item.name}."
-            )
+            self.game_screen.game_logic.add_message(f"You drop the {item.name}.")

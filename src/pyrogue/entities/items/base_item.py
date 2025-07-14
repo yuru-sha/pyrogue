@@ -58,12 +58,7 @@ class BaseItem(ABC):
         -------
             スタック可能な場合True
         """
-        return (
-            self.stackable
-            and other.stackable
-            and self.name == other.name
-            and type(self) == type(other)
-        )
+        return self.stackable and other.stackable and self.name == other.name and type(self) == type(other)
 
     def is_stackable(self) -> bool:
         """スタック可能かチェック。"""

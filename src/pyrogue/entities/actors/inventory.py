@@ -88,7 +88,7 @@ class Inventory:
             for slot, equipped_item in self.equipped.items():
                 if equipped_item is item:
                     self.equipped[slot] = None
-            
+
             return actual_removed
 
     def get_item(self, index: int) -> Item | None:

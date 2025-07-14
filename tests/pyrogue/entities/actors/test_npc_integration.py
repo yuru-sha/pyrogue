@@ -23,16 +23,10 @@ def test_npc_integration():
 
     # NPCの詳細を表示
     for i, npc in enumerate(npc_spawner.npcs):
-        print(
-            f"  NPC {i+1}: {npc.name} (種類: {npc.npc_type}, 位置: ({npc.x}, {npc.y}))"
-        )
+        print(f"  NPC {i+1}: {npc.name} (種類: {npc.npc_type}, 位置: ({npc.x}, {npc.y}))")
 
     # 特別な部屋のNPCを確認
-    special_npcs = [
-        npc
-        for npc in npc_spawner.npcs
-        if npc.npc_type.value in ["MERCHANT", "PRIEST", "MAGE"]
-    ]
+    special_npcs = [npc for npc in npc_spawner.npcs if npc.npc_type.value in ["MERCHANT", "PRIEST", "MAGE"]]
     print(f"特別な部屋のNPC: {len(special_npcs)}個")
 
     print("統合テスト完了！")

@@ -50,9 +50,7 @@ class FOVManager:
         self.base_fov_radius = 8  # 基本FOV半径
 
         # FOV計算用のマップを初期化
-        self.fov_map = tcod.map.Map(
-            width=game_screen.dungeon_width, height=game_screen.dungeon_height
-        )
+        self.fov_map = tcod.map.Map(width=game_screen.dungeon_width, height=game_screen.dungeon_height)
 
         # 可視範囲を初期化
         self.visible = np.full(
@@ -134,9 +132,7 @@ class FOVManager:
         effective_radius = self._calculate_effective_fov_radius(x, y)
 
         # FOV計算
-        self.fov_map.compute_fov(
-            x, y, radius=effective_radius, algorithm=libtcodpy.FOV_SHADOW
-        )
+        self.fov_map.compute_fov(x, y, radius=effective_radius, algorithm=libtcodpy.FOV_SHADOW)
 
         # 結果を可視範囲配列にコピー
         self.visible[:] = self.fov_map.fov[:]
@@ -263,10 +259,7 @@ class FOVManager:
             視界内にある場合True
 
         """
-        if not (
-            0 <= x < self.game_screen.dungeon_width
-            and 0 <= y < self.game_screen.dungeon_height
-        ):
+        if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
             return False
         return self.visible[y, x]
 
@@ -284,9 +277,6 @@ class FOVManager:
             探索済みの場合True
 
         """
-        if not (
-            0 <= x < self.game_screen.dungeon_width
-            and 0 <= y < self.game_screen.dungeon_height
-        ):
+        if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
             return False
         return self.game_screen.game_logic.get_explored_tiles()[y, x]

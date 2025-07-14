@@ -128,12 +128,12 @@ class Player(Actor):
 
         """
         # ウィザードモードチェック
-        if context and hasattr(context, 'game_logic') and context.game_logic.is_wizard_mode():
+        if context and hasattr(context, "game_logic") and context.game_logic.is_wizard_mode():
             # ウィザードモード時はダメージを無効化
-            if hasattr(context, 'add_message'):
+            if hasattr(context, "add_message"):
                 context.add_message(f"[Wizard] Damage {amount} blocked!")
             return
-        
+
         # 通常時は基底クラスの処理を実行
         super().take_damage(amount)
 
@@ -154,7 +154,7 @@ class Player(Actor):
 
         """
         from pyrogue.constants import get_exp_for_level
-        
+
         self.exp += amount
         required_exp = get_exp_for_level(self.level + 1)
         if self.exp >= required_exp:

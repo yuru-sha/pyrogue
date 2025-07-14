@@ -144,12 +144,8 @@ class DialogueManager:
                             next_node=None,
                             action=DialogueAction.TRADE,
                         ),
-                        DialogueChoice(
-                            text="Tell me about your wares.", next_node="about_wares"
-                        ),
-                        DialogueChoice(
-                            text="Goodbye.", next_node=None, action=DialogueAction.END
-                        ),
+                        DialogueChoice(text="Tell me about your wares.", next_node="about_wares"),
+                        DialogueChoice(text="Goodbye.", next_node=None, action=DialogueAction.END),
                     ],
                 ),
                 DialogueNode(
@@ -180,9 +176,7 @@ class DialogueManager:
                             text="I'm just passing through.",
                             next_node="passing_through",
                         ),
-                        DialogueChoice(
-                            text="I'm looking for information.", next_node="information"
-                        ),
+                        DialogueChoice(text="I'm looking for information.", next_node="information"),
                         DialogueChoice(
                             text="Sorry, I'll be on my way.",
                             next_node=None,
@@ -207,9 +201,7 @@ class DialogueManager:
                     text="What kind of information are you seeking?",
                     speaker="Guard",
                     choices=[
-                        DialogueChoice(
-                            text="About the dungeon.", next_node="dungeon_info"
-                        ),
+                        DialogueChoice(text="About the dungeon.", next_node="dungeon_info"),
                         DialogueChoice(
                             text="Never mind.",
                             next_node=None,
@@ -256,9 +248,7 @@ class DialogueManager:
                         choice = DialogueChoice(
                             text=choice_data["text"],
                             next_node=choice_data.get("next_node"),
-                            action=DialogueAction(
-                                choice_data.get("action", "continue")
-                            ),
+                            action=DialogueAction(choice_data.get("action", "continue")),
                             condition=choice_data.get("condition"),
                         )
                         choices.append(choice)

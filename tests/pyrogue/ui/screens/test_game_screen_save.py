@@ -83,9 +83,7 @@ def test_game_screen_save_load():
 
         # 死亡後のロード試行
         load_after_death = game_screen.load_game()
-        print(
-            f"   死亡後のロード結果: {'成功' if load_after_death else '失敗（正常）'}"
-        )
+        print(f"   死亡後のロード結果: {'成功' if load_after_death else '失敗（正常）'}")
 
         print("\n=== テスト完了 ===")
 

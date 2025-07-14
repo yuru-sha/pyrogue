@@ -313,9 +313,7 @@ class TradingManager:
             player.inventory.add_item(trade_item.item)
 
             if self.context:
-                self.context.show_message(
-                    f"You bought {trade_item.item.name} for {trade_item.price} gold."
-                )
+                self.context.show_message(f"You bought {trade_item.item.name} for {trade_item.price} gold.")
                 self.context.update_display()
 
             # 取引可能なアイテムリストを更新
@@ -356,9 +354,7 @@ class TradingManager:
                         f"You sold {trade_item.quantity} {trade_item.item.name} for {trade_item.price} gold."
                     )
                 else:
-                    self.context.show_message(
-                        f"You sold {trade_item.item.name} for {trade_item.price} gold."
-                    )
+                    self.context.show_message(f"You sold {trade_item.item.name} for {trade_item.price} gold.")
                 self.context.update_display()
 
             # 取引可能なアイテムリストを更新
@@ -376,9 +372,7 @@ class TradingManager:
             購入可能なアイテムリスト
 
         """
-        return [
-            item for item in self.available_items if item.trade_type == TradeType.BUY
-        ]
+        return [item for item in self.available_items if item.trade_type == TradeType.BUY]
 
     def get_sell_items(self) -> list[TradeItem]:
         """
@@ -389,9 +383,7 @@ class TradingManager:
             売却可能なアイテムリスト
 
         """
-        return [
-            item for item in self.available_items if item.trade_type == TradeType.SELL
-        ]
+        return [item for item in self.available_items if item.trade_type == TradeType.SELL]
 
     def get_all_items(self) -> list[TradeItem]:
         """
@@ -432,9 +424,7 @@ class TradingManager:
         """
         return self.current_npc
 
-    def set_price_multipliers(
-        self, buy_multiplier: float, sell_multiplier: float
-    ) -> None:
+    def set_price_multipliers(self, buy_multiplier: float, sell_multiplier: float) -> None:
         """
         価格倍率を設定。
 

@@ -111,9 +111,7 @@ class SaveLoadManager:
 
         if floor_data:
             floor_save_data = self._serialize_floor_data(floor_data)
-            self.game_screen.game_logic.dungeon_manager.floor_data[
-                current_floor
-            ] = floor_save_data
+            self.game_screen.game_logic.dungeon_manager.floor_data[current_floor] = floor_save_data
 
     def _create_save_data(self) -> dict[str, Any]:
         """
@@ -129,9 +127,7 @@ class SaveLoadManager:
 
         save_data = {
             "player": self._serialize_player(player),
-            "inventory": self._serialize_inventory(
-                self.game_screen.game_logic.inventory
-            ),
+            "inventory": self._serialize_inventory(self.game_screen.game_logic.inventory),
             "current_floor": dungeon_manager.current_floor,
             "floor_data": dungeon_manager.floor_data,
             "message_log": self.game_screen.game_logic.message_log,
@@ -260,12 +256,8 @@ class SaveLoadManager:
         return {
             "items": [self._serialize_item(item) for item in inventory.items],
             "equipped": {
-                "weapon": self._serialize_item(inventory.equipped["weapon"])
-                if inventory.equipped["weapon"]
-                else None,
-                "armor": self._serialize_item(inventory.equipped["armor"])
-                if inventory.equipped["armor"]
-                else None,
+                "weapon": self._serialize_item(inventory.equipped["weapon"]) if inventory.equipped["weapon"] else None,
+                "armor": self._serialize_item(inventory.equipped["armor"]) if inventory.equipped["armor"] else None,
                 "ring_left": self._serialize_item(inventory.equipped["ring_left"])
                 if inventory.equipped["ring_left"]
                 else None,
@@ -287,25 +279,15 @@ class SaveLoadManager:
         inventory = self.game_screen.game_logic.inventory
 
         # アイテムリストの復元
-        inventory.items = [
-            self._deserialize_item(item_data) for item_data in inventory_data["items"]
-        ]
+        inventory.items = [self._deserialize_item(item_data) for item_data in inventory_data["items"]]
 
         # 装備品の復元
         equipped_data = inventory_data["equipped"]
         inventory.equipped = {
-            "weapon": self._deserialize_item(equipped_data["weapon"])
-            if equipped_data["weapon"]
-            else None,
-            "armor": self._deserialize_item(equipped_data["armor"])
-            if equipped_data["armor"]
-            else None,
-            "ring_left": self._deserialize_item(equipped_data["ring_left"])
-            if equipped_data["ring_left"]
-            else None,
-            "ring_right": self._deserialize_item(equipped_data["ring_right"])
-            if equipped_data["ring_right"]
-            else None,
+            "weapon": self._deserialize_item(equipped_data["weapon"]) if equipped_data["weapon"] else None,
+            "armor": self._deserialize_item(equipped_data["armor"]) if equipped_data["armor"] else None,
+            "ring_left": self._deserialize_item(equipped_data["ring_left"]) if equipped_data["ring_left"] else None,
+            "ring_right": self._deserialize_item(equipped_data["ring_right"]) if equipped_data["ring_right"] else None,
         }
 
     def _serialize_item(self, item: Item) -> dict[str, Any]:
@@ -376,18 +358,10 @@ class SaveLoadManager:
         """
         return {
             "tiles": floor_data.tiles.tolist(),
-            "monsters": [
-                self._serialize_monster(monster)
-                for monster in floor_data.monster_spawner.monsters
-            ],
-            "items": [
-                self._serialize_item(item) for item in floor_data.item_spawner.items
-            ],
+            "monsters": [self._serialize_monster(monster) for monster in floor_data.monster_spawner.monsters],
+            "items": [self._serialize_item(item) for item in floor_data.item_spawner.items],
             "explored": floor_data.explored.tolist(),
-            "traps": [
-                self._serialize_trap(trap)
-                for trap in getattr(floor_data, "trap_manager", {}).get("traps", [])
-            ],
+            "traps": [self._serialize_trap(trap) for trap in getattr(floor_data, "trap_manager", {}).get("traps", [])],
         }
 
     def _serialize_monster(self, monster) -> dict[str, Any]:
@@ -436,9 +410,7 @@ class SaveLoadManager:
         現在のフロアをロード。
         """
         current_floor = self.game_screen.game_logic.dungeon_manager.current_floor
-        floor_data = self.game_screen.game_logic.dungeon_manager.get_floor_data(
-            current_floor
-        )
+        floor_data = self.game_screen.game_logic.dungeon_manager.get_floor_data(current_floor)
 
         if floor_data:
             # 既存のフロアデータを復元

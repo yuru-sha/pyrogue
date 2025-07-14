@@ -70,9 +70,7 @@ class NPCSpawner:
         # 通常の部屋にNPCを配置
         self._spawn_regular_room_npcs(dungeon_tiles, rooms)
 
-    def _spawn_special_room_npcs(
-        self, dungeon_tiles: np.ndarray, rooms: list[Room]
-    ) -> None:
+    def _spawn_special_room_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
         """
         特別な部屋にNPCを配置する。
 
@@ -96,9 +94,7 @@ class NPCSpawner:
                         self.npcs.append(npc)
                         self.occupied_positions.add(position)
 
-    def _spawn_regular_room_npcs(
-        self, dungeon_tiles: np.ndarray, rooms: list[Room]
-    ) -> None:
+    def _spawn_regular_room_npcs(self, dungeon_tiles: np.ndarray, rooms: list[Room]) -> None:
         """
         通常の部屋にNPCを配置する。
 
@@ -195,9 +191,7 @@ class NPCSpawner:
 
         return max(0, base_count + variation)
 
-    def _get_random_position_in_room(
-        self, room: Room, dungeon_tiles: np.ndarray
-    ) -> tuple[int, int] | None:
+    def _get_random_position_in_room(self, room: Room, dungeon_tiles: np.ndarray) -> tuple[int, int] | None:
         """
         部屋内のランダムな位置を取得する。
 
@@ -255,9 +249,7 @@ class NPCSpawner:
         # 実際の実装では、タイルの種類に応じて適切な値をチェック
         return dungeon_tiles[y, x] == 0  # 0 = 床タイル（実装により異なる）
 
-    def _create_npc(
-        self, npc_type: NPCType, position: tuple[int, int], room_type: str | None = None
-    ) -> NPC | None:
+    def _create_npc(self, npc_type: NPCType, position: tuple[int, int], room_type: str | None = None) -> NPC | None:
         """
         NPCを作成する。
 

@@ -225,9 +225,7 @@ class RoomBuilder:
 
         return grid_x, grid_y
 
-    def get_adjacent_grid_positions(
-        self, grid_pos: tuple[int, int]
-    ) -> list[tuple[int, int]]:
+    def get_adjacent_grid_positions(self, grid_pos: tuple[int, int]) -> list[tuple[int, int]]:
         """
         隣接するグリッド位置を取得。
 
@@ -256,9 +254,7 @@ class RoomBuilder:
 
         return adjacent
 
-    def find_room_at_grid(
-        self, rooms: list[Room], grid_x: int, grid_y: int
-    ) -> Room | None:
+    def find_room_at_grid(self, rooms: list[Room], grid_x: int, grid_y: int) -> Room | None:
         """
         指定されたグリッド位置の部屋を検索。
 

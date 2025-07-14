@@ -59,9 +59,7 @@ class SpecialRoomBuilder:
                 self._decorate_special_room(room)
                 self.special_rooms_created.append(room)
 
-        game_logger.info(
-            f"Created {len(self.special_rooms_created)} special rooms on floor {self.floor}"
-        )
+        game_logger.info(f"Created {len(self.special_rooms_created)} special rooms on floor {self.floor}")
 
     def _should_create_special_room(self, room: Room) -> bool:
         """
@@ -133,9 +131,7 @@ class SpecialRoomBuilder:
         """
         room_type = room.room_type
 
-        game_logger.debug(
-            f"Decorating {room_type} (room {room.id}) on floor {self.floor}"
-        )
+        game_logger.debug(f"Decorating {room_type} (room {room.id}) on floor {self.floor}")
 
         if room_type == "treasure_room":
             self._decorate_treasure_room(room)

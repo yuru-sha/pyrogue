@@ -113,7 +113,7 @@ class BSPDungeonBuilder:
         """葉ノードに部屋を作成。"""
         # 部屋間の最小間隔を確保するため、セクション境界から最低2マス離す
         room_margin = 2
-        
+
         if self._full_rooms:
             # ノード全体を部屋にする（マージン考慮）
             room_x = node.x + room_margin
@@ -124,11 +124,11 @@ class BSPDungeonBuilder:
             # 部屋のサイズをランダムに決定（マージン考慮）
             available_width = node.width - 2 * room_margin
             available_height = node.height - 2 * room_margin
-            
+
             # 利用可能なスペースが最小サイズを満たしているかチェック
             if available_width < self._min_size or available_height < self._min_size:
                 return  # 部屋を作成できない
-            
+
             max_width = max(self._min_size, available_width)
             max_height = max(self._min_size, available_height)
 
@@ -180,17 +180,13 @@ class BSPDungeonBuilder:
                 if 0 <= x < self.width and 0 <= y < self.height:
                     tiles[y, x] = Floor()
 
-    def _connect_nodes(
-        self, node1: tcod.bsp.BSP, node2: tcod.bsp.BSP, tiles: np.ndarray
-    ) -> None:
+    def _connect_nodes(self, node1: tcod.bsp.BSP, node2: tcod.bsp.BSP, tiles: np.ndarray) -> None:
         """2つのノード間を接続（参考リンク準拠の多様なパターン）。"""
         # 各ノードから代表的な部屋を取得
         room1 = self._get_room_from_node(node1)
         room2 = self._get_room_from_node(node2)
 
-        game_logger.debug(
-            f"Connecting nodes: room1={room1.id if room1 else None}, room2={room2.id if room2 else None}"
-        )
+        game_logger.debug(f"Connecting nodes: room1={room1.id if room1 else None}, room2={room2.id if room2 else None}")
 
         if room1 and room2:
             # 部屋の中心から中心へ接続
@@ -200,20 +196,12 @@ class BSPDungeonBuilder:
             # L字型通路で中心同士を接続
             if random.random() < 0.5:
                 # 水平→垂直
-                self._hline_with_connection_door(
-                    tiles, center1[0], center2[0], center1[1]
-                )
-                self._vline_with_connection_door(
-                    tiles, center2[0], center1[1], center2[1]
-                )
+                self._hline_with_connection_door(tiles, center1[0], center2[0], center1[1])
+                self._vline_with_connection_door(tiles, center2[0], center1[1], center2[1])
             else:
                 # 垂直→水平
-                self._vline_with_connection_door(
-                    tiles, center1[0], center1[1], center2[1]
-                )
-                self._hline_with_connection_door(
-                    tiles, center1[0], center2[0], center2[1]
-                )
+                self._vline_with_connection_door(tiles, center1[0], center1[1], center2[1])
+                self._hline_with_connection_door(tiles, center1[0], center2[0], center2[1])
         else:
             game_logger.warning("No rooms found in nodes for connection")
 
@@ -233,9 +221,7 @@ class BSPDungeonBuilder:
 
         return None
 
-    def _get_room_centers(
-        self, room1: Room, room2: Room
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
+    def _get_room_centers(self, room1: Room, room2: Room) -> tuple[tuple[int, int], tuple[int, int]]:
         """2つの部屋の中心座標を取得。"""
         center1_x, center1_y = room1.center()
         center2_x, center2_y = room2.center()
@@ -259,9 +245,7 @@ class BSPDungeonBuilder:
 
         return False
 
-    def _place_corridor_tile(
-        self, tiles: np.ndarray, x: int, y: int, allow_door: bool = True
-    ) -> None:
+    def _place_corridor_tile(self, tiles: np.ndarray, x: int, y: int, allow_door: bool = True) -> None:
         """通路タイルを配置（壁を貫通する際にドア設置）。"""
         from pyrogue.map.tile import Wall
 
@@ -273,9 +257,7 @@ class BSPDungeonBuilder:
             # 壁を貫通する際の処理
             if is_wall and allow_door and position not in self.door_positions:
                 # 部屋の境界（外周）を突き抜ける箇所のみでドア配置 & 隣接ドアがないかチェック
-                if self._is_room_boundary_wall(x, y) and not self._has_adjacent_door(
-                    x, y
-                ):
+                if self._is_room_boundary_wall(x, y) and not self._has_adjacent_door(x, y):
                     # 壁をランダムな状態のドアで置き換え
                     door = self._create_random_door()
                     tiles[y, x] = door
@@ -300,9 +282,7 @@ class BSPDungeonBuilder:
         # 60% クローズドドア (0.40-1.00)
         return Door(state="closed")
 
-    def _place_boundary_door_tile(
-        self, tiles: np.ndarray, x: int, y: int, allow_door: bool = True
-    ) -> None:
+    def _place_boundary_door_tile(self, tiles: np.ndarray, x: int, y: int, allow_door: bool = True) -> None:
         """境界位置でのドア配置（より積極的にドアを設置）。"""
         from pyrogue.map.tile import Wall
 
@@ -314,9 +294,7 @@ class BSPDungeonBuilder:
             # 壁を貫通する際の処理
             if is_wall and allow_door and position not in self.door_positions:
                 # 部屋の境界（外周）を突き抜ける箇所のみでドア配置 & 隣接ドアがないかチェック
-                if self._is_room_boundary_wall(x, y) and not self._has_adjacent_door(
-                    x, y
-                ):
+                if self._is_room_boundary_wall(x, y) and not self._has_adjacent_door(x, y):
                     # 壁をランダムな状態のドアで置き換え
                     door = self._create_random_door()
                     tiles[y, x] = door
@@ -392,10 +370,7 @@ class BSPDungeonBuilder:
         """指定された座標が部屋の内部にあるかどうかを判定。"""
         for room in self.rooms:
             # 部屋の内部（境界を除く）かどうかをチェック
-            if (
-                room.x < x < room.x + room.width - 1
-                and room.y < y < room.y + room.height - 1
-            ):
+            if room.x < x < room.x + room.width - 1 and room.y < y < room.y + room.height - 1:
                 return True
         return False
 
@@ -403,16 +378,11 @@ class BSPDungeonBuilder:
         """指定された座標が部屋の床（境界含む）かどうかを判定。"""
         for room in self.rooms:
             # 部屋の範囲内（境界含む）かどうかをチェック
-            if (
-                room.x <= x <= room.x + room.width - 1
-                and room.y <= y <= room.y + room.height - 1
-            ):
+            if room.x <= x <= room.x + room.width - 1 and room.y <= y <= room.y + room.height - 1:
                 return True
         return False
 
-    def _hline_with_connection_door(
-        self, tiles: np.ndarray, x1: int, x2: int, y: int
-    ) -> None:
+    def _hline_with_connection_door(self, tiles: np.ndarray, x1: int, x2: int, y: int) -> None:
         """水平線を掘る（境界含む複数ドア配置可能）。"""
         x_start, x_end = min(x1, x2), max(x1, x2)
         for i, x in enumerate(range(x_start, x_end + 1)):
@@ -426,9 +396,7 @@ class BSPDungeonBuilder:
             else:
                 self._place_corridor_tile(tiles, x, y, allow_door)
 
-    def _vline_with_connection_door(
-        self, tiles: np.ndarray, x: int, y1: int, y2: int
-    ) -> None:
+    def _vline_with_connection_door(self, tiles: np.ndarray, x: int, y1: int, y2: int) -> None:
         """垂直線を掘る（境界含む複数ドア配置可能）。"""
         y_start, y_end = min(y1, y2), max(y1, y2)
         for i, y in enumerate(range(y_start, y_end + 1)):
@@ -562,11 +530,7 @@ class BSPDungeonBuilder:
             生成されたダンジョンの統計情報を含む辞書
 
         """
-        avg_room_size = (
-            sum(room.width * room.height for room in self.rooms) / len(self.rooms)
-            if self.rooms
-            else 0
-        )
+        avg_room_size = sum(room.width * room.height for room in self.rooms) / len(self.rooms) if self.rooms else 0
 
         return {
             "builder_type": "RogueBasin BSP (Enhanced)",

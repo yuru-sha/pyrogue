@@ -37,10 +37,7 @@ class TestDarkRoomIntegration:
                 if isinstance(tiles[y, x], Floor):
                     floor_count += 1
                     # 光源タイルをチェック
-                    if (
-                        hasattr(tiles[y, x], "has_light_source")
-                        and tiles[y, x].has_light_source
-                    ):
+                    if hasattr(tiles[y, x], "has_light_source") and tiles[y, x].has_light_source:
                         light_source_count += 1
 
         assert floor_count > 0, "床タイルが存在しません"
@@ -82,15 +79,11 @@ class TestDarkRoomIntegration:
         for floor in non_dark_room_floors:
             director = DungeonDirector(80, 45, floor=floor)
             should_generate = director._should_generate_dark_rooms()
-            assert (
-                not should_generate
-            ), f"階層{floor}で暗い部屋が生成されるべきではありません"
+            assert not should_generate, f"階層{floor}で暗い部屋が生成されるべきではありません"
 
     def test_dark_room_with_bsp_system(self):
         """BSPシステムとの統合テスト。"""
-        director = DungeonDirector(
-            80, 45, floor=6
-        )  # 6階は暗い部屋生成対象（迷路ではない）
+        director = DungeonDirector(80, 45, floor=6)  # 6階は暗い部屋生成対象（迷路ではない）
 
         # BSPシステムを使用
         director.use_section_based = True
@@ -161,9 +154,7 @@ class TestDarkRoomIntegration:
         rooms = [dark_room]
 
         # 光源なしの場合
-        visibility_no_light = dark_room_builder.get_visibility_range_at(
-            25, 24, rooms, player_has_light=False
-        )
+        visibility_no_light = dark_room_builder.get_visibility_range_at(25, 24, rooms, player_has_light=False)
 
         # 光源ありの場合
         visibility_with_light = dark_room_builder.get_visibility_range_at(
@@ -279,10 +270,7 @@ class TestDarkRoomIntegration:
         assert low_stats["darkness_intensity"] == 0.2
 
         # 暗さ強度が部屋の変換に影響することを確認
-        assert (
-            high_darkness_builder.darkness_intensity
-            > low_darkness_builder.darkness_intensity
-        )
+        assert high_darkness_builder.darkness_intensity > low_darkness_builder.darkness_intensity
 
     def test_special_room_exclusion_from_darkness(self):
         """特別な部屋が暗くならないことの確認テスト。"""

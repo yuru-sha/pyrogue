@@ -140,9 +140,7 @@ class MagicMissile(Spell):
         )
         self.damage = damage
 
-    def cast(
-        self, context: EffectContext, target_pos: tuple[int, int] | None = None
-    ) -> bool:
+    def cast(self, context: EffectContext, target_pos: tuple[int, int] | None = None) -> bool:
         """
         マジックミサイルを詠唱。
 
@@ -184,16 +182,12 @@ class MagicMissile(Spell):
 
         if isinstance(context, GameLogic):
             current_floor_data = context.dungeon_manager.get_current_floor_data()
-            monster = current_floor_data.monster_spawner.get_monster_at(
-                target_x, target_y
-            )
+            monster = current_floor_data.monster_spawner.get_monster_at(target_x, target_y)
 
             if monster:
                 # ダメージを与える（防御力無視）
                 monster.hp = max(0, monster.hp - self.damage)
-                context.add_message(
-                    f"Your magic missile hits the {monster.name} for {self.damage} damage!"
-                )
+                context.add_message(f"Your magic missile hits the {monster.name} for {self.damage} damage!")
 
                 # モンスターの死亡判定
                 if monster.hp <= 0:
@@ -354,9 +348,7 @@ class PoisonBolt(Spell):
         )
         self.poison_duration = poison_duration
 
-    def cast(
-        self, context: EffectContext, target_pos: tuple[int, int] | None = None
-    ) -> bool:
+    def cast(self, context: EffectContext, target_pos: tuple[int, int] | None = None) -> bool:
         """
         ポイズンボルトを詠唱。
 
@@ -397,18 +389,14 @@ class PoisonBolt(Spell):
 
         if isinstance(context, GameLogic):
             current_floor_data = context.dungeon_manager.get_current_floor_data()
-            monster = current_floor_data.monster_spawner.get_monster_at(
-                target_x, target_y
-            )
+            monster = current_floor_data.monster_spawner.get_monster_at(target_x, target_y)
 
             if monster:
                 # 毒状態異常を付与
                 poison_effect = PoisonEffect(duration=self.poison_duration, damage=2)
                 monster.status_effects.add_effect(poison_effect)
 
-                context.add_message(
-                    f"Your poison bolt hits the {monster.name}! It looks sick."
-                )
+                context.add_message(f"Your poison bolt hits the {monster.name}! It looks sick.")
                 return True
             context.add_message("Your poison bolt hits nothing.")
             return True
@@ -504,9 +492,7 @@ class Spellbook:
         """
         spell = self.get_spell_by_name(spell_name)
         if not spell:
-            context.add_message(
-                f"You don't know the spell '{spell_name}'."
-            )
+            context.add_message(f"You don't know the spell '{spell_name}'.")
             return False
 
         return spell.cast(context, **kwargs)

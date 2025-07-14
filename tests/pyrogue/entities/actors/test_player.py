@@ -96,6 +96,8 @@ class TestPlayer:
 
     def test_player_experience_and_leveling(self):
         """プレイヤーの経験値とレベルアップテスト。"""
+        from pyrogue.constants import get_exp_for_level
+
         player = Player(x=10, y=15)
         initial_level = player.level
         initial_max_hp = player.max_hp
@@ -111,7 +113,7 @@ class TestPlayer:
         assert player.level == initial_level
 
         # レベルアップに必要な経験値を獲得
-        level_up_exp = initial_level * 100  # CONFIG.player.EXPERIENCE_MULTIPLIER
+        level_up_exp = get_exp_for_level(initial_level + 1)  # 正しい経験値計算
         player.exp = 0  # リセット
         leveled_up = player.gain_exp(level_up_exp)
         assert leveled_up

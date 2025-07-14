@@ -91,9 +91,10 @@ class GameLogic:
         self.turn_manager = TurnManager()
         self.monster_ai_manager = MonsterAIManager()
         self.score_manager = ScoreManager()
-        
+
         # ウィザードモード（デバッグ用）
         from pyrogue.config.env import get_debug_mode
+
         self.wizard_mode = get_debug_mode()
 
         # 新しいマネージャーを初期化
@@ -121,86 +122,88 @@ class GameLogic:
         self.wizard_mode = not self.wizard_mode
         status = "enabled" if self.wizard_mode else "disabled"
         self.add_message(f"Wizard mode {status}!")
-        
+
     def is_wizard_mode(self) -> bool:
         """ウィザードモードの状態を取得。"""
         return self.wizard_mode
-    
+
     def wizard_teleport_to_stairs(self) -> None:
         """ウィザード機能: 階段位置にテレポート。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-            
+
         floor_data = self.get_current_floor_data()
         if not floor_data:
             return
-            
+
         # 下り階段を探す
         for y in range(floor_data.tiles.shape[0]):
             for x in range(floor_data.tiles.shape[1]):
                 from pyrogue.map.tile import StairsDown
+
                 if isinstance(floor_data.tiles[y, x], StairsDown):
                     self.player.x = x
                     self.player.y = y
                     self.add_message(f"[Wizard] Teleported to stairs at ({x}, {y})!")
                     self._update_fov()
                     return
-                    
+
         self.add_message("[Wizard] No stairs found on this floor!")
-    
+
     def wizard_level_up(self) -> None:
         """ウィザード機能: レベルアップ。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-        
+
         from pyrogue.constants import get_exp_for_level
-        
+
         # 次のレベルに必要な経験値を設定してレベルアップ
         next_level = self.player.level + 1
         required_exp = get_exp_for_level(next_level)
         self.player.exp = required_exp
         self.player.level_up()  # 正規のレベルアップ処理を使用
         self.add_message(f"[Wizard] Level up! Now level {self.player.level}")
-    
+
     def wizard_heal_full(self) -> None:
         """ウィザード機能: 完全回復。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-            
+
         self.player.hp = self.player.max_hp
         self.player.mp = self.player.max_mp
         self.add_message("[Wizard] Fully healed!")
-    
+
     def wizard_reveal_all(self) -> None:
         """ウィザード機能: 全マップ探索済みにする。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-            
+
         floor_data = self.get_current_floor_data()
         if not floor_data:
             return
-            
+
         # 全タイルを探索済みにする
         explored = self.get_explored_tiles()
         explored.fill(True)
-        
+
         # 全隠しドア・トラップを発見済みにする
         for y in range(floor_data.tiles.shape[0]):
             for x in range(floor_data.tiles.shape[1]):
                 from pyrogue.map.tile import SecretDoor
+
                 tile = floor_data.tiles[y, x]
                 if isinstance(tile, SecretDoor) and tile.door_state == "secret":
                     tile.reveal()
-                    
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.is_hidden:
                     trap.reveal()
-        
+
         self.add_message("[Wizard] All map revealed!")
         self._update_fov()
 
@@ -279,35 +282,23 @@ class GameLogic:
         # 初期アイテム
 
         # Potion of Healing x2（HP10-15回復）
-        healing_potion1 = Potion(
-            x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12)
-        )
-        healing_potion2 = Potion(
-            x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12)
-        )
+        healing_potion1 = Potion(x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12))
+        healing_potion2 = Potion(x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12))
         self.inventory.add_item(healing_potion1)
         self.inventory.add_item(healing_potion2)
 
         # Food Ration x2（満腹度25回復）
-        food_ration1 = Food(
-            x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25)
-        )
-        food_ration2 = Food(
-            x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25)
-        )
+        food_ration1 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
+        food_ration2 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
         self.inventory.add_item(food_ration1)
         self.inventory.add_item(food_ration2)
 
         # Scroll of Light x1（視野拡大50ターン）
-        light_scroll = Scroll(
-            x=0, y=0, name="Scroll of Light", effect=LightEffect(duration=50, radius=15)
-        )
+        light_scroll = Scroll(x=0, y=0, name="Scroll of Light", effect=LightEffect(duration=50, radius=15))
         self.inventory.add_item(light_scroll)
 
         self.add_message("You are equipped with a Dagger and Leather Armor.")
-        self.add_message(
-            "You start with some basic supplies: potions, food, and a scroll."
-        )
+        self.add_message("You start with some basic supplies: potions, food, and a scroll.")
 
     # EffectContext用プロパティ
     @property
@@ -351,12 +342,7 @@ class GameLogic:
             return False
 
         # 境界チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # タイルチェック
@@ -424,12 +410,7 @@ class GameLogic:
             return False
 
         # 座標の境界チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # タイルが歩行可能かチェック
@@ -580,12 +561,7 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         tile = floor_data.tiles[y, x]
@@ -609,12 +585,7 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         tile = floor_data.tiles[y, x]
@@ -657,12 +628,7 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         tile = floor_data.tiles[y, x]
@@ -694,29 +660,25 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # トラップスポナーからトラップを検索
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.x == x and trap.y == y and trap.is_hidden:
                     # 発見成功率はプレイヤーレベルに依存（基本40% + レベル*5%）
                     import random
+
                     success_rate = min(90, 40 + self.player.level * 5)
-                    
+
                     if random.randint(1, 100) <= success_rate:
                         trap.reveal()  # トラップを発見
                         self.add_message(f"You found a {trap.name}!")
                         return True
                     # 失敗してもメッセージは出さない（まとめて処理される）
                     return False
-        
+
         return False
 
     # トラップ処理（TrapManagerに委譲予定）
@@ -727,21 +689,16 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # トラップスポナーからトラップを検索
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.x == x and trap.y == y and not trap.is_hidden:
                     # 発見済みトラップのみ解除可能
                     return trap.disarm(self.context)
-        
+
         return False
 
     # 魔法処理（MagicManagerに委譲予定）
@@ -819,9 +776,7 @@ class GameLogic:
         # デフォルトの探索状態を返す
         import numpy as np
 
-        return np.full(
-            (self.dungeon_manager.height, self.dungeon_manager.width), False, dtype=bool
-        )
+        return np.full((self.dungeon_manager.height, self.dungeon_manager.width), False, dtype=bool)
 
     def update_explored_tiles(self, visible_tiles) -> None:
         """探索済みタイルを更新。"""
@@ -843,9 +798,7 @@ class GameLogic:
                 x, y = player.x + dx, player.y + dy
                 monster = self._get_monster_at(x, y)
                 if monster:
-                    return self.combat_manager.handle_player_attack(
-                        monster, self.context
-                    )
+                    return self.combat_manager.handle_player_attack(monster, self.context)
 
         return False
 

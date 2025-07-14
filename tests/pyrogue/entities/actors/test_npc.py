@@ -427,10 +427,7 @@ class TestNPC:
         )
         assert "Hello there, adventurer!" in friendly_npc.get_greeting_message()
         assert "Alice" in friendly_npc.get_greeting_message()
-        assert (
-            "Farewell, and may fortune favor you!"
-            in friendly_npc.get_farewell_message()
-        )
+        assert "Farewell, and may fortune favor you!" in friendly_npc.get_farewell_message()
 
         # 中立的なNPC
         neutral_npc = NPC(

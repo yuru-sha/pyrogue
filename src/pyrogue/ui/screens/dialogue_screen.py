@@ -34,9 +34,7 @@ class DialogueScreen(Screen):
 
     """
 
-    def __init__(
-        self, engine: Engine, dialogue_manager: DialogueManager, npc_id: str
-    ) -> None:
+    def __init__(self, engine: Engine, dialogue_manager: DialogueManager, npc_id: str) -> None:
         """
         DialogueScreenの初期化。
 
@@ -112,9 +110,7 @@ class DialogueScreen(Screen):
         if key_sym == tcod.event.K_UP:
             self.selected_choice = max(0, self.selected_choice - 1)
         elif key_sym == tcod.event.K_DOWN:
-            self.selected_choice = min(
-                len(current_node.choices) - 1, self.selected_choice + 1
-            )
+            self.selected_choice = min(len(current_node.choices) - 1, self.selected_choice + 1)
 
         # Enterキーで選択肢を決定
         elif key_sym == tcod.event.K_RETURN:
@@ -175,9 +171,7 @@ class DialogueScreen(Screen):
 
         # タイトルを表示
         title = f"Conversation with {current_node.speaker}"
-        console.print(
-            console.width // 2, 2, title, fg=tcod.white, alignment=tcod.CENTER
-        )
+        console.print(console.width // 2, 2, title, fg=tcod.white, alignment=tcod.CENTER)
 
         # 会話テキストを表示
         self._render_dialogue_text(console, current_node.text, start_y=5)
@@ -188,9 +182,7 @@ class DialogueScreen(Screen):
         # 操作方法を表示
         self._render_help(console)
 
-    def _render_dialogue_text(
-        self, console: tcod.Console, text: str, start_y: int
-    ) -> None:
+    def _render_dialogue_text(self, console: tcod.Console, text: str, start_y: int) -> None:
         """
         会話テキストを描画する。
 
@@ -214,9 +206,7 @@ class DialogueScreen(Screen):
                 alignment=tcod.CENTER,
             )
 
-    def _render_choices(
-        self, console: tcod.Console, choices: list, start_y: int
-    ) -> None:
+    def _render_choices(self, console: tcod.Console, choices: list, start_y: int) -> None:
         """
         選択肢を描画する。
 

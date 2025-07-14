@@ -72,9 +72,7 @@ class Torch(BaseItem, LightSource):
             max_stack=5,
         )
 
-        LightSource.__init__(
-            self, name="Torch", light_radius=4, duration=duration, intensity=0.8
-        )
+        LightSource.__init__(self, name="Torch", light_radius=4, duration=duration, intensity=0.8)
 
         self.remaining_duration = duration
         self.is_lit = False
@@ -135,9 +133,7 @@ class Lantern(BaseItem, LightSource):
             stackable=False,
         )
 
-        LightSource.__init__(
-            self, name="Lantern", light_radius=6, duration=duration, intensity=1.0
-        )
+        LightSource.__init__(self, name="Lantern", light_radius=6, duration=duration, intensity=1.0)
 
         self.remaining_duration = duration
         self.is_lit = False
@@ -318,10 +314,7 @@ class LightManager:
         max_intensity = 0.0
 
         for light_source in self.active_light_sources:
-            if (
-                hasattr(light_source, "get_light_radius")
-                and light_source.get_light_radius() > 0
-            ):
+            if hasattr(light_source, "get_light_radius") and light_source.get_light_radius() > 0:
                 max_intensity = max(max_intensity, light_source.intensity)
 
         return max_intensity

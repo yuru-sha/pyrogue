@@ -51,11 +51,7 @@ class ItemManager:
             return None
 
         # プレイヤーの位置にあるアイテムを探す
-        items_at_position = [
-            item
-            for item in floor_data.items
-            if item.x == player.x and item.y == player.y
-        ]
+        items_at_position = [item for item in floor_data.items if item.x == player.x and item.y == player.y]
 
         if not items_at_position:
             self.context.add_message("No items to get here.")
@@ -220,9 +216,7 @@ class ItemManager:
         if inventory.is_equipped(item):
             # 呪われたアイテムのチェック
             if hasattr(item, "cursed") and item.cursed:
-                self.context.add_message(
-                    f"You can't drop the {item_name}! It's cursed!"
-                )
+                self.context.add_message(f"You can't drop the {item_name}! It's cursed!")
                 return False
 
             # 装備解除
@@ -289,9 +283,7 @@ class ItemManager:
         # 装備処理
         old_item = inventory.equip(item)
         if old_item is not None:
-            self.context.add_message(
-                f"You unequip the {old_item.name} and equip the {item_name}."
-            )
+            self.context.add_message(f"You unequip the {old_item.name} and equip the {item_name}.")
         else:
             self.context.add_message(f"You equip the {item_name}.")
         return True

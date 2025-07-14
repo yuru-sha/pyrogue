@@ -130,17 +130,13 @@ class SaveManager:
         try:
             # セーブファイルの整合性チェック
             if not self._verify_checksum():
-                game_logger.warning(
-                    "Save file integrity check failed - potential tampering detected"
-                )
+                game_logger.warning("Save file integrity check failed - potential tampering detected")
                 # チェックサム検証失敗時もバックアップを試行
                 if self.backup_file.exists():
                     try:
                         with open(self.backup_file, "rb") as f:
                             game_data = pickle.load(f)
-                        game_logger.info(
-                            "Game loaded from backup file after checksum failure"
-                        )
+                        game_logger.info("Game loaded from backup file after checksum failure")
                         return game_data
                     except Exception as backup_error:
                         game_logger.error(f"Backup file also corrupted: {backup_error}")
@@ -338,9 +334,7 @@ class SaveManager:
             # チェックサムを比較
             is_valid = stored_checksum == current_checksum
             if not is_valid:
-                game_logger.warning(
-                    f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}"
-                )
+                game_logger.warning(f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}")
 
             return is_valid
 
