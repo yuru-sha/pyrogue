@@ -150,7 +150,11 @@ class TestIsolatedRoomIntegration:
 
                 # 基本的な検証
                 assert tiles.shape == (45, 80)
-                assert start_pos is not None
+                # 1階では上り階段がNone、2階以降では存在する
+                if floor == 1:
+                    assert start_pos is None, f"Floor 1 should have no up stairs, got {start_pos}"
+                else:
+                    assert start_pos is not None, f"Floor {floor} should have up stairs"
 
                 # 最深階以外では下り階段が存在
                 if floor < 26:

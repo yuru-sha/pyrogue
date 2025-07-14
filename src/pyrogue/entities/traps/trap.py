@@ -77,7 +77,7 @@ class Trap(ABC):
         if self.is_hidden:
             self.is_hidden = False
             if context and context.game_screen:
-                context.game_screen.message_log.append(f"You discovered a {self.name}!")
+                context.add_message(f"You discovered a {self.name}!")
 
     def disarm(self, context: EffectContext | None = None) -> bool:
         """
@@ -94,12 +94,12 @@ class Trap(ABC):
         """
         if self.is_disarmed:
             if context and context.game_screen:
-                context.game_screen.message_log.append("This trap is already disarmed.")
+                context.add_message("This trap is already disarmed.")
             return False
 
         if self.is_hidden:
             if context and context.game_screen:
-                context.game_screen.message_log.append(
+                context.add_message(
                     "You can't disarm a trap you can't see!"
                 )
             return False
@@ -112,18 +112,18 @@ class Trap(ABC):
         if success:
             self.is_disarmed = True
             if context and context.game_screen:
-                context.game_screen.message_log.append(
+                context.add_message(
                     f"You successfully disarmed the {self.name}!"
                 )
             return True
         if context and context.game_screen:
-            context.game_screen.message_log.append(
+            context.add_message(
                 f"You failed to disarm the {self.name}!"
             )
         # 失敗時にトラップが発動する可能性
         if random.random() < 0.3:  # 30%の確率で発動
             if context and context.game_screen:
-                context.game_screen.message_log.append(
+                context.add_message(
                     "Your clumsy attempt triggers the trap!"
                 )
             self.activate(context)
@@ -205,7 +205,7 @@ class PitTrap(Trap):
         player.hp = max(0, player.hp - actual_damage)
 
         # メッセージを表示
-        context.game_screen.message_log.append(
+        context.add_message(
             f"You fall into a pit! You take {actual_damage} damage!"
         )
 
@@ -255,7 +255,7 @@ class PoisonNeedleTrap(Trap):
         player.status_effects.add_effect(poison_effect)
 
         # メッセージを表示
-        context.game_screen.message_log.append(
+        context.add_message(
             "You step on a poison needle! You feel sick..."
         )
 
@@ -304,7 +304,7 @@ class TeleportTrap(Trap):
 
         if success:
             # メッセージを表示
-            context.game_screen.message_log.append(
+            context.add_message(
                 "You step on a strange rune and are whisked away!"
             )
 

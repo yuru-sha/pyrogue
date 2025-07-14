@@ -1,7 +1,6 @@
 {
   "env": {
-    "CLAUDE_CACHE": "./.ccache",
-    "MAX_THINKING_TOKENS": "31999"
+    "CLAUDE_CACHE": "./.ccache"
   },
   "permissions": {
     "allow": [

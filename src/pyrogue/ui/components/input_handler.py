@@ -101,8 +101,8 @@ class InputHandler:
             tcod.event.KeySym.KP_3: (1, 1),  # 右下
         }
 
-        # 移動処理
-        if key in movement_keys:
+        # 移動処理（Ctrl修飾子が押されていない場合のみ）
+        if key in movement_keys and not (mod & tcod.event.Modifier.CTRL):
             dx, dy = movement_keys[key]
             self.game_screen.game_logic.handle_player_move(dx, dy)
             return
@@ -163,6 +163,27 @@ class InputHandler:
         elif key == ord("l") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+L でロード
             self.game_screen.save_load_manager.load_game()
+
+        elif key == ord("w") and mod & tcod.event.Modifier.CTRL:
+            # Ctrl+W でウィザードモード切り替え
+            self.game_screen.game_logic.toggle_wizard_mode()
+
+        # ウィザードモード専用コマンド
+        elif key == ord("t") and mod & tcod.event.Modifier.CTRL:
+            # Ctrl+T で階段にテレポート
+            self.game_screen.game_logic.wizard_teleport_to_stairs()
+            
+        elif key == ord("u") and mod & tcod.event.Modifier.CTRL:
+            # Ctrl+U でレベルアップ
+            self.game_screen.game_logic.wizard_level_up()
+            
+        elif key == ord("h") and mod & tcod.event.Modifier.CTRL:
+            # Ctrl+H で完全回復
+            self.game_screen.game_logic.wizard_heal_full()
+            
+        elif key == ord("r") and mod & tcod.event.Modifier.CTRL:
+            # Ctrl+R で全マップ探索
+            self.game_screen.game_logic.wizard_reveal_all()
 
         elif key == ord("s"):
             # 隠しドア探索（Ctrlが押されていない場合のみ）
@@ -241,13 +262,15 @@ class InputHandler:
 
     def _handle_search_action(self) -> None:
         """
-        隠しドア探索処理。
+        隠しドア・トラップ探索処理。
         """
         player = self.game_screen.player
         if not player:
             return
 
         found_secret = False
+        found_trap = False
+        
         # プレイヤーの周囲8方向をチェック
         for dy in [-1, 0, 1]:
             for dx in [-1, 0, 1]:
@@ -255,10 +278,14 @@ class InputHandler:
                     continue
 
                 x, y = player.x + dx, player.y + dy
+                # 隠しドア探索
                 if self.game_screen.game_logic.search_secret_door(x, y):
                     found_secret = True
+                # トラップ探索
+                if self.game_screen.game_logic.search_trap(x, y):
+                    found_trap = True
 
-        if not found_secret:
+        if not found_secret and not found_trap:
             self.game_screen.game_logic.add_message("You search but find nothing.")
 
     def _handle_disarm_action(self) -> None:

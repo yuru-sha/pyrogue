@@ -196,12 +196,9 @@ class StairsManager:
             上り階段の位置
 
         """
-        # 1階では上り階段は不要だが、開始位置として最初の部屋の中央を返す
+        # 1階では上り階段は不要
         if floor <= 1:
-            if rooms:
-                start_room = rooms[0]
-                return start_room.center()
-            return self._find_safe_fallback_position(tiles)  # 動的フォールバック
+            return None
 
         # 上り階段用の部屋を選択
         up_stairs_room = self._select_stairs_room(rooms, "up", floor)

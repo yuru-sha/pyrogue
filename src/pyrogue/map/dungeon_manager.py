@@ -96,14 +96,21 @@ class FloorData:
         self.trap_manager = trap_manager
         self.explored = explored
 
-        # 開始位置を設定（1階では下り階段の位置、その他では上り階段の位置）
-        if up_pos is not None:
-            self.start_pos = up_pos
-        elif down_pos is not None:
-            self.start_pos = down_pos
+        # 開始位置を設定
+        if floor_number == 1:
+            # 1階では階段から離れた安全な位置を動的に探す
+            self.start_pos = self._find_safe_start_position_for_floor1(
+                tiles, up_pos, down_pos
+            )
         else:
-            # フォールバック：最初の部屋の中央
-            self.start_pos = (0, 0)  # デフォルト値
+            # 2階以降では上り階段の位置を使用
+            if up_pos is not None:
+                self.start_pos = up_pos
+            elif down_pos is not None:
+                self.start_pos = down_pos
+            else:
+                # フォールバック：適切な位置
+                self.start_pos = (1, 1)  # 最小限の安全な位置
 
     def is_valid_position(self, x: int, y: int) -> bool:
         """
@@ -195,6 +202,102 @@ class FloorData:
     def traps(self):
         """現在のフロアのトラップリストを取得。"""
         return self.trap_manager.traps
+
+    def _find_safe_start_position_for_floor1(
+        self,
+        tiles: np.ndarray,
+        up_pos: tuple[int, int] | None,
+        down_pos: tuple[int, int] | None,
+    ) -> tuple[int, int]:
+        """
+        1階でプレイヤーの安全な開始位置を見つける。
+
+        階段から離れた床タイルの位置を動的に探し、
+        階段と重複しない安全な開始位置を返します。
+
+        Args:
+        ----
+            tiles: ダンジョンタイルの2次元配列
+            up_pos: 上り階段の位置
+            down_pos: 下り階段の位置
+
+        Returns:
+        -------
+            安全な開始位置のタプル (x, y)
+
+        """
+        from pyrogue.map.tile import Floor, StairsDown, StairsUp
+
+        height, width = tiles.shape
+
+        # 階段位置をリストにまとめる
+        stairs_positions = []
+        if up_pos is not None:
+            stairs_positions.append(up_pos)
+        if down_pos is not None:
+            stairs_positions.append(down_pos)
+
+        # 床タイルで階段から離れた位置を探す
+        best_candidates = []
+
+        # まず中央付近から検索
+        center_x, center_y = width // 2, height // 2
+
+        # 中央から外側に向かって螺旋状に検索
+        for radius in range(1, min(width, height) // 2):
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    x, y = center_x + dx, center_y + dy
+
+                    # 境界チェック
+                    if not (1 <= x < width - 1 and 1 <= y < height - 1):
+                        continue
+
+                    # 床タイルかチェック
+                    if not isinstance(tiles[y, x], Floor):
+                        continue
+
+                    # 階段位置でないかチェック
+                    if (x, y) in stairs_positions:
+                        continue
+
+                    # 階段から十分離れているかチェック
+                    min_distance_to_stairs = float("inf")
+                    for stairs_x, stairs_y in stairs_positions:
+                        distance = abs(x - stairs_x) + abs(y - stairs_y)  # マンハッタン距離
+                        min_distance_to_stairs = min(min_distance_to_stairs, distance)
+
+                    # 階段から少なくとも2マス以上離れている位置を優先
+                    if min_distance_to_stairs >= 2:
+                        best_candidates.append((x, y))
+
+                    # 十分な候補が見つかったら早期終了
+                    if len(best_candidates) >= 10:
+                        break
+                if len(best_candidates) >= 10:
+                    break
+            if len(best_candidates) >= 10:
+                break
+
+        # 最適な候補が見つかった場合
+        if best_candidates:
+            # 中央に最も近い位置を選択
+            best_position = min(
+                best_candidates,
+                key=lambda pos: abs(pos[0] - center_x) + abs(pos[1] - center_y),
+            )
+            return best_position
+
+        # フォールバック: 階段から離れた位置で床タイルを探す
+        for y in range(1, height - 1):
+            for x in range(1, width - 1):
+                if isinstance(tiles[y, x], Floor) and (x, y) not in stairs_positions:
+                    return (x, y)
+
+        # 最終フォールバック: 安全な固定位置
+        fallback_x = max(2, min(width - 3, width // 4))
+        fallback_y = max(2, min(height - 3, height // 4))
+        return (fallback_x, fallback_y)
 
 
 class DungeonManager:

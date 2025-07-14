@@ -297,7 +297,11 @@ class MovementManager:
                 and trap.y == player.y
                 and not getattr(trap, "is_triggered", False)
             ):
-                trap.activate(self.context)
+                # ウィザードモード時はトラップが発動しない（無敵モード）
+                if hasattr(self.context, 'game_logic') and self.context.game_logic.is_wizard_mode():
+                    self.context.add_message(f"[Wizard] {trap.name} detected but not triggered!")
+                else:
+                    trap.activate(self.context)
 
     def _check_special_tiles(self) -> None:
         """特殊タイルの処理。"""

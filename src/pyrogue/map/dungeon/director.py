@@ -63,7 +63,7 @@ class DungeonDirector:
 
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
-        self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=8)
+        self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=5)
         self.maze_builder = MazeBuilder(width, height, complexity=0.75)
         self.isolated_room_builder = IsolatedRoomBuilder(
             width, height, isolation_level=0.8
@@ -356,24 +356,12 @@ class DungeonDirector:
             else:
                 return "bsp"
 
-        # 特定の階層で迷路を生成する確率
-        # 浅い階層では低確率、深い階層では高確率
-        if floor <= 5:
-            maze_probability = 0.1  # 10%の確率
-        elif floor <= 15:
-            maze_probability = 0.2  # 20%の確率
-        else:
-            maze_probability = 0.3  # 30%の確率
-
         # 特定の階層は必ず迷路にする（例：7階、13階、19階）
         if floor in [7, 13, 19]:
             return "maze"
 
-        # 確率に基づいて決定
-        if random.random() < maze_probability:
-            return "maze"
-        else:
-            return "bsp"  # BSPベースのダンジョン
+        # 指定階層以外はすべてBSPダンジョンを生成
+        return "bsp"
 
     def _should_generate_isolated_rooms(self) -> bool:
         """

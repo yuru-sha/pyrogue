@@ -91,6 +91,10 @@ class GameLogic:
         self.turn_manager = TurnManager()
         self.monster_ai_manager = MonsterAIManager()
         self.score_manager = ScoreManager()
+        
+        # ウィザードモード（デバッグ用）
+        from pyrogue.config.env import get_debug_mode
+        self.wizard_mode = get_debug_mode()
 
         # 新しいマネージャーを初期化
         self.movement_manager = MovementManager(self.context)
@@ -111,6 +115,94 @@ class GameLogic:
 
         # 初期化状態を追跡
         self._is_initialized = False
+
+    def toggle_wizard_mode(self) -> None:
+        """ウィザードモードの切り替え。"""
+        self.wizard_mode = not self.wizard_mode
+        status = "enabled" if self.wizard_mode else "disabled"
+        self.add_message(f"Wizard mode {status}!")
+        
+    def is_wizard_mode(self) -> bool:
+        """ウィザードモードの状態を取得。"""
+        return self.wizard_mode
+    
+    def wizard_teleport_to_stairs(self) -> None:
+        """ウィザード機能: 階段位置にテレポート。"""
+        if not self.wizard_mode:
+            self.add_message("Wizard mode required!")
+            return
+            
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return
+            
+        # 下り階段を探す
+        for y in range(floor_data.tiles.shape[0]):
+            for x in range(floor_data.tiles.shape[1]):
+                from pyrogue.map.tile import StairsDown
+                if isinstance(floor_data.tiles[y, x], StairsDown):
+                    self.player.x = x
+                    self.player.y = y
+                    self.add_message(f"[Wizard] Teleported to stairs at ({x}, {y})!")
+                    self._update_fov()
+                    return
+                    
+        self.add_message("[Wizard] No stairs found on this floor!")
+    
+    def wizard_level_up(self) -> None:
+        """ウィザード機能: レベルアップ。"""
+        if not self.wizard_mode:
+            self.add_message("Wizard mode required!")
+            return
+        
+        from pyrogue.constants import get_exp_for_level
+        
+        # 次のレベルに必要な経験値を設定してレベルアップ
+        next_level = self.player.level + 1
+        required_exp = get_exp_for_level(next_level)
+        self.player.exp = required_exp
+        self.player.level_up()  # 正規のレベルアップ処理を使用
+        self.add_message(f"[Wizard] Level up! Now level {self.player.level}")
+    
+    def wizard_heal_full(self) -> None:
+        """ウィザード機能: 完全回復。"""
+        if not self.wizard_mode:
+            self.add_message("Wizard mode required!")
+            return
+            
+        self.player.hp = self.player.max_hp
+        self.player.mp = self.player.max_mp
+        self.add_message("[Wizard] Fully healed!")
+    
+    def wizard_reveal_all(self) -> None:
+        """ウィザード機能: 全マップ探索済みにする。"""
+        if not self.wizard_mode:
+            self.add_message("Wizard mode required!")
+            return
+            
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return
+            
+        # 全タイルを探索済みにする
+        explored = self.get_explored_tiles()
+        explored.fill(True)
+        
+        # 全隠しドア・トラップを発見済みにする
+        for y in range(floor_data.tiles.shape[0]):
+            for x in range(floor_data.tiles.shape[1]):
+                from pyrogue.map.tile import SecretDoor
+                tile = floor_data.tiles[y, x]
+                if isinstance(tile, SecretDoor) and tile.door_state == "secret":
+                    tile.reveal()
+                    
+        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+            for trap in floor_data.trap_spawner.traps:
+                if trap.is_hidden:
+                    trap.reveal()
+        
+        self.add_message("[Wizard] All map revealed!")
+        self._update_fov()
 
     def setup_new_game(self) -> None:
         """新しいゲームをセットアップ。"""
@@ -595,10 +687,61 @@ class GameLogic:
 
         return False
 
+    def search_trap(self, x: int, y: int) -> bool:
+        """隠しトラップを探索。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 座標チェック
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
+            return False
+
+        # トラップスポナーからトラップを検索
+        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+            for trap in floor_data.trap_spawner.traps:
+                if trap.x == x and trap.y == y and trap.is_hidden:
+                    # 発見成功率はプレイヤーレベルに依存（基本40% + レベル*5%）
+                    import random
+                    success_rate = min(90, 40 + self.player.level * 5)
+                    
+                    if random.randint(1, 100) <= success_rate:
+                        trap.reveal()  # トラップを発見
+                        self.add_message(f"You found a {trap.name}!")
+                        return True
+                    # 失敗してもメッセージは出さない（まとめて処理される）
+                    return False
+        
+        return False
+
     # トラップ処理（TrapManagerに委譲予定）
     def disarm_trap(self, x: int, y: int) -> bool:
         """トラップを解除。"""
-        # TrapManagerに委譲予定（現在未実装）
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 座標チェック
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
+            return False
+
+        # トラップスポナーからトラップを検索
+        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+            for trap in floor_data.trap_spawner.traps:
+                if trap.x == x and trap.y == y and not trap.is_hidden:
+                    # 発見済みトラップのみ解除可能
+                    return trap.disarm(self.context)
+        
         return False
 
     # 魔法処理（MagicManagerに委譲予定）
