@@ -22,17 +22,50 @@ def test_room_spacing():
     for room1 in director.rooms:
         for room2 in director.rooms:
             if room1 != room2:
-                # 部屋間の距離を計算
-                x_distance = min(
-                    abs(room1.x + room1.width - room2.x),
-                    abs(room2.x + room2.width - room1.x),
-                )
-                y_distance = min(
-                    abs(room1.y + room1.height - room2.y),
-                    abs(room2.y + room2.height - room1.y),
-                )
-                if x_distance > 0 and y_distance > 0:  # 部屋が重なっていない場合
-                    assert x_distance >= 3 or y_distance >= 3, "Rooms are too close"
+                # 正しい部屋間距離計算
+                # 部屋の境界を定義
+                room1_left = room1.x
+                room1_right = room1.x + room1.width - 1
+                room1_top = room1.y
+                room1_bottom = room1.y + room1.height - 1
+                
+                room2_left = room2.x
+                room2_right = room2.x + room2.width - 1
+                room2_top = room2.y
+                room2_bottom = room2.y + room2.height - 1
+                
+                # X方向の距離計算（部屋が重なっていない場合）
+                if room1_right < room2_left:
+                    x_distance = room2_left - room1_right - 1
+                elif room2_right < room1_left:
+                    x_distance = room1_left - room2_right - 1
+                else:
+                    x_distance = 0  # 重なっている または 隣接している
+                
+                # Y方向の距離計算（部屋が重なっていない場合）
+                if room1_bottom < room2_top:
+                    y_distance = room2_top - room1_bottom - 1
+                elif room2_bottom < room1_top:
+                    y_distance = room1_top - room2_bottom - 1
+                else:
+                    y_distance = 0  # 重なっている または 隣接している
+                
+                # 部屋が重なっていない場合のみテスト
+                if x_distance > 0 and y_distance > 0:  # 対角線上に配置された部屋
+                    assert x_distance >= 3 or y_distance >= 3, \
+                        f"Rooms are too close: room1=({room1.x},{room1.y},{room1.width},{room1.height}), " \
+                        f"room2=({room2.x},{room2.y},{room2.width},{room2.height}), " \
+                        f"x_distance={x_distance}, y_distance={y_distance}"
+                elif x_distance > 0:  # 水平方向に隣接
+                    assert x_distance >= 3, \
+                        f"Rooms are too close horizontally: room1=({room1.x},{room1.y},{room1.width},{room1.height}), " \
+                        f"room2=({room2.x},{room2.y},{room2.width},{room2.height}), " \
+                        f"x_distance={x_distance}"
+                elif y_distance > 0:  # 垂直方向に隣接
+                    assert y_distance >= 3, \
+                        f"Rooms are too close vertically: room1=({room1.x},{room1.y},{room1.width},{room1.height}), " \
+                        f"room2=({room2.x},{room2.y},{room2.width},{room2.height}), " \
+                        f"y_distance={y_distance}"
 
 
 def test_stairs_placement():
