@@ -266,7 +266,7 @@ class GameLogic:
         )
         from pyrogue.entities.items.item import Armor, Food, Potion, Scroll, Weapon
 
-        # 初期武器: Dagger (攻撃力+2)
+        # 初期武器: Dagger (攻撃力+2) - item_types.pyのWEAPONSと統一
         dagger = Weapon(x=0, y=0, name="Dagger", attack_bonus=2)
         self.inventory.add_item(dagger)
         self.inventory.equip(dagger)

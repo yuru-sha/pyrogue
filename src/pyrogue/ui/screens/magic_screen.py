@@ -64,7 +64,7 @@ class MagicScreen(Screen):
 
         # タイトル
         console.print(
-            x=2, y=1, string="Spellbook - Select a spell to cast", fg=tcod.color.yellow
+            x=2, y=1, string="Spellbook - Select a spell to cast", fg=(255, 255, 0)
         )
 
         # MPの表示
@@ -73,16 +73,16 @@ class MagicScreen(Screen):
             x=2,
             y=3,
             string=f"MP: {player.mp}/{player.max_mp}",
-            fg=tcod.color.light_cyan,
+            fg=(0, 255, 255),
         )
 
         # 魔法一覧
         spells = player.spellbook.known_spells
         if not spells:
             console.print(
-                x=2, y=5, string="You don't know any spells yet.", fg=tcod.color.gray
+                x=2, y=5, string="You don't know any spells yet.", fg=(128, 128, 128)
             )
-            console.print(x=2, y=7, string="Press ESC to return.", fg=tcod.color.gray)
+            console.print(x=2, y=7, string="Press ESC to return.", fg=(128, 128, 128))
             return
 
         # 魔法リスト表示
@@ -91,22 +91,22 @@ class MagicScreen(Screen):
 
             # 選択中の魔法をハイライト
             if i == self.selected_index:
-                console.print(x=1, y=y, string=">", fg=tcod.color.yellow)
+                console.print(x=1, y=y, string=">", fg=(255, 255, 0))
 
             # 魔法名とMP消費量
             spell_text = f"{chr(ord('a') + i)}) {spell.name} (MP:{spell.mp_cost})"
 
             # MP不足の場合は暗い色で表示
             if player.mp < spell.mp_cost:
-                color = tcod.color.dark_gray
+                color = (64, 64, 64)
             else:
-                color = tcod.color.white
+                color = (255, 255, 255)
 
             console.print(x=3, y=y, string=spell_text, fg=color)
 
             # 魔法の説明
             console.print(
-                x=5, y=y + 1, string=f"   {spell.description}", fg=tcod.color.light_gray
+                x=5, y=y + 1, string=f"   {spell.description}", fg=(192, 192, 192)
             )
 
         # 操作説明
@@ -114,7 +114,7 @@ class MagicScreen(Screen):
             x=2,
             y=len(spells) * 2 + 7,
             string="Use arrow keys to select, Enter to cast, ESC to cancel",
-            fg=tcod.color.gray,
+            fg=(128, 128, 128),
         )
 
     def handle_key(self, event: tcod.event.KeyDown) -> None:

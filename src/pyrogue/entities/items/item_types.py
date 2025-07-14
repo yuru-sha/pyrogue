@@ -62,25 +62,26 @@ class FoodType(ItemType):
     nutrition: int  # Nutrition value
 
 
-# Weapon definitions
+# Weapon definitions - 階層に応じた段階的出現
 WEAPONS = [
-    WeaponType(")", "Mace", 1, 26, 100, 8, 2, (-1, 3)),
-    WeaponType(")", "Long Sword", 2, 26, 80, 15, 4, (-1, 4)),
-    WeaponType(")", "Short Bow", 3, 26, 70, 15, 3, (0, 3)),
-    WeaponType(")", "Battle Axe", 4, 26, 60, 25, 6, (-2, 5)),
-    WeaponType(")", "Two-Handed Sword", 6, 26, 40, 40, 8, (-3, 6)),
+    WeaponType(")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),      # 序盤専用・初期装備
+    WeaponType(")", "Mace", 1, 10, 100, 8, 2, (-1, 3)),       # 序盤メイン武器
+    WeaponType(")", "Long Sword", 5, 20, 80, 15, 4, (-1, 4)), # 中盤メイン武器
+    WeaponType(")", "Short Bow", 8, 22, 70, 15, 3, (0, 3)),   # 中盤～終盤
+    WeaponType(")", "Battle Axe", 12, 26, 60, 25, 6, (-2, 5)),# 終盤武器
+    WeaponType(")", "Two-Handed Sword", 18, 26, 40, 40, 8, (-3, 6)), # 最終武器
 ]
 
-# Armor definitions
+# Armor definitions - 階層に応じた段階的出現
 ARMORS = [
-    ArmorType("[", "Leather Armor", 1, 26, 100, 20, 2, (0, 2)),
-    ArmorType("[", "Studded Leather", 2, 26, 90, 25, 3, (0, 3)),
-    ArmorType("[", "Ring Mail", 3, 26, 80, 30, 4, (-1, 3)),
-    ArmorType("[", "Scale Mail", 4, 26, 70, 40, 5, (-2, 4)),
-    ArmorType("[", "Chain Mail", 5, 26, 60, 50, 6, (-2, 4)),
-    ArmorType("[", "Splint Mail", 6, 26, 50, 60, 7, (-3, 5)),
-    ArmorType("[", "Banded Mail", 7, 26, 40, 70, 8, (-3, 5)),
-    ArmorType("[", "Plate Mail", 8, 26, 30, 80, 9, (-4, 6)),
+    ArmorType("[", "Leather Armor", 1, 8, 100, 20, 2, (0, 2)),     # 序盤専用・初期装備
+    ArmorType("[", "Studded Leather", 3, 12, 90, 25, 3, (0, 3)),   # 序盤～中盤移行
+    ArmorType("[", "Ring Mail", 5, 15, 80, 30, 4, (-1, 3)),        # 中盤序盤
+    ArmorType("[", "Scale Mail", 8, 18, 70, 40, 5, (-2, 4)),       # 中盤メイン
+    ArmorType("[", "Chain Mail", 10, 22, 60, 50, 6, (-2, 4)),      # 中盤～終盤
+    ArmorType("[", "Splint Mail", 15, 26, 50, 60, 7, (-3, 5)),     # 終盤防具
+    ArmorType("[", "Banded Mail", 18, 26, 40, 70, 8, (-3, 5)),     # 高級防具
+    ArmorType("[", "Plate Mail", 20, 26, 30, 80, 9, (-4, 6)),      # 最高級防具
 ]
 
 # Ring definitions
