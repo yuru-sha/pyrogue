@@ -111,14 +111,38 @@ class Player(Actor):
         self.spellbook = Spellbook()
         self.identification = ItemIdentification()
 
-    # move, take_damage, heal は基底クラスから継承
+    # move, heal は基底クラスから継承
+    # take_damageはウィザードモード対応のためオーバーライド
+
+    def take_damage(self, amount: int, context=None) -> None:
+        """
+        ダメージを受けてHPを減少（ウィザードモード対応）。
+
+        ウィザードモード時はダメージを無効化し、警告メッセージを表示します。
+        通常時は基底クラスの処理を実行します。
+
+        Args:
+        ----
+            amount: 受けるダメージ量
+            context: ゲームコンテキスト（ウィザードモード判定用）
+
+        """
+        # ウィザードモードチェック
+        if context and hasattr(context, 'game_logic') and context.game_logic.is_wizard_mode():
+            # ウィザードモード時はダメージを無効化
+            if hasattr(context, 'add_message'):
+                context.add_message(f"[Wizard] Damage {amount} blocked!")
+            return
+        
+        # 通常時は基底クラスの処理を実行
+        super().take_damage(amount)
 
     def gain_exp(self, amount: int) -> bool:
         """
         経験値を獲得し、レベルアップをチェック。
 
         経験値を加算し、レベルアップ条件を満たした場合は自動的に
-        レベルアップ処理を実行します。現在のレベル×100が必要経験値です。
+        レベルアップ処理を実行します。必要経験値は指数関数的に増加します。
 
         Args:
         ----
@@ -129,8 +153,11 @@ class Player(Actor):
             レベルアップした場合はTrue、そうでなければFalse
 
         """
+        from pyrogue.constants import get_exp_for_level
+        
         self.exp += amount
-        if self.exp >= self.level * CONFIG.player.EXPERIENCE_MULTIPLIER:
+        required_exp = get_exp_for_level(self.level + 1)
+        if self.exp >= required_exp:
             self.level_up()
             return True
         return False
@@ -152,7 +179,7 @@ class Player(Actor):
         self.defense += CONFIG.player.LEVEL_UP_DEFENSE_BONUS
         self.exp = 0
 
-    def consume_food(self, amount: int = 1) -> str | None:
+    def consume_food(self, amount: int = 1, context=None) -> str | None:
         """
         食料を消費して満腹度を減少し、MPの自然回復を行う。
 
@@ -182,7 +209,11 @@ class Player(Actor):
         # 飢餓状態をチェック
         if self.hunger <= 0:
             # 飢餓状態: 防御力を無視した直接ダメージ
-            self.hp = max(0, self.hp - 1)
+            if context:
+                self.take_damage(1, context)
+            else:
+                # contextがない場合は直接HPを減らす（後方互換性）
+                self.hp = max(0, self.hp - 1)
 
             if old_hunger > 0:
                 # 初めて飢餓状態になった場合

@@ -571,7 +571,7 @@ class MonsterAIManager:
         # 攻撃命中判定
         if random.random() < 0.8:  # 80%の命中率
             actual_damage = max(1, damage - player.get_defense())
-            player.take_damage(actual_damage)
+            player.take_damage(actual_damage, context)
             context.add_message(
                 f"{monster.name} shoots you for {actual_damage} damage!"
             )
@@ -726,7 +726,7 @@ class MonsterAIManager:
         else:
             # 通常ダメージを与える
             damage = max(1, monster.attack - player.get_defense())
-            player.take_damage(damage)
+            player.take_damage(damage, context)
             context.add_message(f"{monster.name} attacks you for {damage} damage!")
 
     def split_monster_on_damage(self, monster: Monster, context: GameContext) -> None:

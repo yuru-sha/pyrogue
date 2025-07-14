@@ -86,10 +86,14 @@ class CombatManager:
 
         # モンスターの攻撃処理
         damage = self._calculate_damage(monster, player)
-        player.hp -= damage
-
-        # 攻撃メッセージ
-        context.add_message(f"The {monster.name} attacks you for {damage} damage!")
+        
+        # ウィザードモード時はダメージを受けない（無敵モード）
+        if hasattr(context, 'game_logic') and context.game_logic.is_wizard_mode():
+            context.add_message(f"[Wizard] The {monster.name} attacks you for {damage} damage, but you are invincible!")
+        else:
+            player.hp -= damage
+            # 攻撃メッセージ
+            context.add_message(f"The {monster.name} attacks you for {damage} damage!")
 
         # 特殊攻撃効果の判定
         self._handle_special_attack_effects(monster, context)

@@ -19,7 +19,6 @@ class GameConstants:
 
     # 階層関連
     MAX_FLOORS: int = 26  # オリジナルRogueと同じ
-    AMULET_FLOOR: int = 26  # イェンダーのアミュレットが配置される階
 
     # プレイヤー初期値
     PLAYER_INITIAL_HP: int = 20
