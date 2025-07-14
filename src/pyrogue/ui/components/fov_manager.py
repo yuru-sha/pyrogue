@@ -153,6 +153,7 @@ class FOVManager:
         Returns:
         -------
             効果的なFOV半径
+
         """
         # 現在の階層データを取得
         floor_data = self.game_screen.game_logic.get_current_floor_data()
@@ -187,6 +188,7 @@ class FOVManager:
         Returns:
         -------
             光源を持っている場合True
+
         """
         # プレイヤーのインベントリから光源アイテムを検索
         if hasattr(player, "inventory") and hasattr(player.inventory, "items"):
@@ -207,6 +209,7 @@ class FOVManager:
         Returns:
         -------
             光源半径
+
         """
         max_radius = 0
 

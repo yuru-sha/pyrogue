@@ -136,7 +136,7 @@ class InventoryScreen(Screen):
             if event.sym == tcod.event.KeySym.UP:
                 self.selected_index = (self.selected_index - 1) % inventory_size
                 return
-            elif event.sym == tcod.event.KeySym.DOWN:
+            if event.sym == tcod.event.KeySym.DOWN:
                 self.selected_index = (self.selected_index + 1) % inventory_size
                 return
 

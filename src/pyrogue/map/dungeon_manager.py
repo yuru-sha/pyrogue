@@ -100,15 +100,14 @@ class FloorData:
         if floor_number == 1:
             # 1階では階段から離れた安全な位置を動的に探す
             self.start_pos = self._find_safe_start_position_for_floor1(tiles, up_pos, down_pos)
+        # 2階以降では上り階段の位置を使用
+        elif up_pos is not None:
+            self.start_pos = up_pos
+        elif down_pos is not None:
+            self.start_pos = down_pos
         else:
-            # 2階以降では上り階段の位置を使用
-            if up_pos is not None:
-                self.start_pos = up_pos
-            elif down_pos is not None:
-                self.start_pos = down_pos
-            else:
-                # フォールバック：適切な位置
-                self.start_pos = (1, 1)  # 最小限の安全な位置
+            # フォールバック：適切な位置
+            self.start_pos = (1, 1)  # 最小限の安全な位置
 
     def is_valid_position(self, x: int, y: int) -> bool:
         """
@@ -122,6 +121,7 @@ class FloorData:
         Returns:
         -------
             有効な座標の場合True
+
         """
         return 0 <= x < self.tiles.shape[1] and 0 <= y < self.tiles.shape[0]
 
@@ -137,6 +137,7 @@ class FloorData:
         Returns:
         -------
             タイルインスタンス、無効な座標の場合None
+
         """
         if self.is_valid_position(x, y):
             return self.tiles[y, x]
@@ -151,6 +152,7 @@ class FloorData:
             x: X座標
             y: Y座標
             walkable: 通行可能かどうか
+
         """
         if self.is_valid_position(x, y):
             tile = self.tiles[y, x]
@@ -166,6 +168,7 @@ class FloorData:
             x: X座標
             y: Y座標
             tile_type: タイルタイプ
+
         """
         if self.is_valid_position(x, y):
             # タイルタイプに応じたタイルインスタンスを作成

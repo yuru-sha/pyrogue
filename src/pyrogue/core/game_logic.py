@@ -404,6 +404,7 @@ class GameLogic:
         Returns:
         -------
             ドロップ可能な場合True
+
         """
         floor_data = self.get_current_floor_data()
         if not floor_data:
@@ -437,6 +438,7 @@ class GameLogic:
         Returns:
         -------
             ドロップが成功した場合True
+
         """
         if not self.can_drop_item_at(x, y):
             return False

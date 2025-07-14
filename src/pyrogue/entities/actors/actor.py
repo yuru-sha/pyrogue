@@ -129,6 +129,7 @@ class Actor(ABC):
         Returns
         -------
             生存している場合True、死亡している場合False
+
         """
         return not self.is_dead()
 

@@ -34,6 +34,7 @@ class DarkRoom(Room):
             width: 幅
             height: 高さ
             darkness_level: 暗さレベル（0.0-1.0）。1.0は完全な暗闇
+
         """
         super().__init__(x, y, width, height)
         self.is_dark = True
@@ -62,6 +63,7 @@ class DarkRoomBuilder:
         Args:
         ----
             darkness_intensity: 暗さの強度（0.0-1.0）。高いほど暗い
+
         """
         self.darkness_intensity = darkness_intensity
         self.dark_rooms: list[DarkRoom] = []
@@ -81,6 +83,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             生成された暗い部屋のリスト
+
         """
         self.dark_rooms = []
 
@@ -108,6 +111,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             変換された暗い部屋
+
         """
         # 暗さレベルを決定（強度に基づいて変動）
         darkness_level = max(0.5, self.darkness_intensity + random.uniform(-0.2, 0.2))
@@ -142,6 +146,7 @@ class DarkRoomBuilder:
             dark_rooms: 暗い部屋のリスト
             tiles: ダンジョンのタイル配列
             light_source_probability: 光源配置確率
+
         """
         self.light_sources = []
 
@@ -167,6 +172,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             光源の位置、または None
+
         """
         # 部屋の内部から候補位置を選択
         candidates = []
@@ -199,6 +205,7 @@ class DarkRoomBuilder:
         ----
             position: 光源の位置
             tiles: ダンジョンのタイル配列
+
         """
         x, y = position
 
@@ -221,6 +228,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             暗さレベル（0.0-1.0）。0.0は明るい、1.0は完全な暗闇
+
         """
         for room in rooms:
             if isinstance(room, DarkRoom):
@@ -242,6 +250,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             暗い部屋内の場合True
+
         """
         for room in rooms:
             if isinstance(room, DarkRoom):
@@ -272,6 +281,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             視界範囲（セル数）
+
         """
         # 暗い部屋内かチェック
         for room in rooms:
@@ -280,9 +290,8 @@ class DarkRoomBuilder:
                     if player_has_light:
                         # 光源を持っている場合は通常の視界範囲
                         return light_radius
-                    else:
-                        # 光源なしの場合は制限された視界範囲
-                        return room.base_visibility_range
+                    # 光源なしの場合は制限された視界範囲
+                    return room.base_visibility_range
 
         # 通常の部屋では標準的な視界範囲
         return 8  # デフォルトのFOV範囲
@@ -300,6 +309,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             最も近い光源の位置、または None
+
         """
         if not self.light_sources:
             return None
@@ -328,6 +338,7 @@ class DarkRoomBuilder:
         Returns:
         -------
             光の影響度（0.0-1.0）。1.0は完全に照明されている
+
         """
         if light_sources is None:
             light_sources = self.light_sources

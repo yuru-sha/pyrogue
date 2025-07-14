@@ -186,9 +186,7 @@ class CLIEngine:
             self.running = False
             return True
 
-        if result.should_quit:
-            return False
-        elif not result.success:
+        if result.should_quit or not result.success:
             return False
 
         return True
@@ -262,9 +260,8 @@ class CLIEngine:
                 floor_data.monster_spawner.monsters.append(test_monster)
                 print(f"Spawned Test Bat at ({x}, {y})")
                 return True
-            else:
-                print("Could not spawn monster")
-                return False
+            print("Could not spawn monster")
+            return False
         else:
             print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")
             return False

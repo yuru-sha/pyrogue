@@ -18,6 +18,7 @@ from __future__ import annotations
 import random
 
 import numpy as np
+
 from pyrogue.map.dungeon import Room
 
 from .amulet import AmuletOfYendor
@@ -193,6 +194,7 @@ class ItemSpawner:
         Returns:
         -------
             有効な位置の(x, y)座標。見つからない場合は(None, None)
+
         """
         height, width = dungeon_tiles.shape
 

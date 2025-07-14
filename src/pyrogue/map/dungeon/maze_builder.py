@@ -132,10 +132,9 @@ class MazeBuilder:
                         # 壁の場合：隣接する壁が非常に少なければ通路に
                         if wall_count < 3:
                             new_tiles[y, x] = Floor()
-                    else:
-                        # 通路の場合：隣接する壁が多ければ壁に
-                        if wall_count > 7:
-                            new_tiles[y, x] = Wall()
+                    # 通路の場合：隣接する壁が多ければ壁に
+                    elif wall_count > 7:
+                        new_tiles[y, x] = Wall()
 
             tiles[:] = new_tiles
 

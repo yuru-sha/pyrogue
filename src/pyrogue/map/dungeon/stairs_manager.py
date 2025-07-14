@@ -45,6 +45,7 @@ class StairsManager:
         Returns:
         -------
             安全な座標のタプル (x, y)
+
         """
         height, width = tiles.shape
 
@@ -104,6 +105,7 @@ class StairsManager:
         Returns:
         -------
             (上り階段位置, 下り階段位置) のタプル
+
         """
         self.stairs_placed = []
 
@@ -157,6 +159,7 @@ class StairsManager:
         Returns:
         -------
             Floorタイルの位置リスト
+
         """
         positions = []
         for y in range(tiles.shape[0]):

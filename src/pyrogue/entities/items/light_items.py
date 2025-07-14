@@ -34,6 +34,7 @@ class LightSource(ABC):
         Returns
         -------
             使用可能な場合True
+
         """
 
     @abstractmethod
@@ -44,6 +45,7 @@ class LightSource(ABC):
         Returns
         -------
             使い切られている場合True
+
         """
 
 
@@ -61,6 +63,7 @@ class Torch(BaseItem, LightSource):
         Args:
         ----
             duration: 燃焼時間（ターン数）
+
         """
         BaseItem.__init__(
             self,
@@ -95,6 +98,7 @@ class Torch(BaseItem, LightSource):
         Args:
         ----
             turns: 消費するターン数
+
         """
         if self.is_lit:
             self.remaining_duration = max(0, self.remaining_duration - turns)
@@ -123,6 +127,7 @@ class Lantern(BaseItem, LightSource):
         Args:
         ----
             duration: 燃料持続時間（ターン数）
+
         """
         BaseItem.__init__(
             self,
@@ -156,6 +161,7 @@ class Lantern(BaseItem, LightSource):
         Args:
         ----
             turns: 消費するターン数
+
         """
         if self.is_lit:
             self.remaining_duration = max(0, self.remaining_duration - turns)
@@ -184,6 +190,7 @@ class LightRing(BaseItem, LightSource):
         Args:
         ----
             light_radius: 光の範囲
+
         """
         BaseItem.__init__(
             self,
@@ -238,6 +245,7 @@ class LightManager:
         Args:
         ----
             light_source: 追加する光源
+
         """
         if light_source not in self.active_light_sources:
             self.active_light_sources.append(light_source)
@@ -250,6 +258,7 @@ class LightManager:
         Args:
         ----
             light_source: 削除する光源
+
         """
         if light_source in self.active_light_sources:
             self.active_light_sources.remove(light_source)
@@ -262,6 +271,7 @@ class LightManager:
         Returns
         -------
             合計光の範囲
+
         """
         max_radius = 0
 
@@ -279,6 +289,7 @@ class LightManager:
         Returns
         -------
             有効な光源がある場合True
+
         """
         return self.get_total_light_radius() > 0
 
@@ -289,6 +300,7 @@ class LightManager:
         Args:
         ----
             turns: 消費するターン数
+
         """
         depleted_sources = []
 
@@ -310,6 +322,7 @@ class LightManager:
         Returns
         -------
             光の強度（0.0-1.0）
+
         """
         max_intensity = 0.0
 

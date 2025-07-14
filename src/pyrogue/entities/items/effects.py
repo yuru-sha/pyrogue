@@ -19,9 +19,7 @@ from pyrogue.entities.actors.status_effects import (
 
 def _add_message_safe(context, message: str) -> None:
     """コンテキストに安全にメッセージを追加するヘルパー関数。"""
-    if hasattr(context, "add_message"):
-        context.add_message(message)
-    elif hasattr(context, "game_screen") and hasattr(context.game_screen, "message_log"):
+    if hasattr(context, "add_message") or (hasattr(context, "game_screen") and hasattr(context.game_screen, "message_log")):
         context.add_message(message)
 
 
@@ -29,7 +27,7 @@ def _get_floor_data_safe(context):
     """コンテキストから安全にフロアデータを取得するヘルパー関数。"""
     if hasattr(context, "dungeon_manager"):
         return context.dungeon_manager.get_current_floor_data()
-    elif hasattr(context, "dungeon"):
+    if hasattr(context, "dungeon"):
         return context.dungeon
     return None
 

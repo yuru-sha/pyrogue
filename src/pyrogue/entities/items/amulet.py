@@ -38,6 +38,7 @@ class AmuletOfYendor(Item):
         Returns:
         -------
             効果の適用に成功したかどうか
+
         """
         # プレイヤーにアミュレット所持フラグを設定
         if hasattr(context, "player"):
@@ -57,6 +58,7 @@ class AmuletOfYendor(Item):
         Args:
         ----
             context: ゲームコンテキスト
+
         """
         try:
             # GameLogicまたはDungeonManagerへのアクセスを試行
@@ -94,6 +96,7 @@ class AmuletOfYendor(Item):
         Returns:
         -------
             配置された階段の位置 (x, y)、配置に失敗した場合はNone
+
         """
         from pyrogue.map.tile import Floor, StairsUp
 

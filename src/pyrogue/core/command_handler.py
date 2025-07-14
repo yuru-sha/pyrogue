@@ -81,6 +81,7 @@ class CommonCommandHandler:
         Returns:
         -------
             CommandResult: コマンド実行結果
+
         """
         if args is None:
             args = []
@@ -92,46 +93,45 @@ class CommonCommandHandler:
             return self._handle_move_command(command, args)
 
         # アクションコマンド
-        elif command in ["get", "pickup", "g"]:
+        if command in ["get", "pickup", "g"]:
             return self._handle_get_item()
-        elif command in ["use", "u"]:
+        if command in ["use", "u"]:
             return self._handle_use_item(args)
-        elif command in ["attack", "a"]:
+        if command in ["attack", "a"]:
             return self._handle_attack(args)
-        elif command in ["stairs", "stair"]:
+        if command in ["stairs", "stair"]:
             return self._handle_stairs(args)
-        elif command in ["open", "o"]:
+        if command in ["open", "o"]:
             return self._handle_open_door()
-        elif command in ["close", "c"]:
+        if command in ["close", "c"]:
             return self._handle_close_door()
-        elif command in ["search", "s"]:
+        if command in ["search", "s"]:
             return self._handle_search()
-        elif command in ["disarm", "d"]:
+        if command in ["disarm", "d"]:
             return self._handle_disarm_trap()
 
         # 情報表示コマンド
-        elif command in ["status", "stat"]:
+        if command in ["status", "stat"]:
             self.context.display_player_status()
             return CommandResult(True)
-        elif command in ["inventory", "inv", "i"]:
+        if command in ["inventory", "inv", "i"]:
             self.context.display_inventory()
             return CommandResult(True)
-        elif command in ["look", "l"]:
+        if command in ["look", "l"]:
             self.context.display_game_state()
             return CommandResult(True)
 
         # デバッグコマンド
-        elif command == "debug":
+        if command == "debug":
             return self._handle_debug_command(args)
 
         # システムコマンド
-        elif command in ["quit", "exit", "q"]:
+        if command in ["quit", "exit", "q"]:
             return CommandResult(True, "Goodbye!", should_quit=True)
-        elif command == "help":
+        if command == "help":
             return self._handle_help()
 
-        else:
-            return CommandResult(False, f"Unknown command: {command}")
+        return CommandResult(False, f"Unknown command: {command}")
 
     def _handle_move_command(self, command: str, args: list[str]) -> CommandResult:
         """移動コマンドの処理。"""
@@ -163,16 +163,14 @@ class CommonCommandHandler:
         success = self.context.game_logic.handle_player_move(dx, dy)
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "Cannot move in that direction")
+        return CommandResult(False, "Cannot move in that direction")
 
     def _handle_get_item(self) -> CommandResult:
         """アイテム取得の処理。"""
         success = self.context.game_logic.handle_get_item()
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "No item to pick up here")
+        return CommandResult(False, "No item to pick up here")
 
     def _handle_use_item(self, args: list[str]) -> CommandResult:
         """アイテム使用の処理。"""
@@ -183,8 +181,7 @@ class CommonCommandHandler:
         success = self.context.game_logic.handle_use_item(item_name)
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, f"Cannot use {item_name}")
+        return CommandResult(False, f"Cannot use {item_name}")
 
     def _handle_attack(self, args: list[str]) -> CommandResult:
         """攻撃の処理。"""
@@ -192,8 +189,7 @@ class CommonCommandHandler:
         success = self.context.game_logic.handle_combat()
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "No enemy to attack nearby")
+        return CommandResult(False, "No enemy to attack nearby")
 
     def _handle_stairs(self, args: list[str]) -> CommandResult:
         """階段の処理。"""
@@ -210,40 +206,35 @@ class CommonCommandHandler:
 
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "No stairs here or cannot use stairs")
+        return CommandResult(False, "No stairs here or cannot use stairs")
 
     def _handle_open_door(self) -> CommandResult:
         """扉を開く処理。"""
         success = self.context.game_logic.handle_open_door()
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "No door to open nearby")
+        return CommandResult(False, "No door to open nearby")
 
     def _handle_close_door(self) -> CommandResult:
         """扉を閉じる処理。"""
         success = self.context.game_logic.handle_close_door()
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "No door to close nearby")
+        return CommandResult(False, "No door to close nearby")
 
     def _handle_search(self) -> CommandResult:
         """隠し扉の探索処理。"""
         success = self.context.game_logic.handle_search()
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "Nothing found")
+        return CommandResult(False, "Nothing found")
 
     def _handle_disarm_trap(self) -> CommandResult:
         """トラップ解除の処理。"""
         success = self.context.game_logic.handle_disarm_trap()
         if success:
             return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "No trap to disarm here")
+        return CommandResult(False, "No trap to disarm here")
 
     def _handle_help(self) -> CommandResult:
         """ヘルプ表示。"""
@@ -294,6 +285,7 @@ Available Commands:
         Returns:
         -------
             コマンド実行結果
+
         """
         if not args:
             self.context.add_message(
@@ -330,7 +322,7 @@ Available Commands:
 
             return CommandResult(True)
 
-        elif debug_cmd == "floor" and len(args) > 1:
+        if debug_cmd == "floor" and len(args) > 1:
             try:
                 floor_num = int(args[1])
                 game_logic = self.context.game_logic

@@ -57,6 +57,7 @@ class BaseItem(ABC):
         Returns:
         -------
             スタック可能な場合True
+
         """
         return self.stackable and other.stackable and self.name == other.name and type(self) == type(other)
 

@@ -348,38 +348,35 @@ class Player(Actor):
         """現在の飢餓レベルを取得。"""
         if self.hunger >= HungerConstants.FULL_THRESHOLD:
             return "Full"
-        elif self.hunger >= HungerConstants.CONTENT_THRESHOLD:
+        if self.hunger >= HungerConstants.CONTENT_THRESHOLD:
             return "Content"
-        elif self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
             return "Hungry"
-        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
             return "Very Hungry"
-        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+        if self.hunger >= HungerConstants.STARVING_THRESHOLD:
             return "Starving"
-        else:
-            return "Dying"
+        return "Dying"
 
     def get_hunger_attack_penalty(self) -> int:
         """飢餓による攻撃力ペナルティを取得。"""
         if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
             return 0
-        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
             return HungerConstants.HUNGRY_ATTACK_PENALTY
-        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+        if self.hunger >= HungerConstants.STARVING_THRESHOLD:
             return HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
-        else:
-            return HungerConstants.STARVING_ATTACK_PENALTY
+        return HungerConstants.STARVING_ATTACK_PENALTY
 
     def get_hunger_defense_penalty(self) -> int:
         """飢餓による防御力ペナルティを取得。"""
         if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
             return 0
-        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
             return HungerConstants.HUNGRY_DEFENSE_PENALTY
-        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+        if self.hunger >= HungerConstants.STARVING_THRESHOLD:
             return HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
-        else:
-            return HungerConstants.STARVING_DEFENSE_PENALTY
+        return HungerConstants.STARVING_DEFENSE_PENALTY
 
     def eat_food(self, amount: int = 25) -> None:
         """
@@ -568,6 +565,7 @@ class Player(Actor):
         Returns
         -------
             総合スコア
+
         """
         # オリジナルRogue風スコア計算
         score = 0

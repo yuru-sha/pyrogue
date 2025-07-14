@@ -32,6 +32,7 @@ class MovementManager:
         Args:
         ----
             context: 共有ゲームコンテキスト
+
         """
         self.context = context
 
@@ -47,6 +48,7 @@ class MovementManager:
         Returns:
         -------
             移動が成功した場合True
+
         """
         player = self.context.player
 
@@ -90,6 +92,7 @@ class MovementManager:
         Returns:
         -------
             移動可能な場合True
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
         if not floor_data:
@@ -124,6 +127,7 @@ class MovementManager:
         Returns:
         -------
             モンスターインスタンス、いない場合None
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
         if not floor_data:
@@ -147,6 +151,7 @@ class MovementManager:
         Returns:
         -------
             戦闘処理が成功した場合True
+
         """
         # 戦闘処理をCombatManagerに委譲
         combat_result = self.context.combat_manager.handle_player_attack(monster, self.context)
@@ -168,6 +173,7 @@ class MovementManager:
         Returns:
         -------
             処理が成功した場合True
+
         """
         # モンスターが死亡している場合、その位置に移動
         if not monster.is_alive:
@@ -188,6 +194,7 @@ class MovementManager:
         Returns:
         -------
             移動が成功した場合True
+
         """
         # プレイヤーの位置を更新
         self.context.player.x = new_x

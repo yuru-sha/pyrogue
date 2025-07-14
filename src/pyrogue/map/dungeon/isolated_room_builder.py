@@ -32,6 +32,7 @@ class IsolatedRoomGroup:
         ----
             rooms: 部屋群
             access_points: アクセスポイント（隠し通路の位置）
+
         """
         self.rooms = rooms
         self.access_points = access_points
@@ -58,6 +59,7 @@ class IsolatedRoomBuilder:
             width: ダンジョンの幅
             height: ダンジョンの高さ
             isolation_level: 孤立度（0.0-1.0）。高いほど発見が困難
+
         """
         self.width = width
         self.height = height
@@ -82,6 +84,7 @@ class IsolatedRoomBuilder:
         Returns:
         -------
             生成された孤立部屋群のリスト
+
         """
         # 状態をリセットしてから開始
         self.reset()
@@ -121,6 +124,7 @@ class IsolatedRoomBuilder:
         Returns:
         -------
             生成された孤立部屋群、または None
+
         """
         # 孤立エリアの位置を決定
         isolation_area = self._find_isolation_area()
@@ -152,6 +156,7 @@ class IsolatedRoomBuilder:
         Returns
         -------
             (x, y, width, height) または None
+
         """
         # 孤立エリアのサイズを決定
         area_width = random.randint(15, 25)

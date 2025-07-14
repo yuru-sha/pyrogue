@@ -350,6 +350,7 @@ class GameRenderer:
         Returns
         -------
             str: ランダムな文字
+
         """
         chars = ["?", "!", "@", "#", "$", "%", "^", "&", "*", "+", "=", "~"]
         return random.choice(chars)
@@ -361,5 +362,6 @@ class GameRenderer:
         Returns
         -------
             tuple[int, int, int]: RGB色値
+
         """
         return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))

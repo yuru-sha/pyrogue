@@ -317,8 +317,7 @@ class DungeonDirector:
             # テスト中は特定の階層のみ迷路にして、その他はBSPにする
             if floor in [7, 13, 19]:
                 return "maze"
-            else:
-                return "bsp"
+            return "bsp"
 
         # 特定の階層は必ず迷路にする（例：7階、13階、19階）
         if floor in [7, 13, 19]:
@@ -334,17 +333,17 @@ class DungeonDirector:
         Returns
         -------
             孤立部屋群を生成する場合True
+
         """
         # 特定の階層で孤立部屋群を生成
         # 浅い階層では低確率、深い階層では高確率
         if self.floor <= 3:
             return False  # 浅い階層では生成しない
-        elif self.floor <= 10:
+        if self.floor <= 10:
             return self.floor in [4, 8]  # 4階、8階で確実に生成
-        elif self.floor <= 20:
+        if self.floor <= 20:
             return self.floor in [11, 15, 18]  # 11階、15階、18階で確実に生成
-        else:
-            return self.floor in [22, 25]  # 22階、25階で確実に生成
+        return self.floor in [22, 25]  # 22階、25階で確実に生成
 
     def _should_generate_dark_rooms(self) -> bool:
         """
@@ -353,14 +352,14 @@ class DungeonDirector:
         Returns
         -------
             暗い部屋を生成する場合True
+
         """
         # 特定の階層で暗い部屋を生成
         # 深い階層ほど暗い部屋が多くなる
         if self.floor <= 5:
             return False  # 浅い階層では生成しない
-        elif self.floor <= 12:
+        if self.floor <= 12:
             return self.floor in [6, 10]  # 6階、10階で確実に生成
-        elif self.floor <= 20:
+        if self.floor <= 20:
             return self.floor in [14, 17, 20]  # 14階、17階、20階で確実に生成
-        else:
-            return self.floor in [23, 24]  # 深層では23階、24階で確実に生成
+        return self.floor in [23, 24]  # 深層では23階、24階で確実に生成

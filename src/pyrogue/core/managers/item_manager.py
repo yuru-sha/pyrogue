@@ -32,6 +32,7 @@ class ItemManager:
         Args:
         ----
             context: 共有ゲームコンテキスト
+
         """
         self.context = context
 
@@ -42,6 +43,7 @@ class ItemManager:
         Returns
         -------
             取得したアイテムの名前、取得できない場合None
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -90,6 +92,7 @@ class ItemManager:
         Returns:
         -------
             追加が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -111,6 +114,7 @@ class ItemManager:
         Returns:
         -------
             見つかったアイテム、なければNone
+
         """
         inventory = self.context.inventory
 
@@ -132,6 +136,7 @@ class ItemManager:
         Returns:
         -------
             使用が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -155,10 +160,9 @@ class ItemManager:
             if success:
                 # 使用成功時の追加処理
                 return True
-            else:
-                # 使用失敗時の処理
-                self.context.add_message(f"The {item_name} has no effect.")
-                return False
+            # 使用失敗時の処理
+            self.context.add_message(f"The {item_name} has no effect.")
+            return False
 
         except Exception as e:
             self.context.add_message(f"Failed to use {item_name}: {e!s}")
@@ -171,6 +175,7 @@ class ItemManager:
         Args:
         ----
             item: 使用したアイテム
+
         """
         inventory = self.context.inventory
 
@@ -188,6 +193,7 @@ class ItemManager:
         Args:
         ----
             item: 使用を試行したアイテム
+
         """
         self.context.add_message(f"You couldn't use the {item.name}.")
 
@@ -202,6 +208,7 @@ class ItemManager:
         Returns:
         -------
             ドロップが成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -242,6 +249,7 @@ class ItemManager:
         Args:
         ----
             item: 配置するアイテム
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -265,6 +273,7 @@ class ItemManager:
         Returns:
         -------
             装備が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -299,6 +308,7 @@ class ItemManager:
         Returns:
         -------
             装備解除が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -341,6 +351,7 @@ class ItemManager:
         Returns:
         -------
             装備スロット名、見つからない場合None
+
         """
         inventory = self.context.inventory
 
@@ -365,6 +376,7 @@ class ItemManager:
         Returns:
         -------
             指定位置にあるアイテムのリスト
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
 
@@ -385,5 +397,6 @@ class ItemManager:
         Returns:
         -------
             指定位置にあるアイテムの総数
+
         """
         return len(self.get_items_at_position(x, y))
