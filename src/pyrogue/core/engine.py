@@ -122,7 +122,7 @@ class Engine:
         """
         # デフォルトフォントファイルの読み込みと設定
         tileset = tcod.tileset.load_tilesheet(
-            "data/assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
+            "assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
             32,
             8,  # 列数と行数
             tcod.tileset.CHARMAP_TCOD,  # 文字マップ

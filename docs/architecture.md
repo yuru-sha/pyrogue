@@ -1003,7 +1003,7 @@ class Engine:
     def initialize(self) -> None:
         # フォントとタイルセット
         tileset = tcod.tileset.load_tilesheet(
-            "data/assets/fonts/dejavu10x10_gs_tc.png",
+            "assets/fonts/dejavu10x10_gs_tc.png",
             32, 8, tcod.tileset.CHARMAP_TCOD
         )
 

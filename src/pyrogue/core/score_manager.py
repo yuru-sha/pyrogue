@@ -77,7 +77,7 @@ class ScoreEntry:
 class ScoreManager:
     """スコアランキング管理クラス"""
 
-    def __init__(self, score_file: str = "data/scores.json") -> None:
+    def __init__(self, score_file: str = "scores.json") -> None:
         self.score_file = score_file
         self.scores: list[ScoreEntry] = []
         self.load_scores()

@@ -117,7 +117,7 @@ pyrogue/
 │   └── utils/            # Utility modules
 │       └── logger.py     # Logging system
 │
-├── data/                 # Game assets and data
+├── assets/                 # Game assets
 ├── saves/               # Save game files (runtime generated)
 ├── tests/               # Unit tests
 └── docs/               # Documentation

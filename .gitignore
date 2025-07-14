@@ -175,9 +175,10 @@ alembic.ini
 # Node modules
 node_modules/
 
-# APP directory
+# APP directory and files
 data/
 logs/
+scores.json
 
 # macOS
 .DS_Store

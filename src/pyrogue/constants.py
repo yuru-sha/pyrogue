@@ -221,10 +221,10 @@ class FileConstants:
     SAVE_FILE_DIR: str = "saves"
 
     # フォント
-    FONT_FILE: str = "data/assets/fonts/dejavu10x10_gs_tc.png"
+    FONT_FILE: str = "assets/fonts/dejavu10x10_gs_tc.png"
 
     # ログファイル
-    LOG_FILE_DIR: str = "data/logs"
+    LOG_FILE_DIR: str = "logs"
     LOG_FILE_NAME: str = "pyrogue.log"
 
 
