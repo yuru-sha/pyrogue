@@ -241,13 +241,15 @@ class InputHandler:
 
     def _handle_search_action(self) -> None:
         """
-        隠しドア探索処理。
+        隠しドア・トラップ探索処理。
         """
         player = self.game_screen.player
         if not player:
             return
 
         found_secret = False
+        found_trap = False
+        
         # プレイヤーの周囲8方向をチェック
         for dy in [-1, 0, 1]:
             for dx in [-1, 0, 1]:
@@ -255,10 +257,14 @@ class InputHandler:
                     continue
 
                 x, y = player.x + dx, player.y + dy
+                # 隠しドア探索
                 if self.game_screen.game_logic.search_secret_door(x, y):
                     found_secret = True
+                # トラップ探索
+                if self.game_screen.game_logic.search_trap(x, y):
+                    found_trap = True
 
-        if not found_secret:
+        if not found_secret and not found_trap:
             self.game_screen.game_logic.add_message("You search but find nothing.")
 
     def _handle_disarm_action(self) -> None:

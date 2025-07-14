@@ -157,11 +157,11 @@ class MagicMissile(Spell):
 
         """
         if not self.can_cast(context):
-            context.game_screen.message_log.append("You don't have enough MP!")
+            context.add_message("You don't have enough MP!")
             return False
 
         if not target_pos:
-            context.game_screen.message_log.append("You need to specify a target!")
+            context.add_message("You need to specify a target!")
             return False
 
         # MPを消費
@@ -176,7 +176,7 @@ class MagicMissile(Spell):
         player = context.player
         distance = ((player.x - target_x) ** 2 + (player.y - target_y) ** 2) ** 0.5
         if distance > player.light_radius:
-            context.game_screen.message_log.append("The target is too far away!")
+            context.add_message("The target is too far away!")
             return False
 
         # モンスターを検索
@@ -191,20 +191,20 @@ class MagicMissile(Spell):
             if monster:
                 # ダメージを与える（防御力無視）
                 monster.hp = max(0, monster.hp - self.damage)
-                context.game_screen.message_log.append(
+                context.add_message(
                     f"Your magic missile hits the {monster.name} for {self.damage} damage!"
                 )
 
                 # モンスターの死亡判定
                 if monster.hp <= 0:
-                    context.game_screen.message_log.append(f"The {monster.name} dies!")
+                    context.add_message(f"The {monster.name} dies!")
                     # 経験値獲得
                     context.player.gain_exp(monster.exp_value)
                     # モンスターを削除
                     current_floor_data.monster_spawner.monsters.remove(monster)
 
                 return True
-            context.game_screen.message_log.append("Your magic missile hits nothing.")
+            context.add_message("Your magic missile hits nothing.")
             return True
 
         return False
@@ -252,13 +252,13 @@ class Heal(Spell):
 
         """
         if not self.can_cast(context):
-            context.game_screen.message_log.append("You don't have enough MP!")
+            context.add_message("You don't have enough MP!")
             return False
 
         player = context.player
 
         if player.hp >= player.max_hp:
-            context.game_screen.message_log.append("You are already at full health!")
+            context.add_message("You are already at full health!")
             return False
 
         # MPを消費
@@ -270,7 +270,7 @@ class Heal(Spell):
         player.heal(self.heal_amount)
         actual_heal = player.hp - old_hp
 
-        context.game_screen.message_log.append(f"You feel better! (+{actual_heal} HP)")
+        context.add_message(f"You feel better! (+{actual_heal} HP)")
 
         return True
 
@@ -308,13 +308,13 @@ class CurePoison(Spell):
 
         """
         if not self.can_cast(context):
-            context.game_screen.message_log.append("You don't have enough MP!")
+            context.add_message("You don't have enough MP!")
             return False
 
         player = context.player
 
         if not player.is_poisoned():
-            context.game_screen.message_log.append("You are not poisoned!")
+            context.add_message("You are not poisoned!")
             return False
 
         # MPを消費
@@ -323,7 +323,7 @@ class CurePoison(Spell):
 
         # 毒状態を解除
         player.status_effects.remove_effect("Poison")
-        context.game_screen.message_log.append("You feel the poison leave your body!")
+        context.add_message("You feel the poison leave your body!")
 
         return True
 
@@ -371,11 +371,11 @@ class PoisonBolt(Spell):
 
         """
         if not self.can_cast(context):
-            context.game_screen.message_log.append("You don't have enough MP!")
+            context.add_message("You don't have enough MP!")
             return False
 
         if not target_pos:
-            context.game_screen.message_log.append("You need to specify a target!")
+            context.add_message("You need to specify a target!")
             return False
 
         # MPを消費
@@ -389,7 +389,7 @@ class PoisonBolt(Spell):
         # 射程制限
         distance = ((player.x - target_x) ** 2 + (player.y - target_y) ** 2) ** 0.5
         if distance > player.light_radius:
-            context.game_screen.message_log.append("The target is too far away!")
+            context.add_message("The target is too far away!")
             return False
 
         # モンスターを検索
@@ -406,11 +406,11 @@ class PoisonBolt(Spell):
                 poison_effect = PoisonEffect(duration=self.poison_duration, damage=2)
                 monster.status_effects.add_effect(poison_effect)
 
-                context.game_screen.message_log.append(
+                context.add_message(
                     f"Your poison bolt hits the {monster.name}! It looks sick."
                 )
                 return True
-            context.game_screen.message_log.append("Your poison bolt hits nothing.")
+            context.add_message("Your poison bolt hits nothing.")
             return True
 
         return False
@@ -504,7 +504,7 @@ class Spellbook:
         """
         spell = self.get_spell_by_name(spell_name)
         if not spell:
-            context.game_screen.message_log.append(
+            context.add_message(
                 f"You don't know the spell '{spell_name}'."
             )
             return False

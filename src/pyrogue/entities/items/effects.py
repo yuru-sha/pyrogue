@@ -24,7 +24,7 @@ def _add_message_safe(context, message: str) -> None:
     elif hasattr(context, "game_screen") and hasattr(
         context.game_screen, "message_log"
     ):
-        context.game_screen.message_log.append(message)
+        context.add_message(message)
 
 
 def _get_floor_data_safe(context):

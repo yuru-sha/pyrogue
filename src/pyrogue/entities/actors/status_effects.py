@@ -140,7 +140,7 @@ class PoisonEffect(StatusEffect):
         context.player.hp = max(0, context.player.hp - self.damage)
 
         # メッセージを表示
-        context.game_screen.message_log.append(
+        context.add_message(
             f"毒によって{self.damage}ダメージを受けた！"
         )
 
@@ -184,7 +184,7 @@ class ParalysisEffect(StatusEffect):
 
         """
         # 麻痺状態のメッセージを表示
-        context.game_screen.message_log.append("麻痺して動けない！")
+        context.add_message("麻痺して動けない！")
 
         # 継続ターン数を更新
         return self.update_duration()
@@ -228,7 +228,7 @@ class ConfusionEffect(StatusEffect):
 
         """
         # 混乱状態のメッセージを表示
-        context.game_screen.message_log.append("混乱して正常な判断ができない！")
+        context.add_message("混乱して正常な判断ができない！")
 
         # 継続ターン数を更新
         return self.update_duration()
@@ -279,12 +279,8 @@ class HallucinationEffect(StatusEffect):
             "The world around you seems unreal!",
         ]
 
-        if hasattr(context, "add_message"):
-            context.add_message(random.choice(messages))
-        elif hasattr(context, "game_screen") and hasattr(
-            context.game_screen, "message_log"
-        ):
-            context.game_screen.message_log.append(random.choice(messages))
+        # 幻覚状態のメッセージを表示
+        context.add_message(random.choice(messages))
 
         # 継続ターン数を更新
         return self.update_duration()

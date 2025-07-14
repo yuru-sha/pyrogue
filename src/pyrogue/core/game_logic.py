@@ -595,10 +595,61 @@ class GameLogic:
 
         return False
 
+    def search_trap(self, x: int, y: int) -> bool:
+        """隠しトラップを探索。"""
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 座標チェック
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
+            return False
+
+        # トラップスポナーからトラップを検索
+        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+            for trap in floor_data.trap_spawner.traps:
+                if trap.x == x and trap.y == y and trap.is_hidden:
+                    # 発見成功率はプレイヤーレベルに依存（基本40% + レベル*5%）
+                    import random
+                    success_rate = min(90, 40 + self.player.level * 5)
+                    
+                    if random.randint(1, 100) <= success_rate:
+                        trap.reveal()  # トラップを発見
+                        self.add_message(f"You found a {trap.name}!")
+                        return True
+                    # 失敗してもメッセージは出さない（まとめて処理される）
+                    return False
+        
+        return False
+
     # トラップ処理（TrapManagerに委譲予定）
     def disarm_trap(self, x: int, y: int) -> bool:
         """トラップを解除。"""
-        # TrapManagerに委譲予定（現在未実装）
+        floor_data = self.get_current_floor_data()
+        if not floor_data:
+            return False
+
+        # 座標チェック
+        if (
+            x < 0
+            or y < 0
+            or y >= floor_data.tiles.shape[0]
+            or x >= floor_data.tiles.shape[1]
+        ):
+            return False
+
+        # トラップスポナーからトラップを検索
+        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+            for trap in floor_data.trap_spawner.traps:
+                if trap.x == x and trap.y == y and not trap.is_hidden:
+                    # 発見済みトラップのみ解除可能
+                    return trap.disarm(self.context)
+        
         return False
 
     # 魔法処理（MagicManagerに委譲予定）
