@@ -315,7 +315,7 @@ class DarkRoomBuilder:
 
         return nearest_light
 
-    def get_light_influence_at(self, x: int, y: int, light_sources: list[tuple[int, int]] = None) -> float:
+    def get_light_influence_at(self, x: int, y: int, light_sources: list[tuple[int, int]] | None = None) -> float:
         """
         指定位置での光の影響度を取得。
 

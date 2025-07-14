@@ -58,8 +58,8 @@ class DungeonDirector:
 
         # タイル配列を初期化（全て壁で開始）
         self.tiles = np.full((height, width), Wall(), dtype=object)
-        self.rooms = []
-        self.corridors = []
+        self.rooms: list[Room] = []
+        self.corridors: list[Corridor] = []
 
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
@@ -245,12 +245,12 @@ class DungeonDirector:
 
     def set_custom_builders(
         self,
-        room_builder: RoomBuilder = None,
-        corridor_builder: CorridorBuilder = None,
-        door_manager: DoorManager = None,
-        special_room_builder: SpecialRoomBuilder = None,
-        stairs_manager: StairsManager = None,
-        validation_manager: ValidationManager = None,
+        room_builder: RoomBuilder | None = None,
+        corridor_builder: CorridorBuilder | None = None,
+        door_manager: DoorManager | None = None,
+        special_room_builder: SpecialRoomBuilder | None = None,
+        stairs_manager: StairsManager | None = None,
+        validation_manager: ValidationManager | None = None,
     ) -> None:
         """
         カスタムビルダーコンポーネントを設定。

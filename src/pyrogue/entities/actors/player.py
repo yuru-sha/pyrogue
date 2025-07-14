@@ -13,6 +13,12 @@ Example:
 
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyrogue.core.managers.game_context import GameContext
 
 from pyrogue.config import CONFIG
 from pyrogue.constants import HungerConstants
@@ -114,7 +120,7 @@ class Player(Actor):
     # move, heal は基底クラスから継承
     # take_damageはウィザードモード対応のためオーバーライド
 
-    def take_damage(self, amount: int, context=None) -> None:
+    def take_damage(self, amount: int, context: GameContext | None = None) -> None:
         """
         ダメージを受けてHPを減少（ウィザードモード対応）。
 
@@ -179,7 +185,7 @@ class Player(Actor):
         self.defense += CONFIG.player.LEVEL_UP_DEFENSE_BONUS
         self.exp = 0
 
-    def consume_food(self, amount: int = 1, context=None) -> str | None:
+    def consume_food(self, amount: int = 1, context: GameContext | None = None) -> str | None:
         """
         食料を消費して満腹度を減少し、MPの自然回復を行う。
 
@@ -468,7 +474,7 @@ class Player(Actor):
             self.inventory.add_item(item)
         return item
 
-    def use_item(self, item: Item, context=None) -> bool:
+    def use_item(self, item: Item, context: GameContext | None = None) -> bool:
         """
         アイテムを使用して効果を適用。
 

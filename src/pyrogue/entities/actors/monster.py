@@ -92,8 +92,8 @@ class Monster(Actor):
         self.special_ability_cooldown = 0
 
         # 分裂モンスター用の属性
-        self.parent_monster = None
-        self.split_children = []
+        self.parent_monster: Monster | None = None
+        self.split_children: list[Monster] = []
 
         # 逃走モンスター用の属性
         self.flee_threshold = 0.3  # HP30%以下で逃走

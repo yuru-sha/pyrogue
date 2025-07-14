@@ -25,10 +25,10 @@ class Room:
     width: int
     height: int
     is_special: bool = False
-    room_type: str = None
-    connected_rooms: set = None
-    doors: list = None
-    id: int = None
+    room_type: str | None = None
+    connected_rooms: set | None = None
+    doors: list | None = None
+    id: int | None = None
     is_isolated: bool = False
 
     def __post_init__(self):

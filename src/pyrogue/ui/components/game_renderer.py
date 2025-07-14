@@ -192,7 +192,7 @@ class GameRenderer:
 
                     # 隠しトラップは薄い色で表示
                     if trap.is_hidden:
-                        color = tuple(c // 2 for c in color)  # 色を半分に
+                        color = (color[0] // 2, color[1] // 2, color[2] // 2)  # 色を半分に
 
                     console.print(x, y + map_offset_y, char, fg=color)
                     break  # 1つの座標に複数トラップがある場合は最初のもののみ表示

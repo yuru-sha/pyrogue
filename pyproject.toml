@@ -106,10 +106,5 @@ exclude = [
 ]
 
 [[tool.mypy.overrides]]
-module = [
-    "streamlit.*",
-    "pandas.*",
-    "openmeteo_requests",
-    "openmeteo_sdk"
-]
+module = []
 ignore_missing_imports = true

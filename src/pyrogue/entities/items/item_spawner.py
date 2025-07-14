@@ -126,7 +126,7 @@ class ItemSpawner:
                 k=1,
             )[0]
 
-            item = None
+            item: Item | None = None
             if item_type == "weapon":
                 item = self._create_weapon()
             elif item_type == "armor":

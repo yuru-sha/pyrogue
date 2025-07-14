@@ -301,7 +301,7 @@ class InputHandler:
 
         self.game_screen.game_logic.add_message("No trap to disarm nearby.")
 
-    def start_targeting(self, start_x: int = None, start_y: int = None) -> None:
+    def start_targeting(self, start_x: int | None = None, start_y: int | None = None) -> None:
         """
         ターゲット選択モードを開始。
 

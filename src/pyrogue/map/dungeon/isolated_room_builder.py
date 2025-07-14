@@ -185,7 +185,7 @@ class IsolatedRoomBuilder:
 
     def _generate_rooms_in_area(self, area_x: int, area_y: int, area_width: int, area_height: int) -> list[Room]:
         """孤立エリア内に部屋を生成。"""
-        rooms = []
+        rooms: list[Room] = []
         room_count = random.randint(2, 4)
 
         for i in range(room_count):
@@ -202,7 +202,7 @@ class IsolatedRoomBuilder:
                 # 他の部屋と重複しないかチェック
                 new_room = Room(x, y, room_width, room_height)
                 if not self._room_overlaps_with_existing(new_room, rooms):
-                    new_room.id = f"isolated_{len(rooms)}"
+                    new_room.id = 9000 + len(rooms)  # 孤立部屋のID（9000番台）
                     new_room.is_isolated = True
                     rooms.append(new_room)
                     break

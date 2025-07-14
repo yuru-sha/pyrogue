@@ -38,7 +38,7 @@ class SpecialRoomBuilder:
 
         """
         self.floor = floor
-        self.special_rooms_created = []
+        self.special_rooms_created: list[Room] = []
 
     def process_special_rooms(self, rooms: list[Room]) -> None:
         """
@@ -49,7 +49,7 @@ class SpecialRoomBuilder:
             rooms: 部屋のリスト
 
         """
-        self.special_rooms_created = []
+        self.special_rooms_created: list[Room] = []
 
         for room in rooms:
             if self._should_create_special_room(room):
@@ -273,7 +273,7 @@ class SpecialRoomBuilder:
             部屋種類とその数の辞書
 
         """
-        room_counts = {}
+        room_counts: dict[str, int] = {}
         for room in self.special_rooms_created:
             room_type = room.room_type
             room_counts[room_type] = room_counts.get(room_type, 0) + 1
@@ -281,7 +281,7 @@ class SpecialRoomBuilder:
 
     def reset(self) -> None:
         """ビルダーの状態をリセット。"""
-        self.special_rooms_created = []
+        self.special_rooms_created: list[Room] = []
 
     def get_statistics(self) -> dict:
         """特別部屋生成の統計情報を取得。"""

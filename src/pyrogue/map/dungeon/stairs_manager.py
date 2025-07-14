@@ -32,7 +32,7 @@ class StairsManager:
 
     def __init__(self) -> None:
         """階段マネージャーを初期化。"""
-        self.stairs_placed = []
+        self.stairs_placed: list[tuple[str, tuple[int, int], str]] = []
 
     def _find_safe_fallback_position(self, tiles: np.ndarray) -> tuple[int, int]:
         """

@@ -241,7 +241,7 @@ class GameScreen:
             self.renderer.update_console(console)
 
     # ユーティリティメソッド
-    def start_targeting(self, start_x: int = None, start_y: int = None) -> None:
+    def start_targeting(self, start_x: int | None = None, start_y: int | None = None) -> None:
         """ターゲット選択モードを開始。"""
         self.input_handler.start_targeting(start_x, start_y)
 

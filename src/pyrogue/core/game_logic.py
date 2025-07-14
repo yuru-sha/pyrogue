@@ -807,9 +807,9 @@ class GameLogic:
         # ItemManagerに委譲予定（現在未実装）
         return False
 
-    def get_nearby_enemies(self) -> list:
+    def get_nearby_enemies(self) -> list[Monster]:
         """周囲の敵を取得。"""
-        enemies = []
+        enemies: list[Monster] = []
         player = self.player
         floor_data = self.get_current_floor_data()
 

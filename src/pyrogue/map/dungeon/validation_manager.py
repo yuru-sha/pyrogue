@@ -35,8 +35,8 @@ class ValidationManager:
 
     def __init__(self) -> None:
         """検証マネージャーを初期化。"""
-        self.validation_results = []
-        self.warnings = []
+        self.validation_results: list[dict[str, bool | str]] = []
+        self.warnings: list[str] = []
 
     def validate_dungeon(
         self,

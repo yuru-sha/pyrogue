@@ -26,7 +26,7 @@ class Corridor:
     start_pos: tuple[int, int]
     end_pos: tuple[int, int]
     points: list[tuple[int, int]]
-    connecting_rooms: tuple[int, int] = None  # 接続する部屋のID
+    connecting_rooms: tuple[int, int] | None = None  # 接続する部屋のID
 
     def __post_init__(self):
         if not self.points:
@@ -60,7 +60,7 @@ class CorridorBuilder:
         """
         self.width = width
         self.height = height
-        self.corridors = []
+        self.corridors: list[Corridor] = []
 
     def connect_rooms_rogue_style(self, rooms: list[Room], tiles: np.ndarray) -> list[Corridor]:
         """

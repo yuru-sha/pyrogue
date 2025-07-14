@@ -24,7 +24,7 @@ class GameOverScreen:
         self.menu_options = ["Return to Menu", "Quit"]
 
         # プレイヤーの統計情報（ゲームオーバー時に設定される）
-        self.player_stats = {}
+        self.player_stats: dict[str, int] = {}
         self.final_floor = 1
         self.cause_of_death = "Unknown"
 

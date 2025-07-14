@@ -28,7 +28,7 @@ class DoorManager:
 
     def __init__(self) -> None:
         """ドアマネージャーを初期化。"""
-        self.placed_doors = []
+        self.placed_doors: list[tuple[int, int, str]] = []
 
     def place_doors(self, rooms: list[Room], corridors: list[Corridor], tiles: np.ndarray) -> None:
         """
@@ -417,7 +417,7 @@ class DoorManager:
             ドア種類とその数の辞書
 
         """
-        door_counts = {}
+        door_counts: dict[str, int] = {}
         for _, _, door_type in self.placed_doors:
             door_counts[door_type] = door_counts.get(door_type, 0) + 1
         return door_counts
