@@ -181,6 +181,51 @@ class Food(Item):
         return self.effect.apply(context)
 
 
+class Wand(Item):
+    """ワンドクラス"""
+
+    def __init__(self, x: int, y: int, name: str, effect: Effect, charges: int):
+        super().__init__(
+            x=x,
+            y=y,
+            name=name,
+            char="/",
+            color=(139, 69, 19),  # 茶色
+            stackable=False,
+            identified=False,  # ワンドは未識別
+            item_type="WAND",
+        )
+        self.effect = effect
+        self.charges = charges
+        self.max_charges = charges  # 最大チャージ数を記録
+
+    def use(self) -> str:
+        """ワンドを使用した時のメッセージを返す"""
+        return f"You zap {self.name}."
+
+    def apply_effect(self, context: EffectContext, direction: tuple[int, int]) -> bool:
+        """ワンドの効果を適用する"""
+        if self.charges <= 0:
+            return False
+        
+        # チャージを消費
+        self.charges -= 1
+        
+        # 効果を適用（方向情報を渡す）
+        return self.effect.apply(context, direction=direction)
+
+    def has_charges(self) -> bool:
+        """チャージが残っているかチェック"""
+        return self.charges > 0
+
+    def get_charges_info(self) -> str:
+        """チャージ情報を取得"""
+        if self.identified:
+            return f"({self.charges}/{self.max_charges} charges)"
+        else:
+            return ""
+
+
 class Gold(Item):
     """金貨クラス"""
 

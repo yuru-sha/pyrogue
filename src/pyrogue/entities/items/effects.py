@@ -63,7 +63,7 @@ class Effect(ABC):
         self.description = description
 
     @abstractmethod
-    def apply(self, context: EffectContext) -> bool:
+    def apply(self, context: EffectContext, **kwargs) -> bool:
         """Apply the effect. Returns True if successful, False otherwise."""
 
     def can_apply(self, context: EffectContext) -> bool:
@@ -367,6 +367,150 @@ class HallucinationPotionEffect(StatusEffectApplication):
         )
 
 
+# Wand-specific effects
+class WandEffect(Effect):
+    """Base class for wand effects that require direction."""
+    
+    def __init__(self, name: str, description: str, damage_range: tuple[int, int] = (0, 0)):
+        super().__init__(name, description)
+        self.damage_range = damage_range
+    
+    def get_damage(self) -> int:
+        """Get random damage value within range."""
+        if self.damage_range[0] == self.damage_range[1]:
+            return self.damage_range[0]
+        return random.randint(self.damage_range[0], self.damage_range[1])
+    
+    def find_target_in_direction(self, context: EffectContext, direction: tuple[int, int], max_range: int = 10):
+        """Find the first monster in the given direction."""
+        player = context.player
+        start_x, start_y = player.x, player.y
+        dx, dy = direction
+        
+        current_floor = _get_floor_data_safe(context)
+        if not current_floor:
+            return None, None, None
+        
+        for distance in range(1, max_range + 1):
+            target_x = start_x + dx * distance
+            target_y = start_y + dy * distance
+            
+            # Check bounds
+            if target_x < 0 or target_x >= 80 or target_y < 0 or target_y >= 45:
+                break
+            
+            # Check for wall collision
+            if not current_floor.tiles[target_y][target_x].walkable:
+                break
+            
+            # Check for monster
+            monster = current_floor.monster_spawner.get_monster_at(target_x, target_y)
+            if monster:
+                return monster, target_x, target_y
+        
+        return None, None, None
+
+
+class MagicMissileWandEffect(WandEffect):
+    """Magic missile wand effect - never misses."""
+    
+    def __init__(self, damage_range: tuple[int, int] = (3, 8)):
+        super().__init__("Magic Missile", "Shoots a magical projectile that always hits", damage_range)
+    
+    def apply(self, context: EffectContext, **kwargs) -> bool:
+        direction = kwargs.get('direction', (0, 0))
+        if direction == (0, 0):
+            _add_message_safe(context, "You need to choose a direction!")
+            return False
+        
+        monster, target_x, target_y = self.find_target_in_direction(context, direction)
+        
+        if monster:
+            damage = self.get_damage()
+            monster.hp = max(0, monster.hp - damage)
+            _add_message_safe(context, f"Your magic missile hits the {monster.name} for {damage} damage!")
+            
+            # Check if monster dies
+            if monster.hp <= 0:
+                _add_message_safe(context, f"The {monster.name} dies!")
+                context.player.gain_exp(monster.exp_value)
+                # Remove monster from floor
+                current_floor = _get_floor_data_safe(context)
+                if current_floor and monster in current_floor.monster_spawner.monsters:
+                    current_floor.monster_spawner.monsters.remove(monster)
+        else:
+            _add_message_safe(context, "Your magic missile dissipates harmlessly.")
+        
+        return True
+
+
+class LightningWandEffect(WandEffect):
+    """Lightning wand effect - hits in a straight line."""
+    
+    def __init__(self, damage_range: tuple[int, int] = (6, 15)):
+        super().__init__("Lightning", "Shoots a bolt of lightning", damage_range)
+    
+    def apply(self, context: EffectContext, **kwargs) -> bool:
+        direction = kwargs.get('direction', (0, 0))
+        if direction == (0, 0):
+            _add_message_safe(context, "You need to choose a direction!")
+            return False
+        
+        monster, target_x, target_y = self.find_target_in_direction(context, direction)
+        
+        if monster:
+            damage = self.get_damage()
+            monster.hp = max(0, monster.hp - damage)
+            _add_message_safe(context, f"Lightning strikes the {monster.name} for {damage} damage!")
+            
+            # Check if monster dies
+            if monster.hp <= 0:
+                _add_message_safe(context, f"The {monster.name} is electrocuted!")
+                context.player.gain_exp(monster.exp_value)
+                # Remove monster from floor
+                current_floor = _get_floor_data_safe(context)
+                if current_floor and monster in current_floor.monster_spawner.monsters:
+                    current_floor.monster_spawner.monsters.remove(monster)
+        else:
+            _add_message_safe(context, "Lightning crackles harmlessly through the air.")
+        
+        return True
+
+
+class LightWandEffect(WandEffect):
+    """Light wand effect - illuminates the area."""
+    
+    def __init__(self):
+        super().__init__("Light", "Creates a bright light", (0, 0))
+    
+    def apply(self, context: EffectContext, **kwargs) -> bool:
+        # Light up the area around the player
+        player = context.player
+        current_floor = _get_floor_data_safe(context)
+        
+        if current_floor:
+            # Light up a 5x5 area around the player
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    x, y = player.x + dx, player.y + dy
+                    if 0 <= x < 80 and 0 <= y < 45:
+                        current_floor.explored[y][x] = True
+        
+        _add_message_safe(context, "The area is lit up by magical light!")
+        return True
+
+
+class NothingWandEffect(WandEffect):
+    """Nothing wand effect - does nothing."""
+    
+    def __init__(self):
+        super().__init__("Nothing", "Does absolutely nothing", (0, 0))
+    
+    def apply(self, context: EffectContext, **kwargs) -> bool:
+        _add_message_safe(context, "Nothing happens.")
+        return True
+
+
 # Pre-defined common effects
 HEAL_LIGHT = HealingEffect(25)
 HEAL_MEDIUM = HealingEffect(50)
@@ -385,3 +529,9 @@ POISON_POTION = PoisonPotionEffect()
 PARALYSIS_POTION = ParalysisPotionEffect()
 CONFUSION_POTION = ConfusionPotionEffect()
 HALLUCINATION_POTION = HallucinationPotionEffect()
+
+# Pre-defined wand effects
+MAGIC_MISSILE_WAND = MagicMissileWandEffect()
+LIGHTNING_WAND = LightningWandEffect()
+LIGHT_WAND = LightWandEffect()
+NOTHING_WAND = NothingWandEffect()

@@ -136,31 +136,26 @@ class TestEnhancedHungerSystem:
 
     def test_full_bonus_effects(self):
         """満腹時のボーナス効果テスト。"""
-        # HPとMPを部分的に減らして満腹状態に
+        # HPを部分的に減らして満腹状態に
         self.player.hunger = HungerConstants.FULL_THRESHOLD + 10
         self.player.hp = self.player.max_hp - 5
-        self.player.mp = self.player.max_mp - 3
 
         # ボーナス効果のテスト（確率的なので複数回実行）
         hp_gained = False
-        mp_gained = False
 
         for _ in range(50):  # 50回実行して効果を確認
             old_hp = self.player.hp
-            old_mp = self.player.mp
 
             self.turn_manager._apply_full_bonus_effects(self.context, self.player)
 
             if self.player.hp > old_hp:
                 hp_gained = True
-            if self.player.mp > old_mp:
-                mp_gained = True
 
-            if hp_gained and mp_gained:
+            if hp_gained:
                 break
 
-        # 少なくともどちらかの効果は発動するはず
-        assert hp_gained or mp_gained
+        # HP回復効果は発動するはず
+        assert hp_gained
 
     def test_starvation_damage(self):
         """飢餓状態でのダメージテスト。"""

@@ -62,6 +62,15 @@ class FoodType(ItemType):
     nutrition: int  # Nutrition value
 
 
+@dataclass
+class WandType(ItemType):
+    """Wand type class."""
+
+    effect: str  # Wand effect type
+    charges_range: tuple[int, int]  # Range of charges (min, max)
+    damage_range: tuple[int, int]  # Range of damage/effect power (min, max)
+
+
 # Weapon definitions - 階層に応じた段階的出現
 WEAPONS = [
     WeaponType(")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),  # 序盤専用・初期装備
@@ -122,6 +131,22 @@ POTIONS = [
 FOODS = [
     FoodType("%", "Food Ration", 1, 26, 100, 30, 900),
     FoodType("%", "Slime Mold", 1, 26, 80, 20, 600),
+]
+
+# Wand definitions - オリジナルRogue準拠
+WANDS = [
+    WandType("/", "Wand of Magic Missiles", 2, 26, 80, 150, "magic_missile", (3, 8), (3, 8)),
+    WandType("/", "Wand of Light", 1, 26, 90, 100, "light", (10, 20), (0, 0)),
+    WandType("/", "Wand of Lightning", 4, 26, 70, 200, "lightning", (5, 12), (6, 15)),
+    WandType("/", "Wand of Fire", 3, 26, 75, 180, "fire", (4, 10), (4, 12)),
+    WandType("/", "Wand of Cold", 3, 26, 75, 180, "cold", (4, 10), (4, 12)),
+    WandType("/", "Wand of Polymorph", 5, 26, 60, 220, "polymorph", (5, 15), (0, 0)),
+    WandType("/", "Wand of Teleport Monster", 4, 26, 65, 200, "teleport_monster", (5, 12), (0, 0)),
+    WandType("/", "Wand of Slow Monster", 3, 26, 70, 160, "slow_monster", (4, 10), (0, 0)),
+    WandType("/", "Wand of Haste Monster", 3, 26, 50, 140, "haste_monster", (4, 10), (0, 0)),
+    WandType("/", "Wand of Sleep", 2, 26, 75, 120, "sleep", (6, 15), (0, 0)),
+    WandType("/", "Wand of Drain Life", 8, 26, 40, 300, "drain_life", (3, 8), (8, 20)),
+    WandType("/", "Wand of Nothing", 1, 26, 30, 50, "nothing", (5, 15), (0, 0)),
 ]
 
 

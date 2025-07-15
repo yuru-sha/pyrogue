@@ -118,9 +118,8 @@ class InputHandler:
                 self.game_screen.engine.state = GameStates.SHOW_INVENTORY
 
         elif key == ord("z"):
-            # 魔法画面
-            if self.game_screen.engine:
-                self.game_screen.engine.state = GameStates.SHOW_MAGIC
+            # ワンドを振る（方向選択）
+            self._handle_zap_wand_action()
 
         elif key == tcod.event.KeySym.TAB:
             # FOV切り替え
@@ -514,3 +513,18 @@ Press any key to continue...
         # ロード成功時にFOVを更新
         if result.success:
             self.game_screen.fov_manager.update_fov()
+
+    def _handle_zap_wand_action(self) -> None:
+        """
+        ワンド使用処理（方向選択）。
+        
+        プレイヤーが所持するワンドを使用し、方向を選択して発動する。
+        オリジナルRogue準拠のワンドシステム。
+        """
+        # TODO: ワンドシステムの実装
+        self.game_screen.game_logic.add_message("Zap wand command not yet implemented.")
+        # 将来的にはここで以下の処理を行う：
+        # 1. インベントリからワンドを選択
+        # 2. 方向選択
+        # 3. ワンド効果の発動
+        # 4. チャージ消費処理

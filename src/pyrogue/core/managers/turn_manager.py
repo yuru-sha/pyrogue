@@ -237,11 +237,6 @@ class TurnManager:
             player.hp = min(player.max_hp, player.hp + 1)
             context.add_message("You feel refreshed!")
 
-        # MP回復ボーナス
-        if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            if player.mp < player.max_mp and random.random() < HungerConstants.FULL_MP_REGEN_BONUS:
-                player.mp = min(player.max_mp, player.mp + 1)
-                context.add_message("Your magical energy flows strongly!")
 
     def _process_hunger_damage(self, context: GameContext, player) -> None:
         """
