@@ -179,6 +179,7 @@ node_modules/
 data/
 logs/
 scores.json
+saves/
 
 # macOS
 .DS_Store

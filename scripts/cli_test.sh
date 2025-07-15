@@ -151,7 +151,13 @@ main() {
     run_test "勝利条件テスト" "debug yendor\nstairs up\nquit" "You have escaped with the Amulet of Yendor"
     run_test "階層テレポートテスト" "debug floor 26\nstatus\ndebug floor 1\nstatus\nquit" "Floor: B1F"
 
-    # 8. 統合動作テスト
+    # 8. セーブ・ロード統合テスト
+    log_info "=== セーブ・ロード統合テスト ==="
+    run_test "セーブ機能テスト" "debug gold 50\nsave\nquit" "Game saved successfully"
+    run_test "ロード機能テスト" "debug gold 50\nsave\nload\nquit" "Game loaded successfully"
+    run_test "セーブ・ロード統合テスト" "debug gold 75\nget\nsave\nload\nstatus\nquit" "Gold: 75"
+
+    # 9. 統合動作テスト
     log_info "=== 統合動作テスト ==="
     run_test "複合操作テスト" "help\nstatus\ninventory\nlook\nn\ne\nstatus\nquit" "PLAYER STATUS"
 

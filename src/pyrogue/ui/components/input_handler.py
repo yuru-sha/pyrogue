@@ -157,12 +157,12 @@ class InputHandler:
 
         # セーブ・ロード（Ctrlキーの組み合わせを先にチェック）
         elif key == ord("s") and mod & tcod.event.Modifier.CTRL:
-            # Ctrl+S でセーブ
-            self.game_screen.save_load_manager.save_game()
+            # Ctrl+S でセーブ - CommonCommandHandler経由で統一処理
+            self._handle_save_command()
 
         elif key == ord("l") and mod & tcod.event.Modifier.CTRL:
-            # Ctrl+L でロード
-            self.game_screen.save_load_manager.load_game()
+            # Ctrl+L でロード - CommonCommandHandler経由で統一処理
+            self._handle_load_command()
 
         elif key == ord("w") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+W でウィザードモード切り替え
@@ -482,3 +482,35 @@ Press any key to continue...
                 effect.update()
                 if effect.duration <= 0:
                     player.status_effects.remove(effect)
+
+    def _handle_save_command(self) -> None:
+        """
+        セーブコマンドを CommonCommandHandler 経由で処理。
+        """
+        from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+        
+        # GUI用のCommandContextを作成
+        context = GUICommandContext(self.game_screen)
+        
+        # CommonCommandHandlerを使用してセーブ処理を実行
+        command_handler = CommonCommandHandler(context)
+        result = command_handler.handle_command("save")
+        
+        # 結果に基づいて追加処理は不要（メッセージはすでに表示済み）
+
+    def _handle_load_command(self) -> None:
+        """
+        ロードコマンドを CommonCommandHandler 経由で処理。
+        """
+        from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+        
+        # GUI用のCommandContextを作成
+        context = GUICommandContext(self.game_screen)
+        
+        # CommonCommandHandlerを使用してロード処理を実行
+        command_handler = CommonCommandHandler(context)
+        result = command_handler.handle_command("load")
+        
+        # ロード成功時にFOVを更新
+        if result.success:
+            self.game_screen.fov_manager.update_fov()
