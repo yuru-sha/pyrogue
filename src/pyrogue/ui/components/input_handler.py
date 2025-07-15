@@ -207,12 +207,17 @@ class InputHandler:
 
         elif (
             key == tcod.event.KeySym.QUESTION
-            or key == tcod.event.KeySym.SLASH
             or unicode_char == "?"
-            or unicode_char == "/"
         ):
             # ヘルプ表示（JIS配列対応）
             self._handle_help_action()
+            
+        elif (
+            key == tcod.event.KeySym.SLASH
+            or unicode_char == "/"
+        ):
+            # シンボル説明（JIS配列対応）
+            self._handle_symbol_explanation_action()
 
         elif key == tcod.event.KeySym.PERIOD or unicode_char == ".":
             # 休憩コマンド（ピリオド）
@@ -424,6 +429,7 @@ Actions:
 Information:
   Tab - Toggle FOV display
   ?   - Show this help
+  /   - Show symbol guide
 
 System:
   Ctrl+S - Save game
@@ -441,6 +447,61 @@ Press any key to continue...
         """
 
         self.game_screen.game_logic.add_message(help_text.strip())
+
+    def _handle_symbol_explanation_action(self) -> None:
+        """
+        シンボル説明表示処理。
+
+        ゲーム内で使用される各シンボルの意味を説明します。
+        """
+        symbol_text = """
+=== PyRogue Symbol Guide ===
+
+Terrain:
+  .  - Floor (walkable ground)
+  #  - Wall (blocks movement and vision)
+  +  - Closed door (can be opened with 'o')
+  /  - Open door (can be closed with 'c')
+  <  - Stairs up (ascend with '<')
+  >  - Stairs down (descend with '>')
+  ^  - Trap (can be disarmed with 'd')
+
+Items:
+  $  - Gold pieces
+  !  - Potion (quaff with 'u' in inventory)
+  ?  - Scroll (read with 'u' in inventory)
+  )  - Weapon (equip with 'e' in inventory)
+  [  - Armor (equip with 'e' in inventory)
+  =  - Ring (equip with 'e' in inventory)
+  %  - Food (eat with 'u' in inventory)
+  /  - Wand (zap with 'z' command)
+  *  - Amulet of Yendor (victory item!)
+
+Creatures:
+  @  - You (the player)
+
+Monsters (A-Z):
+  A  - Aquator          N  - Nymph
+  B  - Bat              O  - Orc
+  C  - Centaur          P  - Phantom
+  D  - Dragon           Q  - Quagga
+  E  - Emu              R  - Rattlesnake
+  F  - Venus Flytrap    S  - Snake
+  G  - Griffin          T  - Troll
+  H  - Hobgoblin        U  - Ur-Vile
+  I  - Ice Monster      V  - Vampire
+  J  - Jabberwock       W  - Wraith
+  K  - Kestrel          X  - Xeroc
+  L  - Leprechaun       Y  - Yeti
+  M  - Medusa           Z  - Zombie
+
+Special Monsters:
+  f  - Phantom Fungus (hallucination inducer)
+
+Press any key to continue...
+        """
+
+        self.game_screen.game_logic.add_message(symbol_text.strip())
 
     def _handle_rest_action(self) -> None:
         """

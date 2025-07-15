@@ -40,7 +40,7 @@ def setup_game_logger() -> logging.Logger:
     logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
     # Create logs directory
-    log_dir = Path("data/logs")
+    log_dir = Path("logs")
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Simple file handler
