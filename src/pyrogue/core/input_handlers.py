@@ -181,5 +181,11 @@ class StateManager:
             return "search"
         if key == ord("d"):
             return "disarm"
+        if key == ord("x"):
+            return "examine"
+        if key == ord("R"):
+            return "rest long"
+        if key == ord("."):
+            return "rest"
 
         return None

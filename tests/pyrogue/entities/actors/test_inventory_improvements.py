@@ -100,5 +100,94 @@ def test_stack_behavior_comprehensive():
     assert len(inventory.items) == 0
 
 
+def test_drop_item_functionality():
+    """新しいdrop_itemメソッドのテスト"""
+    from pyrogue.entities.items.item import Weapon
+
+    inventory = Inventory()
+
+    # 武器を作成して装備
+    weapon = Weapon(0, 0, "Test Sword", 5)
+    inventory.add_item(weapon)
+    inventory.equip(weapon)
+
+    # 装備中の武器をドロップ
+    success, dropped_count, message = inventory.drop_item(weapon)
+
+    assert success is True
+    assert dropped_count == 1
+    assert "You first unequip" in message
+    assert "You drop the" in message
+    assert len(inventory.items) == 0
+    assert inventory.equipped["weapon"] is None
+
+
+def test_drop_item_cursed():
+    """呪われたアイテムのドロップテスト"""
+    from pyrogue.entities.items.item import Weapon
+
+    inventory = Inventory()
+
+    # 呪われた武器を作成
+    weapon = Weapon(0, 0, "Cursed Sword", 5)
+    weapon.cursed = True
+    inventory.add_item(weapon)
+    inventory.equip(weapon)
+
+    # 呪われた武器のドロップ試行
+    success, dropped_count, message = inventory.drop_item(weapon)
+
+    assert success is False
+    assert dropped_count == 0
+    assert "cursed" in message
+    assert len(inventory.items) == 1
+    assert inventory.equipped["weapon"] is weapon
+
+
+def test_can_drop_item():
+    """can_drop_itemメソッドのテスト"""
+    from pyrogue.entities.items.item import Weapon
+
+    inventory = Inventory()
+
+    # 通常の武器
+    weapon = Weapon(0, 0, "Test Sword", 5)
+    inventory.add_item(weapon)
+
+    can_drop, error_msg = inventory.can_drop_item(weapon)
+    assert can_drop is True
+    assert error_msg is None
+
+    # 呪われた武器を装備
+    weapon.cursed = True
+    inventory.equip(weapon)
+
+    can_drop, error_msg = inventory.can_drop_item(weapon)
+    assert can_drop is False
+    assert "cursed" in error_msg
+
+
+def test_drop_item_stackable():
+    """スタック可能アイテムのドロップテスト"""
+    inventory = Inventory()
+
+    # スタック可能アイテムを5個追加
+    for _ in range(5):
+        potion = Potion(0, 0, "Healing Potion", HealingEffect(heal_amount=10))
+        inventory.add_item(potion)
+
+    healing_potion = inventory.items[0]
+    assert healing_potion.stack_count == 5
+
+    # 3個をドロップ
+    success, dropped_count, message = inventory.drop_item(healing_potion, 3)
+
+    assert success is True
+    assert dropped_count == 3
+    assert "You drop 3" in message
+    assert healing_potion.stack_count == 2
+    assert len(inventory.items) == 1
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

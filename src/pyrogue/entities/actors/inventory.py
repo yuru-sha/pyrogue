@@ -284,3 +284,65 @@ class Inventory:
             if equipped_item is item:
                 return slot
         return None
+
+    def can_drop_item(self, item: Item) -> tuple[bool, str | None]:
+        """
+        アイテムがドロップ可能かどうかを判定
+
+        Args:
+        ----
+            item: 確認するアイテム
+
+        Returns:
+        -------
+            tuple[bool, str | None]: (ドロップ可能か, エラーメッセージ)
+
+        """
+        # 呪われた装備中のアイテムはドロップ不可
+        if self.is_equipped(item) and hasattr(item, "cursed") and item.cursed:
+            return False, f"You cannot drop the cursed {item.name}! You must first remove the curse."
+        return True, None
+
+    def drop_item(self, item: Item, drop_count: int = 1) -> tuple[bool, int, str]:
+        """
+        アイテムをドロップ（装備解除含む）
+
+        Args:
+        ----
+            item: ドロップするアイテム
+            drop_count: ドロップする数量
+
+        Returns:
+        -------
+            tuple[bool, int, str]: (成功したか, 実際にドロップした数量, メッセージ)
+
+        """
+        # ドロップ可能かチェック
+        can_drop, error_msg = self.can_drop_item(item)
+        if not can_drop:
+            return False, 0, error_msg
+
+        # 装備中の場合は先に装備解除
+        was_equipped = self.is_equipped(item)
+        if was_equipped:
+            slot = self.get_equipped_slot(item)
+            if slot:
+                self.equipped[slot] = None
+
+        # アイテムを削除
+        if item.stackable:
+            actual_count = min(drop_count, item.stack_count)
+            removed_count = self.remove_item(item, actual_count)
+            if removed_count > 1:
+                message = f"You drop {removed_count} {item.name}."
+            else:
+                message = f"You drop the {item.name}."
+        else:
+            removed_count = self.remove_item(item, 1)
+            message = f"You drop the {item.name}."
+
+        # 装備解除メッセージを前に追加
+        if was_equipped:
+            message = f"You first unequip the {item.name}. {message}"
+
+        return True, removed_count, message

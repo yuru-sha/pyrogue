@@ -108,7 +108,12 @@ class InputHandler:
         # 移動処理（Ctrl修飾子が押されていない場合のみ）
         if key in movement_keys and not (mod & tcod.event.Modifier.CTRL):
             dx, dy = movement_keys[key]
-            self.game_screen.game_logic.handle_player_move(dx, dy)
+
+            # Shift修飾子が押されている場合は走る
+            if mod & tcod.event.Modifier.SHIFT:
+                self._handle_run_action(dx, dy)
+            else:
+                self.game_screen.game_logic.handle_player_move(dx, dy)
             return
 
         # アクションコマンド
@@ -196,6 +201,10 @@ class InputHandler:
             # 投げるコマンド
             self._handle_throw_action()
 
+        elif key == ord("x"):
+            # 調査・検査コマンド
+            self._handle_examine_action()
+
         elif (
             key == tcod.event.KeySym.QUESTION
             or key == tcod.event.KeySym.SLASH
@@ -208,6 +217,10 @@ class InputHandler:
         elif key == tcod.event.KeySym.PERIOD or unicode_char == ".":
             # 休憩コマンド（ピリオド）
             self._handle_rest_action()
+
+        elif key == ord("R"):
+            # 長時間休憩コマンド（大文字R）
+            self._handle_long_rest_action()
 
         # ゲーム終了
         elif key == tcod.event.KeySym.ESCAPE:
@@ -654,3 +667,362 @@ Press any key to continue...
                 self.game_screen.game_logic.add_message(f"The {wand.name} fails to work.")
         else:
             self.game_screen.game_logic.add_message(f"The {wand.name} is not functional.")
+
+    def _handle_examine_action(self) -> None:
+        """
+        調査・検査コマンドの処理。
+
+        プレイヤーの足元と隣接する8タイルを調査し、
+        アイテム、モンスター、地形の詳細情報を表示する。
+        """
+        player = self.game_screen.game_logic.player
+        dungeon = self.game_screen.game_logic.dungeon
+
+        # 調査結果を格納するリスト
+        examination_results = []
+
+        # プレイヤーの足元を調査
+        player_tile_info = self._examine_tile(player.x, player.y, dungeon)
+        if player_tile_info:
+            examination_results.append(f"Here: {player_tile_info}")
+
+        # 隣接する8タイルを調査
+        directions = [
+            (-1, -1),
+            (0, -1),
+            (1, -1),  # 上列
+            (-1, 0),
+            (1, 0),  # 中列
+            (-1, 1),
+            (0, 1),
+            (1, 1),  # 下列
+        ]
+
+        for dx, dy in directions:
+            x, y = player.x + dx, player.y + dy
+
+            # マップ範囲内かチェック
+            if 0 <= x < dungeon.width and 0 <= y < dungeon.height:
+                tile_info = self._examine_tile(x, y, dungeon)
+                if tile_info:
+                    direction_name = self._get_direction_name(dx, dy)
+                    examination_results.append(f"{direction_name}: {tile_info}")
+
+        # 結果をメッセージとして表示
+        if examination_results:
+            self.game_screen.game_logic.add_message("=== Examination Results ===")
+            for result in examination_results:
+                self.game_screen.game_logic.add_message(result)
+        else:
+            self.game_screen.game_logic.add_message("Nothing interesting nearby.")
+
+    def _examine_tile(self, x: int, y: int, dungeon) -> str | None:
+        """
+        指定されたタイルの詳細情報を取得。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+            dungeon: ダンジョンインスタンス
+
+        Returns:
+        -------
+            タイルの詳細情報文字列（何もない場合はNone）
+        """
+        info_parts = []
+
+        # モンスターをチェック
+        monster = dungeon.get_monster_at(x, y)
+        if monster:
+            info_parts.append(f"Monster: {monster.name} (HP: {monster.hp}/{monster.max_hp})")
+
+        # アイテムをチェック
+        items = dungeon.get_items_at(x, y)
+        if items:
+            player = self.game_screen.game_logic.player
+            for item in items:
+                display_name = item.get_display_name(player.identification)
+                if item.stackable and item.stack_count > 1:
+                    info_parts.append(f"Item: {display_name} (x{item.stack_count})")
+                else:
+                    info_parts.append(f"Item: {display_name}")
+
+        # トラップをチェック
+        trap = dungeon.get_trap_at(x, y)
+        if trap and trap.discovered:
+            info_parts.append(f"Trap: {trap.name} ({'disarmed' if trap.disarmed else 'armed'})")
+
+        # 地形をチェック
+        tile = dungeon.get_tile(x, y)
+        if tile:
+            terrain_info = self._get_terrain_info(tile)
+            if terrain_info:
+                info_parts.append(f"Terrain: {terrain_info}")
+
+        return "; ".join(info_parts) if info_parts else None
+
+    def _get_direction_name(self, dx: int, dy: int) -> str:
+        """
+        方向ベクトルから方向名を取得。
+
+        Args:
+        ----
+            dx: X方向の差分
+            dy: Y方向の差分
+
+        Returns:
+        -------
+            方向名の文字列
+        """
+        direction_map = {
+            (-1, -1): "NW",
+            (0, -1): "N",
+            (1, -1): "NE",
+            (-1, 0): "W",
+            (1, 0): "E",
+            (-1, 1): "SW",
+            (0, 1): "S",
+            (1, 1): "SE",
+        }
+        return direction_map.get((dx, dy), "Unknown")
+
+    def _get_terrain_info(self, tile) -> str | None:
+        """
+        地形タイルの情報を取得。
+
+        Args:
+        ----
+            tile: タイルインスタンス
+
+        Returns:
+        -------
+            地形情報の文字列
+        """
+        from pyrogue.map.tile import TileType
+
+        if not tile:
+            return None
+
+        # タイルタイプによる地形情報
+        terrain_descriptions = {
+            TileType.FLOOR: "floor",
+            TileType.WALL: "wall",
+            TileType.DOOR_OPEN: "open door",
+            TileType.DOOR_CLOSED: "closed door",
+            TileType.DOOR_SECRET: "secret door" if tile.discovered else "wall",
+            TileType.STAIRS_UP: "stairs up",
+            TileType.STAIRS_DOWN: "stairs down",
+            TileType.STAIRS_EXIT: "exit stairs",
+        }
+
+        return terrain_descriptions.get(tile.tile_type, "unknown terrain")
+
+    def _handle_long_rest_action(self) -> None:
+        """
+        長時間休憩コマンドの処理。
+
+        プレイヤーを完全に回復するまで休憩する。
+        モンスターが近くにいる場合は休憩できない。
+        """
+        player = self.game_screen.game_logic.player
+
+        # プレイヤーが既に最大HPの場合
+        if player.hp >= player.max_hp:
+            self.game_screen.game_logic.add_message("You are already at full health.")
+            return
+
+        # 近くにモンスターがいるかチェック
+        if self._check_nearby_monsters():
+            self.game_screen.game_logic.add_message("You cannot rest with monsters nearby!")
+            return
+
+        # 休憩開始メッセージ
+        self.game_screen.game_logic.add_message("You begin to rest...")
+
+        # 回復が必要なターン数を計算
+        hp_to_recover = player.max_hp - player.hp
+        turns_needed = hp_to_recover * 2  # 2ターンで1HP回復
+
+        # 休憩ループ
+        turns_rested = 0
+        while player.hp < player.max_hp and turns_rested < turns_needed:
+            # ターンを進める
+            self.game_screen.game_logic.advance_turn()
+
+            # 2ターンごとに1HP回復
+            if turns_rested % 2 == 1:
+                player.hp = min(player.max_hp, player.hp + 1)
+
+            turns_rested += 1
+
+            # 途中でモンスターが近づいてきたら休憩を中断
+            if self._check_nearby_monsters():
+                self.game_screen.game_logic.add_message("Your rest is interrupted by a monster!")
+                return
+
+            # プレイヤーが死亡した場合は休憩を中断
+            if player.hp <= 0:
+                return
+
+        # 休憩完了メッセージ
+        if player.hp >= player.max_hp:
+            self.game_screen.game_logic.add_message(f"You feel fully rested. (Rested for {turns_rested} turns)")
+        else:
+            self.game_screen.game_logic.add_message(f"You feel somewhat better. (Rested for {turns_rested} turns)")
+
+    def _check_nearby_monsters(self) -> bool:
+        """
+        プレイヤーの近くにモンスターがいるかチェック。
+
+        Returns
+        -------
+            近くにモンスターがいる場合True
+        """
+        player = self.game_screen.game_logic.player
+        dungeon = self.game_screen.game_logic.dungeon
+
+        # 視界内のモンスターをチェック
+        for monster in dungeon.monsters:
+            if monster.hp > 0:  # 生きているモンスターのみ
+                distance = abs(monster.x - player.x) + abs(monster.y - player.y)
+                if distance <= 10:  # 10タイル以内にモンスターがいる
+                    return True
+        return False
+
+    def _handle_run_action(self, dx: int, dy: int) -> None:
+        """
+        走るコマンドの処理。
+
+        指定された方向に障害物にぶつかるまで連続して移動する。
+        モンスター、アイテム、ドア、少ないHPなどの場合は停止します。
+
+        Args:
+        ----
+            dx: X方向の移動量
+            dy: Y方向の移動量
+        """
+        player = self.game_screen.game_logic.player
+        dungeon = self.game_screen.game_logic.dungeon
+
+        # 走る前のチェック
+        if not self._can_start_running():
+            # 通常の移動にフォールバック
+            self.game_screen.game_logic.handle_player_move(dx, dy)
+            return
+
+        self.game_screen.game_logic.add_message("You start running...")
+
+        steps_taken = 0
+        max_steps = 20  # 最大ステップ数制限
+
+        while steps_taken < max_steps:
+            next_x = player.x + dx
+            next_y = player.y + dy
+
+            # 進行可能かチェック
+            if not self._can_continue_running(next_x, next_y):
+                break
+
+            # 移動を実行
+            if not self.game_screen.game_logic.handle_player_move(dx, dy):
+                break
+
+            steps_taken += 1
+
+            # 移動後のチェック
+            if not self._can_continue_running_after_move():
+                break
+
+            # プレイヤーが死亡した場合は停止
+            if player.hp <= 0:
+                break
+
+        if steps_taken > 0:
+            self.game_screen.game_logic.add_message(f"You stop running. (Ran for {steps_taken} steps)")
+        else:
+            self.game_screen.game_logic.add_message("You cannot run in that direction.")
+
+    def _can_start_running(self) -> bool:
+        """
+        走ることができるかチェック。
+
+        Returns
+        -------
+            走ることができる場合True
+        """
+        player = self.game_screen.game_logic.player
+
+        # HPが低い場合は走れない
+        if player.hp < player.max_hp * 0.3:
+            self.game_screen.game_logic.add_message("You are too injured to run.")
+            return False
+
+        # 近くにモンスターがいる場合は走れない
+        if self._check_nearby_monsters():
+            self.game_screen.game_logic.add_message("You cannot run with monsters nearby!")
+            return False
+
+        return True
+
+    def _can_continue_running(self, next_x: int, next_y: int) -> bool:
+        """
+        走り続けることができるかチェック。
+
+        Args:
+        ----
+            next_x: 次のX座標
+            next_y: 次のY座標
+
+        Returns:
+        -------
+            走り続けることができる場合True
+        """
+        dungeon = self.game_screen.game_logic.dungeon
+
+        # マップ範囲外の場合は停止
+        if not (0 <= next_x < dungeon.width and 0 <= next_y < dungeon.height):
+            return False
+
+        # モンスターがいる場合は停止
+        if dungeon.get_monster_at(next_x, next_y):
+            return False
+
+        # アイテムがある場合は停止
+        if dungeon.get_items_at(next_x, next_y):
+            return False
+
+        # ドアがある場合は停止
+        tile = dungeon.get_tile(next_x, next_y)
+        if tile:
+            from pyrogue.map.tile import TileType
+
+            if tile.tile_type in (TileType.DOOR_CLOSED, TileType.DOOR_SECRET):
+                return False
+
+        return True
+
+    def _can_continue_running_after_move(self) -> bool:
+        """
+        移動後に走り続けることができるかチェック。
+
+        Returns
+        -------
+            走り続けることができる場合True
+        """
+        player = self.game_screen.game_logic.player
+        dungeon = self.game_screen.game_logic.dungeon
+
+        # 足元にアイテムがある場合は停止
+        if dungeon.get_items_at(player.x, player.y):
+            return False
+
+        # 近くにモンスターが現れた場合は停止
+        if self._check_nearby_monsters():
+            return False
+
+        # HPが低くなった場合は停止
+        if player.hp < player.max_hp * 0.3:
+            return False
+
+        return True
