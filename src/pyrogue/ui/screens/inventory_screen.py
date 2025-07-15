@@ -68,23 +68,19 @@ class InventoryScreen(Screen):
 
         # 装備情報を表示
         equipped = self.game_screen.game_logic.inventory.equipped
+        player = self.game_screen.game_logic.player
         console.print(40, 3, "Equipment:", tcod.yellow)
-        console.print(
-            42,
-            5,
-            f"Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}",
-        )
-        console.print(42, 6, f"Armor: {equipped['armor'].name if equipped['armor'] else 'None'}")
-        console.print(
-            42,
-            7,
-            f"Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}",
-        )
-        console.print(
-            42,
-            8,
-            f"Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}",
-        )
+        
+        # 装備品の表示に識別システムを使用
+        weapon_name = equipped['weapon'].get_display_name(player.identification) if equipped['weapon'] else 'None'
+        armor_name = equipped['armor'].get_display_name(player.identification) if equipped['armor'] else 'None'
+        ring_left_name = equipped['ring_left'].get_display_name(player.identification) if equipped['ring_left'] else 'None'
+        ring_right_name = equipped['ring_right'].get_display_name(player.identification) if equipped['ring_right'] else 'None'
+        
+        console.print(42, 5, f"Weapon: {weapon_name}")
+        console.print(42, 6, f"Armor: {armor_name}")
+        console.print(42, 7, f"Ring(L): {ring_left_name}")
+        console.print(42, 8, f"Ring(R): {ring_right_name}")
 
         # ヘルプを表示
         if self.show_help:

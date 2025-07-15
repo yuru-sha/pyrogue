@@ -193,6 +193,19 @@ class InputHandler:
             # NPCとの対話
             self._handle_talk_action()
 
+        elif (
+            key == tcod.event.KeySym.QUESTION
+            or key == tcod.event.KeySym.SLASH
+            or unicode_char == "?"
+            or unicode_char == "/"
+        ):
+            # ヘルプ表示（JIS配列対応）
+            self._handle_help_action()
+
+        elif key == tcod.event.KeySym.PERIOD or unicode_char == ".":
+            # 休憩コマンド（ピリオド）
+            self._handle_rest_action()
+
         # ゲーム終了
         elif key == tcod.event.KeySym.ESCAPE:
             if self.game_screen.engine:
@@ -417,3 +430,108 @@ class InputHandler:
 
         # 対話開始メッセージ
         self.game_screen.game_logic.add_message(f"You talk to {npc.name}.")
+
+    def _handle_help_action(self) -> None:
+        """
+        ヘルプ表示処理。
+        
+        メインゲーム画面で使用可能な全コマンドの一覧を表示します。
+        """
+        help_text = """
+=== PyRogue Help ===
+
+Movement:
+  hjkl, yubn  - Vi-style movement (8 directions)
+  Arrow keys  - Standard movement
+  Numpad 1-9  - Numeric movement
+
+Actions:
+  g  - Get item at your feet
+  i  - Open inventory
+  o  - Open door
+  c  - Close door
+  s  - Search for hidden doors/traps
+  d  - Disarm trap
+  t  - Talk to NPC
+  z  - Zap a wand in a direction
+  .  - Rest for one turn
+  >  - Go down stairs
+  <  - Go up stairs
+
+Information:
+  Tab - Toggle FOV display
+  ?   - Show this help
+
+System:
+  Ctrl+S - Save game
+  Ctrl+L - Load game
+  Ctrl+W - Toggle wizard mode (debug)
+  ESC    - Return to menu
+
+Wizard Mode (Debug):
+  Ctrl+T - Teleport to stairs
+  Ctrl+U - Level up
+  Ctrl+H - Heal fully
+  Ctrl+R - Reveal all map
+
+Press any key to continue...
+        """
+        
+        self.game_screen.game_logic.add_message(help_text.strip())
+
+    def _handle_rest_action(self) -> None:
+        """
+        休憩コマンド処理。
+        
+        その場で1ターン休憩し、時間を経過させます。
+        - HP/MP自然回復
+        - 飢餓進行
+        - 状態異常進行
+        - 敵のターン処理
+        """
+        player = self.game_screen.player
+        if not player:
+            return
+
+        # プレイヤーが死亡している場合は休憩できない
+        if player.hp <= 0:
+            self.game_screen.game_logic.add_message("You cannot rest while dead.")
+            return
+
+        # 休憩メッセージ
+        self.game_screen.game_logic.add_message("You rest for a moment.")
+        
+        # ターン経過処理
+        # GameLogicのターン管理メソッドを使用
+        if hasattr(self.game_screen.game_logic, 'handle_turn_end'):
+            self.game_screen.game_logic.handle_turn_end()
+        else:
+            # 古いバージョンとの互換性のため、直接処理
+            self._process_rest_turn()
+
+    def _process_rest_turn(self) -> None:
+        """
+        休憩時のターン処理（フォールバック実装）。
+        """
+        player = self.game_screen.player
+        
+        # HP自然回復（満腹時）
+        if hasattr(player, 'hunger') and player.hunger >= 80:  # 満腹時
+            if player.hp < player.max_hp:
+                player.hp = min(player.max_hp, player.hp + 1)
+                
+        # MP自然回復（満腹時）
+        if hasattr(player, 'mp') and hasattr(player, 'max_mp') and hasattr(player, 'hunger'):
+            if player.hunger >= 80 and player.mp < player.max_mp:
+                player.mp = min(player.max_mp, player.mp + 1)
+        
+        # 飢餓進行
+        if hasattr(player, 'consume_food'):
+            player.consume_food(1)  # 1ポイント消費
+            
+        # 状態異常進行
+        if hasattr(player, 'status_effects'):
+            for effect in list(player.status_effects):
+                effect.update()
+                if effect.duration <= 0:
+                    player.status_effects.remove(effect)
