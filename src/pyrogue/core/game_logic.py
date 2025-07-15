@@ -850,3 +850,75 @@ class GameLogic:
     def get_score_table(self, limit: int = 10) -> str:
         """スコアテーブルを取得"""
         return self.score_manager.format_score_table(limit)
+
+    def handle_turn_end(self) -> None:
+        """
+        ターン終了時の処理。
+
+        ターンマネージャーによるターン処理とオートセーブ機能を実行します。
+        """
+        # TurnManagerによるターン処理
+        self.turn_manager.process_turn(self.context)
+        
+        # オートセーブ機能の実行
+        self._handle_auto_save()
+
+    def _handle_auto_save(self) -> None:
+        """
+        オートセーブ機能の処理。
+
+        環境変数でオートセーブが有効な場合、一定間隔でゲームを自動保存します。
+        """
+        from pyrogue.config.env import get_auto_save_enabled
+        
+        # オートセーブが無効の場合は処理しない
+        if not get_auto_save_enabled():
+            return
+            
+        # 一定ターン数毎にオートセーブを実行（10ターン毎）
+        if self.turn_manager.turn_count % 10 == 0:
+            self._perform_auto_save()
+
+    def _perform_auto_save(self) -> None:
+        """
+        実際のオートセーブを実行。
+
+        CommonCommandHandlerのセーブ機能を使用してゲームを保存します。
+        """
+        try:
+            # プレイヤーが死亡している場合はオートセーブしない
+            if self.player.hp <= 0:
+                return
+                
+            # CommonCommandHandlerを使用してセーブ
+            from pyrogue.core.common_command_handler import CommonCommandHandler
+            
+            command_handler = CommonCommandHandler()
+            success = command_handler.save_game(self.context)
+            
+            if success:
+                # オートセーブ成功メッセージ（デバッグモード時のみ）
+                if self.wizard_mode:
+                    self.add_message(f"[Auto-save] Game saved at turn {self.turn_manager.turn_count}")
+            else:
+                # オートセーブ失敗時のメッセージ
+                if self.wizard_mode:
+                    self.add_message("[Auto-save] Failed to save game")
+                    
+        except Exception as e:
+            # エラーが発生した場合のログ出力
+            from pyrogue.utils import game_logger
+            game_logger.error(f"Auto-save failed: {e}")
+            
+            if self.wizard_mode:
+                self.add_message(f"[Auto-save] Error: {e}")
+
+    def get_message_history(self) -> list[str]:
+        """
+        メッセージ履歴を取得。
+
+        Returns:
+        -------
+            メッセージ履歴のリスト
+        """
+        return self.message_log.copy()
