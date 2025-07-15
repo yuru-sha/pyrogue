@@ -269,9 +269,6 @@ class Player(Actor):
         """毒状態かどうかを判定。"""
         return self.has_status_effect("Poison")
 
-
-
-
     def is_starving(self) -> bool:
         """飢餓状態かどうかを判定。"""
         return self.hunger <= 0

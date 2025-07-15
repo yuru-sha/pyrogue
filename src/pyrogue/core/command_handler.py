@@ -435,32 +435,32 @@ Available Commands:
     def _handle_save(self, args: list[str]) -> CommandResult:
         """
         セーブコマンドの処理。
-        
+
         Args:
         ----
             args: コマンド引数（現在未使用）
-            
+
         Returns:
         -------
             CommandResult: セーブ実行結果
         """
         # SaveManagerを使用してセーブを実行
         from pyrogue.core.save_manager import SaveManager
-        
+
         save_manager = SaveManager()
-        
+
         # 現在のゲーム状態を取得
         try:
             game_data = self._create_save_data()
             success = save_manager.save_game_state(game_data)
-            
+
             if success:
                 self.context.add_message("Game saved successfully!")
                 return CommandResult(True)
             else:
                 self.context.add_message("Failed to save game.")
                 return CommandResult(False)
-                
+
         except Exception as e:
             self.context.add_message(f"Error saving game: {e}")
             return CommandResult(False)
@@ -468,37 +468,37 @@ Available Commands:
     def _handle_load(self, args: list[str]) -> CommandResult:
         """
         ロードコマンドの処理。
-        
+
         Args:
         ----
             args: コマンド引数（現在未使用）
-            
+
         Returns:
         -------
             CommandResult: ロード実行結果
         """
         # SaveManagerを使用してロードを実行
         from pyrogue.core.save_manager import SaveManager
-        
+
         save_manager = SaveManager()
-        
+
         try:
             save_data = save_manager.load_game_state()
-            
+
             if save_data is None:
                 self.context.add_message("No save file found.")
                 return CommandResult(False)
-                
+
             # セーブデータの復元
             success = self._restore_save_data(save_data)
-            
+
             if success:
                 self.context.add_message("Game loaded successfully!")
                 return CommandResult(True)
             else:
                 self.context.add_message("Failed to load game.")
                 return CommandResult(False)
-                
+
         except Exception as e:
             self.context.add_message(f"Error loading game: {e}")
             return CommandResult(False)
@@ -506,14 +506,14 @@ Available Commands:
     def _create_save_data(self) -> dict[str, Any]:
         """
         セーブデータを作成（GUIモードと同じ完全保存）。
-        
-        Returns:
+
+        Returns
         -------
             dict: セーブデータ辞書
         """
         player = self.context.player
         dungeon_manager = self.context.game_logic.dungeon_manager
-        
+
         # GUIモードと同じ完全なセーブデータを作成
         save_data = {
             "player": self._serialize_player(player),
@@ -524,17 +524,17 @@ Available Commands:
             "has_amulet": getattr(player, "has_amulet", False),
             "version": "1.0",
         }
-        
+
         return save_data
 
     def _restore_save_data(self, save_data: dict[str, Any]) -> bool:
         """
         セーブデータからゲーム状態を復元（GUIモードと同じ完全復元）。
-        
+
         Args:
         ----
             save_data: セーブデータ辞書
-            
+
         Returns:
         -------
             bool: 復元に成功した場合True
@@ -544,35 +544,35 @@ Available Commands:
             player_data = save_data.get("player", {})
             if player_data:
                 self._deserialize_player(player_data)
-            
+
             # インベントリの復元
             inventory_data = save_data.get("inventory", {})
             if inventory_data:
                 self._deserialize_inventory(inventory_data)
-            
+
             # ダンジョン状態の復元
             dungeon_manager = self.context.game_logic.dungeon_manager
             dungeon_manager.current_floor = save_data.get("current_floor", 1)
-            
+
             # フロアデータを正しく復元
             floor_data = save_data.get("floor_data", {})
             if floor_data:
                 self._restore_floor_data(floor_data)
-            
+
             # メッセージログの復元
             message_log = save_data.get("message_log", [])
             if hasattr(self.context.game_logic, "message_log"):
                 self.context.game_logic.message_log = message_log
-            
+
             # アミュレット状態の復元
             if "has_amulet" in save_data:
                 self.context.player.has_amulet = save_data["has_amulet"]
-            
+
             # 現在のフロアを読み込み
             self._load_current_floor()
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Error restoring save data: {e}")
             return False
@@ -582,7 +582,7 @@ Available Commands:
         プレイヤーデータをデシリアライズ。
         """
         player = self.context.player
-        
+
         player.x = player_data.get("x", player.x)
         player.y = player_data.get("y", player.y)
         player.hp = player_data.get("hp", player.hp)
@@ -592,7 +592,7 @@ Available Commands:
         player.gold = player_data.get("gold", player.gold)
         player.attack = player_data.get("attack", player.attack)
         player.defense = player_data.get("defense", player.defense)
-        
+
         # オプション属性の復元
         if "hunger" in player_data:
             player.hunger = player_data["hunger"]
@@ -608,18 +608,20 @@ Available Commands:
         インベントリデータをデシリアライズ。
         """
         inventory = self.context.game_logic.inventory
-        
+
         # アイテムリストの復元
         items_data = inventory_data.get("items", [])
         inventory.items = [self._deserialize_item(item_data) for item_data in items_data]
-        
+
         # 装備品の復元
         equipped_data = inventory_data.get("equipped", {})
         inventory.equipped = {
             "weapon": self._deserialize_item(equipped_data["weapon"]) if equipped_data.get("weapon") else None,
             "armor": self._deserialize_item(equipped_data["armor"]) if equipped_data.get("armor") else None,
             "ring_left": self._deserialize_item(equipped_data["ring_left"]) if equipped_data.get("ring_left") else None,
-            "ring_right": self._deserialize_item(equipped_data["ring_right"]) if equipped_data.get("ring_right") else None,
+            "ring_right": self._deserialize_item(equipped_data["ring_right"])
+            if equipped_data.get("ring_right")
+            else None,
         }
 
     def _serialize_player(self, player) -> dict[str, Any]:
@@ -648,14 +650,20 @@ Available Commands:
         """
         if inventory is None:
             return {"items": [], "equipped": {"weapon": None, "armor": None, "ring_left": None, "ring_right": None}}
-        
+
         return {
             "items": [self._serialize_item(item) for item in inventory.items],
             "equipped": {
-                "weapon": self._serialize_item(inventory.equipped["weapon"]) if inventory.equipped.get("weapon") else None,
+                "weapon": self._serialize_item(inventory.equipped["weapon"])
+                if inventory.equipped.get("weapon")
+                else None,
                 "armor": self._serialize_item(inventory.equipped["armor"]) if inventory.equipped.get("armor") else None,
-                "ring_left": self._serialize_item(inventory.equipped["ring_left"]) if inventory.equipped.get("ring_left") else None,
-                "ring_right": self._serialize_item(inventory.equipped["ring_right"]) if inventory.equipped.get("ring_right") else None,
+                "ring_left": self._serialize_item(inventory.equipped["ring_left"])
+                if inventory.equipped.get("ring_left")
+                else None,
+                "ring_right": self._serialize_item(inventory.equipped["ring_right"])
+                if inventory.equipped.get("ring_right")
+                else None,
             },
         }
 
@@ -681,7 +689,7 @@ Available Commands:
         アイテムデータをデシリアライズ。
         """
         from pyrogue.entities.items.item import Item
-        
+
         # 基本的なアイテム復元（必須フィールドを含む）
         item = Item(
             x=item_data.get("x", 0),
@@ -690,9 +698,9 @@ Available Commands:
             char=item_data.get("char", "?"),
             color=item_data.get("color", (255, 255, 255)),
             item_type=item_data.get("item_type", "MISC"),
-            cursed=item_data.get("cursed", False)
+            cursed=item_data.get("cursed", False),
         )
-        
+
         # 後から追加された属性のチェック
         if "quantity" in item_data:
             item.quantity = item_data["quantity"]
@@ -700,7 +708,7 @@ Available Commands:
             item.enchantment = item_data["enchantment"]
         if "stack_count" in item_data:
             item.stack_count = item_data["stack_count"]
-        
+
         return item
 
     def _serialize_all_floors(self, floors: dict[int, Any]) -> dict[str, Any]:
@@ -722,7 +730,9 @@ Available Commands:
             "monsters": [self._serialize_monster(monster) for monster in floor_data.monster_spawner.monsters],
             "items": [self._serialize_item(item) for item in floor_data.item_spawner.items],
             "explored": floor_data.explored.tolist(),
-            "traps": [self._serialize_trap(trap) for trap in getattr(getattr(floor_data, "trap_manager", None), "traps", [])],
+            "traps": [
+                self._serialize_trap(trap) for trap in getattr(getattr(floor_data, "trap_manager", None), "traps", [])
+            ],
         }
 
     def _serialize_floor_data(self) -> dict[str, Any]:
@@ -739,7 +749,7 @@ Available Commands:
                 "explored": [],
                 "traps": [],
             }
-        
+
         return self._serialize_floor_data_object(current_floor_data)
 
     def _restore_floor_data(self, floor_data: dict[str, Any]) -> None:
@@ -749,10 +759,10 @@ Available Commands:
         # フロアデータの完全復元は複雑なため、現在は簡略化
         # 将来的にはフロアデータの完全復元を実装予定
         dungeon_manager = self.context.game_logic.dungeon_manager
-        
+
         # 既存のフロアをクリア（現在は再生成に依存）
         dungeon_manager.floors.clear()
-        
+
         # セーブされたフロアデータを記録（デバッグ用）
         if floor_data:
             self.context.add_message(f"Loaded floor data for {len(floor_data)} floors")
@@ -765,7 +775,7 @@ Available Commands:
         """
         current_floor = self.context.game_logic.dungeon_manager.current_floor
         floor_data = self.context.game_logic.dungeon_manager.floors.get(current_floor)
-        
+
         if floor_data:
             # 既存のフロアデータを復元
             self._deserialize_floor_data(floor_data)
@@ -779,7 +789,6 @@ Available Commands:
         """
         # 実装は複雑になるため、基本的な復元のみ
         # 詳細な復元はGameLogic側で実装
-        pass
 
     def _serialize_monster(self, monster) -> dict[str, Any]:
         """

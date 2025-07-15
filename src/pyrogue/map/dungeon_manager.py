@@ -472,7 +472,6 @@ class DungeonManager:
         monster_spawner = MonsterSpawner(floor_number)
         monster_spawner.spawn_monsters(tiles, dungeon_director.rooms)
 
-
         item_spawner = ItemSpawner(floor_number)
         item_spawner.spawn_items(tiles, dungeon_director.rooms)
 
@@ -593,24 +592,24 @@ class DungeonManager:
         # 迷路の床タイル（通路）を全て取得
         floor_positions = []
         height, width = tiles.shape
-        
+
         for y in range(height):
             for x in range(width):
                 if isinstance(tiles[y, x], Floor):
                     floor_positions.append((x, y))
-        
+
         # 迷路での基本トラップ数を決定（通路数に応じて調整）
         base_trap_count = max(2, len(floor_positions) // 50)  # 50床タイルごとに1つのトラップ
         level_bonus = floor_number // 5  # 階層ボーナス
         total_traps = min(base_trap_count + level_bonus, len(floor_positions) // 10)  # 最大密度制限
-        
+
         # ランダムに配置位置を選択
         random.shuffle(floor_positions)
-        
+
         # トラップを配置
         for i in range(min(total_traps, len(floor_positions))):
             x, y = floor_positions[i]
-            
+
             # 同じ位置に既にトラップがないことを確認
             if trap_manager.get_trap_at(x, y) is None:
                 # 重み付き抽選でトラップタイプを選択
@@ -619,7 +618,7 @@ class DungeonManager:
                     weights=[weight for _, weight in trap_types],
                     k=1,
                 )[0]
-                
+
                 # トラップを作成して追加
                 new_trap = trap_class(x, y)
                 trap_manager.add_trap(new_trap)

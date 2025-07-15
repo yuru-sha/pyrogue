@@ -45,6 +45,8 @@ class InputHandler:
         self.targeting_mode = False
         self.targeting_x = 0
         self.targeting_y = 0
+        self.wand_direction_mode = False
+        self.selected_wand = None
 
     def handle_key(self, event: tcod.event.KeyDown) -> None:
         """
@@ -57,6 +59,8 @@ class InputHandler:
         """
         if self.targeting_mode:
             self._handle_targeting_key(event)
+        elif self.wand_direction_mode:
+            self._handle_wand_direction_key(event)
         else:
             self._handle_normal_key(event)
 
@@ -380,7 +384,7 @@ class InputHandler:
     def _handle_help_action(self) -> None:
         """
         ヘルプ表示処理。
-        
+
         メインゲーム画面で使用可能な全コマンドの一覧を表示します。
         """
         help_text = """
@@ -422,13 +426,13 @@ Wizard Mode (Debug):
 
 Press any key to continue...
         """
-        
+
         self.game_screen.game_logic.add_message(help_text.strip())
 
     def _handle_rest_action(self) -> None:
         """
         休憩コマンド処理。
-        
+
         その場で1ターン休憩し、時間を経過させます。
         - HP/MP自然回復
         - 飢餓進行
@@ -446,10 +450,10 @@ Press any key to continue...
 
         # 休憩メッセージ
         self.game_screen.game_logic.add_message("You rest for a moment.")
-        
+
         # ターン経過処理
         # GameLogicのターン管理メソッドを使用
-        if hasattr(self.game_screen.game_logic, 'handle_turn_end'):
+        if hasattr(self.game_screen.game_logic, "handle_turn_end"):
             self.game_screen.game_logic.handle_turn_end()
         else:
             # 古いバージョンとの互換性のため、直接処理
@@ -460,23 +464,23 @@ Press any key to continue...
         休憩時のターン処理（フォールバック実装）。
         """
         player = self.game_screen.player
-        
+
         # HP自然回復（満腹時）
-        if hasattr(player, 'hunger') and player.hunger >= 80:  # 満腹時
+        if hasattr(player, "hunger") and player.hunger >= 80:  # 満腹時
             if player.hp < player.max_hp:
                 player.hp = min(player.max_hp, player.hp + 1)
-                
+
         # MP自然回復（満腹時）
-        if hasattr(player, 'mp') and hasattr(player, 'max_mp') and hasattr(player, 'hunger'):
+        if hasattr(player, "mp") and hasattr(player, "max_mp") and hasattr(player, "hunger"):
             if player.hunger >= 80 and player.mp < player.max_mp:
                 player.mp = min(player.max_mp, player.mp + 1)
-        
+
         # 飢餓進行
-        if hasattr(player, 'consume_food'):
+        if hasattr(player, "consume_food"):
             player.consume_food(1)  # 1ポイント消費
-            
+
         # 状態異常進行
-        if hasattr(player, 'status_effects'):
+        if hasattr(player, "status_effects"):
             for effect in list(player.status_effects):
                 effect.update()
                 if effect.duration <= 0:
@@ -487,14 +491,14 @@ Press any key to continue...
         セーブコマンドを CommonCommandHandler 経由で処理。
         """
         from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
-        
+
         # GUI用のCommandContextを作成
         context = GUICommandContext(self.game_screen)
-        
+
         # CommonCommandHandlerを使用してセーブ処理を実行
         command_handler = CommonCommandHandler(context)
         result = command_handler.handle_command("save")
-        
+
         # 結果に基づいて追加処理は不要（メッセージはすでに表示済み）
 
     def _handle_load_command(self) -> None:
@@ -502,14 +506,14 @@ Press any key to continue...
         ロードコマンドを CommonCommandHandler 経由で処理。
         """
         from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
-        
+
         # GUI用のCommandContextを作成
         context = GUICommandContext(self.game_screen)
-        
+
         # CommonCommandHandlerを使用してロード処理を実行
         command_handler = CommonCommandHandler(context)
         result = command_handler.handle_command("load")
-        
+
         # ロード成功時にFOVを更新
         if result.success:
             self.game_screen.fov_manager.update_fov()
@@ -517,14 +521,136 @@ Press any key to continue...
     def _handle_zap_wand_action(self) -> None:
         """
         ワンド使用処理（方向選択）。
-        
+
         プレイヤーが所持するワンドを使用し、方向を選択して発動する。
         オリジナルRogue準拠のワンドシステム。
         """
-        # TODO: ワンドシステムの実装
-        self.game_screen.game_logic.add_message("Zap wand command not yet implemented.")
-        # 将来的にはここで以下の処理を行う：
-        # 1. インベントリからワンドを選択
-        # 2. 方向選択
-        # 3. ワンド効果の発動
-        # 4. チャージ消費処理
+        # インベントリからワンドを探す
+        player = self.game_screen.player
+        wands = []
+
+        for item in player.inventory.items:
+            if hasattr(item, "item_type") and item.item_type == "WAND":
+                wands.append(item)
+
+        if not wands:
+            self.game_screen.game_logic.add_message("You have no wands to zap.")
+            return
+
+        # ワンドが1つだけの場合は自動選択
+        if len(wands) == 1:
+            selected_wand = wands[0]
+        else:
+            # 複数のワンドがある場合は選択画面を表示
+            self.game_screen.game_logic.add_message("Select a wand to zap:")
+            for i, wand in enumerate(wands):
+                charges_info = wand.get_charges_info() if hasattr(wand, "get_charges_info") else ""
+                self.game_screen.game_logic.add_message(f"{chr(ord('a') + i)}) {wand.name} {charges_info}")
+
+            # 簡単な実装：最初のワンドを自動選択
+            selected_wand = wands[0]
+
+        # チャージをチェック
+        if hasattr(selected_wand, "has_charges") and not selected_wand.has_charges():
+            self.game_screen.game_logic.add_message(f"The {selected_wand.name} has no charges left.")
+            return
+
+        # 方向選択モードに入る
+        self.game_screen.game_logic.add_message("Zap wand in which direction?")
+        self._start_wand_direction_selection(selected_wand)
+
+    def _start_wand_direction_selection(self, wand) -> None:
+        """
+        ワンド方向選択モードを開始。
+
+        Args:
+        ----
+            wand: 使用するワンド
+        """
+        # 方向選択モードの状態を設定
+        self.wand_direction_mode = True
+        self.selected_wand = wand
+
+    def _handle_wand_direction_key(self, event) -> None:
+        """
+        ワンド方向選択のキー処理。
+
+        Args:
+        ----
+            event: キーイベント
+        """
+        key = event.sym
+
+        # 方向キーの処理
+        direction_keys = {
+            # Vi-keys
+            ord("h"): (-1, 0),  # 左
+            ord("j"): (0, 1),  # 下
+            ord("k"): (0, -1),  # 上
+            ord("l"): (1, 0),  # 右
+            ord("y"): (-1, -1),  # 左上
+            ord("u"): (1, -1),  # 右上
+            ord("b"): (-1, 1),  # 左下
+            ord("n"): (1, 1),  # 右下
+            # 矢印キー
+            tcod.event.KeySym.LEFT: (-1, 0),
+            tcod.event.KeySym.RIGHT: (1, 0),
+            tcod.event.KeySym.UP: (0, -1),
+            tcod.event.KeySym.DOWN: (0, 1),
+            # テンキー
+            tcod.event.KeySym.KP_4: (-1, 0),  # 左
+            tcod.event.KeySym.KP_6: (1, 0),  # 右
+            tcod.event.KeySym.KP_8: (0, -1),  # 上
+            tcod.event.KeySym.KP_2: (0, 1),  # 下
+            tcod.event.KeySym.KP_7: (-1, -1),  # 左上
+            tcod.event.KeySym.KP_9: (1, -1),  # 右上
+            tcod.event.KeySym.KP_1: (-1, 1),  # 左下
+            tcod.event.KeySym.KP_3: (1, 1),  # 右下
+        }
+
+        if key in direction_keys:
+            direction = direction_keys[key]
+            self._execute_wand_zap(direction)
+        elif key == tcod.event.KeySym.ESCAPE:
+            # キャンセル
+            self.wand_direction_mode = False
+            self.selected_wand = None
+            self.game_screen.game_logic.add_message("Cancelled.")
+        else:
+            self.game_screen.game_logic.add_message("Choose a direction (use movement keys).")
+
+    def _execute_wand_zap(self, direction: tuple[int, int]) -> None:
+        """
+        ワンドの発動処理。
+
+        Args:
+        ----
+            direction: 発動方向
+        """
+        if not hasattr(self, "selected_wand") or not self.selected_wand:
+            return
+
+        wand = self.selected_wand
+
+        # 方向選択モードを終了
+        self.wand_direction_mode = False
+        self.selected_wand = None
+
+        # ワンドの効果を適用
+        if hasattr(wand, "apply_effect"):
+            success = wand.apply_effect(self.game_screen.game_logic, direction)
+            if success:
+                # 使用メッセージを表示
+                if hasattr(wand, "use"):
+                    self.game_screen.game_logic.add_message(wand.use())
+
+                # チャージが0になった場合の処理
+                if hasattr(wand, "charges") and wand.charges <= 0:
+                    self.game_screen.game_logic.add_message(f"The {wand.name} crumbles to dust.")
+                    # インベントリから削除
+                    if wand in self.game_screen.player.inventory.items:
+                        self.game_screen.player.inventory.items.remove(wand)
+            else:
+                self.game_screen.game_logic.add_message(f"The {wand.name} fails to work.")
+        else:
+            self.game_screen.game_logic.add_message(f"The {wand.name} is not functional.")

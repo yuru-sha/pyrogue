@@ -83,7 +83,6 @@ class Engine:
         self.message_log: list[str] = []  # メッセージログを追加
         self.state_manager = StateManager()
 
-
         # セーブマネージャーを初期化
         self.save_manager = SaveManager()
 

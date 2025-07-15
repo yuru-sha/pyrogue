@@ -98,7 +98,6 @@ class GameRenderer:
                         # モンスターの描画
                         self._render_monsters_at(console, x, y, floor_data, map_offset_y)
 
-
                         # ウィザードモード時: トラップの描画
                         if wizard_mode:
                             self._render_traps_at(console, x, y, floor_data, map_offset_y)
@@ -320,7 +319,6 @@ class GameRenderer:
         recent_messages = messages[-max_messages:]
         for i, message in enumerate(recent_messages):
             console.print(0, message_y_start + i, message, fg=(255, 255, 255))
-
 
     def _get_hallucination_char(self) -> str:
         """

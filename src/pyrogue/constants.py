@@ -175,8 +175,6 @@ class MagicConstants:
     TELEPORT_MAX_ATTEMPTS: int = 100
 
 
-
-
 @dataclass(frozen=True)
 class DisplayConstants:
     """表示に関する定数。"""

@@ -120,7 +120,6 @@ class TestPlayer:
         assert player.defense > initial_defense
         assert player.hp == player.max_hp  # 全回復
 
-
     def test_player_hunger_system(self):
         """プレイヤーの満腹度システムテスト。"""
         player = Player(x=10, y=15)

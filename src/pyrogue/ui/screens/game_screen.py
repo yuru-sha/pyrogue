@@ -133,11 +133,11 @@ class GameScreen:
 
         """
         from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
-        
+
         context = GUICommandContext(self)
         command_handler = CommonCommandHandler(context)
         result = command_handler.handle_command("save")
-        
+
         return result.success
 
     def load_game(self) -> bool:
@@ -150,15 +150,15 @@ class GameScreen:
 
         """
         from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
-        
+
         context = GUICommandContext(self)
         command_handler = CommonCommandHandler(context)
         result = command_handler.handle_command("load")
-        
+
         # ロード成功時にFOVを更新
         if result.success:
             self.fov_manager.update_fov()
-        
+
         return result.success
 
     # GameLogic連携プロパティ
@@ -269,13 +269,13 @@ class GameScreen:
     def has_save_file(self) -> bool:
         """セーブファイルが存在するかチェック。"""
         from pyrogue.core.save_manager import SaveManager
-        
+
         save_manager = SaveManager()
         return save_manager.has_save_file()
 
     def delete_save_file(self) -> bool:
         """セーブファイルを削除。"""
         from pyrogue.core.save_manager import SaveManager
-        
+
         save_manager = SaveManager()
         return save_manager.delete_save_data()

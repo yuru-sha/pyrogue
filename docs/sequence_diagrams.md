@@ -26,18 +26,18 @@ sequenceDiagram
     Engine->>GameScreen: handle_key(event)
     GameScreen->>InputHandler: process_input(event)
     InputHandler->>GameLogic: handle_player_action(action)
-    
+
     alt プレイヤーターン
         GameLogic->>GameLogic: process_player_action()
         GameLogic->>TurnManager: advance_turn()
-        
+
         alt ターン消費アクション
             TurnManager->>MonsterAI: process_monsters()
             MonsterAI->>GameLogic: monster_action()
             GameLogic->>GameLogic: apply_environment_effects()
         end
     end
-    
+
     GameLogic->>GameScreen: update_game_state()
     GameScreen->>GameRenderer: render(console)
     GameRenderer->>Engine: 描画完了
@@ -56,19 +56,19 @@ sequenceDiagram
     participant MessageLog
 
     GameLogic->>TurnManager: advance_turn()
-    
+
     TurnManager->>Player: apply_turn_effects()
     Player->>StatusManager: process_status_effects()
     StatusManager->>MessageLog: add_status_messages()
-    
+
     TurnManager->>MonsterAI: process_all_monsters()
-    
+
     loop 各モンスター
         MonsterAI->>MonsterAI: calculate_monster_action()
         MonsterAI->>GameLogic: execute_monster_action()
         GameLogic->>MessageLog: add_action_message()
     end
-    
+
     TurnManager->>GameLogic: turn_completed()
     GameLogic->>GameLogic: check_game_state()
 ```
@@ -91,11 +91,11 @@ sequenceDiagram
     Player->>InputHandler: 攻撃キー入力
     InputHandler->>GameLogic: handle_attack_action()
     GameLogic->>CombatManager: process_combat(player, target)
-    
+
     CombatManager->>CombatManager: calculate_damage()
     CombatManager->>CombatManager: check_critical_hit()
     CombatManager->>Monster: take_damage(damage)
-    
+
     alt モンスター死亡
         Monster->>GameLogic: on_death()
         GameLogic->>Player: gain_experience()
@@ -104,7 +104,7 @@ sequenceDiagram
         Monster->>StatusManager: check_status_effects()
         StatusManager->>MessageLog: add_damage_message()
     end
-    
+
     CombatManager->>GameLogic: combat_result()
     GameLogic->>GameRenderer: mark_dirty_regions()
     GameRenderer->>Player: 戦闘結果表示
@@ -122,27 +122,27 @@ sequenceDiagram
     participant MessageLog
 
     MonsterAI->>Monster: determine_action()
-    
+
     alt 攻撃アクション
         Monster->>CombatManager: attack_player()
         CombatManager->>CombatManager: calculate_damage()
         CombatManager->>Player: take_damage()
-        
+
         alt 特殊攻撃
             Monster->>Player: apply_special_effect()
             Player->>StatusManager: add_status_effect()
             StatusManager->>MessageLog: add_effect_message()
         end
-        
+
     else 移動アクション
         Monster->>MonsterAI: move_towards_player()
         MonsterAI->>Monster: update_position()
-        
+
     else 特殊アクション
         Monster->>Monster: execute_special_ability()
         Monster->>MessageLog: add_ability_message()
     end
-    
+
     Monster->>MonsterAI: action_completed()
 ```
 
@@ -164,28 +164,28 @@ sequenceDiagram
     Player->>InventoryScreen: アイテム選択
     InventoryScreen->>GameLogic: use_item(item)
     GameLogic->>Item: use(player, context)
-    
+
     alt 未識別アイテム
         Item->>IdentificationManager: identify_on_use()
         IdentificationManager->>Item: set_identified(true)
         IdentificationManager->>MessageLog: add_identification_message()
     end
-    
+
     Item->>EffectManager: apply_effects(player)
-    
+
     alt 回復アイテム
         EffectManager->>Player: heal(amount)
         EffectManager->>MessageLog: add_healing_message()
-        
+
     else 状態異常治療
         EffectManager->>StatusManager: remove_status_effect()
         StatusManager->>MessageLog: add_cure_message()
-        
+
     else 能力向上
         EffectManager->>Player: modify_stats(enhancement)
         EffectManager->>MessageLog: add_enhancement_message()
     end
-    
+
     alt スタック可能アイテム
         Item->>Item: decrease_quantity()
         alt 数量が0
@@ -194,7 +194,7 @@ sequenceDiagram
     else 単発使用アイテム
         GameLogic->>Player: remove_from_inventory(item)
     end
-    
+
     GameLogic->>InventoryScreen: refresh_display()
 ```
 
@@ -212,16 +212,16 @@ sequenceDiagram
 
     Player->>GameLogic: get_item_command()
     GameLogic->>FloorData: get_items_at_position(x, y)
-    
+
     alt ゴールドアイテム
         FloorData->>Item: get_gold_amount()
         Item->>Player: add_gold(amount)
         FloorData->>FloorData: remove_item(gold)
         GameLogic->>MessageLog: add_gold_message()
-        
+
     else 通常アイテム
         FloorData->>Item: get_item_at_position()
-        
+
         alt インベントリ満杯
             GameLogic->>MessageLog: add_inventory_full_message()
         else インベントリ空きあり
@@ -241,7 +241,7 @@ sequenceDiagram
             end
         end
     end
-    
+
     GameLogic->>GameRenderer: mark_dirty_position(x, y)
 ```
 
@@ -261,38 +261,38 @@ sequenceDiagram
 
     DungeonManager->>DungeonDirector: generate_floor(floor_number)
     DungeonDirector->>DungeonDirector: determine_dungeon_type()
-    
+
     alt BSPダンジョン
         DungeonDirector->>SectionBasedBuilder: build(width, height)
         SectionBasedBuilder->>BSP: create_bsp_tree()
         BSP->>BSP: split_recursive()
-        
+
         loop 各リーフノード
             SectionBasedBuilder->>Room: create_room_in_node()
             Room->>SectionBasedBuilder: room_created()
         end
-        
+
         SectionBasedBuilder->>SectionBasedBuilder: connect_rooms()
-        
+
         loop 各接続
             SectionBasedBuilder->>SectionBasedBuilder: create_l_corridor()
             SectionBasedBuilder->>DoorSystem: place_doors_on_path()
             DoorSystem->>DoorSystem: check_door_placement_rules()
         end
-        
+
     else 迷路ダンジョン
         DungeonDirector->>MazeBuilder: build_maze()
         MazeBuilder->>MazeBuilder: recursive_backtracking()
     end
-    
+
     SectionBasedBuilder->>EntitySpawner: populate_dungeon()
-    
+
     loop エンティティ配置
         EntitySpawner->>EntitySpawner: spawn_monsters()
         EntitySpawner->>EntitySpawner: spawn_items()
         EntitySpawner->>EntitySpawner: spawn_traps()
     end
-    
+
     EntitySpawner->>DungeonDirector: placement_completed()
     DungeonDirector->>DungeonManager: dungeon_ready()
 ```
@@ -308,18 +308,18 @@ sequenceDiagram
     participant DoorValidator
 
     SectionBasedBuilder->>DoorSystem: place_doors_on_corridor(path)
-    
+
     loop 通路の各位置
         DoorSystem->>DoorValidator: should_place_door(x, y)
         DoorValidator->>Room: is_room_boundary_wall(x, y)
-        
+
         alt 部屋境界の壁
             DoorValidator->>DoorValidator: check_adjacent_doors(x, y)
-            
+
             alt 隣接ドアなし
                 DoorValidator->>DoorSystem: door_placement_approved()
                 DoorSystem->>DoorSystem: determine_door_type()
-                
+
                 alt 60%確率
                     DoorSystem->>CorridorPath: place_closed_door()
                 else 30%確率
@@ -327,12 +327,12 @@ sequenceDiagram
                 else 10%確率
                     DoorSystem->>CorridorPath: place_secret_door()
                 end
-                
+
                 DoorSystem->>DoorSystem: register_door_position(x, y)
             end
         end
     end
-    
+
     DoorSystem->>SectionBasedBuilder: door_placement_completed()
 ```
 
@@ -353,15 +353,15 @@ sequenceDiagram
     Player->>Engine: Ctrl+S (セーブキー)
     Engine->>SaveLoadManager: save_game()
     SaveLoadManager->>GameLogic: create_save_data()
-    
+
     GameLogic->>GameLogic: serialize_player_data()
     GameLogic->>GameLogic: serialize_dungeon_data()
     GameLogic->>GameLogic: serialize_inventory_data()
     GameLogic->>SaveLoadManager: save_data_ready()
-    
+
     SaveLoadManager->>DataValidator: validate_save_data()
     DataValidator->>SaveLoadManager: validation_result()
-    
+
     alt データ有効
         SaveLoadManager->>PermadeathManager: save_with_checksum()
         PermadeathManager->>FileSystem: create_backup()
@@ -369,7 +369,7 @@ sequenceDiagram
         PermadeathManager->>FileSystem: write_checksum()
         PermadeathManager->>SaveLoadManager: save_completed()
         SaveLoadManager->>Player: セーブ成功メッセージ
-        
+
     else データ無効
         SaveLoadManager->>Player: セーブ失敗メッセージ
     end
@@ -390,29 +390,29 @@ sequenceDiagram
     Player->>Engine: Ctrl+L (ロードキー)
     Engine->>SaveLoadManager: load_game()
     SaveLoadManager->>PermadeathManager: load_with_verification()
-    
+
     PermadeathManager->>FileSystem: read_save_file()
     PermadeathManager->>FileSystem: read_checksum()
     PermadeathManager->>PermadeathManager: verify_checksum()
-    
+
     alt チェックサム一致
         PermadeathManager->>SaveLoadManager: save_data_loaded()
-        
+
     else チェックサム不一致
         PermadeathManager->>FileSystem: restore_from_backup()
         PermadeathManager->>PermadeathManager: verify_backup_checksum()
-        
+
         alt バックアップ有効
             PermadeathManager->>SaveLoadManager: backup_data_loaded()
         else バックアップ無効
             PermadeathManager->>SaveLoadManager: load_failed()
         end
     end
-    
+
     alt ロード成功
         SaveLoadManager->>DataValidator: validate_loaded_data()
         DataValidator->>SaveLoadManager: validation_result()
-        
+
         alt データ有効
             SaveLoadManager->>GameLogic: restore_game_state()
             GameLogic->>GameLogic: deserialize_player_data()
@@ -420,7 +420,7 @@ sequenceDiagram
             GameLogic->>GameLogic: deserialize_inventory_data()
             GameLogic->>SaveLoadManager: game_state_restored()
             SaveLoadManager->>Player: ロード成功メッセージ
-            
+
         else データ無効
             SaveLoadManager->>Player: データ破損メッセージ
         end
@@ -445,14 +445,14 @@ sequenceDiagram
     Player->>InputHandler: 's' (探索キー)
     InputHandler->>GameLogic: handle_search_action()
     GameLogic->>TrapSystem: search_adjacent_traps()
-    
+
     loop 隣接8方向
         TrapSystem->>TrapSpawner: get_trap_at_position(x, y)
-        
+
         alt 隠しトラップ発見
             TrapSpawner->>TrapSystem: hidden_trap_found()
             TrapSystem->>TrapSystem: calculate_search_success()
-            
+
             alt 探索成功
                 TrapSystem->>TrapSpawner: reveal_trap()
                 TrapSystem->>MessageLog: add_trap_found_message()
@@ -461,23 +461,23 @@ sequenceDiagram
             end
         end
     end
-    
+
     Player->>InputHandler: 'd' (解除キー)
     InputHandler->>GameLogic: handle_disarm_action()
     GameLogic->>TrapSystem: disarm_adjacent_traps()
-    
+
     loop 隣接8方向
         TrapSystem->>TrapSpawner: get_revealed_trap_at_position(x, y)
-        
+
         alt 解除対象トラップ存在
             TrapSystem->>TrapSystem: calculate_disarm_success()
-            
+
             alt 解除成功
                 TrapSystem->>TrapSpawner: remove_trap()
                 TrapSystem->>MessageLog: add_disarm_success_message()
             else 解除失敗
                 TrapSystem->>TrapSystem: check_failure_trigger()
-                
+
                 alt 30%確率でトラップ発動
                     TrapSystem->>TrapSpawner: trigger_trap()
                     TrapSpawner->>Player: apply_trap_effect()
@@ -506,39 +506,39 @@ sequenceDiagram
     MagicScreen->>Player: 魔法一覧表示
     Player->>MagicScreen: 魔法選択
     MagicScreen->>GameLogic: cast_spell(spell_id)
-    
+
     GameLogic->>SpellManager: get_spell(spell_id)
     SpellManager->>SpellManager: check_mp_cost()
-    
+
     alt MP不足
         SpellManager->>MessageLog: add_insufficient_mp_message()
     else MP充分
         SpellManager->>GameLogic: spell_castable()
-        
+
         alt ターゲット必要
             GameLogic->>TargetingSystem: enter_targeting_mode()
             TargetingSystem->>Player: ターゲット選択モード
             Player->>TargetingSystem: ターゲット選択
             TargetingSystem->>GameLogic: target_selected()
         end
-        
+
         GameLogic->>SpellManager: execute_spell(target)
         SpellManager->>Player: consume_mp(cost)
         SpellManager->>EffectManager: apply_spell_effects()
-        
+
         alt 攻撃魔法
             EffectManager->>TargetingSystem: deal_magic_damage()
             EffectManager->>MessageLog: add_damage_message()
-            
+
         else 回復魔法
             EffectManager->>Player: heal_hp(amount)
             EffectManager->>MessageLog: add_healing_message()
-            
+
         else 状態異常魔法
             EffectManager->>TargetingSystem: apply_status_effect()
             EffectManager->>MessageLog: add_effect_message()
         end
-        
+
         SpellManager->>GameLogic: spell_completed()
     end
 ```
@@ -558,27 +558,27 @@ sequenceDiagram
     participant MessageLog
 
     Note over NPCManager: 現在このシステムは無効化されています
-    
+
     Player->>GameLogic: move_to_npc_position()
     GameLogic->>NPCManager: check_npc_interaction()
     NPCManager->>NPC: get_npc_at_position()
-    
+
     alt NPC存在
         NPC->>DialogueScreen: start_dialogue()
         DialogueScreen->>Player: 対話選択肢表示
         Player->>DialogueScreen: 選択肢選択
-        
+
         alt 取引選択
             DialogueScreen->>TradingManager: start_trading()
             TradingManager->>Player: 取引画面表示
             Player->>TradingManager: 取引操作
             TradingManager->>NPC: process_trade()
             NPC->>MessageLog: add_trade_message()
-            
+
         else 情報交換選択
             DialogueScreen->>NPC: provide_information()
             NPC->>MessageLog: add_info_message()
-            
+
         else 対話終了
             DialogueScreen->>GameLogic: end_dialogue()
         end

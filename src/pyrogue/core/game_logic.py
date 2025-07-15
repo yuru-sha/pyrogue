@@ -825,7 +825,6 @@ class GameLogic:
 
         return enemies
 
-
     def record_game_over(self, death_cause: str = "Unknown") -> None:
         """ゲームオーバー時のスコア記録"""
         self.score_manager.add_score(

@@ -207,10 +207,10 @@ class Wand(Item):
         """ワンドの効果を適用する"""
         if self.charges <= 0:
             return False
-        
+
         # チャージを消費
         self.charges -= 1
-        
+
         # 効果を適用（方向情報を渡す）
         return self.effect.apply(context, direction=direction)
 

@@ -237,7 +237,6 @@ class TurnManager:
             player.hp = min(player.max_hp, player.hp + 1)
             context.add_message("You feel refreshed!")
 
-
     def _process_hunger_damage(self, context: GameContext, player) -> None:
         """
         飢餓によるダメージを処理。
