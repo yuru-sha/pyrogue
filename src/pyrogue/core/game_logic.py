@@ -825,14 +825,6 @@ class GameLogic:
 
         return enemies
 
-    def get_npc_at(self, x: int, y: int):
-        """指定した座標にいるNPCを取得。"""
-        floor_data = self.get_current_floor_data()
-
-        if not floor_data or not hasattr(floor_data, "npc_spawner"):
-            return None
-
-        return floor_data.npc_spawner.get_npc_at_position(x, y)
 
     def record_game_over(self, death_cause: str = "Unknown") -> None:
         """ゲームオーバー時のスコア記録"""

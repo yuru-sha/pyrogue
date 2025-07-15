@@ -190,8 +190,8 @@ class InputHandler:
             self._handle_search_action()
 
         elif key == ord("t"):
-            # NPCとの対話
-            self._handle_talk_action()
+            # 投げるコマンド
+            self._handle_throw_action()
 
         elif (
             key == tcod.event.KeySym.QUESTION
@@ -364,72 +364,19 @@ class InputHandler:
         """
         return self.targeting_mode, self.targeting_x, self.targeting_y
 
-    def _handle_talk_action(self) -> None:
+    def _handle_throw_action(self) -> None:
         """
-        NPCとの対話処理。
+        投げるコマンド処理。
 
-        プレイヤーの周囲8方向をチェックし、NPCがいる場合は対話を開始する。
+        アイテムを投擲して遠距離攻撃を行う。
         """
-        # NPCシステムの有効性をチェック
-        from pyrogue.constants import FeatureConstants
-
-        if not FeatureConstants.ENABLE_NPC_SYSTEM:
-            self.game_screen.game_logic.add_message("NPCs are not available in this version.")
-            return
-
-        player = self.game_screen.player
-        if not player:
-            return
-
-        # プレイヤーの周囲8方向をチェック
-        for dy in [-1, 0, 1]:
-            for dx in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-
-                target_x = player.x + dx
-                target_y = player.y + dy
-
-                # NPCがいるかチェック
-                npc = self.game_screen.game_logic.get_npc_at(target_x, target_y)
-                if npc:
-                    # NPCとの対話を開始
-                    self._start_dialogue_with_npc(npc)
-                    return
-
-        # 周囲にNPCがいない場合
-        self.game_screen.game_logic.add_message("There is no one to talk to.")
-
-    def _start_dialogue_with_npc(self, npc) -> None:
-        """
-        NPCとの対話を開始。
-
-        Args:
-        ----
-            npc: 対話するNPC
-
-        """
-        if not self.game_screen.engine:
-            return
-
-        # NPCの対話IDを取得
-        dialogue_id = getattr(npc, "dialogue_id", "default")
-
-        # 対話画面に遷移
-        from pyrogue.ui.screens.dialogue_screen import DialogueScreen
-
-        dialogue_screen = DialogueScreen(
-            self.game_screen.engine,
-            self.game_screen.engine.dialogue_manager,
-            dialogue_id,
-        )
-
-        # 対話画面を設定
-        self.game_screen.engine.dialogue_screen = dialogue_screen
-        self.game_screen.engine.state = GameStates.DIALOGUE
-
-        # 対話開始メッセージ
-        self.game_screen.game_logic.add_message(f"You talk to {npc.name}.")
+        # TODO: 投げるコマンドの実装
+        self.game_screen.game_logic.add_message("Throw command not yet implemented.")
+        # 将来的にはここで以下の処理を行う：
+        # 1. インベントリから投擲可能アイテムを選択
+        # 2. 投擲方向を選択
+        # 3. 軌道計算とダメージ処理
+        # 4. アイテムの消費または回収処理
 
     def _handle_help_action(self) -> None:
         """
@@ -452,7 +399,7 @@ Actions:
   c  - Close door
   s  - Search for hidden doors/traps
   d  - Disarm trap
-  t  - Talk to NPC
+  t  - Throw item
   z  - Zap a wand in a direction
   .  - Rest for one turn
   >  - Go down stairs

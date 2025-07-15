@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from pyrogue.entities.items.item_spawner import ItemSpawner
 
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
-from pyrogue.entities.actors.npc_spawner import NPCSpawner
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.traps.trap import TrapManager
 
@@ -50,7 +49,6 @@ class FloorData:
         up_pos: 上り階段の位置 (x, y)
         down_pos: 下り階段の位置 (x, y)
         monster_spawner: モンスター管理インスタンス
-        npc_spawner: NPC管理インスタンス
         item_spawner: アイテム管理インスタンス
         trap_manager: トラップ管理インスタンス
         explored: 探索済み領域のブール配列
@@ -65,7 +63,6 @@ class FloorData:
         up_pos: tuple[int, int],
         down_pos: tuple[int, int],
         monster_spawner: MonsterSpawner,
-        npc_spawner: NPCSpawner,
         item_spawner: ItemSpawner,
         trap_manager: TrapManager,
         explored: np.ndarray,
@@ -80,7 +77,6 @@ class FloorData:
             up_pos: 上り階段の位置
             down_pos: 下り階段の位置
             monster_spawner: モンスター管理インスタンス
-            npc_spawner: NPC管理インスタンス
             item_spawner: アイテム管理インスタンス
             trap_manager: トラップ管理インスタンス
             explored: 探索済み領域のブール配列
@@ -91,7 +87,6 @@ class FloorData:
         self.up_pos = up_pos
         self.down_pos = down_pos
         self.monster_spawner = monster_spawner
-        self.npc_spawner = npc_spawner
         self.item_spawner = item_spawner
         self.trap_manager = trap_manager
         self.explored = explored
@@ -477,9 +472,6 @@ class DungeonManager:
         monster_spawner = MonsterSpawner(floor_number)
         monster_spawner.spawn_monsters(tiles, dungeon_director.rooms)
 
-        # NPCを生成
-        npc_spawner = NPCSpawner(floor_number)
-        npc_spawner.spawn_npcs(tiles, dungeon_director.rooms)
 
         item_spawner = ItemSpawner(floor_number)
         item_spawner.spawn_items(tiles, dungeon_director.rooms)
@@ -498,7 +490,6 @@ class DungeonManager:
             up_pos=up_pos,
             down_pos=down_pos,
             monster_spawner=monster_spawner,
-            npc_spawner=npc_spawner,
             item_spawner=item_spawner,
             trap_manager=trap_manager,
             explored=explored,

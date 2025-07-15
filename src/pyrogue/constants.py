@@ -175,14 +175,6 @@ class MagicConstants:
     TELEPORT_MAX_ATTEMPTS: int = 100
 
 
-@dataclass(frozen=True)
-class FeatureConstants:
-    """機能の有効/無効を制御する定数。"""
-
-    # NPCシステムの制御
-    ENABLE_NPC_SYSTEM: bool = False  # NPCシステムを無効化（将来の拡張のため残す）
-    ENABLE_DIALOGUE: bool = False  # 対話システムを無効化
-    ENABLE_TRADING: bool = False  # 取引システムを無効化
 
 
 @dataclass(frozen=True)

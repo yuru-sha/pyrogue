@@ -1,7 +1,7 @@
 """
 Actor基底クラス。
 
-このモジュールは、Player、Monster、NPCの共通基底クラスを定義します。
+このモジュールは、Player、Monsterの共通基底クラスを定義します。
 移動、ダメージ処理、状態異常管理などの共通機能を提供します。
 """
 
@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 class Actor(ABC):
     """
-    Player、Monster、NPCの共通基底クラス。
+    Player、Monsterの共通基底クラス。
 
     すべてのアクターが持つ基本的な属性と機能を定義します。
     位置、HP、基本ステータス、移動、ダメージ処理、状態異常管理など
