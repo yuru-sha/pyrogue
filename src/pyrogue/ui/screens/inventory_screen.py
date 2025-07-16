@@ -247,7 +247,7 @@ class InventoryScreen(Screen):
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # アイテムを使用
                     player = self.game_screen.game_logic.player
-                    success = player.use_item(selected_item, self.game_screen.game_logic)
+                    success = player.use_item(selected_item, self.game_screen)
 
                     if success:
                         # 使用成功時に識別

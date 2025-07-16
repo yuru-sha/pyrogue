@@ -52,6 +52,8 @@ class CLICommandContext(CommandContext):
 
     def add_message(self, message: str) -> None:
         """メッセージの追加。"""
+        # GameLogicのmessage_logにも追加
+        self.engine.game_logic.add_message(message)
         print(message)
 
     def display_player_status(self) -> None:
@@ -206,10 +208,13 @@ class CLIEngine:
             try:
                 damage = int(args[1])
                 self.game_logic.player.hp = max(0, self.game_logic.player.hp - damage)
-                print(f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
+                msg = f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}"
+                self.game_logic.add_message(msg)
+                print(msg)
 
                 # 死亡チェック
                 if self.game_logic.player.hp <= 0:
+                    self.game_logic.add_message("You have died!")
                     print("You have died!")
                     return False
                 return True
@@ -220,10 +225,13 @@ class CLIEngine:
             try:
                 hp = int(args[1])
                 self.game_logic.player.hp = max(0, min(hp, self.game_logic.player.max_hp))
-                print(f"Player HP set to: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}")
+                msg = f"Player HP set to {self.game_logic.player.hp}"
+                self.game_logic.add_message(msg)
+                print(msg)
 
                 # 死亡チェック
                 if self.game_logic.player.hp <= 0:
+                    self.game_logic.add_message("You have died!")
                     print("You have died!")
                     return False
                 return True
@@ -234,7 +242,9 @@ class CLIEngine:
             try:
                 count = int(args[1])
                 self.game_logic.player.monsters_killed += count
-                print(f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}")
+                msg = f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}"
+                self.game_logic.add_message(msg)
+                print(msg)
                 return True
             except ValueError:
                 print("Invalid kill count value")
@@ -262,9 +272,13 @@ class CLIEngine:
                     color=(255, 255, 255),
                 )
                 floor_data.monster_spawner.monsters.append(test_monster)
-                print(f"Spawned Test Bat at ({x}, {y})")
+                msg = f"Spawned Test Bat at ({x}, {y})"
+                self.game_logic.add_message(msg)
+                print(msg)
                 return True
-            print("Could not spawn monster")
+            msg = "Could not spawn monster"
+            self.game_logic.add_message(msg)
+            print(msg)
             return False
         else:
             print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")

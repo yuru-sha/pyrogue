@@ -1019,7 +1019,12 @@ Character Details:
             # メッセージログの復元
             message_log = save_data.get("message_log", [])
             if hasattr(self.context.game_logic, "message_log"):
-                self.context.game_logic.message_log = message_log
+                # GameLogicのmessage_logを更新
+                self.context.game_logic.message_log.clear()
+                self.context.game_logic.message_log.extend(message_log)
+
+                # GameContextのmessage_logも同じリストを参照するよう更新
+                self.context.message_log = self.context.game_logic.message_log
 
             # アミュレット状態の復元
             if "has_amulet" in save_data:
@@ -1063,6 +1068,7 @@ Character Details:
     def _deserialize_inventory(self, inventory_data: dict[str, Any]) -> None:
         """
         インベントリデータをデシリアライズ。
+        軽量な状態データから完全なアイテムオブジェクトを復元する。
         """
         inventory = self.context.game_logic.inventory
 
@@ -1070,16 +1076,19 @@ Character Details:
         items_data = inventory_data.get("items", [])
         inventory.items = [self._deserialize_item(item_data) for item_data in items_data]
 
-        # 装備品の復元
+        # 装備品の復元（インデックスベース）
         equipped_data = inventory_data.get("equipped", {})
         inventory.equipped = {
-            "weapon": self._deserialize_item(equipped_data["weapon"]) if equipped_data.get("weapon") else None,
-            "armor": self._deserialize_item(equipped_data["armor"]) if equipped_data.get("armor") else None,
-            "ring_left": self._deserialize_item(equipped_data["ring_left"]) if equipped_data.get("ring_left") else None,
-            "ring_right": self._deserialize_item(equipped_data["ring_right"])
-            if equipped_data.get("ring_right")
-            else None,
+            "weapon": None,
+            "armor": None,
+            "ring_left": None,
+            "ring_right": None,
         }
+
+        # インデックスから実際のアイテムオブジェクトに変換
+        for slot, index in equipped_data.items():
+            if index is not None and 0 <= index < len(inventory.items):
+                inventory.equipped[slot] = inventory.items[index]
 
     def _serialize_player(self, player) -> dict[str, Any]:
         """
@@ -1108,65 +1117,248 @@ Character Details:
         if inventory is None:
             return {"items": [], "equipped": {"weapon": None, "armor": None, "ring_left": None, "ring_right": None}}
 
+        # アイテムリストのシリアライズ
+        items_data = [self._serialize_item(item) for item in inventory.items]
+
+        # 装備状態をインデックスベースで保存
+        equipped_indices = {}
+        for slot, item in inventory.equipped.items():
+            if item is not None:
+                # インベントリ内でのインデックスを検索
+                try:
+                    index = inventory.items.index(item)
+                    equipped_indices[slot] = index
+                except ValueError:
+                    # インベントリに見つからない場合はNone
+                    equipped_indices[slot] = None
+            else:
+                equipped_indices[slot] = None
+
         return {
-            "items": [self._serialize_item(item) for item in inventory.items],
-            "equipped": {
-                "weapon": self._serialize_item(inventory.equipped["weapon"])
-                if inventory.equipped.get("weapon")
-                else None,
-                "armor": self._serialize_item(inventory.equipped["armor"]) if inventory.equipped.get("armor") else None,
-                "ring_left": self._serialize_item(inventory.equipped["ring_left"])
-                if inventory.equipped.get("ring_left")
-                else None,
-                "ring_right": self._serialize_item(inventory.equipped["ring_right"])
-                if inventory.equipped.get("ring_right")
-                else None,
-            },
+            "items": items_data,
+            "equipped": equipped_indices,
         }
 
     def _serialize_item(self, item) -> dict[str, Any]:
         """
-        アイテムをシリアライズ。
+        アイテムを軽量な状態データとしてシリアライズ。
+        IDベース＋状態データで実装詳細に依存しない形式。
         """
-        return {
-            "item_type": item.item_type,
-            "name": item.name,
-            "char": getattr(item, "char", "?"),
-            "color": getattr(item, "color", (255, 255, 255)),
-            "x": getattr(item, "x", 0),
-            "y": getattr(item, "y", 0),
-            "quantity": getattr(item, "quantity", 1),
-            "stack_count": getattr(item, "stack_count", 1),
-            "enchantment": getattr(item, "enchantment", 0),
+        from pyrogue.entities.items.item_factory import ItemFactory
+
+        # アイテムIDを取得（オブジェクトから直接、または名前から）
+        item_id = getattr(item, "item_id", None)
+        if item_id is None or item_id == 0:
+            # IDが設定されていない場合は名前から取得
+            item_id = ItemFactory.get_id_by_name(item.name)
+
+        data = {
+            "item_id": item_id,  # 主キー：アイテムID
+            "name": item.name,  # 後方互換性用：アイテム名
+            "count": getattr(item, "stack_count", 1),
+            "identified": getattr(item, "identified", True),
+            "blessed": getattr(item, "blessed", False),
             "cursed": getattr(item, "cursed", False),
+            "enchantment": getattr(item, "enchantment", 0),
         }
+
+        # アイテム固有の状態属性
+        if hasattr(item, "charges"):
+            data["charges"] = item.charges
+        if hasattr(item, "amount"):  # Gold用
+            data["amount"] = item.amount
+        if hasattr(item, "bonus"):  # Ring用
+            data["bonus"] = item.bonus
+        if hasattr(item, "effect") and hasattr(item, "item_type") and item.item_type == "RING":
+            # Ringの効果名のみ保存（文字列として）
+            data["effect_name"] = (
+                getattr(item.effect, "name", item.effect) if isinstance(item.effect, str) else item.effect
+            )
+
+        return data
 
     def _deserialize_item(self, item_data: dict[str, Any]):
         """
-        アイテムデータをデシリアライズ。
+        IDベースでアイテムオブジェクトを復元。名前変更に対応し、後方互換性も維持。
         """
-        from pyrogue.entities.items.item import Item
+        from pyrogue.entities.items.item_factory import ItemFactory
+        from pyrogue.entities.items.item_spawner import ItemSpawner
 
-        # 基本的なアイテム復元（必須フィールドを含む）
-        item = Item(
-            x=item_data.get("x", 0),
-            y=item_data.get("y", 0),
-            name=item_data.get("name", "Unknown Item"),
-            char=item_data.get("char", "?"),
-            color=item_data.get("color", (255, 255, 255)),
-            item_type=item_data.get("item_type", "MISC"),
-            cursed=item_data.get("cursed", False),
-        )
+        item_id = item_data.get("item_id")
+        name = item_data.get("name", "Unknown Item")
 
-        # 後から追加された属性のチェック
-        if "quantity" in item_data:
-            item.quantity = item_data["quantity"]
-        if "enchantment" in item_data:
-            item.enchantment = item_data["enchantment"]
-        if "stack_count" in item_data:
-            item.stack_count = item_data["stack_count"]
+        # IDベース復元を優先
+        if item_id is not None:
+            try:
+                item = ItemFactory.create_by_id(item_id, 0, 0)
+            except ValueError:
+                # 不明なIDの場合は名前ベースにフォールバック
+                spawner = ItemSpawner(floor=1)
+                item = self._create_item_by_name(spawner, name)
+        else:
+            # IDがない場合（旧セーブデータ）は名前ベース
+            spawner = ItemSpawner(floor=1)
+            item = self._create_item_by_name(spawner, name)
+
+        if item is None:
+            # フォールバック: 基本的なアイテムを作成
+            from pyrogue.entities.items.item import Item
+
+            item = Item(x=0, y=0, name=name, char="?", color=(255, 255, 255), item_type="MISC", cursed=False)
+
+        # 保存された状態を適用
+        self._apply_item_state(item, item_data)
 
         return item
+
+    def _create_item_by_name(self, spawner, name: str):
+        """
+        アイテム名から適切なアイテムオブジェクトを直接生成。
+        ItemSpawnerは使用せず、直接アイテムクラスを使用する。
+        """
+        from pyrogue.entities.items.amulet import AmuletOfYendor
+        from pyrogue.entities.items.effects import (
+            ConfusionPotionEffect,
+            EnchantArmorEffect,
+            EnchantWeaponEffect,
+            HallucinationPotionEffect,
+            HealingEffect,
+            IdentifyEffect,
+            LightEffect,
+            LightningWandEffect,
+            LightWandEffect,
+            MagicMappingEffect,
+            MagicMissileWandEffect,
+            NothingWandEffect,
+            NutritionEffect,
+            ParalysisPotionEffect,
+            PoisonPotionEffect,
+            RemoveCurseEffect,
+            TeleportEffect,
+        )
+        from pyrogue.entities.items.item import Armor, Food, Gold, Potion, Ring, Scroll, Wand, Weapon
+
+        try:
+            # 食料
+            if name == "Food Ration":
+                return Food(0, 0, "Food Ration", NutritionEffect(25))
+
+            # ポーション
+            elif name == "Potion of Healing":
+                return Potion(0, 0, "Potion of Healing", HealingEffect(25))
+            elif name == "Potion of Extra Healing":
+                return Potion(0, 0, "Potion of Extra Healing", HealingEffect(50))
+            elif name == "Potion of Poison":
+                return Potion(0, 0, "Potion of Poison", PoisonPotionEffect())
+            elif name == "Potion of Paralysis":
+                return Potion(0, 0, "Potion of Paralysis", ParalysisPotionEffect())
+            elif name == "Potion of Confusion":
+                return Potion(0, 0, "Potion of Confusion", ConfusionPotionEffect())
+            elif name == "Potion of Hallucination":
+                return Potion(0, 0, "Potion of Hallucination", HallucinationPotionEffect())
+
+            # 巻物
+            elif name == "Scroll of Light":
+                return Scroll(0, 0, "Scroll of Light", LightEffect())
+            elif name == "Scroll of Teleportation":
+                return Scroll(0, 0, "Scroll of Teleportation", TeleportEffect())
+            elif name == "Scroll of Magic Mapping":
+                return Scroll(0, 0, "Scroll of Magic Mapping", MagicMappingEffect())
+            elif name == "Scroll of Identify":
+                return Scroll(0, 0, "Scroll of Identify", IdentifyEffect())
+            elif name == "Scroll of Remove Curse":
+                return Scroll(0, 0, "Scroll of Remove Curse", RemoveCurseEffect())
+            elif name == "Scroll of Enchant Weapon":
+                return Scroll(0, 0, "Scroll of Enchant Weapon", EnchantWeaponEffect())
+            elif name == "Scroll of Enchant Armor":
+                return Scroll(0, 0, "Scroll of Enchant Armor", EnchantArmorEffect())
+
+            # 杖
+            elif name == "Wand of Magic Missile":
+                return Wand(0, 0, "Wand of Magic Missile", MagicMissileWandEffect(), 3)
+            elif name == "Wand of Lightning":
+                return Wand(0, 0, "Wand of Lightning", LightningWandEffect(), 3)
+            elif name == "Wand of Light":
+                return Wand(0, 0, "Wand of Light", LightWandEffect(), 3)
+            elif name == "Wand of Nothing":
+                return Wand(0, 0, "Wand of Nothing", NothingWandEffect(), 3)
+
+            # 武器
+            elif name == "Dagger":
+                return Weapon(0, 0, "Dagger", 2)
+            elif name == "Short Sword":
+                return Weapon(0, 0, "Short Sword", 3)
+            elif name == "Long Sword":
+                return Weapon(0, 0, "Long Sword", 4)
+            elif name == "Mace":
+                return Weapon(0, 0, "Mace", 3)
+
+            # 防具
+            elif name == "Leather Armor":
+                return Armor(0, 0, "Leather Armor", 2)
+            elif name == "Chain Mail":
+                return Armor(0, 0, "Chain Mail", 3)
+            elif name == "Plate Mail":
+                return Armor(0, 0, "Plate Mail", 4)
+
+            # 指輪
+            elif name == "Ring of Protection":
+                return Ring(0, 0, "Ring of Protection", "protection", 1)
+            elif name == "Ring of Add Strength":
+                return Ring(0, 0, "Ring of Add Strength", "strength", 1)
+            elif name == "Ring of Sustain Strength":
+                return Ring(0, 0, "Ring of Sustain Strength", "sustain", 1)
+            elif name == "Ring of Searching":
+                return Ring(0, 0, "Ring of Searching", "search", 1)
+            elif name == "Ring of See Invisible":
+                return Ring(0, 0, "Ring of See Invisible", "see_invisible", 1)
+            elif name == "Ring of Regeneration":
+                return Ring(0, 0, "Ring of Regeneration", "regeneration", 1)
+
+            # 特別なアイテム
+            elif name == "Gold":
+                return Gold(0, 0, 1)
+            elif name == "Amulet of Yendor":
+                return AmuletOfYendor(0, 0)
+
+        except Exception as e:
+            print(f"Warning: Failed to create item '{name}': {e}")
+
+        return None
+
+    def _apply_item_state(self, item, item_data: dict[str, Any]):
+        """
+        保存された状態データをアイテムに適用。
+        """
+        # 基本状態の適用
+        if "count" in item_data and hasattr(item, "stack_count"):
+            item.stack_count = max(1, item_data["count"])
+
+        if "identified" in item_data and hasattr(item, "identified"):
+            item.identified = item_data["identified"]
+
+        if "blessed" in item_data and hasattr(item, "blessed"):
+            item.blessed = item_data["blessed"]
+
+        if "cursed" in item_data and hasattr(item, "cursed"):
+            item.cursed = item_data["cursed"]
+
+        if "enchantment" in item_data and hasattr(item, "enchantment"):
+            item.enchantment = item_data["enchantment"]
+
+        # アイテム固有状態の適用
+        if "charges" in item_data and hasattr(item, "charges"):
+            item.charges = max(0, item_data["charges"])
+
+        if "amount" in item_data and hasattr(item, "amount"):
+            item.amount = max(1, item_data["amount"])
+
+        if "bonus" in item_data and hasattr(item, "bonus"):
+            item.bonus = item_data["bonus"]
+
+        if "effect_name" in item_data and hasattr(item, "effect"):
+            # Ringの効果名を文字列として保存している場合
+            item.effect = item_data["effect_name"]
 
     def _serialize_all_floors(self, floors: dict[int, Any]) -> dict[str, Any]:
         """

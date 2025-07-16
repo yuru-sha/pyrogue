@@ -177,6 +177,10 @@ class GameScreen:
         """ゲームスクリーン自身へのアクセス。"""
         return self
 
+    def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
+        """メッセージをゲームログに追加。"""
+        self.game_logic.add_message(message)
+
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
 

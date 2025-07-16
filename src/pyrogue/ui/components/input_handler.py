@@ -48,6 +48,8 @@ class InputHandler:
         self.targeting_y = 0
         self.wand_direction_mode = False
         self.selected_wand = None
+        self.wand_selection_mode = False
+        self.available_wands = []
 
         # CommonCommandHandlerを初期化
         self.command_context = GUICommandContext(game_screen)
@@ -66,6 +68,8 @@ class InputHandler:
             self._handle_targeting_key(event)
         elif self.wand_direction_mode:
             self._handle_wand_direction_key(event)
+        elif self.wand_selection_mode:
+            self._handle_wand_selection_key(event)
         else:
             self._handle_normal_key(event)
 
@@ -232,12 +236,18 @@ class InputHandler:
             if result.should_end_turn:
                 self.game_screen.game_logic.handle_turn_end()
 
-        elif key == tcod.event.KeySym.QUESTION or unicode_char == "?":
-            # ヘルプ表示（JIS配列対応）
+        elif (
+            key == tcod.event.KeySym.QUESTION
+            or unicode_char == "?"
+            or (key == tcod.event.KeySym.SLASH and mod & tcod.event.Modifier.SHIFT)
+        ):
+            # ヘルプ表示（JIS配列対応・Shift+/も追加）
             self._handle_help_action()
 
-        elif key == tcod.event.KeySym.SLASH or unicode_char == "/":
-            # シンボル説明（JIS配列対応・CommonCommandHandler経由）
+        elif (key == tcod.event.KeySym.SLASH and not (mod & tcod.event.Modifier.SHIFT)) or (
+            unicode_char == "/" and not (mod & tcod.event.Modifier.SHIFT)
+        ):
+            # シンボル説明（JIS配列対応・CommonCommandHandler経由・Shift未押下時のみ）
             result = self.command_handler.handle_command("symbol_explanation")
 
         elif key == tcod.event.KeySym.PERIOD or unicode_char == ".":
@@ -696,7 +706,7 @@ Actions:
 
 Information:
   Tab - Toggle FOV display
-  ?   - Show this help
+  ?   - Show this help (JIS: Shift+/ also works)
   /   - Show symbol guide
   x   - Examine surroundings
   \\   - Show identification status
@@ -1049,6 +1059,7 @@ Press any key to continue...
         # ワンドが1つだけの場合は自動選択
         if len(wands) == 1:
             selected_wand = wands[0]
+            self._proceed_with_wand_selection(selected_wand)
         else:
             # 複数のワンドがある場合は選択画面を表示
             self.game_screen.game_logic.add_message("Select a wand to zap:")
@@ -1056,9 +1067,18 @@ Press any key to continue...
                 charges_info = wand.get_charges_info() if hasattr(wand, "get_charges_info") else ""
                 self.game_screen.game_logic.add_message(f"{chr(ord('a') + i)}) {wand.name} {charges_info}")
 
-            # 簡単な実装：最初のワンドを自動選択
-            selected_wand = wands[0]
+            # ワンド選択モードに入る
+            self.wand_selection_mode = True
+            self.available_wands = wands
 
+    def _proceed_with_wand_selection(self, selected_wand) -> None:
+        """
+        選択されたワンドで処理を続行。
+
+        Args:
+        ----
+            selected_wand: 選択されたワンド
+        """
         # チャージをチェック
         if hasattr(selected_wand, "has_charges") and not selected_wand.has_charges():
             self.game_screen.game_logic.add_message(f"The {selected_wand.name} has no charges left.")
@@ -1079,6 +1099,37 @@ Press any key to continue...
         # 方向選択モードの状態を設定
         self.wand_direction_mode = True
         self.selected_wand = wand
+
+    def _handle_wand_selection_key(self, event: tcod.event.KeyDown) -> None:
+        """
+        ワンド選択モードのキー入力を処理。
+
+        Args:
+        ----
+            event: TCODキーイベント
+
+        """
+        key = event.sym
+
+        # ESCキーでキャンセル
+        if key == tcod.event.KeySym.ESCAPE:
+            self.wand_selection_mode = False
+            self.available_wands = []
+            self.game_screen.game_logic.add_message("Cancelled.")
+            return
+
+        # a-z キーによる選択
+        if ord("a") <= key <= ord("z"):
+            index = key - ord("a")
+            if 0 <= index < len(self.available_wands):
+                selected_wand = self.available_wands[index]
+                self.wand_selection_mode = False
+                self.available_wands = []
+                self._proceed_with_wand_selection(selected_wand)
+            else:
+                self.game_screen.game_logic.add_message("Invalid selection. Try again.")
+        else:
+            self.game_screen.game_logic.add_message("Select a wand (a-z) or ESC to cancel.")
 
     def _handle_wand_direction_key(self, event) -> None:
         """

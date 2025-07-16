@@ -24,6 +24,7 @@ class Item:
     item_type: str = "ITEM"  # アイテムタイプ（識別システム用）
     stack_count: int = 1  # スタック数
     cursed: bool = False  # 呪いフラグ
+    item_id: int = 0  # アイテムID（復元用）
 
     def pick_up(self) -> str:
         """アイテムを拾った時のメッセージを返す"""
