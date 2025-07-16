@@ -48,8 +48,6 @@ class InputHandler:
         self.targeting_y = 0
         self.wand_direction_mode = False
         self.selected_wand = None
-        self.wand_selection_mode = False
-        self.available_wands = []
 
         # CommonCommandHandlerを初期化
         self.command_context = GUICommandContext(game_screen)
@@ -68,8 +66,6 @@ class InputHandler:
             self._handle_targeting_key(event)
         elif self.wand_direction_mode:
             self._handle_wand_direction_key(event)
-        elif self.wand_selection_mode:
-            self._handle_wand_selection_key(event)
         else:
             self._handle_normal_key(event)
 
@@ -136,7 +132,7 @@ class InputHandler:
                 self.game_screen.engine.state = GameStates.SHOW_INVENTORY
 
         elif key == ord("z"):
-            # ワンドを振る（方向選択機能を使用）
+            # ワンドを振る（カーソル選択方式）
             self._handle_zap_wand_action()
 
         elif key == tcod.event.KeySym.TAB:
@@ -1039,18 +1035,12 @@ Press any key to continue...
 
     def _handle_zap_wand_action(self) -> None:
         """
-        ワンド使用処理（方向選択）。
+        ワンド使用処理（カーソル選択）。
 
-        プレイヤーが所持するワンドを使用し、方向を選択して発動する。
-        オリジナルRogue準拠のワンドシステム。
+        プレイヤーが所持するワンドを使用し、カーソルで選択して発動する。
+        インベントリ画面と統一されたUI。
         """
-        # インベントリからワンドを探す
-        player = self.game_screen.player
-        wands = []
-
-        for item in player.inventory.items:
-            if hasattr(item, "item_type") and item.item_type == "WAND":
-                wands.append(item)
+        wands = self._get_available_wands()
 
         if not wands:
             self.game_screen.game_logic.add_message("You have no wands to zap.")
@@ -1058,18 +1048,35 @@ Press any key to continue...
 
         # ワンドが1つだけの場合は自動選択
         if len(wands) == 1:
-            selected_wand = wands[0]
-            self._proceed_with_wand_selection(selected_wand)
+            self._proceed_with_wand_selection(wands[0])
         else:
-            # 複数のワンドがある場合は選択画面を表示
-            self.game_screen.game_logic.add_message("Select a wand to zap:")
-            for i, wand in enumerate(wands):
-                charges_info = wand.get_charges_info() if hasattr(wand, "get_charges_info") else ""
-                self.game_screen.game_logic.add_message(f"{chr(ord('a') + i)}) {wand.name} {charges_info}")
+            # 複数のワンドがある場合はワンド選択画面を表示
+            self._show_wand_selection_screen()
 
-            # ワンド選択モードに入る
-            self.wand_selection_mode = True
-            self.available_wands = wands
+    def _get_available_wands(self) -> list:
+        """
+        プレイヤーが持っているワンドのリストを取得。
+
+        Returns
+        -------
+            ワンドのリスト
+
+        """
+        player = self.game_screen.player
+        return [item for item in player.inventory.items if hasattr(item, "item_type") and item.item_type == "WAND"]
+
+    def _show_wand_selection_screen(self) -> None:
+        """
+        ワンド選択画面を表示する。
+        """
+        from pyrogue.ui.screens.wand_selection_screen import WandSelectionScreen
+
+        if self.game_screen.engine:
+            wand_screen = WandSelectionScreen(self.game_screen)
+            wand_screen.setup()
+            self.game_screen.engine.wand_selection_screen = wand_screen
+            self.game_screen.engine.last_state = self.game_screen.engine.state
+            self.game_screen.engine.state = GameStates.SHOW_WAND_SELECTION
 
     def _proceed_with_wand_selection(self, selected_wand) -> None:
         """
@@ -1099,37 +1106,6 @@ Press any key to continue...
         # 方向選択モードの状態を設定
         self.wand_direction_mode = True
         self.selected_wand = wand
-
-    def _handle_wand_selection_key(self, event: tcod.event.KeyDown) -> None:
-        """
-        ワンド選択モードのキー入力を処理。
-
-        Args:
-        ----
-            event: TCODキーイベント
-
-        """
-        key = event.sym
-
-        # ESCキーでキャンセル
-        if key == tcod.event.KeySym.ESCAPE:
-            self.wand_selection_mode = False
-            self.available_wands = []
-            self.game_screen.game_logic.add_message("Cancelled.")
-            return
-
-        # a-z キーによる選択
-        if ord("a") <= key <= ord("z"):
-            index = key - ord("a")
-            if 0 <= index < len(self.available_wands):
-                selected_wand = self.available_wands[index]
-                self.wand_selection_mode = False
-                self.available_wands = []
-                self._proceed_with_wand_selection(selected_wand)
-            else:
-                self.game_screen.game_logic.add_message("Invalid selection. Try again.")
-        else:
-            self.game_screen.game_logic.add_message("Select a wand (a-z) or ESC to cancel.")
 
     def _handle_wand_direction_key(self, event) -> None:
         """

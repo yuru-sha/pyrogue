@@ -128,7 +128,7 @@ main() {
     # 4. インベントリシステムテスト
     log_info "=== インベントリシステムテスト ==="
     run_test "インベントリ表示テスト" "inventory\nquit" "INVENTORY"
-    run_test "初期装備確認テスト" "inventory\nquit" "Dagger.*equipped"
+    run_test "初期装備確認テスト" "inventory\nquit" "Dagger.*\(E\)"
 
     # 5. アイテムシステムテスト
     log_info "=== アイテムシステムテスト ==="

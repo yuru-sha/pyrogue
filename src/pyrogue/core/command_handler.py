@@ -1155,6 +1155,10 @@ Character Details:
         data = {
             "item_id": item_id,  # 主キー：アイテムID
             "name": item.name,  # 後方互換性用：アイテム名
+            "x": getattr(item, "x", 0),  # アイテムの位置情報
+            "y": getattr(item, "y", 0),  # アイテムの位置情報
+            "char": getattr(item, "char", "?"),  # 表示文字
+            "color": getattr(item, "color", (255, 255, 255)),  # 表示色
             "count": getattr(item, "stack_count", 1),
             "identified": getattr(item, "identified", True),
             "blessed": getattr(item, "blessed", False),
@@ -1208,6 +1212,17 @@ Character Details:
 
         # 保存された状態を適用
         self._apply_item_state(item, item_data)
+
+        # 位置情報を復元
+        if "x" in item_data and "y" in item_data:
+            item.x = item_data["x"]
+            item.y = item_data["y"]
+
+        # 表示情報を復元
+        if "char" in item_data:
+            item.char = item_data["char"]
+        if "color" in item_data:
+            item.color = item_data["color"]
 
         return item
 

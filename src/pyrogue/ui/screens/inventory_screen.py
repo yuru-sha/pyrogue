@@ -59,11 +59,11 @@ class InventoryScreen(Screen):
             if self.game_screen.game_logic.inventory.is_equipped(item):
                 slot = self.game_screen.game_logic.inventory.get_equipped_slot(item)
                 if slot == "ring_left":
-                    item_text += " (equipped - left)"
+                    item_text += " (E-L)"
                 elif slot == "ring_right":
-                    item_text += " (equipped - right)"
+                    item_text += " (E-R)"
                 else:
-                    item_text += " (equipped)"
+                    item_text += " (E)"
                 fg = (0, 255, 0) if i != self.selected_index else (255, 255, 0)
 
             console.print(2, 3 + i, item_text, fg)
@@ -88,8 +88,8 @@ class InventoryScreen(Screen):
         attack_bonus = self.game_screen.game_logic.inventory.get_attack_bonus()
         defense_bonus = self.game_screen.game_logic.inventory.get_defense_bonus()
 
-        console.print(42, 10, f"Attack Bonus: +{attack_bonus}")
-        console.print(42, 11, f"Defense Bonus: +{defense_bonus}")
+        console.print(42, 10, f"Attack Bonus: {attack_bonus:+d}")
+        console.print(42, 11, f"Defense Bonus: {defense_bonus:+d}")
 
         # ヘルプを表示
         if self.show_help:

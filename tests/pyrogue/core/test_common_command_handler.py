@@ -678,12 +678,28 @@ class TestCommonCommandHandler:
             },
             "inventory": {
                 "items": [
-                    {"item_id": 101, "name": "Magic Sword", "count": 1, "identified": True, "blessed": False, "cursed": False, "enchantment": 3},
-                    {"item_id": 201, "name": "Leather Armor", "count": 1, "identified": True, "blessed": False, "cursed": False, "enchantment": 1},
+                    {
+                        "item_id": 101,
+                        "name": "Magic Sword",
+                        "count": 1,
+                        "identified": True,
+                        "blessed": False,
+                        "cursed": False,
+                        "enchantment": 3,
+                    },
+                    {
+                        "item_id": 201,
+                        "name": "Leather Armor",
+                        "count": 1,
+                        "identified": True,
+                        "blessed": False,
+                        "cursed": False,
+                        "enchantment": 1,
+                    },
                 ],
                 "equipped": {
                     "weapon": 0,  # インデックス0のアイテム（Magic Sword）
-                    "armor": 1,   # インデックス1のアイテム（Leather Armor）
+                    "armor": 1,  # インデックス1のアイテム（Leather Armor）
                     "ring_left": None,
                     "ring_right": None,
                 },
@@ -707,7 +723,15 @@ class TestCommonCommandHandler:
                         }
                     ],
                     "items": [
-                        {"item_id": 301, "name": "Greater Healing Potion", "count": 1, "identified": True, "blessed": False, "cursed": False, "enchantment": 0}
+                        {
+                            "item_id": 301,
+                            "name": "Greater Healing Potion",
+                            "count": 1,
+                            "identified": True,
+                            "blessed": False,
+                            "cursed": False,
+                            "enchantment": 0,
+                        }
                     ],
                     "traps": [{"trap_type": "PitTrap", "x": 30, "y": 25, "hidden": True}],
                     "explored": [[True] * 10 for _ in range(10)],

@@ -245,14 +245,14 @@ class Engine:
         # コンテキストがNoneの場合の安全な処理
         if context is None:
             # デフォルトの処理（通常は発生しないが安全のため）
-            return self.state
+            return True, None
 
         try:
             return self.state_manager.handle_input(event, self.state, context)
         except Exception as e:
             # 入力処理エラーを記録してゲームを継続
             print(f"Warning: Input handling error: {e}")
-            return self.state
+            return True, None
 
     def _get_current_screen(self):
         """Get the current screen instance based on state."""
@@ -262,6 +262,8 @@ class Engine:
             return self.game_screen
         if self.state == GameStates.SHOW_INVENTORY:
             return self.inventory_screen
+        if self.state == GameStates.SHOW_WAND_SELECTION:
+            return getattr(self, "wand_selection_screen", None)
         if self.state == GameStates.TARGETING:
             return self.game_screen
         if self.state == GameStates.GAME_OVER:

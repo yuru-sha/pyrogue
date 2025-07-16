@@ -647,7 +647,13 @@ class CLIEngine:
                     equipped_str = ""
                     if hasattr(item, "item_type"):
                         if inventory.is_equipped(item):
-                            equipped_str = " (equipped)"
+                            slot = inventory.get_equipped_slot(item)
+                            if slot == "ring_left":
+                                equipped_str = " (E-L)"
+                            elif slot == "ring_right":
+                                equipped_str = " (E-R)"
+                            else:
+                                equipped_str = " (E)"
                     print(f"{i + 1}. {item.name}{equipped_str}")
 
             # 装備情報を表示

@@ -92,6 +92,9 @@ class FloorData:
         self.trap_manager = trap_manager
         self.explored = explored
 
+        # width/height属性を追加（tilesの形状から導出）
+        self.height, self.width = tiles.shape if tiles is not None else (0, 0)
+
         # 開始位置を設定
         if floor_number == 1:
             # 1階では階段から離れた安全な位置を動的に探す
@@ -138,6 +141,74 @@ class FloorData:
         if self.is_valid_position(x, y):
             return self.tiles[y, x]
         return None
+
+    def get_monster_at(self, x: int, y: int):
+        """
+        指定位置にいるモンスターを取得。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            モンスターインスタンス、存在しない場合None
+
+        """
+        if self.monster_spawner:
+            return self.monster_spawner.get_monster_at(x, y)
+        return None
+
+    def get_items_at(self, x: int, y: int) -> list:
+        """
+        指定位置にあるアイテムを取得。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            アイテムのリスト
+
+        """
+        if self.item_spawner:
+            return [item for item in self.item_spawner.items if item.x == x and item.y == y]
+        return []
+
+    def has_monster_at(self, x: int, y: int) -> bool:
+        """
+        指定位置にモンスターがいるかチェック。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            モンスターがいる場合True
+
+        """
+        return self.get_monster_at(x, y) is not None
+
+    def has_items_at(self, x: int, y: int) -> bool:
+        """
+        指定位置にアイテムがあるかチェック。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            アイテムがある場合True
+
+        """
+        return len(self.get_items_at(x, y)) > 0
 
     def set_tile_walkable(self, x: int, y: int, walkable: bool) -> None:
         """

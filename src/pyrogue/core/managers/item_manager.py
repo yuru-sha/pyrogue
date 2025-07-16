@@ -284,7 +284,6 @@ class ItemManager:
 
         # インベントリからアイテムを検索
         item = self._get_item_by_name(item_name)
-
         if not item:
             self.context.add_message(f"You don't have a {item_name}.")
             return False
@@ -294,9 +293,72 @@ class ItemManager:
             self.context.add_message(f"You can't equip the {item_name}.")
             return False
 
+        # 装備処理と参照管理
+        return self._execute_equip_with_reference_management(item, item_name, inventory)
+
+    def _execute_equip_with_reference_management(self, item, item_name: str, inventory) -> bool:
+        """
+        装備処理を実行し、インベントリ内の参照を適切に管理する。
+
+        Args:
+        ----
+            item: 装備するアイテム
+            item_name: アイテム名
+            inventory: インベントリインスタンス
+
+        Returns:
+        -------
+            装備が成功した場合True
+
+        """
+        # 装備前にアイテムのインベントリ内インデックスを記録
+        item_index = inventory.items.index(item) if item in inventory.items else -1
+
         # 装備処理
         old_item = inventory.equip(item)
+
+        # 装備したアイテムの参照を適切に管理
+        self._manage_equipped_item_reference(item, item_index, inventory)
+
+        # 古いアイテムの処理とメッセージ表示
+        return self._handle_old_item_and_message(old_item, item_name)
+
+    def _manage_equipped_item_reference(self, item, item_index: int, inventory) -> None:
+        """
+        装備したアイテムの参照をインベントリ内で適切に管理する。
+
+        Args:
+        ----
+            item: 装備したアイテム
+            item_index: 元のインデックス
+            inventory: インベントリインスタンス
+
+        """
+        if item not in inventory.items:
+            # アイテムがインベントリに存在しない場合は追加
+            inventory.items.append(item)
+        elif item_index >= 0:
+            # アイテムが既に存在する場合は、元の位置に確実に配置
+            inventory.items[item_index] = item
+
+    def _handle_old_item_and_message(self, old_item, item_name: str) -> bool:
+        """
+        古いアイテムの処理とメッセージ表示を行う。
+
+        Args:
+        ----
+            old_item: 取り外された古いアイテム
+            item_name: 新しく装備したアイテム名
+
+        Returns:
+        -------
+            常にTrue
+
+        """
         if old_item is not None:
+            # 古いアイテムがインベントリに存在していない場合は追加
+            if old_item not in self.context.inventory.items:
+                self.context.inventory.items.append(old_item)
             self.context.add_message(f"You unequip the {old_item.name} and equip the {item_name}.")
         else:
             self.context.add_message(f"You equip the {item_name}.")
