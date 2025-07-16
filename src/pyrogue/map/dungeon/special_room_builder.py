@@ -38,7 +38,7 @@ class SpecialRoomBuilder:
 
         """
         self.floor = floor
-        self.special_rooms_created = []
+        self.special_rooms_created: list[Room] = []
 
     def process_special_rooms(self, rooms: list[Room]) -> None:
         """
@@ -49,7 +49,7 @@ class SpecialRoomBuilder:
             rooms: 部屋のリスト
 
         """
-        self.special_rooms_created = []
+        self.special_rooms_created: list[Room] = []
 
         for room in rooms:
             if self._should_create_special_room(room):
@@ -59,9 +59,7 @@ class SpecialRoomBuilder:
                 self._decorate_special_room(room)
                 self.special_rooms_created.append(room)
 
-        game_logger.info(
-            f"Created {len(self.special_rooms_created)} special rooms on floor {self.floor}"
-        )
+        game_logger.info(f"Created {len(self.special_rooms_created)} special rooms on floor {self.floor}")
 
     def _should_create_special_room(self, room: Room) -> bool:
         """
@@ -133,9 +131,7 @@ class SpecialRoomBuilder:
         """
         room_type = room.room_type
 
-        game_logger.debug(
-            f"Decorating {room_type} (room {room.id}) on floor {self.floor}"
-        )
+        game_logger.debug(f"Decorating {room_type} (room {room.id}) on floor {self.floor}")
 
         if room_type == "treasure_room":
             self._decorate_treasure_room(room)
@@ -277,7 +273,7 @@ class SpecialRoomBuilder:
             部屋種類とその数の辞書
 
         """
-        room_counts = {}
+        room_counts: dict[str, int] = {}
         for room in self.special_rooms_created:
             room_type = room.room_type
             room_counts[room_type] = room_counts.get(room_type, 0) + 1
@@ -285,7 +281,7 @@ class SpecialRoomBuilder:
 
     def reset(self) -> None:
         """ビルダーの状態をリセット。"""
-        self.special_rooms_created = []
+        self.special_rooms_created: list[Room] = []
 
     def get_statistics(self) -> dict:
         """特別部屋生成の統計情報を取得。"""

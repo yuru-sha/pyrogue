@@ -62,9 +62,7 @@ class DungeonGenerator:
         self.start_pos = None
         self.end_pos = None
 
-        game_logger.debug(
-            f"DungeonGenerator initialized for floor {floor} ({width}x{height})"
-        )
+        game_logger.debug(f"DungeonGenerator initialized for floor {floor} ({width}x{height})")
 
     def generate(self) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
         """
@@ -167,17 +165,13 @@ class DungeonGenerator:
             info["room_builder_stats"] = self.director.room_builder.get_statistics()
 
         if hasattr(self.director.corridor_builder, "get_statistics"):
-            info[
-                "corridor_builder_stats"
-            ] = self.director.corridor_builder.get_statistics()
+            info["corridor_builder_stats"] = self.director.corridor_builder.get_statistics()
 
         if hasattr(self.director.door_manager, "get_statistics"):
             info["door_manager_stats"] = self.director.door_manager.get_statistics()
 
         if hasattr(self.director.special_room_builder, "get_statistics"):
-            info[
-                "special_room_builder_stats"
-            ] = self.director.special_room_builder.get_statistics()
+            info["special_room_builder_stats"] = self.director.special_room_builder.get_statistics()
 
         if hasattr(self.director.stairs_manager, "get_statistics"):
             info["stairs_manager_stats"] = self.director.stairs_manager.get_statistics()

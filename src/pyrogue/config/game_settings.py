@@ -1,8 +1,9 @@
 """
 PyRogueゲームの設定定数。
 
-このモジュールは後方互換性のため保持されています。
-新しいコードでは pyrogue.constants を使用してください。
+このモジュールは構造化されたゲーム設定を提供します。
+新しいコードでは pyrogue.constants を使用することを推奨しますが、
+グループ化された設定値が必要な場合はこのモジュールを使用してください。
 """
 
 from dataclasses import dataclass, field
@@ -22,17 +23,13 @@ class DisplayConfig:
     """表示およびレンダリングの設定。"""
 
     SCREEN_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    SCREEN_HEIGHT: int = (
-        GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
-    )
+    SCREEN_HEIGHT: int = GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
     MAP_WIDTH: int = GameConstants.DUNGEON_WIDTH
     MAP_HEIGHT: int = GameConstants.MAP_DISPLAY_HEIGHT
     FONT_WIDTH: int = 10
     FONT_HEIGHT: int = 10
     MIN_SCREEN_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    MIN_SCREEN_HEIGHT: int = (
-        GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
-    )
+    MIN_SCREEN_HEIGHT: int = GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
 
 
 @dataclass

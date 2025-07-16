@@ -77,9 +77,7 @@ class TestIsolatedRoomIntegration:
         for floor in non_isolation_floors:
             director = DungeonDirector(80, 45, floor=floor)
             should_generate = director._should_generate_isolated_rooms()
-            assert (
-                not should_generate
-            ), f"階層{floor}で孤立部屋群が生成されるべきではありません"
+            assert not should_generate, f"階層{floor}で孤立部屋群が生成されるべきではありません"
 
     def test_isolated_room_with_bsp_system(self):
         """BSPシステムとの統合テスト。"""
@@ -232,7 +230,4 @@ class TestIsolatedRoomIntegration:
 
         # 孤立度が隠し通路の生成に影響することを確認
         # （具体的な効果は実装に依存するため、基本的な設定チェックのみ）
-        assert (
-            high_isolation_builder.isolation_level
-            > low_isolation_builder.isolation_level
-        )
+        assert high_isolation_builder.isolation_level > low_isolation_builder.isolation_level

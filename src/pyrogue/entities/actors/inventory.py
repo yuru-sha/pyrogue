@@ -79,17 +79,11 @@ class Inventory:
             # スタック可能なアイテムで、削除数がスタック数より少ない場合
             item.stack_count -= count
             return count
-        else:
-            # スタック不可能、または削除数がスタック数以上の場合は完全削除
-            actual_removed = item.stack_count if item.stackable else 1
-            self.items.remove(item)
+        # スタック不可能、または削除数がスタック数以上の場合は完全削除
+        actual_removed = item.stack_count if item.stackable else 1
+        self.items.remove(item)
 
-            # 装備中のアイテムの場合は装備スロットもクリア
-            for slot, equipped_item in self.equipped.items():
-                if equipped_item is item:
-                    self.equipped[slot] = None
-            
-            return actual_removed
+        return actual_removed
 
     def get_item(self, index: int) -> Item | None:
         """
@@ -134,9 +128,8 @@ class Inventory:
         if isinstance(item, Ring):
             # 左手の指輪が空いていれば左手に、そうでなければ右手に装備
             if self.equipped["ring_left"] is None:
-                old_item = self.equipped["ring_left"]
                 self.equipped["ring_left"] = item
-                return old_item
+                return None  # 交換されたアイテムはない
             old_item = self.equipped["ring_right"]
             self.equipped["ring_right"] = item
             return old_item
@@ -184,7 +177,7 @@ class Inventory:
         # 指輪のボーナス
         for ring_slot in ["ring_left", "ring_right"]:
             ring = self.equipped[ring_slot]
-            if isinstance(ring, Ring) and ring.effect == "attack":
+            if isinstance(ring, Ring) and ring.effect == "strength":
                 bonus += ring.bonus
 
         return bonus
@@ -208,7 +201,7 @@ class Inventory:
         # 指輪のボーナス
         for ring_slot in ["ring_left", "ring_right"]:
             ring = self.equipped[ring_slot]
-            if isinstance(ring, Ring) and ring.effect == "defense":
+            if isinstance(ring, Ring) and ring.effect == "protection":
                 bonus += ring.bonus
 
         return bonus
@@ -227,7 +220,32 @@ class Inventory:
 
         """
         item = self.equipped.get(slot)
-        return item.name if item else "None"
+        if not item:
+            return "None"
+
+        # ボーナス情報を含む表示名を生成
+        if isinstance(item, Weapon):
+            sign = "+" if item.attack >= 0 else ""
+            enchant_text = f" {sign}{item.enchantment}" if item.enchantment != 0 else ""
+            return f"{item.name} (ATK {sign}{item.attack}{enchant_text})"
+        elif isinstance(item, Armor):
+            sign = "+" if item.defense >= 0 else ""
+            enchant_text = f" {sign}{item.enchantment}" if item.enchantment != 0 else ""
+            return f"{item.name} (DEF {sign}{item.defense}{enchant_text})"
+        elif isinstance(item, Ring):
+            sign = "+" if item.bonus >= 0 else ""
+            # 効果名をより読みやすく表示
+            effect_display = {
+                "protection": "DEF",
+                "strength": "ATK",
+                "sustain": "SUSTAIN",
+                "search": "SEARCH",
+                "see_invisible": "SEE INV",
+                "regeneration": "REGEN",
+            }.get(item.effect, item.effect.upper())
+            return f"{item.name} ({effect_display} {sign}{item.bonus})"
+        else:
+            return item.name
 
     def get_equipped_weapon(self) -> Weapon | None:
         """
@@ -264,6 +282,7 @@ class Inventory:
         Returns:
         -------
             bool: 装備中の場合True
+
         """
         return item in self.equipped.values()
 
@@ -278,8 +297,71 @@ class Inventory:
         Returns:
         -------
             str | None: 装備スロット名（装備されていない場合はNone）
+
         """
         for slot, equipped_item in self.equipped.items():
             if equipped_item is item:
                 return slot
         return None
+
+    def can_drop_item(self, item: Item) -> tuple[bool, str | None]:
+        """
+        アイテムがドロップ可能かどうかを判定
+
+        Args:
+        ----
+            item: 確認するアイテム
+
+        Returns:
+        -------
+            tuple[bool, str | None]: (ドロップ可能か, エラーメッセージ)
+
+        """
+        # 呪われた装備中のアイテムはドロップ不可
+        if self.is_equipped(item) and hasattr(item, "cursed") and item.cursed:
+            return False, f"You cannot drop the cursed {item.name}! You must first remove the curse."
+        return True, None
+
+    def drop_item(self, item: Item, drop_count: int = 1) -> tuple[bool, int, str]:
+        """
+        アイテムをドロップ（装備解除含む）
+
+        Args:
+        ----
+            item: ドロップするアイテム
+            drop_count: ドロップする数量
+
+        Returns:
+        -------
+            tuple[bool, int, str]: (成功したか, 実際にドロップした数量, メッセージ)
+
+        """
+        # ドロップ可能かチェック
+        can_drop, error_msg = self.can_drop_item(item)
+        if not can_drop:
+            return False, 0, error_msg
+
+        # 装備中の場合は先に装備解除
+        was_equipped = self.is_equipped(item)
+        if was_equipped:
+            slot = self.get_equipped_slot(item)
+            if slot:
+                self.equipped[slot] = None
+
+        # アイテムを削除
+        if item.stackable:
+            actual_count = min(drop_count, item.stack_count)
+            removed_count = self.remove_item(item, actual_count)
+            if removed_count > 1:
+                message = f"You drop {removed_count} {item.name}."
+            else:
+                message = f"You drop the {item.name}."
+        else:
+            removed_count = self.remove_item(item, 1)
+            message = f"You drop the {item.name}."
+
+        # 装備解除メッセージを前に追加
+        if was_equipped:
+            message = f"You first unequip the {item.name}. {message}"
+
+        return True, removed_count, message

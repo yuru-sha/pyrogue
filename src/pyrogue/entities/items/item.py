@@ -24,6 +24,7 @@ class Item:
     item_type: str = "ITEM"  # アイテムタイプ（識別システム用）
     stack_count: int = 1  # スタック数
     cursed: bool = False  # 呪いフラグ
+    item_id: int = 0  # アイテムID（復元用）
 
     def pick_up(self) -> str:
         """アイテムを拾った時のメッセージを返す"""
@@ -105,6 +106,20 @@ class Ring(Item):
         self.effect = effect
         self.bonus = bonus
 
+    def pick_up(self) -> str:
+        """指輪を拾った時のメッセージ"""
+        sign = "+" if self.bonus >= 0 else ""
+        # 効果名をより読みやすく表示
+        effect_display = {
+            "protection": "DEF",
+            "strength": "ATK",
+            "sustain": "SUSTAIN",
+            "search": "SEARCH",
+            "see_invisible": "SEE INV",
+            "regeneration": "REGEN",
+        }.get(self.effect, self.effect.upper())
+        return f"You pick up the {self.name} ({effect_display} {sign}{self.bonus})."
+
 
 class Scroll(Item):
     """巻物クラス"""
@@ -179,6 +194,51 @@ class Food(Item):
     def apply_effect(self, context: EffectContext) -> bool:
         """食料の効果を適用する"""
         return self.effect.apply(context)
+
+
+class Wand(Item):
+    """ワンドクラス"""
+
+    def __init__(self, x: int, y: int, name: str, effect: Effect, charges: int):
+        super().__init__(
+            x=x,
+            y=y,
+            name=name,
+            char="/",
+            color=(139, 69, 19),  # 茶色
+            stackable=False,
+            identified=False,  # ワンドは未識別
+            item_type="WAND",
+        )
+        self.effect = effect
+        self.charges = charges
+        self.max_charges = charges  # 最大チャージ数を記録
+
+    def use(self) -> str:
+        """ワンドを使用した時のメッセージを返す"""
+        return f"You zap {self.name}."
+
+    def apply_effect(self, context: EffectContext, direction: tuple[int, int]) -> bool:
+        """ワンドの効果を適用する"""
+        if self.charges <= 0:
+            return False
+
+        # チャージを消費
+        self.charges -= 1
+
+        # 効果を適用（方向情報を渡す）
+        return self.effect.apply(context, direction=direction)
+
+    def has_charges(self) -> bool:
+        """チャージが残っているかチェック"""
+        return self.charges > 0
+
+    def get_charges_info(self) -> str:
+        """チャージ情報を取得"""
+        if self.identified:
+            return f"({self.charges}/{self.max_charges} charges)"
+        else:
+            return ""
 
 
 class Gold(Item):

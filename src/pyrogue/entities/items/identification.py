@@ -144,21 +144,21 @@ class ItemIdentification:
         if item_type == "POTION":
             if item_name in self.identified_potions:
                 return item_name
-            elif item_name in self.potion_appearances:
+            if item_name in self.potion_appearances:
                 color = self.potion_appearances[item_name]
                 return f"{color} potion"
 
         elif item_type == "SCROLL":
             if item_name in self.identified_scrolls:
                 return item_name
-            elif item_name in self.scroll_appearances:
+            if item_name in self.scroll_appearances:
                 words = self.scroll_appearances[item_name]
                 return f'scroll labeled "{words}"'
 
         elif item_type == "RING":
             if item_name in self.identified_rings:
                 return item_name
-            elif item_name in self.ring_appearances:
+            if item_name in self.ring_appearances:
                 material = self.ring_appearances[item_name]
                 return f"{material} ring"
 
@@ -170,10 +170,10 @@ class ItemIdentification:
         if item_type == "POTION" and item_name not in self.identified_potions:
             self.identified_potions.add(item_name)
             return True
-        elif item_type == "SCROLL" and item_name not in self.identified_scrolls:
+        if item_type == "SCROLL" and item_name not in self.identified_scrolls:
             self.identified_scrolls.add(item_name)
             return True
-        elif item_type == "RING" and item_name not in self.identified_rings:
+        if item_type == "RING" and item_name not in self.identified_rings:
             self.identified_rings.add(item_name)
             return True
 
@@ -183,9 +183,9 @@ class ItemIdentification:
         """アイテムが識別済みかどうかを判定"""
         if item_type == "POTION":
             return item_name in self.identified_potions
-        elif item_type == "SCROLL":
+        if item_type == "SCROLL":
             return item_name in self.identified_scrolls
-        elif item_type == "RING":
+        if item_type == "RING":
             return item_name in self.identified_rings
 
         # 武器・防具・食料・金貨は常に識別済み
@@ -205,11 +205,7 @@ class ItemIdentification:
         """識別時のメッセージを取得"""
         display_name = self.get_display_name(item_name, item_type)
 
-        if item_type == "POTION":
-            return f"This {display_name} is a {item_name}!"
-        elif item_type == "SCROLL":
-            return f"This {display_name} is a {item_name}!"
-        elif item_type == "RING":
+        if item_type == "POTION" or item_type == "SCROLL" or item_type == "RING":
             return f"This {display_name} is a {item_name}!"
 
         return f"You have identified the {item_name}."

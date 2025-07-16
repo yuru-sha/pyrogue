@@ -35,9 +35,7 @@ def main() -> None:
         game_logger.info("Environment configuration loaded successfully")
 
     parser = argparse.ArgumentParser(description="PyRogue - A Python Roguelike Game")
-    parser.add_argument(
-        "--cli", action="store_true", help="Run in CLI mode for automated testing"
-    )
+    parser.add_argument("--cli", action="store_true", help="Run in CLI mode for automated testing")
     args = parser.parse_args()
 
     try:
@@ -49,9 +47,7 @@ def main() -> None:
             engine.initialize()
             engine.run()
     except Exception as e:
-        game_logger.error(
-            "Fatal error", extra={"error": str(e), "traceback": traceback.format_exc()}
-        )
+        game_logger.error("Fatal error", extra={"error": str(e), "traceback": traceback.format_exc()})
         print(f"Error: {e}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
         sys.exit(1)

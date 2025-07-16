@@ -32,6 +32,7 @@ class ItemManager:
         Args:
         ----
             context: 共有ゲームコンテキスト
+
         """
         self.context = context
 
@@ -42,6 +43,7 @@ class ItemManager:
         Returns
         -------
             取得したアイテムの名前、取得できない場合None
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -51,11 +53,7 @@ class ItemManager:
             return None
 
         # プレイヤーの位置にあるアイテムを探す
-        items_at_position = [
-            item
-            for item in floor_data.items
-            if item.x == player.x and item.y == player.y
-        ]
+        items_at_position = [item for item in floor_data.items if item.x == player.x and item.y == player.y]
 
         if not items_at_position:
             self.context.add_message("No items to get here.")
@@ -94,6 +92,7 @@ class ItemManager:
         Returns:
         -------
             追加が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -115,6 +114,7 @@ class ItemManager:
         Returns:
         -------
             見つかったアイテム、なければNone
+
         """
         inventory = self.context.inventory
 
@@ -136,6 +136,7 @@ class ItemManager:
         Returns:
         -------
             使用が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -159,10 +160,9 @@ class ItemManager:
             if success:
                 # 使用成功時の追加処理
                 return True
-            else:
-                # 使用失敗時の処理
-                self.context.add_message(f"The {item_name} has no effect.")
-                return False
+            # 使用失敗時の処理
+            self.context.add_message(f"The {item_name} has no effect.")
+            return False
 
         except Exception as e:
             self.context.add_message(f"Failed to use {item_name}: {e!s}")
@@ -175,6 +175,7 @@ class ItemManager:
         Args:
         ----
             item: 使用したアイテム
+
         """
         inventory = self.context.inventory
 
@@ -192,6 +193,7 @@ class ItemManager:
         Args:
         ----
             item: 使用を試行したアイテム
+
         """
         self.context.add_message(f"You couldn't use the {item.name}.")
 
@@ -206,6 +208,7 @@ class ItemManager:
         Returns:
         -------
             ドロップが成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -220,14 +223,17 @@ class ItemManager:
         if inventory.is_equipped(item):
             # 呪われたアイテムのチェック
             if hasattr(item, "cursed") and item.cursed:
-                self.context.add_message(
-                    f"You can't drop the {item_name}! It's cursed!"
-                )
+                self.context.add_message(f"You can't drop the {item_name}! It's cursed!")
                 return False
 
-            # 装備解除
-            inventory.unequip(item)
-            self.context.add_message(f"You unequip the {item_name}.")
+            # 装備解除（スロット指定）
+            slot = inventory.get_equipped_slot(item)
+            if slot:
+                inventory.unequip(slot)
+                self.context.add_message(f"You unequip the {item_name}.")
+            else:
+                self.context.add_message(f"Failed to unequip the {item_name}.")
+                return False
 
         # インベントリから削除（スタック可能アイテムは全スタック削除）
         if item.stackable and item.stack_count > 1:
@@ -248,6 +254,7 @@ class ItemManager:
         Args:
         ----
             item: 配置するアイテム
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -271,12 +278,12 @@ class ItemManager:
         Returns:
         -------
             装備が成功した場合True
+
         """
         inventory = self.context.inventory
 
         # インベントリからアイテムを検索
         item = self._get_item_by_name(item_name)
-
         if not item:
             self.context.add_message(f"You don't have a {item_name}.")
             return False
@@ -286,12 +293,73 @@ class ItemManager:
             self.context.add_message(f"You can't equip the {item_name}.")
             return False
 
+        # 装備処理と参照管理
+        return self._execute_equip_with_reference_management(item, item_name, inventory)
+
+    def _execute_equip_with_reference_management(self, item, item_name: str, inventory) -> bool:
+        """
+        装備処理を実行し、インベントリ内の参照を適切に管理する。
+
+        Args:
+        ----
+            item: 装備するアイテム
+            item_name: アイテム名
+            inventory: インベントリインスタンス
+
+        Returns:
+        -------
+            装備が成功した場合True
+
+        """
+        # 装備前にアイテムのインベントリ内インデックスを記録
+        item_index = inventory.items.index(item) if item in inventory.items else -1
+
         # 装備処理
         old_item = inventory.equip(item)
+
+        # 装備したアイテムの参照を適切に管理
+        self._manage_equipped_item_reference(item, item_index, inventory)
+
+        # 古いアイテムの処理とメッセージ表示
+        return self._handle_old_item_and_message(old_item, item_name)
+
+    def _manage_equipped_item_reference(self, item, item_index: int, inventory) -> None:
+        """
+        装備したアイテムの参照をインベントリ内で適切に管理する。
+
+        Args:
+        ----
+            item: 装備したアイテム
+            item_index: 元のインデックス
+            inventory: インベントリインスタンス
+
+        """
+        if item not in inventory.items:
+            # アイテムがインベントリに存在しない場合は追加
+            inventory.items.append(item)
+        elif item_index >= 0:
+            # アイテムが既に存在する場合は、元の位置に確実に配置
+            inventory.items[item_index] = item
+
+    def _handle_old_item_and_message(self, old_item, item_name: str) -> bool:
+        """
+        古いアイテムの処理とメッセージ表示を行う。
+
+        Args:
+        ----
+            old_item: 取り外された古いアイテム
+            item_name: 新しく装備したアイテム名
+
+        Returns:
+        -------
+            常にTrue
+
+        """
         if old_item is not None:
-            self.context.add_message(
-                f"You unequip the {old_item.name} and equip the {item_name}."
-            )
+            # 古いアイテムがインベントリに存在していない場合は追加
+            if old_item not in self.context.inventory.items:
+                self.context.inventory.items.append(old_item)
+            self.context.add_message(f"You unequip the {old_item.name} and equip the {item_name}.")
         else:
             self.context.add_message(f"You equip the {item_name}.")
         return True
@@ -307,6 +375,7 @@ class ItemManager:
         Returns:
         -------
             装備解除が成功した場合True
+
         """
         inventory = self.context.inventory
 
@@ -349,6 +418,7 @@ class ItemManager:
         Returns:
         -------
             装備スロット名、見つからない場合None
+
         """
         inventory = self.context.inventory
 
@@ -373,6 +443,7 @@ class ItemManager:
         Returns:
         -------
             指定位置にあるアイテムのリスト
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
 
@@ -393,5 +464,6 @@ class ItemManager:
         Returns:
         -------
             指定位置にあるアイテムの総数
+
         """
         return len(self.get_items_at_position(x, y))

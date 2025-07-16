@@ -28,11 +28,9 @@ class DoorManager:
 
     def __init__(self) -> None:
         """ドアマネージャーを初期化。"""
-        self.placed_doors = []
+        self.placed_doors: list[tuple[int, int, str]] = []
 
-    def place_doors(
-        self, rooms: list[Room], corridors: list[Corridor], tiles: np.ndarray
-    ) -> None:
+    def place_doors(self, rooms: list[Room], corridors: list[Corridor], tiles: np.ndarray) -> None:
         """
         ドアを配置。
 
@@ -47,9 +45,7 @@ class DoorManager:
 
         # 新しいアプローチ: 通路から部屋への接続点を直接探す
         for room in rooms:
-            door_positions = self._find_corridor_to_room_connections(
-                room, corridors, tiles
-            )
+            door_positions = self._find_corridor_to_room_connections(room, corridors, tiles)
 
             # 各部屋に最大2個のドアまでに制限
             door_positions = door_positions[:2]
@@ -117,9 +113,7 @@ class DoorManager:
             and (x, y) not in room.inner
         )
 
-    def _find_door_positions(
-        self, room: Room, corridors: list[Corridor], tiles: np.ndarray
-    ) -> list[tuple[int, int]]:
+    def _find_door_positions(self, room: Room, corridors: list[Corridor], tiles: np.ndarray) -> list[tuple[int, int]]:
         """
         部屋のドア配置位置を見つける。
 
@@ -231,9 +225,7 @@ class DoorManager:
 
         return False
 
-    def _is_corridor_tile(
-        self, x: int, y: int, room: Room, corridors: list[Corridor]
-    ) -> bool:
+    def _is_corridor_tile(self, x: int, y: int, room: Room, corridors: list[Corridor]) -> bool:
         """
         指定座標が通路のタイルかチェック。
 
@@ -250,10 +242,7 @@ class DoorManager:
 
         """
         # 部屋の内部にある場合は通路ではない
-        if (
-            room.x < x < room.x + room.width - 1
-            and room.y < y < room.y + room.height - 1
-        ):
+        if room.x < x < room.x + room.width - 1 and room.y < y < room.y + room.height - 1:
             return False
 
         # 通路の座標リストに含まれているかチェック
@@ -263,9 +252,7 @@ class DoorManager:
 
         return False
 
-    def _is_corridor_connection(
-        self, position: tuple[int, int], corridors: list[Corridor]
-    ) -> bool:
+    def _is_corridor_connection(self, position: tuple[int, int], corridors: list[Corridor]) -> bool:
         """
         位置が通路との接続点かチェック。
 
@@ -345,9 +332,7 @@ class DoorManager:
 
         return Door
 
-    def _place_door_at_position(
-        self, x: int, y: int, door_type: type, room: Room, tiles: np.ndarray
-    ) -> None:
+    def _place_door_at_position(self, x: int, y: int, door_type: type, room: Room, tiles: np.ndarray) -> None:
         """
         指定位置にドアを配置。
 
@@ -366,9 +351,7 @@ class DoorManager:
             room.add_door(x, y)
             self.placed_doors.append((x, y, door_type.__name__))
 
-            game_logger.debug(
-                f"Placed {door_type.__name__} at ({x}, {y}) for room {room.id}"
-            )
+            game_logger.debug(f"Placed {door_type.__name__} at ({x}, {y}) for room {room.id}")
 
     def _validate_door_placement(self, x: int, y: int, tiles: np.ndarray) -> bool:
         """
@@ -404,9 +387,7 @@ class DoorManager:
 
         return True
 
-    def get_door_at_position(
-        self, x: int, y: int, tiles: np.ndarray
-    ) -> Door | SecretDoor | None:
+    def get_door_at_position(self, x: int, y: int, tiles: np.ndarray) -> Door | SecretDoor | None:
         """
         指定位置のドアを取得。
 
@@ -436,7 +417,7 @@ class DoorManager:
             ドア種類とその数の辞書
 
         """
-        door_counts = {}
+        door_counts: dict[str, int] = {}
         for _, _, door_type in self.placed_doors:
             door_counts[door_type] = door_counts.get(door_type, 0) + 1
         return door_counts
@@ -452,6 +433,5 @@ class DoorManager:
         return {
             "total_doors": len(self.placed_doors),
             "door_types": door_counts,
-            "secret_door_ratio": door_counts.get("SecretDoor", 0)
-            / max(1, len(self.placed_doors)),
+            "secret_door_ratio": door_counts.get("SecretDoor", 0) / max(1, len(self.placed_doors)),
         }

@@ -41,15 +41,19 @@ class SaveManager:
 
     """
 
-    def __init__(self, save_dir: str = "saves") -> None:
+    def __init__(self, save_dir: str | None = None) -> None:
         """
         SaveManagerを初期化。
 
         Args:
         ----
-            save_dir: セーブデータを保存するディレクトリ
+            save_dir: セーブデータを保存するディレクトリ（Noneの場合は環境変数から取得）
 
         """
+        if save_dir is None:
+            from pyrogue.config.env import get_save_directory
+
+            save_dir = get_save_directory()
         self.save_dir = Path(save_dir)
         self.save_file = self.save_dir / "game_save.pkl"
         self.backup_file = self.save_dir / "game_save_backup.pkl"
@@ -91,15 +95,24 @@ class SaveManager:
 
             # 既存のファイルをバックアップ
             if self.save_file.exists():
-                self.save_file.rename(self.backup_file)
+                try:
+                    self.save_file.rename(self.backup_file)
+                except (OSError, PermissionError) as e:
+                    raise SaveError(f"Failed to backup save file: {e}") from e
 
             # メインセーブファイルを保存
-            with open(self.save_file, "wb") as f:
-                pickle.dump(game_data, f)
+            try:
+                with open(self.save_file, "wb") as f:
+                    pickle.dump(game_data, f)
+            except (OSError, PermissionError, pickle.PickleError) as e:
+                raise SaveError(f"Failed to save game data: {e}") from e
 
             # メタデータを保存
-            with open(self.metadata_file, "w") as f:
-                json.dump(metadata, f, indent=2)
+            try:
+                with open(self.metadata_file, "w") as f:
+                    json.dump(metadata, f, indent=2)
+            except (OSError, PermissionError, json.JSONEncodeError) as e:
+                raise SaveError(f"Failed to save metadata: {e}") from e
 
             # セーブファイルのチェックサムを計算・保存
             self._save_checksum()
@@ -130,17 +143,15 @@ class SaveManager:
         try:
             # セーブファイルの整合性チェック
             if not self._verify_checksum():
-                game_logger.warning(
-                    "Save file integrity check failed - potential tampering detected"
-                )
+                game_logger.warning("Save file integrity check failed - potential tampering detected")
                 # チェックサム検証失敗時もバックアップを試行
                 if self.backup_file.exists():
                     try:
                         with open(self.backup_file, "rb") as f:
                             game_data = pickle.load(f)
-                        game_logger.info(
-                            "Game loaded from backup file after checksum failure"
-                        )
+                        # 後方互換性: 古いセーブファイルからMP関連属性を削除
+                        self._remove_legacy_mp_attributes(game_data)
+                        game_logger.info("Game loaded from backup file after checksum failure")
                         return game_data
                     except Exception as backup_error:
                         game_logger.error(f"Backup file also corrupted: {backup_error}")
@@ -161,6 +172,9 @@ class SaveManager:
             with open(self.save_file, "rb") as f:
                 game_data = pickle.load(f)
 
+            # 後方互換性: 古いセーブファイルからMP関連属性を削除
+            self._remove_legacy_mp_attributes(game_data)
+
             game_logger.info(f"Game loaded successfully from {self.save_file}")
             return game_data
 
@@ -171,12 +185,36 @@ class SaveManager:
                 try:
                     with open(self.backup_file, "rb") as f:
                         game_data = pickle.load(f)
+                    # 後方互換性: 古いセーブファイルからMP関連属性を削除
+                    self._remove_legacy_mp_attributes(game_data)
                     game_logger.info("Game loaded from backup file")
                     return game_data
                 except Exception as backup_error:
                     game_logger.error(f"Backup file also corrupted: {backup_error}")
 
             return None
+
+    def _remove_legacy_mp_attributes(self, game_data: dict[str, Any]) -> None:
+        """
+        古いセーブファイルからMP関連の属性を削除。
+
+        Args:
+        ----
+            game_data: ゲームデータ辞書
+
+        """
+        try:
+            # プレイヤーオブジェクトからMP関連属性を削除
+            if "player" in game_data:
+                player = game_data["player"]
+                if hasattr(player, "mp"):
+                    delattr(player, "mp")
+                    game_logger.debug("Removed legacy 'mp' attribute from player")
+                if hasattr(player, "max_mp"):
+                    delattr(player, "max_mp")
+                    game_logger.debug("Removed legacy 'max_mp' attribute from player")
+        except Exception as e:
+            game_logger.warning(f"Failed to remove legacy MP attributes: {e}")
 
     def _trigger_permadeath(self) -> None:
         """
@@ -338,9 +376,7 @@ class SaveManager:
             # チェックサムを比較
             is_valid = stored_checksum == current_checksum
             if not is_valid:
-                game_logger.warning(
-                    f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}"
-                )
+                game_logger.warning(f"Checksum mismatch: stored={stored_checksum}, current={current_checksum}")
 
             return is_valid
 

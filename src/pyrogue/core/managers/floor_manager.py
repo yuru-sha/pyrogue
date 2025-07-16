@@ -31,6 +31,7 @@ class FloorManager:
         Args:
         ----
             context: 共有ゲームコンテキスト
+
         """
         self.context = context
 
@@ -41,6 +42,7 @@ class FloorManager:
         Returns
         -------
             階段を上ることができた場合True
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -62,14 +64,10 @@ class FloorManager:
         if current_floor <= 1:
             # 勝利条件チェック
             if getattr(self.context.player, "has_amulet", False):
-                self.context.add_message(
-                    "You have escaped with the Amulet of Yendor! You win!"
-                )
+                self.context.add_message("You have escaped with the Amulet of Yendor! You win!")
                 self._handle_victory()
             else:
-                self.context.add_message(
-                    "You climb up the stairs and emerge from the dungeon!"
-                )
+                self.context.add_message("You climb up the stairs and emerge from the dungeon!")
                 self._handle_dungeon_exit()
             return True
 
@@ -83,6 +81,7 @@ class FloorManager:
         Returns
         -------
             階段を下ることができた場合True
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -122,6 +121,7 @@ class FloorManager:
         Returns:
         -------
             移動が成功した場合True
+
         """
         try:
             # フロアを変更
@@ -160,6 +160,7 @@ class FloorManager:
         ----
             floor_data: 新しいフロアのデータ
             direction: 移動方向（"up" または "down"）
+
         """
         player = self.context.player
 
@@ -185,6 +186,7 @@ class FloorManager:
         Args:
         ----
             new_floor: 新しいフロア番号
+
         """
         # 視界を更新
         self._update_fov()
@@ -208,6 +210,7 @@ class FloorManager:
         Args:
         ----
             floor_number: フロア番号
+
         """
         # 特定フロアでの特別な処理
         if floor_number == 26:
@@ -249,6 +252,7 @@ class FloorManager:
         Returns
         -------
             扉を開くことができた場合True
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -286,6 +290,7 @@ class FloorManager:
         Returns
         -------
             扉を閉じることができた場合True
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -333,6 +338,7 @@ class FloorManager:
         Returns:
         -------
             モンスターがいる場合True
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
 
@@ -353,6 +359,7 @@ class FloorManager:
         Returns
         -------
             何かを発見した場合True
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -394,6 +401,7 @@ class FloorManager:
         Returns:
         -------
             隠し扉を発見した場合True
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
 
@@ -427,6 +435,7 @@ class FloorManager:
         Returns:
         -------
             トラップを発見した場合True
+
         """
         floor_data = self.context.dungeon_manager.get_current_floor_data()
 
@@ -449,6 +458,7 @@ class FloorManager:
         Returns
         -------
             トラップを解除できた場合True
+
         """
         player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
@@ -467,15 +477,10 @@ class FloorManager:
                         if trap.x == x and trap.y == y and trap.is_discovered:
                             # トラップの解除を試行
                             if trap.disarm(player):
-                                self.context.add_message(
-                                    f"You successfully disarm the {trap.name}."
-                                )
+                                self.context.add_message(f"You successfully disarm the {trap.name}.")
                                 return True
-                            else:
-                                self.context.add_message(
-                                    f"You fail to disarm the {trap.name}."
-                                )
-                                return False
+                            self.context.add_message(f"You fail to disarm the {trap.name}.")
+                            return False
 
         self.context.add_message("No traps to disarm here.")
         return False

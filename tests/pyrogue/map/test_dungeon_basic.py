@@ -16,12 +16,8 @@ def test_dungeon_generation():
     if up_pos is not None:
         assert 0 <= up_pos[0] < 80, f"Up stairs X position {up_pos[0]} is out of bounds"
         assert 0 <= up_pos[1] < 50, f"Up stairs Y position {up_pos[1]} is out of bounds"
-    assert (
-        0 <= down_pos[0] < 80
-    ), f"Down stairs X position {down_pos[0]} is out of bounds"
-    assert (
-        0 <= down_pos[1] < 50
-    ), f"Down stairs Y position {down_pos[1]} is out of bounds"
+    assert 0 <= down_pos[0] < 80, f"Down stairs X position {down_pos[0]} is out of bounds"
+    assert 0 <= down_pos[1] < 50, f"Down stairs Y position {down_pos[1]} is out of bounds"
 
     # 部屋が生成されているか
     assert len(director.rooms) > 0, "No rooms generated"
@@ -54,16 +50,12 @@ def test_boundary_walls():
     # 上下の境界が壁か
     for x in range(80):
         assert isinstance(tiles[0, x], Wall), f"Top boundary at ({x}, 0) is not wall"
-        assert isinstance(
-            tiles[49, x], Wall
-        ), f"Bottom boundary at ({x}, 49) is not wall"
+        assert isinstance(tiles[49, x], Wall), f"Bottom boundary at ({x}, 49) is not wall"
 
     # 左右の境界が壁か
     for y in range(50):
         assert isinstance(tiles[y, 0], Wall), f"Left boundary at (0, {y}) is not wall"
-        assert isinstance(
-            tiles[y, 79], Wall
-        ), f"Right boundary at (79, {y}) is not wall"
+        assert isinstance(tiles[y, 79], Wall), f"Right boundary at (79, {y}) is not wall"
 
 
 def test_special_room_generation():
@@ -72,14 +64,10 @@ def test_special_room_generation():
     tiles, up_pos, down_pos = director.build_dungeon()
 
     # 特別な部屋が生成されているか
-    special_rooms = [
-        room for room in director.rooms if getattr(room, "is_special", False)
-    ]
+    special_rooms = [room for room in director.rooms if getattr(room, "is_special", False)]
 
     # 特別な部屋の数をチェック（現在の実装では複数の特別な部屋が生成される）
-    assert (
-        len(special_rooms) >= 0
-    ), f"Special rooms should be non-negative: {len(special_rooms)}"
+    assert len(special_rooms) >= 0, f"Special rooms should be non-negative: {len(special_rooms)}"
 
 
 def test_stairs_in_different_rooms():
@@ -92,16 +80,10 @@ def test_stairs_in_different_rooms():
 
     for room in director.rooms:
         # 階段が部屋内にあるかチェック
-        if up_pos and (
-            room.x < up_pos[0] < room.x + room.width
-            and room.y < up_pos[1] < room.y + room.height
-        ):
+        if up_pos and (room.x < up_pos[0] < room.x + room.width and room.y < up_pos[1] < room.y + room.height):
             up_room = room
 
-        if down_pos and (
-            room.x < down_pos[0] < room.x + room.width
-            and room.y < down_pos[1] < room.y + room.height
-        ):
+        if down_pos and (room.x < down_pos[0] < room.x + room.width and room.y < down_pos[1] < room.y + room.height):
             down_room = room
 
     # 階段が部屋内にあることを確認

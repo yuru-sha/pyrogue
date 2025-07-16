@@ -43,9 +43,7 @@ class Trap(ABC):
 
     """
 
-    def __init__(
-        self, x: int, y: int, is_hidden: bool = True, is_disarmed: bool = False
-    ) -> None:
+    def __init__(self, x: int, y: int, is_hidden: bool = True, is_disarmed: bool = False) -> None:
         """
         トラップを初期化。
 
@@ -64,6 +62,7 @@ class Trap(ABC):
         self.char: str = "^"
         self.color: tuple[int, int, int] = (255, 0, 0)
         self.name: str = "Trap"
+        self.trap_type: str = "base"
 
     def reveal(self, context: EffectContext | None = None) -> None:
         """
@@ -99,9 +98,7 @@ class Trap(ABC):
 
         if self.is_hidden:
             if context and context.game_screen:
-                context.add_message(
-                    "You can't disarm a trap you can't see!"
-                )
+                context.add_message("You can't disarm a trap you can't see!")
             return False
 
         # 簡単な成功判定（将来的にはスキルベースに）
@@ -112,20 +109,14 @@ class Trap(ABC):
         if success:
             self.is_disarmed = True
             if context and context.game_screen:
-                context.add_message(
-                    f"You successfully disarmed the {self.name}!"
-                )
+                context.add_message(f"You successfully disarmed the {self.name}!")
             return True
         if context and context.game_screen:
-            context.add_message(
-                f"You failed to disarm the {self.name}!"
-            )
+            context.add_message(f"You failed to disarm the {self.name}!")
         # 失敗時にトラップが発動する可能性
         if random.random() < 0.3:  # 30%の確率で発動
             if context and context.game_screen:
-                context.add_message(
-                    "Your clumsy attempt triggers the trap!"
-                )
+                context.add_message("Your clumsy attempt triggers the trap!")
             self.activate(context)
         return False
 
@@ -185,6 +176,7 @@ class PitTrap(Trap):
         """
         super().__init__(x, y)
         self.name = "Pit Trap"
+        self.trap_type = "pit"
         self.damage = damage
         self.char = "^"
         self.color = (139, 69, 19)  # 茶色
@@ -205,9 +197,7 @@ class PitTrap(Trap):
         player.hp = max(0, player.hp - actual_damage)
 
         # メッセージを表示
-        context.add_message(
-            f"You fall into a pit! You take {actual_damage} damage!"
-        )
+        context.add_message(f"You fall into a pit! You take {actual_damage} damage!")
 
         # トラップを発見状態にする
         self.reveal()
@@ -235,6 +225,7 @@ class PoisonNeedleTrap(Trap):
         """
         super().__init__(x, y)
         self.name = "Poison Needle Trap"
+        self.trap_type = "poison"
         self.poison_duration = poison_duration
         self.char = "^"
         self.color = (0, 255, 0)  # 緑色
@@ -255,9 +246,7 @@ class PoisonNeedleTrap(Trap):
         player.status_effects.add_effect(poison_effect)
 
         # メッセージを表示
-        context.add_message(
-            "You step on a poison needle! You feel sick..."
-        )
+        context.add_message("You step on a poison needle! You feel sick...")
 
         # トラップを発見状態にする
         self.reveal()
@@ -284,6 +273,7 @@ class TeleportTrap(Trap):
         """
         super().__init__(x, y)
         self.name = "Teleport Trap"
+        self.trap_type = "teleport"
         self.char = "^"
         self.color = (255, 0, 255)  # マゼンタ色
 
@@ -304,9 +294,7 @@ class TeleportTrap(Trap):
 
         if success:
             # メッセージを表示
-            context.add_message(
-                "You step on a strange rune and are whisked away!"
-            )
+            context.add_message("You step on a strange rune and are whisked away!")
 
         # トラップを発見状態にする
         self.reveal()

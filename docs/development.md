@@ -38,9 +38,8 @@ make setup
 ```
 pyrogue/
 ├── docs/               # ドキュメント
-├── data/              # ゲームデータ
-│   ├── assets/        # アセット（フォント、画像など）
-│   └── logs/          # ログファイル
+├── assets/            # アセット（フォント、画像など）
+├── logs/            # ログファイル
 ├── src/               # ソースコード
 │   └── pyrogue/
 │       ├── core/      # コアゲームロジック
@@ -69,7 +68,7 @@ vim .env  # または好みのエディタで編集
 2. **環境変数による設定上書き**：
 ```bash
 # 一時的な設定変更
-DEBUG=true WINDOW_WIDTH=100 make run
+DEBUG=true make run
 
 # 永続的な設定変更は.envファイルで行う
 ```
@@ -80,9 +79,6 @@ DEBUG=true WINDOW_WIDTH=100 make run
 |----------|--------------|------|------|
 | `DEBUG` | false | デバッグモード | 開発時の詳細ログ出力 |
 | `LOG_LEVEL` | INFO | ログレベル | DEBUG/INFO/WARNING/ERROR |
-| `WINDOW_WIDTH` | 80 | ウィンドウ幅（文字数） | 画面サイズ調整 |
-| `WINDOW_HEIGHT` | 50 | ウィンドウ高さ（文字数） | 画面サイズ調整 |
-| `FPS_LIMIT` | 60 | フレームレート制限 | パフォーマンス調整 |
 | `AUTO_SAVE_ENABLED` | true | オートセーブ機能 | セーブ頻度制御 |
 | `FONT_PATH` | auto | フォントファイルパス | 表示カスタマイズ |
 
@@ -92,8 +88,6 @@ DEBUG=true WINDOW_WIDTH=100 make run
 ```bash
 DEBUG=true
 LOG_LEVEL=DEBUG
-WINDOW_WIDTH=100
-WINDOW_HEIGHT=60
 AUTO_SAVE_ENABLED=true
 ```
 
@@ -101,8 +95,6 @@ AUTO_SAVE_ENABLED=true
 ```bash
 DEBUG=false
 LOG_LEVEL=INFO
-WINDOW_WIDTH=80
-WINDOW_HEIGHT=50
 AUTO_SAVE_ENABLED=false
 ```
 

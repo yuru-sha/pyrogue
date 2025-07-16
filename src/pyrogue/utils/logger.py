@@ -16,8 +16,9 @@ Example:
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
+
+from pyrogue.config.env import get_debug_mode, get_log_level
 
 
 def setup_game_logger() -> logging.Logger:
@@ -35,19 +36,32 @@ def setup_game_logger() -> logging.Logger:
     if logger.handlers:
         return logger
 
-    # Set debug mode based on environment variable
-    debug_mode = os.getenv("DEBUG", "0") == "1"
-    logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
+    # Set log level based on environment variable
+    debug_mode = get_debug_mode()
+    log_level = get_log_level()
+
+    # Map string log level to logging constants
+    level_mapping = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+
+    # Use specified log level or fallback to DEBUG/INFO based on debug mode
+    if log_level.upper() in level_mapping:
+        logger.setLevel(level_mapping[log_level.upper()])
+    else:
+        logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
     # Create logs directory
-    log_dir = Path("data/logs")
+    log_dir = Path("logs")
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Simple file handler
     handler = logging.FileHandler(log_dir / "game.log", encoding="utf-8")
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 

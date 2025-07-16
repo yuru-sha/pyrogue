@@ -91,9 +91,10 @@ class GameLogic:
         self.turn_manager = TurnManager()
         self.monster_ai_manager = MonsterAIManager()
         self.score_manager = ScoreManager()
-        
+
         # ウィザードモード（デバッグ用）
         from pyrogue.config.env import get_debug_mode
+
         self.wizard_mode = get_debug_mode()
 
         # 新しいマネージャーを初期化
@@ -121,86 +122,88 @@ class GameLogic:
         self.wizard_mode = not self.wizard_mode
         status = "enabled" if self.wizard_mode else "disabled"
         self.add_message(f"Wizard mode {status}!")
-        
+
     def is_wizard_mode(self) -> bool:
         """ウィザードモードの状態を取得。"""
         return self.wizard_mode
-    
+
     def wizard_teleport_to_stairs(self) -> None:
         """ウィザード機能: 階段位置にテレポート。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-            
+
         floor_data = self.get_current_floor_data()
         if not floor_data:
             return
-            
+
         # 下り階段を探す
         for y in range(floor_data.tiles.shape[0]):
             for x in range(floor_data.tiles.shape[1]):
                 from pyrogue.map.tile import StairsDown
+
                 if isinstance(floor_data.tiles[y, x], StairsDown):
                     self.player.x = x
                     self.player.y = y
                     self.add_message(f"[Wizard] Teleported to stairs at ({x}, {y})!")
                     self._update_fov()
                     return
-                    
+
         self.add_message("[Wizard] No stairs found on this floor!")
-    
+
     def wizard_level_up(self) -> None:
         """ウィザード機能: レベルアップ。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-        
+
         from pyrogue.constants import get_exp_for_level
-        
+
         # 次のレベルに必要な経験値を設定してレベルアップ
         next_level = self.player.level + 1
         required_exp = get_exp_for_level(next_level)
         self.player.exp = required_exp
         self.player.level_up()  # 正規のレベルアップ処理を使用
         self.add_message(f"[Wizard] Level up! Now level {self.player.level}")
-    
+
     def wizard_heal_full(self) -> None:
         """ウィザード機能: 完全回復。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-            
+
         self.player.hp = self.player.max_hp
         self.player.mp = self.player.max_mp
         self.add_message("[Wizard] Fully healed!")
-    
+
     def wizard_reveal_all(self) -> None:
         """ウィザード機能: 全マップ探索済みにする。"""
         if not self.wizard_mode:
             self.add_message("Wizard mode required!")
             return
-            
+
         floor_data = self.get_current_floor_data()
         if not floor_data:
             return
-            
+
         # 全タイルを探索済みにする
         explored = self.get_explored_tiles()
         explored.fill(True)
-        
+
         # 全隠しドア・トラップを発見済みにする
         for y in range(floor_data.tiles.shape[0]):
             for x in range(floor_data.tiles.shape[1]):
                 from pyrogue.map.tile import SecretDoor
+
                 tile = floor_data.tiles[y, x]
                 if isinstance(tile, SecretDoor) and tile.door_state == "secret":
                     tile.reveal()
-                    
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.is_hidden:
                     trap.reveal()
-        
+
         self.add_message("[Wizard] All map revealed!")
         self._update_fov()
 
@@ -266,7 +269,7 @@ class GameLogic:
         )
         from pyrogue.entities.items.item import Armor, Food, Potion, Scroll, Weapon
 
-        # 初期武器: Dagger (攻撃力+2)
+        # 初期武器: Dagger (攻撃力+2) - item_types.pyのWEAPONSと統一
         dagger = Weapon(x=0, y=0, name="Dagger", attack_bonus=2)
         self.inventory.add_item(dagger)
         self.inventory.equip(dagger)
@@ -279,35 +282,23 @@ class GameLogic:
         # 初期アイテム
 
         # Potion of Healing x2（HP10-15回復）
-        healing_potion1 = Potion(
-            x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12)
-        )
-        healing_potion2 = Potion(
-            x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12)
-        )
+        healing_potion1 = Potion(x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12))
+        healing_potion2 = Potion(x=0, y=0, name="Potion of Healing", effect=HealingEffect(heal_amount=12))
         self.inventory.add_item(healing_potion1)
         self.inventory.add_item(healing_potion2)
 
         # Food Ration x2（満腹度25回復）
-        food_ration1 = Food(
-            x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25)
-        )
-        food_ration2 = Food(
-            x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25)
-        )
+        food_ration1 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
+        food_ration2 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
         self.inventory.add_item(food_ration1)
         self.inventory.add_item(food_ration2)
 
         # Scroll of Light x1（視野拡大50ターン）
-        light_scroll = Scroll(
-            x=0, y=0, name="Scroll of Light", effect=LightEffect(duration=50, radius=15)
-        )
+        light_scroll = Scroll(x=0, y=0, name="Scroll of Light", effect=LightEffect(duration=50, radius=15))
         self.inventory.add_item(light_scroll)
 
         self.add_message("You are equipped with a Dagger and Leather Armor.")
-        self.add_message(
-            "You start with some basic supplies: potions, food, and a scroll."
-        )
+        self.add_message("You start with some basic supplies: potions, food, and a scroll.")
 
     # EffectContext用プロパティ
     @property
@@ -351,12 +342,7 @@ class GameLogic:
             return False
 
         # 境界チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # タイルチェック
@@ -418,18 +404,14 @@ class GameLogic:
         Returns:
         -------
             ドロップ可能な場合True
+
         """
         floor_data = self.get_current_floor_data()
         if not floor_data:
             return False
 
         # 座標の境界チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # タイルが歩行可能かチェック
@@ -456,6 +438,7 @@ class GameLogic:
         Returns:
         -------
             ドロップが成功した場合True
+
         """
         if not self.can_drop_item_at(x, y):
             return False
@@ -580,12 +563,7 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         tile = floor_data.tiles[y, x]
@@ -609,12 +587,7 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         tile = floor_data.tiles[y, x]
@@ -657,12 +630,7 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         tile = floor_data.tiles[y, x]
@@ -694,29 +662,25 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # トラップスポナーからトラップを検索
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.x == x and trap.y == y and trap.is_hidden:
                     # 発見成功率はプレイヤーレベルに依存（基本40% + レベル*5%）
                     import random
+
                     success_rate = min(90, 40 + self.player.level * 5)
-                    
+
                     if random.randint(1, 100) <= success_rate:
                         trap.reveal()  # トラップを発見
                         self.add_message(f"You found a {trap.name}!")
                         return True
                     # 失敗してもメッセージは出さない（まとめて処理される）
                     return False
-        
+
         return False
 
     # トラップ処理（TrapManagerに委譲予定）
@@ -727,21 +691,16 @@ class GameLogic:
             return False
 
         # 座標チェック
-        if (
-            x < 0
-            or y < 0
-            or y >= floor_data.tiles.shape[0]
-            or x >= floor_data.tiles.shape[1]
-        ):
+        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
             return False
 
         # トラップスポナーからトラップを検索
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.x == x and trap.y == y and not trap.is_hidden:
                     # 発見済みトラップのみ解除可能
                     return trap.disarm(self.context)
-        
+
         return False
 
     # 魔法処理（MagicManagerに委譲予定）
@@ -819,9 +778,7 @@ class GameLogic:
         # デフォルトの探索状態を返す
         import numpy as np
 
-        return np.full(
-            (self.dungeon_manager.height, self.dungeon_manager.width), False, dtype=bool
-        )
+        return np.full((self.dungeon_manager.height, self.dungeon_manager.width), False, dtype=bool)
 
     def update_explored_tiles(self, visible_tiles) -> None:
         """探索済みタイルを更新。"""
@@ -843,9 +800,7 @@ class GameLogic:
                 x, y = player.x + dx, player.y + dy
                 monster = self._get_monster_at(x, y)
                 if monster:
-                    return self.combat_manager.handle_player_attack(
-                        monster, self.context
-                    )
+                    return self.combat_manager.handle_player_attack(monster, self.context)
 
         return False
 
@@ -854,9 +809,9 @@ class GameLogic:
         # ItemManagerに委譲予定（現在未実装）
         return False
 
-    def get_nearby_enemies(self) -> list:
+    def get_nearby_enemies(self) -> list[Monster]:
         """周囲の敵を取得。"""
-        enemies = []
+        enemies: list[Monster] = []
         player = self.player
         floor_data = self.get_current_floor_data()
 
@@ -869,15 +824,6 @@ class GameLogic:
                 enemies.append(monster)
 
         return enemies
-
-    def get_npc_at(self, x: int, y: int):
-        """指定した座標にいるNPCを取得。"""
-        floor_data = self.get_current_floor_data()
-
-        if not floor_data or not hasattr(floor_data, "npc_spawner"):
-            return None
-
-        return floor_data.npc_spawner.get_npc_at_position(x, y)
 
     def record_game_over(self, death_cause: str = "Unknown") -> None:
         """ゲームオーバー時のスコア記録"""
@@ -904,3 +850,206 @@ class GameLogic:
     def get_score_table(self, limit: int = 10) -> str:
         """スコアテーブルを取得"""
         return self.score_manager.format_score_table(limit)
+
+    def handle_turn_end(self) -> None:
+        """
+        ターン終了時の処理。
+
+        ターンマネージャーによるターン処理とオートセーブ機能を実行します。
+        """
+        # TurnManagerによるターン処理
+        self.turn_manager.process_turn(self.context)
+
+        # オートセーブ機能の実行
+        self._handle_auto_save()
+
+    def _handle_auto_save(self) -> None:
+        """
+        オートセーブ機能の処理。
+
+        環境変数でオートセーブが有効な場合、一定間隔でゲームを自動保存します。
+        """
+        from pyrogue.config.env import get_auto_save_enabled
+
+        # オートセーブが無効の場合は処理しない
+        if not get_auto_save_enabled():
+            return
+
+        # 一定ターン数毎にオートセーブを実行（10ターン毎）
+        if self.turn_manager.turn_count % 10 == 0:
+            self._perform_auto_save()
+
+    def _perform_auto_save(self) -> None:
+        """
+        実際のオートセーブを実行。
+
+        CommonCommandHandlerのセーブ機能を使用してゲームを保存します。
+        """
+        try:
+            # プレイヤーが死亡している場合はオートセーブしない
+            if self.player.hp <= 0:
+                return
+
+            # SaveManagerを直接使用してオートセーブを実行
+            from pyrogue.core.save_manager import SaveManager
+
+            save_manager = SaveManager()
+
+            # 現在のゲーム状態を収集
+            save_data = self._create_auto_save_data()
+
+            # オートセーブを実行
+            success = save_manager.save_game_state(save_data)
+
+            if success:
+                # オートセーブ成功メッセージ（デバッグモード時のみ）
+                if self.wizard_mode:
+                    self.add_message(f"[Auto-save] Game saved at turn {self.turn_manager.turn_count}")
+            else:
+                # オートセーブ失敗時のメッセージ
+                if self.wizard_mode:
+                    self.add_message("[Auto-save] Failed to save game")
+
+        except Exception as e:
+            # エラーが発生した場合のログ出力
+            from pyrogue.utils import game_logger
+
+            game_logger.error(f"Auto-save failed: {e}")
+
+    def _create_auto_save_data(self) -> dict:
+        """
+        オートセーブ用のデータを作成。
+
+        Returns
+        -------
+            dict: セーブデータ辞書
+        """
+        # CommonCommandHandlerと同じ形式でセーブデータを作成
+        save_data = {
+            "player": self._serialize_player(self.player),
+            "inventory": self._serialize_inventory(self.inventory),
+            "current_floor": self.dungeon_manager.current_floor,
+            "floor_data": self._serialize_all_floors(self.dungeon_manager.floors),
+            "message_log": self.message_log,
+            "has_amulet": getattr(self.player, "has_amulet", False),
+            "turn_count": self.turn_manager.turn_count,
+            "auto_save": True,  # オートセーブフラグ
+            "version": "1.0",
+        }
+
+        return save_data
+
+    def _serialize_player(self, player) -> dict:
+        """プレイヤーオブジェクトをシリアライズ。"""
+        return {
+            "x": player.x,
+            "y": player.y,
+            "hp": player.hp,
+            "max_hp": player.max_hp,
+            "level": player.level,
+            "exp": player.exp,
+            "gold": player.gold,
+            "attack": player.attack,
+            "defense": player.defense,
+            "hunger": getattr(player, "hunger", 100),
+            "mp": getattr(player, "mp", 0),
+            "max_mp": getattr(player, "max_mp", 0),
+            "has_amulet": getattr(player, "has_amulet", False),
+            "monsters_killed": getattr(player, "monsters_killed", 0),
+            "deepest_floor": getattr(player, "deepest_floor", 1),
+            "turns_played": getattr(player, "turns_played", 0),
+        }
+
+    def _serialize_inventory(self, inventory) -> dict:
+        """インベントリをシリアライズ。"""
+        if inventory is None:
+            return {"items": [], "equipped": {"weapon": None, "armor": None, "ring_left": None, "ring_right": None}}
+
+        return {
+            "items": [self._serialize_item(item) for item in inventory.items],
+            "equipped": {
+                "weapon": self._serialize_item(inventory.equipped["weapon"])
+                if inventory.equipped.get("weapon")
+                else None,
+                "armor": self._serialize_item(inventory.equipped["armor"]) if inventory.equipped.get("armor") else None,
+                "ring_left": self._serialize_item(inventory.equipped["ring_left"])
+                if inventory.equipped.get("ring_left")
+                else None,
+                "ring_right": self._serialize_item(inventory.equipped["ring_right"])
+                if inventory.equipped.get("ring_right")
+                else None,
+            },
+        }
+
+    def _serialize_item(self, item) -> dict:
+        """アイテムをシリアライズ。"""
+        if item is None:
+            return None
+
+        return {
+            "item_type": getattr(item, "item_type", "MISC"),
+            "name": item.name,
+            "char": getattr(item, "char", "?"),
+            "color": getattr(item, "color", (255, 255, 255)),
+            "x": getattr(item, "x", 0),
+            "y": getattr(item, "y", 0),
+            "quantity": getattr(item, "quantity", 1),
+            "stack_count": getattr(item, "stack_count", 1),
+            "enchantment": getattr(item, "enchantment", 0),
+            "cursed": getattr(item, "cursed", False),
+        }
+
+    def _serialize_all_floors(self, floors: dict) -> dict:
+        """すべてのフロアデータをシリアライズ。"""
+        serialized_floors = {}
+        for floor_num, floor_data in floors.items():
+            if floor_data is not None:
+                serialized_floors[floor_num] = self._serialize_floor_data_object(floor_data)
+        return serialized_floors
+
+    def _serialize_floor_data_object(self, floor_data) -> dict:
+        """フロアデータオブジェクトをシリアライズ。"""
+        return {
+            "tiles": floor_data.tiles.tolist(),
+            "monsters": [self._serialize_monster(monster) for monster in floor_data.monster_spawner.monsters],
+            "items": [self._serialize_item(item) for item in floor_data.item_spawner.items],
+            "explored": floor_data.explored.tolist(),
+            "traps": [
+                self._serialize_trap(trap) for trap in getattr(getattr(floor_data, "trap_manager", None), "traps", [])
+            ],
+        }
+
+    def _serialize_monster(self, monster) -> dict:
+        """モンスターをシリアライズ。"""
+        return {
+            "name": monster.name,
+            "char": monster.char,
+            "x": monster.x,
+            "y": monster.y,
+            "hp": monster.hp,
+            "max_hp": monster.max_hp,
+            "attack": monster.attack,
+            "defense": monster.defense,
+            "level": monster.level,
+            "exp_value": getattr(monster, "exp_value", 0),
+            "ai_pattern": getattr(monster, "ai_pattern", "basic"),
+        }
+
+    def _serialize_trap(self, trap) -> dict:
+        """トラップをシリアライズ。"""
+        return {
+            "trap_type": getattr(trap, "trap_type", "PitTrap"),
+            "x": trap.x,
+            "y": trap.y,
+            "hidden": getattr(trap, "is_hidden", True),
+        }
+
+    def get_message_history(self) -> list[str]:
+        """
+        メッセージ履歴を取得。
+
+        Returns
+        -------
+            メッセージ履歴のリスト
+        """
+        return self.message_log.copy()

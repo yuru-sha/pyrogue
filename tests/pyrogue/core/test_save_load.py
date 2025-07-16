@@ -49,13 +49,9 @@ def test_save_load():
     loaded_data = save_manager.load_game_state()
     if loaded_data:
         print("   ロード成功")
-        print(
-            f"   プレイヤー位置: ({loaded_data['player_x']}, {loaded_data['player_y']})"
-        )
+        print(f"   プレイヤー位置: ({loaded_data['player_x']}, {loaded_data['player_y']})")
         print(f"   現在階層: {loaded_data['current_floor']}")
-        print(
-            f"   プレイヤーHP: {loaded_data['player_stats']['hp']}/{loaded_data['player_stats']['hp_max']}"
-        )
+        print(f"   プレイヤーHP: {loaded_data['player_stats']['hp']}/{loaded_data['player_stats']['hp_max']}")
     else:
         print("   ロード失敗")
 
@@ -67,9 +63,7 @@ def test_save_load():
 
     # セーブファイルが削除されているかチェック
     has_save_after_death = save_manager.has_save_file()
-    print(
-        f"   死亡後のセーブファイル存在: {'はい' if has_save_after_death else 'いいえ'}"
-    )
+    print(f"   死亡後のセーブファイル存在: {'はい' if has_save_after_death else 'いいえ'}")
 
     # 死亡後のロード試行
     loaded_after_death = save_manager.load_game_state()

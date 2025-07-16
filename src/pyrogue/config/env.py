@@ -27,6 +27,7 @@ class EnvConfig:
         Args:
         ----
             env_file: .envファイルのパス（指定されない場合はプロジェクトルートの.envを使用）
+
         """
         self._loaded = False
         self.load_env(env_file)
@@ -38,6 +39,7 @@ class EnvConfig:
         Args:
         ----
             env_file: .envファイルのパス
+
         """
         if env_file is None:
             # プロジェクトルートの.envファイルを探す
@@ -65,6 +67,7 @@ class EnvConfig:
         Returns:
         -------
             環境変数の値またはデフォルト値
+
         """
         return os.getenv(key, default)
 
@@ -80,6 +83,7 @@ class EnvConfig:
         Returns:
         -------
             bool値
+
         """
         value = self.get(key, str(default)).lower()
         return value in ("true", "1", "yes", "on")
@@ -96,6 +100,7 @@ class EnvConfig:
         Returns:
         -------
             int値
+
         """
         try:
             return int(self.get(key, str(default)))
@@ -114,6 +119,7 @@ class EnvConfig:
         Returns:
         -------
             float値
+
         """
         try:
             return float(self.get(key, str(default)))
@@ -128,6 +134,7 @@ class EnvConfig:
         Returns
         -------
             読み込まれた場合True
+
         """
         return self._loaded
 
@@ -152,26 +159,11 @@ def get_save_directory() -> str:
     return env_config.get("SAVE_DIRECTORY", "saves")
 
 
-def get_window_width() -> int:
-    """ウィンドウ幅の設定を取得。"""
-    return env_config.get_int("WINDOW_WIDTH", 80)
-
-
-def get_window_height() -> int:
-    """ウィンドウ高さの設定を取得。"""
-    return env_config.get_int("WINDOW_HEIGHT", 50)
-
-
-def get_fps_limit() -> int:
-    """FPS制限の設定を取得。"""
-    return env_config.get_int("FPS_LIMIT", 60)
-
-
 def get_auto_save_enabled() -> bool:
     """オートセーブ機能の設定を取得。"""
     return env_config.get_bool("AUTO_SAVE_ENABLED", True)
 
 
-def get_sound_enabled() -> bool:
-    """音声機能の設定を取得。"""
-    return env_config.get_bool("SOUND_ENABLED", False)
+def is_test_mode() -> bool:
+    """テストモードで実行されているかを判定。"""
+    return env_config.get("PYTEST_CURRENT_TEST") is not None

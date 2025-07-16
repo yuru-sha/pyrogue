@@ -29,12 +29,10 @@ import tcod.tileset
 from pyrogue.config import CONFIG
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.input_handlers import StateManager
-from pyrogue.core.managers.dialogue_manager import DialogueManager
 from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
-from pyrogue.ui.screens.magic_screen import MagicScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
 from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
@@ -85,14 +83,6 @@ class Engine:
         self.message_log: list[str] = []  # メッセージログを追加
         self.state_manager = StateManager()
 
-        # 対話マネージャーを初期化（NPCシステムが有効な場合のみ）
-        from pyrogue.constants import FeatureConstants
-
-        if FeatureConstants.ENABLE_NPC_SYSTEM:
-            self.dialogue_manager = DialogueManager()
-        else:
-            self.dialogue_manager = None
-
         # セーブマネージャーを初期化
         self.save_manager = SaveManager()
 
@@ -100,7 +90,6 @@ class Engine:
         self.menu_screen = MenuScreen(self.console, self)
         self.game_screen = GameScreen(self)
         self.inventory_screen = InventoryScreen(self.game_screen)
-        self.magic_screen = MagicScreen(self)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
 
@@ -122,7 +111,7 @@ class Engine:
         """
         # デフォルトフォントファイルの読み込みと設定
         tileset = tcod.tileset.load_tilesheet(
-            "data/assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
+            "assets/fonts/dejavu10x10_gs_tc.png",  # デフォルトフォント
             32,
             8,  # 列数と行数
             tcod.tileset.CHARMAP_TCOD,  # 文字マップ
@@ -160,12 +149,8 @@ class Engine:
         pixel_height = getattr(event, "height", 600)
 
         # ピクセルサイズをフォントサイズで割って文字数を計算
-        self.screen_width = max(
-            CONFIG.display.MIN_SCREEN_WIDTH, pixel_width // self.font_width
-        )  # 最小幅を保証
-        self.screen_height = max(
-            CONFIG.display.MIN_SCREEN_HEIGHT, pixel_height // self.font_height
-        )  # 最小高さを保証
+        self.screen_width = max(CONFIG.display.MIN_SCREEN_WIDTH, pixel_width // self.font_width)  # 最小幅を保証
+        self.screen_height = max(CONFIG.display.MIN_SCREEN_HEIGHT, pixel_height // self.font_height)  # 最小高さを保証
 
         # 新しいサイズでコンソールを再作成
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
@@ -206,17 +191,12 @@ class Engine:
                     self.game_screen.render(self.console)
                 elif self.state == GameStates.SHOW_INVENTORY:
                     self.inventory_screen.render(self.console)
-                elif self.state == GameStates.SHOW_MAGIC:
-                    self.magic_screen.render(self.console)
                 elif self.state == GameStates.TARGETING:
                     self.game_screen.render(self.console)
                 elif self.state == GameStates.GAME_OVER:
                     self.game_over_screen.render()
                 elif self.state == GameStates.VICTORY:
                     self.victory_screen.render()
-                elif self.state == GameStates.DIALOGUE:
-                    if hasattr(self, "dialogue_screen"):
-                        self.dialogue_screen.render(self.console)
 
                 self.context.present(self.console)
 
@@ -244,9 +224,7 @@ class Engine:
         finally:
             self.cleanup()
 
-    def _handle_input(
-        self, event: tcod.event.KeyDown
-    ) -> tuple[bool, GameStates | None]:
+    def _handle_input(self, event: tcod.event.KeyDown) -> tuple[bool, GameStates | None]:
         """
         キー入力イベントを処理。
 
@@ -263,7 +241,18 @@ class Engine:
         """
         # Get appropriate screen context for current state
         context = self._get_current_screen()
-        return self.state_manager.handle_input(event, self.state, context)
+
+        # コンテキストがNoneの場合の安全な処理
+        if context is None:
+            # デフォルトの処理（通常は発生しないが安全のため）
+            return True, None
+
+        try:
+            return self.state_manager.handle_input(event, self.state, context)
+        except Exception as e:
+            # 入力処理エラーを記録してゲームを継続
+            print(f"Warning: Input handling error: {e}")
+            return True, None
 
     def _get_current_screen(self):
         """Get the current screen instance based on state."""
@@ -273,12 +262,10 @@ class Engine:
             return self.game_screen
         if self.state == GameStates.SHOW_INVENTORY:
             return self.inventory_screen
-        if self.state == GameStates.SHOW_MAGIC:
-            return self.magic_screen
+        if self.state == GameStates.SHOW_WAND_SELECTION:
+            return getattr(self, "wand_selection_screen", None)
         if self.state == GameStates.TARGETING:
             return self.game_screen
-        if self.state == GameStates.DIALOGUE:
-            return getattr(self, "dialogue_screen", None)
         if self.state == GameStates.GAME_OVER:
             return self.game_over_screen
         if self.state == GameStates.VICTORY:
@@ -302,9 +289,7 @@ class Engine:
         self.game_screen.setup_new_game()
         self.state = GameStates.PLAYERS_TURN
 
-    def game_over(
-        self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown"
-    ) -> None:
+    def game_over(self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown") -> None:
         """
         ゲームオーバー処理。
 
@@ -326,9 +311,7 @@ class Engine:
         }
         self.save_manager.trigger_permadeath_on_death(game_data)
 
-        self.game_over_screen.set_game_over_data(
-            player_stats, final_floor, cause_of_death
-        )
+        self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER
 
     def victory(self, player_stats: dict, final_floor: int) -> None:

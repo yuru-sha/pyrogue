@@ -32,7 +32,7 @@ class StairsManager:
 
     def __init__(self) -> None:
         """階段マネージャーを初期化。"""
-        self.stairs_placed = []
+        self.stairs_placed: list[tuple[str, tuple[int, int], str]] = []
 
     def _find_safe_fallback_position(self, tiles: np.ndarray) -> tuple[int, int]:
         """
@@ -45,6 +45,7 @@ class StairsManager:
         Returns:
         -------
             安全な座標のタプル (x, y)
+
         """
         height, width = tiles.shape
 
@@ -57,11 +58,7 @@ class StairsManager:
             for dy in range(-radius, radius + 1):
                 for dx in range(-radius, radius + 1):
                     x, y = center_x + dx, center_y + dy
-                    if (
-                        1 <= x < width - 1
-                        and 1 <= y < height - 1
-                        and isinstance(tiles[y, x], Floor)
-                    ):
+                    if 1 <= x < width - 1 and 1 <= y < height - 1 and isinstance(tiles[y, x], Floor):
                         return (x, y)
 
         # 最終フォールバック: ダンジョン境界内の安全な位置
@@ -69,9 +66,7 @@ class StairsManager:
         fallback_y = max(2, min(height - 3, height // 4))
         return (fallback_x, fallback_y)
 
-    def place_stairs(
-        self, rooms: list[Room], floor: int, tiles: np.ndarray
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
+    def place_stairs(self, rooms: list[Room], floor: int, tiles: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         階段を配置。
 
@@ -94,15 +89,11 @@ class StairsManager:
         # 下り階段の配置
         down_stairs_pos = self._place_down_stairs(rooms, floor, tiles)
 
-        game_logger.info(
-            f"Placed stairs on floor {floor}: up at {up_stairs_pos}, down at {down_stairs_pos}"
-        )
+        game_logger.info(f"Placed stairs on floor {floor}: up at {up_stairs_pos}, down at {down_stairs_pos}")
 
         return up_stairs_pos, down_stairs_pos
 
-    def place_stairs_for_maze(
-        self, floor: int, tiles: np.ndarray
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
+    def place_stairs_for_maze(self, floor: int, tiles: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         迷路専用の階段配置。
 
@@ -114,6 +105,7 @@ class StairsManager:
         Returns:
         -------
             (上り階段位置, 下り階段位置) のタプル
+
         """
         self.stairs_placed = []
 
@@ -128,9 +120,7 @@ class StairsManager:
             # 上り階段: 最初の方の位置
             up_pos = floor_positions[0]
             # 下り階段: 最後の方の位置（距離を離す）
-            down_pos = (
-                floor_positions[-1] if len(floor_positions) > 1 else floor_positions[0]
-            )
+            down_pos = floor_positions[-1] if len(floor_positions) > 1 else floor_positions[0]
 
             # もし同じ位置なら、別の位置を探す
             if up_pos == down_pos and len(floor_positions) > 1:
@@ -154,9 +144,7 @@ class StairsManager:
             # 最下層では下り階段の代わりにエンディング位置として記録
             game_logger.debug(f"Set ending position at {down_pos} on floor {floor}")
 
-        game_logger.info(
-            f"Placed maze stairs on floor {floor}: up at {up_pos}, down at {down_pos}"
-        )
+        game_logger.info(f"Placed maze stairs on floor {floor}: up at {up_pos}, down at {down_pos}")
 
         return up_pos, down_pos
 
@@ -171,6 +159,7 @@ class StairsManager:
         Returns:
         -------
             Floorタイルの位置リスト
+
         """
         positions = []
         for y in range(tiles.shape[0]):
@@ -179,9 +168,7 @@ class StairsManager:
                     positions.append((x, y))
         return positions
 
-    def _place_up_stairs(
-        self, rooms: list[Room], floor: int, tiles: np.ndarray
-    ) -> tuple[int, int]:
+    def _place_up_stairs(self, rooms: list[Room], floor: int, tiles: np.ndarray) -> tuple[int, int]:
         """
         上り階段を配置。
 
@@ -208,9 +195,7 @@ class StairsManager:
             if position:
                 tiles[position[1], position[0]] = StairsUp()
                 self.stairs_placed.append(("up", position, up_stairs_room.id))
-                game_logger.debug(
-                    f"Placed up stairs at {position} in room {up_stairs_room.id}"
-                )
+                game_logger.debug(f"Placed up stairs at {position} in room {up_stairs_room.id}")
                 return position
 
         # フォールバック：最初の部屋の中央
@@ -223,9 +208,7 @@ class StairsManager:
 
         return self._find_safe_fallback_position(tiles)  # 動的最終フォールバック
 
-    def _place_down_stairs(
-        self, rooms: list[Room], floor: int, tiles: np.ndarray
-    ) -> tuple[int, int]:
+    def _place_down_stairs(self, rooms: list[Room], floor: int, tiles: np.ndarray) -> tuple[int, int]:
         """
         下り階段を配置。
 
@@ -252,9 +235,7 @@ class StairsManager:
             if position:
                 tiles[position[1], position[0]] = StairsDown()
                 self.stairs_placed.append(("down", position, down_stairs_room.id))
-                game_logger.debug(
-                    f"Placed down stairs at {position} in room {down_stairs_room.id}"
-                )
+                game_logger.debug(f"Placed down stairs at {position} in room {down_stairs_room.id}")
                 return position
 
         # フォールバック：最後の部屋の中央
@@ -267,9 +248,7 @@ class StairsManager:
 
         return self._find_safe_fallback_position(tiles)  # 動的最終フォールバック
 
-    def _select_stairs_room(
-        self, rooms: list[Room], stairs_type: str, floor: int
-    ) -> Room | None:
+    def _select_stairs_room(self, rooms: list[Room], stairs_type: str, floor: int) -> Room | None:
         """
         階段配置用の部屋を選択。
 
@@ -288,11 +267,7 @@ class StairsManager:
             return None
 
         # 特別部屋とアミュレット部屋を除外
-        suitable_rooms = [
-            room
-            for room in rooms
-            if not room.is_special or room.room_type != "amulet_chamber"
-        ]
+        suitable_rooms = [room for room in rooms if not room.is_special or room.room_type != "amulet_chamber"]
 
         if not suitable_rooms:
             suitable_rooms = rooms
@@ -335,9 +310,7 @@ class StairsManager:
         # "random"
         return random.choice(rooms)
 
-    def _find_stairs_position(
-        self, room: Room, tiles: np.ndarray
-    ) -> tuple[int, int] | None:
+    def _find_stairs_position(self, room: Room, tiles: np.ndarray) -> tuple[int, int] | None:
         """
         部屋内の階段配置位置を見つける。
 
@@ -377,9 +350,7 @@ class StairsManager:
 
         return None
 
-    def _is_valid_stairs_position(
-        self, x: int, y: int, room: Room, tiles: np.ndarray
-    ) -> bool:
+    def _is_valid_stairs_position(self, x: int, y: int, room: Room, tiles: np.ndarray) -> bool:
         """
         階段配置位置が有効かチェック。
 
@@ -396,12 +367,7 @@ class StairsManager:
 
         """
         # 部屋の境界内かチェック
-        if (
-            x <= room.x
-            or x >= room.x + room.width - 1
-            or y <= room.y
-            or y >= room.y + room.height - 1
-        ):
+        if x <= room.x or x >= room.x + room.width - 1 or y <= room.y or y >= room.y + room.height - 1:
             return False
 
         # 既に階段が配置されているかチェック
@@ -464,9 +430,7 @@ class StairsManager:
         """マネージャーの状態をリセット。"""
         self.stairs_placed = []
 
-    def place_stairs_for_maze(
-        self, floor: int, tiles: np.ndarray
-    ) -> tuple[tuple[int, int], tuple[int, int]]:
+    def place_stairs_for_maze(self, floor: int, tiles: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         迷路階層用の階段を配置。
 
@@ -506,9 +470,7 @@ class StairsManager:
         # 下り階段の配置
         down_stairs_pos = None
         if floor < GameConstants.MAX_FLOORS:
-            down_stairs_pos = self._place_maze_stairs(
-                floor_positions, tiles, "down", up_stairs_pos
-            )
+            down_stairs_pos = self._place_maze_stairs(floor_positions, tiles, "down", up_stairs_pos)
 
         # デフォルト位置を設定
         if not up_stairs_pos:
@@ -524,9 +486,7 @@ class StairsManager:
             tiles[down_stairs_pos[1], down_stairs_pos[0]] = StairsDown()
             self.stairs_placed.append(("down", down_stairs_pos, "maze"))
 
-        game_logger.debug(
-            f"Placed maze stairs: up={up_stairs_pos}, down={down_stairs_pos}"
-        )
+        game_logger.debug(f"Placed maze stairs: up={up_stairs_pos}, down={down_stairs_pos}")
         return up_stairs_pos, down_stairs_pos
 
     def _place_maze_stairs(
@@ -564,11 +524,7 @@ class StairsManager:
             adjacent_floors = 0
             for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                 nx, ny = x + dx, y + dy
-                if (
-                    0 <= nx < tiles.shape[1]
-                    and 0 <= ny < tiles.shape[0]
-                    and isinstance(tiles[ny, nx], Floor)
-                ):
+                if 0 <= nx < tiles.shape[1] and 0 <= ny < tiles.shape[0] and isinstance(tiles[ny, nx], Floor):
                     adjacent_floors += 1
 
             # デッドエンド（隣接する床が1つ）を優先
@@ -577,9 +533,7 @@ class StairsManager:
 
         # 優先位置がない場合は通常の床位置を使用
         if not preferred_positions:
-            preferred_positions = [
-                pos for pos in floor_positions if pos != avoid_position
-            ]
+            preferred_positions = [pos for pos in floor_positions if pos != avoid_position]
 
         if not preferred_positions:
             return None

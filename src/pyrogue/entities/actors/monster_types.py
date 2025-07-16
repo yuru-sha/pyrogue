@@ -35,9 +35,7 @@ def get_max_monsters_per_room(floor: int) -> int:
 
 # モンスターの定義
 # (char, name, level, hp, attack, defense, exp_value, view_range, color, ai_pattern)
-MONSTER_STATS: dict[
-    str, tuple[str, str, int, int, int, int, int, int, tuple[int, int, int], str]
-] = {
+MONSTER_STATS: dict[str, tuple[str, str, int, int, int, int, int, int, tuple[int, int, int], str]] = {
     # A-Z順でオリジナルRogueに忠実に実装（AIパターン付き）
     "AQUATOR": (
         "A",

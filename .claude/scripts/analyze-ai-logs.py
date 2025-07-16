@@ -51,10 +51,7 @@ class AILogAnalyzer:
             "summary": {
                 "total_operations": len(self.logs),
                 "error_count": len(self.errors),
-                "operation_breakdown": {
-                    op_type: len(entries)
-                    for op_type, entries in self.operations.items()
-                },
+                "operation_breakdown": {op_type: len(entries) for op_type, entries in self.operations.items()},
                 "time_range": self._get_time_range(),
             },
             "errors": self._analyze_errors(),
@@ -86,14 +83,10 @@ class AILogAnalyzer:
                 "operation": error.get("operation", {}).get("tool"),
                 "command": error.get("operation", {}).get("command"),
                 "ai_hint": error.get("ai_metadata", {}).get("hint"),
-                "suggested_action": error.get("ai_metadata", {}).get(
-                    "suggested_action"
-                ),
+                "suggested_action": error.get("ai_metadata", {}).get("suggested_action"),
                 "context": {
                     "project": error.get("context", {}).get("project", {}).get("name"),
-                    "branch": error.get("context", {})
-                    .get("project", {})
-                    .get("git_branch"),
+                    "branch": error.get("context", {}).get("project", {}).get("git_branch"),
                 },
             }
             error_analysis.append(analysis)
@@ -237,9 +230,7 @@ class AILogAnalyzer:
             print("\n=== AI Log Analysis Summary ===")
             print(f"Total Operations: {report['summary']['total_operations']}")
             print(f"Errors Found: {report['summary']['error_count']}")
-            print(
-                f"Time Range: {report['summary']['time_range']['start']} to {report['summary']['time_range']['end']}"
-            )
+            print(f"Time Range: {report['summary']['time_range']['start']} to {report['summary']['time_range']['end']}")
 
             print("\n--- Operation Breakdown ---")
             for op, count in report["summary"]["operation_breakdown"].items():
@@ -248,9 +239,7 @@ class AILogAnalyzer:
             if report["errors"]:
                 print("\n--- Recent Errors ---")
                 for error in report["errors"][:3]:
-                    print(
-                        f"  • {error['timestamp']}: {error['operation']} - {error['command']}"
-                    )
+                    print(f"  • {error['timestamp']}: {error['operation']} - {error['command']}")
                     print(f"    AI Hint: {error['ai_hint']}")
 
             if report["ai_insights"]:
@@ -267,12 +256,8 @@ def main():
         default=str(Path.home() / ".claude" / "ai-activity.jsonl"),
         help="Path to the AI activity log file",
     )
-    parser.add_argument(
-        "--format", choices=["json", "summary"], default="summary", help="Output format"
-    )
-    parser.add_argument(
-        "--errors-only", action="store_true", help="Show only error analysis"
-    )
+    parser.add_argument("--format", choices=["json", "summary"], default="summary", help="Output format")
+    parser.add_argument("--errors-only", action="store_true", help="Show only error analysis")
 
     args = parser.parse_args()
 

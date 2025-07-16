@@ -198,9 +198,7 @@ class TestMonsterHallucinationAttack:
 
         # 確実に幻覚効果が発動するようにモック
         with patch("random.random", return_value=0.1):  # 30%より低い値
-            self.combat_manager._handle_special_attack_effects(
-                psychic_monster, self.context
-            )
+            self.combat_manager._handle_special_attack_effects(psychic_monster, self.context)
 
         # 幻覚状態異常が追加されたかチェック
         assert self.player.status_effects.has_effect("Hallucination")
@@ -229,9 +227,7 @@ class TestMonsterHallucinationAttack:
 
         # 確実に幻覚効果が発動するようにモック
         with patch("random.random", return_value=0.1):  # 30%より低い値
-            self.combat_manager._handle_special_attack_effects(
-                hallucinogenic_monster, self.context
-            )
+            self.combat_manager._handle_special_attack_effects(hallucinogenic_monster, self.context)
 
         # 幻覚状態異常が追加されたかチェック
         assert self.player.status_effects.has_effect("Hallucination")
@@ -280,9 +276,7 @@ class TestMonsterHallucinationAttack:
 
         # 確率が高すぎて発動しない場合
         with patch("random.random", return_value=0.8):  # 30%より高い値
-            self.combat_manager._handle_special_attack_effects(
-                psychic_monster, self.context
-            )
+            self.combat_manager._handle_special_attack_effects(psychic_monster, self.context)
 
         # 幻覚状態異常は追加されない
         assert not self.player.status_effects.has_effect("Hallucination")

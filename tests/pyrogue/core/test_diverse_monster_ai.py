@@ -56,9 +56,7 @@ class TestDiverseMonsterAI:
         # プレイヤーにアイテムを与える
         from pyrogue.entities.items.item import Item
 
-        test_item = Item(
-            x=0, y=0, name="Test Item", char="!", color=(255, 0, 0), stackable=False
-        )
+        test_item = Item(x=0, y=0, name="Test Item", char="!", color=(255, 0, 0), stackable=False)
         self.player.inventory.add_item(test_item)
 
         # アイテム盗取攻撃をテスト
@@ -458,9 +456,7 @@ class TestDiverseMonsterAI:
 
         # アイテムなしでアイテム盗取を試行
         self.ai_manager._steal_item(leprechaun, self.player, self.context)
-        self.context.add_message.assert_called_with(
-            "Leprechaun tries to steal from you, but you have nothing!"
-        )
+        self.context.add_message.assert_called_with("Leprechaun tries to steal from you, but you have nothing!")
 
         # ゴールドがない場合の盗取
         nymph = Monster(
@@ -481,9 +477,7 @@ class TestDiverseMonsterAI:
 
         self.player.gold = 0
         self.ai_manager._steal_gold(nymph, self.player, self.context)
-        self.context.add_message.assert_called_with(
-            "Nymph searches for gold, but you have none!"
-        )
+        self.context.add_message.assert_called_with("Nymph searches for gold, but you have none!")
 
         # レベル1プレイヤーへのレベル下げ攻撃
         wraith = Monster(

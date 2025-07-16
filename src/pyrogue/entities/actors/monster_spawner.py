@@ -35,7 +35,12 @@ class MonsterSpawner:
         level_bonus = min(4, self.dungeon_level // 3)  # 最大で4体まで追加
         monster_count = base_count + level_bonus
 
-        # 各部屋にモンスターを配置
+        # 迷路階層の場合（部屋がない場合）の対応
+        if not rooms:
+            self._spawn_monsters_in_maze(dungeon_tiles, monster_count)
+            return
+
+        # 通常の部屋ベース配置
         for _ in range(monster_count):
             # ランダムな部屋を選択（特別な部屋は除外）
             available_rooms = [room for room in rooms if not room.is_special]
@@ -48,8 +53,7 @@ class MonsterSpawner:
             available_positions = [
                 (x, y)
                 for x, y in room.inner
-                if isinstance(dungeon_tiles[y, x], Floor)
-                and (x, y) not in self.occupied_positions
+                if isinstance(dungeon_tiles[y, x], Floor) and (x, y) not in self.occupied_positions
             ]
 
             if not available_positions:
@@ -95,9 +99,46 @@ class MonsterSpawner:
 
         return None
 
-    def update_monsters(
-        self, player_x: int, player_y: int, dungeon_tiles: np.ndarray, fov_map: any
-    ) -> None:
+    def _spawn_monsters_in_maze(self, dungeon_tiles: np.ndarray, monster_count: int) -> None:
+        """
+        迷路階層でモンスターを配置。
+
+        部屋がない迷路階層では、床タイル（通路）にランダムにモンスターを配置します。
+
+        Args:
+        ----
+            dungeon_tiles: ダンジョンのタイル配列
+            monster_count: 配置するモンスター数
+
+        """
+        # 迷路の床タイル（通路）を全て取得
+        floor_positions = []
+        height, width = dungeon_tiles.shape
+
+        for y in range(height):
+            for x in range(width):
+                if isinstance(dungeon_tiles[y, x], Floor):
+                    floor_positions.append((x, y))
+
+        # 床タイルが少ない場合は配置数を調整
+        if len(floor_positions) < monster_count:
+            monster_count = len(floor_positions) // 2  # 密度を考慮
+
+        # ランダムに配置位置を選択
+        random.shuffle(floor_positions)
+
+        # モンスターを配置
+        for i in range(min(monster_count, len(floor_positions))):
+            x, y = floor_positions[i]
+
+            # 既に占有されていないかチェック
+            if (x, y) not in self.occupied_positions:
+                monster = self._create_monster(x, y)
+                if monster:
+                    self.monsters.append(monster)
+                    self.occupied_positions.add((x, y))
+
+    def update_monsters(self, player_x: int, player_y: int, dungeon_tiles: np.ndarray, fov_map: any) -> None:
         """
         全モンスターの更新処理
 

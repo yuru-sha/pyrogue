@@ -82,7 +82,7 @@ class GameRenderer:
                 tile = floor_data.tiles[y, x]
                 visible = game_screen.fov_manager.visible[y, x]
                 explored = game_screen.game_logic.get_explored_tiles()[y, x]
-                
+
                 # ウィザードモード時は全マップを表示
                 wizard_mode = game_screen.game_logic.is_wizard_mode()
                 should_render = visible or explored or wizard_mode
@@ -96,13 +96,8 @@ class GameRenderer:
                         self._render_items_at(console, x, y, floor_data, map_offset_y)
 
                         # モンスターの描画
-                        self._render_monsters_at(
-                            console, x, y, floor_data, map_offset_y
-                        )
+                        self._render_monsters_at(console, x, y, floor_data, map_offset_y)
 
-                        # NPCの描画
-                        self._render_npcs_at(console, x, y, floor_data, map_offset_y)
-                        
                         # ウィザードモード時: トラップの描画
                         if wizard_mode:
                             self._render_traps_at(console, x, y, floor_data, map_offset_y)
@@ -113,7 +108,13 @@ class GameRenderer:
             console.print(player.x, player.y + map_offset_y, "@", fg=(255, 255, 255))
 
     def _render_tile(
-        self, console: tcod.Console, x: int, y: int, tile: object, visible: bool, wizard_mode: bool = False
+        self,
+        console: tcod.Console,
+        x: int,
+        y: int,
+        tile: object,
+        visible: bool,
+        wizard_mode: bool = False,
     ) -> None:
         """
         タイルの描画処理。
@@ -142,7 +143,7 @@ class GameRenderer:
             color = (255, 255, 255) if visible else (128, 128, 128)
         elif hasattr(tile, "char"):  # Door, SecretDoor等のタイル
             from pyrogue.map.tile import SecretDoor
-            
+
             if isinstance(tile, SecretDoor) and wizard_mode and tile.door_state == "secret":
                 # ウィザードモード時の隠しドア表示（紫色で強調）
                 char = "S"  # Secret doorの頭文字
@@ -154,11 +155,15 @@ class GameRenderer:
             char = "?"
             color = (255, 0, 255) if visible else (128, 0, 128)
 
-        console.print(x, y, char, fg=color)
-        
-    def _render_traps_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+        # 座標範囲チェック付きの安全な描画
+        try:
+            if 0 <= x < console.width and 0 <= y < console.height:
+                console.print(x, y, char, fg=color)
+        except Exception as e:
+            # 描画エラーを記録（ゲームを継続）
+            print(f"Warning: Drawing error at ({x}, {y}): {e}")
+
+    def _render_traps_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         ウィザードモード時の指定座標のトラップを描画。
 
@@ -171,7 +176,7 @@ class GameRenderer:
             map_offset_y: マップのYオフセット
 
         """
-        if hasattr(floor_data, 'trap_spawner') and floor_data.trap_spawner:
+        if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.x == x and trap.y == y:
                     # トラップタイプに応じた色分け
@@ -187,17 +192,15 @@ class GameRenderer:
                     else:
                         color = (255, 255, 0)  # 黄色（汎用）
                         char = "^"
-                    
+
                     # 隠しトラップは薄い色で表示
                     if trap.is_hidden:
-                        color = tuple(c // 2 for c in color)  # 色を半分に
-                        
+                        color = (color[0] // 2, color[1] // 2, color[2] // 2)  # 色を半分に
+
                     console.print(x, y + map_offset_y, char, fg=color)
                     break  # 1つの座標に複数トラップがある場合は最初のもののみ表示
 
-    def _render_items_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+    def _render_items_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         指定座標のアイテムを描画。
 
@@ -210,18 +213,12 @@ class GameRenderer:
             map_offset_y: マップのYオフセット
 
         """
-        items_at_pos = [
-            item
-            for item in floor_data.item_spawner.items
-            if item.x == x and item.y == y
-        ]
+        items_at_pos = [item for item in floor_data.item_spawner.items if item.x == x and item.y == y]
         if items_at_pos:
             item = items_at_pos[0]  # 最初のアイテムを描画
             console.print(x, y + map_offset_y, item.char, fg=item.color)
 
-    def _render_monsters_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
+    def _render_monsters_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
         指定座標のモンスターを描画。
 
@@ -254,15 +251,10 @@ class GameRenderer:
         # ステータス情報の描画位置（画面上部）
         status_y = 0
 
-        # 1行目: レベル、HP、MP、攻撃力、防御力、空腹度、経験値、所持金
-        mp_display = ""
-        if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            mp_display = f"MP:{player.mp}/{player.max_mp} "
-
+        # 1行目: レベル、HP、攻撃力、防御力、空腹度、経験値、所持金
         status_line1 = (
             f"Lv:{player.level} "
             f"HP:{player.hp}/{player.max_hp} "
-            f"{mp_display}"
             f"Atk:{player.get_attack()} "
             f"Def:{player.get_defense()} "
             f"Hunger:{player.hunger}% "
@@ -316,40 +308,37 @@ class GameRenderer:
             console: TCODコンソール
 
         """
-        messages = self.game_screen.game_logic.message_log
-        if not messages:
-            return
+        try:
+            # 安全な参照アクセス
+            if not hasattr(self.game_screen, "game_logic") or not self.game_screen.game_logic:
+                return
 
-        # メッセージ表示エリアの設定
-        message_y_start = self.game_screen.dungeon_height + 4
-        max_messages = 3  # 最大3つのメッセージを表示
+            messages = self.game_screen.game_logic.message_log
+            if not messages:
+                return
 
-        # 最新のメッセージから表示
-        recent_messages = messages[-max_messages:]
-        for i, message in enumerate(recent_messages):
-            console.print(0, message_y_start + i, message, fg=(255, 255, 255))
+            # メッセージ表示エリアの設定
+            message_y = self.game_screen.dungeon_height + 2
+            max_messages = 7  # 最大7つのメッセージを表示
 
-    def _render_npcs_at(
-        self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int
-    ) -> None:
-        """
-        指定した位置にいるNPCを描画。
-
-        Args:
-        ----
-            console: TCODコンソール
-            x: 描画位置のX座標
-            y: 描画位置のY座標
-            floor_data: 現在のフロアデータ
-            map_offset_y: マップのYオフセット
-
-        """
-        if not hasattr(floor_data, "npc_spawner"):
-            return
-
-        npc = floor_data.npc_spawner.get_npc_at_position(x, y)
-        if npc:
-            console.print(x, y + map_offset_y, npc.char, fg=npc.color)
+            # 最新のメッセージから表示
+            recent_messages = messages[-max_messages:]
+            for i, message in enumerate(recent_messages):
+                try:
+                    # 安全な文字列処理
+                    safe_message = str(message)[:80]  # 長すぎるメッセージを切り詰め
+                    console.print(0, message_y + i, safe_message, fg=(255, 255, 255))
+                except Exception as msg_error:
+                    # 個別メッセージの描画エラー
+                    console.print(0, message_y + i, f"[Message error: {msg_error}]", fg=(255, 100, 100))
+        except Exception as e:
+            # 全体的なエラーのフォールバック
+            try:
+                message_y = self.game_screen.dungeon_height + 2
+                console.print(0, message_y, f"Message system error: {e}", fg=(255, 0, 0))
+            except Exception:
+                # 最後の手段：何もしない（クラッシュを避ける）
+                pass
 
     def _get_hallucination_char(self) -> str:
         """
@@ -358,6 +347,7 @@ class GameRenderer:
         Returns
         -------
             str: ランダムな文字
+
         """
         chars = ["?", "!", "@", "#", "$", "%", "^", "&", "*", "+", "=", "~"]
         return random.choice(chars)
@@ -369,5 +359,6 @@ class GameRenderer:
         Returns
         -------
             tuple[int, int, int]: RGB色値
+
         """
         return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))

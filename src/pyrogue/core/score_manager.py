@@ -60,24 +60,39 @@ class ScoreEntry:
     @classmethod
     def from_dict(cls, data: dict) -> ScoreEntry:
         """辞書から作成"""
-        return cls(
-            player_name=data["player_name"],
-            score=data["score"],
-            level=data["level"],
-            deepest_floor=data["deepest_floor"],
-            gold=data["gold"],
-            monsters_killed=data["monsters_killed"],
-            turns_played=data["turns_played"],
-            death_cause=data["death_cause"],
-            game_result=data["game_result"],
-            timestamp=data["timestamp"],
-        )
+        try:
+            return cls(
+                player_name=data.get("player_name", "Unknown"),
+                score=data.get("score", 0),
+                level=data.get("level", 1),
+                deepest_floor=data.get("deepest_floor", 1),
+                gold=data.get("gold", 0),
+                monsters_killed=data.get("monsters_killed", 0),
+                turns_played=data.get("turns_played", 0),
+                death_cause=data.get("death_cause", "Unknown"),
+                game_result=data.get("game_result", "Unknown"),
+                timestamp=data.get("timestamp", "Unknown"),
+            )
+        except Exception as e:
+            # デフォルト値でフォールバック
+            return cls(
+                player_name="Corrupted Entry",
+                score=0,
+                level=1,
+                deepest_floor=1,
+                gold=0,
+                monsters_killed=0,
+                turns_played=0,
+                death_cause=f"Data corruption: {e}",
+                game_result="Error",
+                timestamp="Unknown",
+            )
 
 
 class ScoreManager:
     """スコアランキング管理クラス"""
 
-    def __init__(self, score_file: str = "data/scores.json") -> None:
+    def __init__(self, score_file: str = "scores.json") -> None:
         self.score_file = score_file
         self.scores: list[ScoreEntry] = []
         self.load_scores()

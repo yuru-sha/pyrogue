@@ -24,8 +24,6 @@ class TestPlayer:
         # 基本ステータスの確認
         assert player.hp > 0
         assert player.max_hp > 0
-        assert player.mp > 0
-        assert player.max_mp > 0
         assert player.attack > 0
         assert player.defense > 0
         assert player.level == 1
@@ -36,7 +34,6 @@ class TestPlayer:
         # インベントリとその他システムの初期化確認
         assert player.inventory is not None
         assert player.status_effects is not None
-        assert player.spellbook is not None
 
     def test_player_move(self):
         """プレイヤーの移動テスト。"""
@@ -96,10 +93,11 @@ class TestPlayer:
 
     def test_player_experience_and_leveling(self):
         """プレイヤーの経験値とレベルアップテスト。"""
+        from pyrogue.constants import get_exp_for_level
+
         player = Player(x=10, y=15)
         initial_level = player.level
         initial_max_hp = player.max_hp
-        initial_max_mp = player.max_mp
         initial_attack = player.attack
         initial_defense = player.defense
 
@@ -111,42 +109,16 @@ class TestPlayer:
         assert player.level == initial_level
 
         # レベルアップに必要な経験値を獲得
-        level_up_exp = initial_level * 100  # CONFIG.player.EXPERIENCE_MULTIPLIER
+        level_up_exp = get_exp_for_level(initial_level + 1)  # 正しい経験値計算
         player.exp = 0  # リセット
         leveled_up = player.gain_exp(level_up_exp)
         assert leveled_up
         assert player.level == initial_level + 1
         assert player.exp == 0  # レベルアップ後はリセット
         assert player.max_hp > initial_max_hp
-        assert player.max_mp > initial_max_mp
         assert player.attack > initial_attack
         assert player.defense > initial_defense
         assert player.hp == player.max_hp  # 全回復
-        assert player.mp == player.max_mp  # 全回復
-
-    def test_player_mp_management(self):
-        """プレイヤーのMP管理テスト。"""
-        player = Player(x=10, y=15)
-
-        # MP消費
-        initial_mp = player.mp
-        consumed = player.spend_mp(5)
-        assert consumed is True
-        assert player.mp == initial_mp - 5
-
-        # MP不足時の消費
-        consumed = player.spend_mp(player.mp + 10)
-        assert consumed is False
-        assert player.mp == initial_mp - 5  # 変化なし
-
-        # MP回復
-        restored = player.restore_mp(3)
-        assert restored == 3
-        assert player.mp == initial_mp - 2
-
-        # MP判定
-        assert player.has_enough_mp(5) is True
-        assert player.has_enough_mp(player.mp + 10) is False
 
     def test_player_hunger_system(self):
         """プレイヤーの満腹度システムテスト。"""

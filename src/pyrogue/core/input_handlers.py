@@ -15,9 +15,7 @@ class InputHandler(ABC):
     """入力ハンドラーの基底クラス。"""
 
     @abstractmethod
-    def handle_input(
-        self, event: tcod.event.KeyDown, context: Any
-    ) -> GameStates | None:
+    def handle_input(self, event: tcod.event.KeyDown, context: Any) -> GameStates | None:
         """特定の状態における入力を処理。"""
 
     def handle_escape(self, current_state: GameStates) -> GameStates | None:
@@ -78,18 +76,8 @@ class StateManager:
             context.handle_input(event)
             return True, None
 
-        if current_state == GameStates.SHOW_MAGIC:
-            context.handle_key(event)
-            return True, None
-
         if current_state == GameStates.TARGETING:
             context.handle_targeting(event)
-            return True, None
-
-        if current_state == GameStates.DIALOGUE:
-            new_screen = context.handle_key(event)
-            if new_screen:
-                return True, GameStates.PLAYERS_TURN
             return True, None
 
         if current_state == GameStates.GAME_OVER or current_state == GameStates.VICTORY:
@@ -119,7 +107,6 @@ class StateManager:
             return GameStates.EXIT
         if current_state in (
             GameStates.SHOW_INVENTORY,
-            GameStates.SHOW_MAGIC,
             GameStates.TARGETING,
         ):
             return GameStates.PLAYERS_TURN
@@ -136,6 +123,7 @@ class StateManager:
         Returns:
         -------
             bool: コマンドハンドラーで処理された場合True
+
         """
         if not self.command_handler:
             return False
@@ -156,31 +144,37 @@ class StateManager:
         # 移動キー - 文字コードで比較
         if key in (ord("h"), tcod.event.KeySym.LEFT):
             return "west"
-        elif key in (ord("j"), tcod.event.KeySym.DOWN):
+        if key in (ord("j"), tcod.event.KeySym.DOWN):
             return "south"
-        elif key in (ord("k"), tcod.event.KeySym.UP):
+        if key in (ord("k"), tcod.event.KeySym.UP):
             return "north"
-        elif key in (ord("l"), tcod.event.KeySym.RIGHT):
+        if key in (ord("l"), tcod.event.KeySym.RIGHT):
             return "east"
-        elif key == ord("y"):
+        if key == ord("y"):
             return "move northwest"
-        elif key == ord("u"):
+        if key == ord("u"):
             return "move northeast"
-        elif key == ord("b"):
+        if key == ord("b"):
             return "move southwest"
-        elif key == ord("n"):
+        if key == ord("n"):
             return "move southeast"
 
         # アクションキー
-        elif key == ord("g"):
+        if key == ord("g"):
             return "get"
-        elif key == ord("o"):
+        if key == ord("o"):
             return "open"
-        elif key == ord("c"):
+        if key == ord("c"):
             return "close"
-        elif key == ord("s"):
+        if key == ord("s"):
             return "search"
-        elif key == ord("d"):
+        if key == ord("d"):
             return "disarm"
+        if key == ord("x"):
+            return "examine"
+        if key == ord("R"):
+            return "rest long"
+        if key == ord("."):
+            return "rest"
 
         return None

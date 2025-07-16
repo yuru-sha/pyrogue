@@ -38,24 +38,16 @@ def test_identification_system():
 
     # 識別状態をチェック
     print("\n=== 識別状態チェック ===")
-    print(
-        f"ポーション識別済み: {player.identification.is_identified(potion.name, potion.item_type)}"
-    )
-    print(
-        f"巻物識別済み: {player.identification.is_identified(scroll.name, scroll.item_type)}"
-    )
-    print(
-        f"指輪識別済み: {player.identification.is_identified(ring.name, ring.item_type)}"
-    )
+    print(f"ポーション識別済み: {player.identification.is_identified(potion.name, potion.item_type)}")
+    print(f"巻物識別済み: {player.identification.is_identified(scroll.name, scroll.item_type)}")
+    print(f"指輪識別済み: {player.identification.is_identified(ring.name, ring.item_type)}")
 
     # ポーションを識別
     print("\n=== ポーション識別 ===")
     was_identified = player.identification.identify_item(potion.name, potion.item_type)
     print(f"識別成功: {was_identified}")
     if was_identified:
-        msg = player.identification.get_identification_message(
-            potion.name, potion.item_type
-        )
+        msg = player.identification.get_identification_message(potion.name, potion.item_type)
         print(f"識別メッセージ: {msg}")
 
     # 識別後の表示名
@@ -66,9 +58,7 @@ def test_identification_system():
 
     # 識別の巻物で全て識別
     print("\n=== 識別の巻物で全識別 ===")
-    scroll_identified = player.identification.identify_item(
-        scroll.name, scroll.item_type
-    )
+    scroll_identified = player.identification.identify_item(scroll.name, scroll.item_type)
     ring_identified = player.identification.identify_item(ring.name, ring.item_type)
     print(f"巻物識別: {scroll_identified}")
     print(f"指輪識別: {ring_identified}")

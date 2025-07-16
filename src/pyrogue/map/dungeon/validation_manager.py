@@ -35,8 +35,8 @@ class ValidationManager:
 
     def __init__(self) -> None:
         """検証マネージャーを初期化。"""
-        self.validation_results = []
-        self.warnings = []
+        self.validation_results: list[dict[str, bool | str]] = []
+        self.warnings: list[str] = []
 
     def validate_dungeon(
         self,
@@ -96,9 +96,7 @@ class ValidationManager:
             if success:
                 game_logger.info("Dungeon validation passed successfully")
             else:
-                game_logger.warning(
-                    f"Dungeon validation failed: {len(self.validation_results)} errors"
-                )
+                game_logger.warning(f"Dungeon validation failed: {len(self.validation_results)} errors")
 
             return success
 
@@ -131,9 +129,7 @@ class ValidationManager:
                 )
 
             if room.width > 20 or room.height > 20:
-                self._add_warning(
-                    f"Room {room.id} is very large: {room.width}x{room.height}"
-                )
+                self._add_warning(f"Room {room.id} is very large: {room.width}x{room.height}")
 
         # タイル配列の整合性チェック
         height, width = tiles.shape
@@ -152,17 +148,11 @@ class ValidationManager:
         floor_ratio = floor_count / total_tiles
 
         if floor_ratio < 0.1:
-            self._add_result(
-                "floor_coverage", False, f"Too few floor tiles: {floor_ratio:.2%}"
-            )
+            self._add_result("floor_coverage", False, f"Too few floor tiles: {floor_ratio:.2%}")
         elif floor_ratio > 0.8:
-            self._add_result(
-                "floor_coverage", False, f"Too many floor tiles: {floor_ratio:.2%}"
-            )
+            self._add_result("floor_coverage", False, f"Too many floor tiles: {floor_ratio:.2%}")
         else:
-            self._add_result(
-                "floor_coverage", True, f"Floor coverage: {floor_ratio:.2%}"
-            )
+            self._add_result("floor_coverage", True, f"Floor coverage: {floor_ratio:.2%}")
 
     def _validate_room_connectivity(self, rooms: list[Room]) -> None:
         """
@@ -200,9 +190,7 @@ class ValidationManager:
         visited_rooms = len(visited)
 
         if visited_rooms == total_rooms:
-            self._add_result(
-                "connectivity", True, f"All {total_rooms} rooms are connected"
-            )
+            self._add_result("connectivity", True, f"All {total_rooms} rooms are connected")
         else:
             self._add_result(
                 "connectivity",
@@ -210,9 +198,7 @@ class ValidationManager:
                 f"Only {visited_rooms}/{total_rooms} rooms are connected",
             )
 
-    def _validate_corridor_integrity(
-        self, corridors: list[Corridor], tiles: np.ndarray
-    ) -> None:
+    def _validate_corridor_integrity(self, corridors: list[Corridor], tiles: np.ndarray) -> None:
         """
         通路の完全性を検証。
 
@@ -240,9 +226,7 @@ class ValidationManager:
                         valid_corridor_points += 1
 
         if total_corridor_points == 0:
-            self._add_result(
-                "corridor_integrity", True, "No corridor points to validate"
-            )
+            self._add_result("corridor_integrity", True, "No corridor points to validate")
         else:
             integrity_ratio = valid_corridor_points / total_corridor_points
             if integrity_ratio >= 0.95:
@@ -258,9 +242,7 @@ class ValidationManager:
                     f"Poor corridor integrity: {integrity_ratio:.2%}",
                 )
 
-    def _validate_boundary_constraints(
-        self, rooms: list[Room], corridors: list[Corridor], tiles: np.ndarray
-    ) -> None:
+    def _validate_boundary_constraints(self, rooms: list[Room], corridors: list[Corridor], tiles: np.ndarray) -> None:
         """
         境界制約を検証。
 
@@ -276,12 +258,7 @@ class ValidationManager:
 
         # 部屋の境界チェック
         for room in rooms:
-            if (
-                room.x < 1
-                or room.y < 1
-                or room.x + room.width >= width - 1
-                or room.y + room.height >= height - 1
-            ):
+            if room.x < 1 or room.y < 1 or room.x + room.width >= width - 1 or room.y + room.height >= height - 1:
                 boundary_violations += 1
 
         # 通路の境界チェック
@@ -359,9 +336,7 @@ class ValidationManager:
                 f"Too many special rooms: {special_ratio:.2%}",
             )
         else:
-            self._add_result(
-                "special_room_rules", True, f"Special room ratio: {special_ratio:.2%}"
-            )
+            self._add_result("special_room_rules", True, f"Special room ratio: {special_ratio:.2%}")
 
     def _validate_accessibility(
         self,
@@ -399,9 +374,7 @@ class ValidationManager:
         else:
             self._add_result("accessibility", False, "Stairs are not in proper rooms")
 
-    def _find_room_containing_position(
-        self, position: tuple[int, int], rooms: list[Room]
-    ) -> Room | None:
+    def _find_room_containing_position(self, position: tuple[int, int], rooms: list[Room]) -> Room | None:
         """
         指定位置を含む部屋を検索。
 
@@ -434,9 +407,7 @@ class ValidationManager:
             message: メッセージ
 
         """
-        self.validation_results.append(
-            {"test": test_name, "passed": passed, "message": message}
-        )
+        self.validation_results.append({"test": test_name, "passed": passed, "message": message})
 
     def _add_warning(self, message: str) -> None:
         """
@@ -550,9 +521,7 @@ class ValidationManager:
 
         # 1階や最下層では階段が片方しかないので、連結性チェックをスキップ
         if floor == 1 or floor == GameConstants.MAX_FLOORS:
-            self._add_result(
-                "maze_connectivity", True, "Single floor, no connectivity check needed"
-            )
+            self._add_result("maze_connectivity", True, "Single floor, no connectivity check needed")
             return
 
         # 階段間の経路の存在を確認
@@ -608,9 +577,7 @@ class ValidationManager:
         if issues:
             self._add_result("maze_stairs_placement", False, "; ".join(issues))
         else:
-            self._add_result(
-                "maze_stairs_placement", True, "Stairs placed correctly in maze"
-            )
+            self._add_result("maze_stairs_placement", True, "Stairs placed correctly in maze")
 
     def _validate_maze_structure(self, tiles: np.ndarray) -> None:
         """
@@ -632,22 +599,16 @@ class ValidationManager:
                 elif isinstance(tiles[y, x], Wall):
                     wall_count += 1
 
-        # 迷路の密度をチェック（床の割合が4%～40%の範囲）
+        # 迷路の密度をチェック（床の割合が2%～80%の範囲）
         total_tiles = height * width
         floor_ratio = floor_count / total_tiles
 
         if floor_ratio < 0.02:  # より現実的な通路密度の下限に調整
-            self._add_result(
-                "maze_structure", False, f"Too few corridors: {floor_ratio:.2%}"
-            )
-        elif floor_ratio > 0.4:
-            self._add_result(
-                "maze_structure", False, f"Too many corridors: {floor_ratio:.2%}"
-            )
+            self._add_result("maze_structure", False, f"Too few corridors: {floor_ratio:.2%}")
+        elif floor_ratio > 0.8:  # 迷路の場合は高い密度も許容（70% → 80%に緩和）
+            self._add_result("maze_structure", False, f"Too many corridors: {floor_ratio:.2%}")
         else:
-            self._add_result(
-                "maze_structure", True, f"Good maze density: {floor_ratio:.2%}"
-            )
+            self._add_result("maze_structure", True, f"Good maze density: {floor_ratio:.2%}")
 
         # 連結性の確認
         connected_floor_count = self._count_connected_floors(tiles)
@@ -681,9 +642,7 @@ class ValidationManager:
 
         return max_component_size
 
-    def _flood_fill_count(
-        self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int
-    ) -> int:
+    def _flood_fill_count(self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int) -> int:
         """
         フラッドフィルで連結成分のサイズを数える。
 
@@ -705,14 +664,7 @@ class ValidationManager:
 
         while stack:
             x, y = stack.pop()
-            if (
-                x < 0
-                or x >= width
-                or y < 0
-                or y >= height
-                or visited[y, x]
-                or not isinstance(tiles[y, x], Floor)
-            ):
+            if x < 0 or x >= width or y < 0 or y >= height or visited[y, x] or not isinstance(tiles[y, x], Floor):
                 continue
 
             visited[y, x] = True

@@ -40,9 +40,7 @@ class MazeBuilder:
         self.complexity = complexity
         self.rooms: list[Room] = []  # 迷路には部屋は存在しないが、互換性のため
 
-        game_logger.info(
-            f"MazeBuilder initialized: {width}x{height}, complexity={complexity}"
-        )
+        game_logger.info(f"MazeBuilder initialized: {width}x{height}, complexity={complexity}")
 
     def build_dungeon(self, tiles: np.ndarray) -> list[Room]:
         """
@@ -92,12 +90,12 @@ class MazeBuilder:
             for x in range(1, self.width - 1, 2):
                 tiles[y, x] = Floor()
 
-                # ランダムに隣接するセルに通路を延伸
-                directions = [(0, 2), (2, 0), (0, -2), (-2, 0)]
+                # ランダムに隣接するセルに通路を延伸（斜め方向も追加）
+                directions = [(0, 2), (2, 0), (0, -2), (-2, 0), (2, 2), (-2, -2), (2, -2), (-2, 2)]
                 random.shuffle(directions)
 
-                # 拡張確率を複雑度に基づいて調整
-                extension_probability = self.complexity * 0.25  # 複雑度を25%に抑制
+                # 拡張確率を複雑度に基づいて調整（より多くの通路を生成）
+                extension_probability = self.complexity * 0.4  # 複雑度を40%に増加
 
                 for dx, dy in directions:
                     nx, ny = x + dx, y + dy
@@ -108,11 +106,14 @@ class MazeBuilder:
                     ):
                         # 通路と中間点を床に
                         tiles[ny, nx] = Floor()
-                        tiles[y + dy // 2, x + dx // 2] = Floor()
+                        # 斜め方向の場合は中間点の座標計算を調整
+                        mid_x, mid_y = x + dx // 2, y + dy // 2
+                        if 1 <= mid_x < self.width - 1 and 1 <= mid_y < self.height - 1:
+                            tiles[mid_y, mid_x] = Floor()
 
     def _apply_cellular_automata(self, tiles: np.ndarray) -> None:
         """セルラーオートマタで迷路を自然化。"""
-        iterations = 2  # イテレーション数を減らす
+        iterations = 1  # イテレーション数をさらに減らして、より広い通路を保持
 
         for _ in range(iterations):
             new_tiles = np.copy(tiles)
@@ -129,21 +130,20 @@ class MazeBuilder:
                             if isinstance(tiles[ny, nx], Wall):
                                 wall_count += 1
 
-                    # セルラーオートマタのルール（より保守的に）
+                    # セルラーオートマタのルール（より通路を保持）
                     if isinstance(tiles[y, x], Wall):
-                        # 壁の場合：隣接する壁が非常に少なければ通路に
-                        if wall_count < 3:
+                        # 壁の場合：隣接する壁が少なければ通路に
+                        if wall_count < 4:
                             new_tiles[y, x] = Floor()
-                    else:
-                        # 通路の場合：隣接する壁が多ければ壁に
-                        if wall_count > 7:
-                            new_tiles[y, x] = Wall()
+                    # 通路の場合：隣接する壁が非常に多い場合のみ壁に
+                    elif wall_count > 6:
+                        new_tiles[y, x] = Wall()
 
             tiles[:] = new_tiles
 
     def _remove_dead_ends(self, tiles: np.ndarray) -> None:
         """デッドエンドを部分的に除去。"""
-        dead_end_removal_rate = max(0.6, 1.0 - self.complexity)  # 最低60%は除去
+        dead_end_removal_rate = max(0.3, 1.0 - self.complexity)  # 最低30%は除去（迷路をより複雑に）
 
         changed = True
         while changed:
@@ -160,10 +160,7 @@ class MazeBuilder:
                                 floor_neighbors += 1
 
                         # デッドエンド（隣接する床が1つだけ）を除去
-                        if (
-                            floor_neighbors == 1
-                            and random.random() < dead_end_removal_rate
-                        ):
+                        if floor_neighbors == 1 and random.random() < dead_end_removal_rate:
                             tiles[y, x] = Wall()
                             changed = True
 
@@ -196,28 +193,17 @@ class MazeBuilder:
             for x in range(self.width):
                 if isinstance(tiles[y, x], Floor) and (x, y) not in largest_component:
                     # 再度連結性をチェック
-                    if not self._is_connected_to_largest(
-                        tiles, x, y, largest_component
-                    ):
+                    if not self._is_connected_to_largest(tiles, x, y, largest_component):
                         tiles[y, x] = Wall()
 
-    def _flood_fill(
-        self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int
-    ) -> list[tuple[int, int]]:
+    def _flood_fill(self, tiles: np.ndarray, visited: np.ndarray, start_x: int, start_y: int) -> list[tuple[int, int]]:
         """フラッドフィルで連結成分を取得。"""
         component = []
         stack = [(start_x, start_y)]
 
         while stack:
             x, y = stack.pop()
-            if (
-                x < 0
-                or x >= self.width
-                or y < 0
-                or y >= self.height
-                or visited[y, x]
-                or isinstance(tiles[y, x], Wall)
-            ):
+            if x < 0 or x >= self.width or y < 0 or y >= self.height or visited[y, x] or isinstance(tiles[y, x], Wall):
                 continue
 
             visited[y, x] = True
@@ -272,9 +258,7 @@ class MazeBuilder:
         closest_point = None
 
         for large_point in largest_component:
-            distance = abs(comp_point[0] - large_point[0]) + abs(
-                comp_point[1] - large_point[1]
-            )
+            distance = abs(comp_point[0] - large_point[0]) + abs(comp_point[1] - large_point[1])
             if distance < min_distance:
                 min_distance = distance
                 closest_point = large_point
@@ -282,9 +266,7 @@ class MazeBuilder:
         if closest_point and min_distance <= 4:  # 距離が4以下なら接続を試行
             self._create_simple_path(tiles, comp_point, closest_point)
 
-    def _create_simple_path(
-        self, tiles: np.ndarray, start: tuple[int, int], end: tuple[int, int]
-    ) -> None:
+    def _create_simple_path(self, tiles: np.ndarray, start: tuple[int, int], end: tuple[int, int]) -> None:
         """2点間に簡単なパスを作成。"""
         x1, y1 = start
         x2, y2 = end

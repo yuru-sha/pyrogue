@@ -53,6 +53,7 @@ class CursedItemGenerator:
         Returns:
         -------
             呪われた武器
+
         """
         name, attack_penalty = random.choice(cls.CURSED_WEAPONS)
         weapon = Weapon(x=x, y=y, name=name, attack_bonus=attack_penalty)
@@ -73,6 +74,7 @@ class CursedItemGenerator:
         Returns:
         -------
             呪われた防具
+
         """
         name, defense_penalty = random.choice(cls.CURSED_ARMORS)
         armor = Armor(x=x, y=y, name=name, defense_bonus=defense_penalty)
@@ -93,6 +95,7 @@ class CursedItemGenerator:
         Returns:
         -------
             呪われた指輪
+
         """
         name, effect, penalty = random.choice(cls.CURSED_RINGS)
         ring = Ring(x=x, y=y, name=name, effect=effect, bonus=penalty)
@@ -112,6 +115,7 @@ class CursedItemGenerator:
         Returns:
         -------
             呪いの適用に成功したかどうか
+
         """
         if item.cursed:
             return False  # 既に呪われている
@@ -125,7 +129,7 @@ class CursedItemGenerator:
             item.color = (128, 0, 128)
             return True
 
-        elif isinstance(item, Armor):
+        if isinstance(item, Armor):
             # 防具の防御力を-1～-2減少
             penalty = random.randint(1, 2)
             item.defense -= penalty
@@ -134,7 +138,7 @@ class CursedItemGenerator:
             item.color = (128, 0, 128)
             return True
 
-        elif isinstance(item, Ring):
+        if isinstance(item, Ring):
             # 指輪のボーナスを-1～-2減少
             penalty = random.randint(1, 2)
             item.bonus -= penalty
@@ -158,12 +162,12 @@ class CursedItemGenerator:
         Returns:
         -------
             ランダムな呪われたアイテム
+
         """
         item_type = random.choice(["weapon", "armor", "ring"])
 
         if item_type == "weapon":
             return cls.generate_cursed_weapon(x, y)
-        elif item_type == "armor":
+        if item_type == "armor":
             return cls.generate_cursed_armor(x, y)
-        else:
-            return cls.generate_cursed_ring(x, y)
+        return cls.generate_cursed_ring(x, y)

@@ -24,7 +24,7 @@ class VictoryScreen:
         self.menu_options = ["Return to Menu", "Quit"]
 
         # プレイヤーの統計情報（勝利時に設定される）
-        self.player_stats = {}
+        self.player_stats: dict[str, int] = {}
         self.final_floor = 26
         self.final_score = 0
 
@@ -32,9 +32,7 @@ class VictoryScreen:
         """コンソールの更新"""
         self.console = console
 
-    def set_victory_data(
-        self, player_stats: dict, final_floor: int, final_score: int
-    ) -> None:
+    def set_victory_data(self, player_stats: dict, final_floor: int, final_score: int) -> None:
         """勝利時のデータを設定"""
         self.player_stats = player_stats.copy()
         self.final_floor = final_floor

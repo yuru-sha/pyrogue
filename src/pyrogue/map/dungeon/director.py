@@ -58,16 +58,18 @@ class DungeonDirector:
 
         # タイル配列を初期化（全て壁で開始）
         self.tiles = np.full((height, width), Wall(), dtype=object)
-        self.rooms = []
-        self.corridors = []
+        self.rooms: list[Room] = []
+        self.corridors: list[Corridor] = []
 
         # Builder components
         self.room_builder = RoomBuilder(width, height, floor)
         self.bsp_builder = BSPDungeonBuilder(width, height, min_section_size=5)
-        self.maze_builder = MazeBuilder(width, height, complexity=0.75)
-        self.isolated_room_builder = IsolatedRoomBuilder(
-            width, height, isolation_level=0.8
-        )
+
+        # 迷路階層の場合はより低い複雑度でより広い迷路を生成
+        maze_complexity = 0.5 if self._determine_dungeon_type(floor) == "maze" else 0.75
+        self.maze_builder = MazeBuilder(width, height, complexity=maze_complexity)
+
+        self.isolated_room_builder = IsolatedRoomBuilder(width, height, isolation_level=0.8)
         self.dark_room_builder = DarkRoomBuilder(darkness_intensity=0.8)
         self.corridor_builder = CorridorBuilder(width, height)
         self.door_manager = DoorManager()
@@ -82,9 +84,7 @@ class DungeonDirector:
         # ダンジョンタイプの決定
         self.dungeon_type = self._determine_dungeon_type(floor)
 
-        game_logger.debug(
-            f"DungeonDirector initialized for floor {floor} ({width}x{height})"
-        )
+        game_logger.debug(f"DungeonDirector initialized for floor {floor} ({width}x{height})")
 
     def build_dungeon(self) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
         """
@@ -100,43 +100,51 @@ class DungeonDirector:
         try:
             if self.use_section_based:
                 if self.dungeon_type == "maze":
-                    # 迷路階層を生成
-                    self.rooms = self.maze_builder.build_dungeon(self.tiles)
-                    game_logger.debug("Generated maze dungeon (no rooms)")
+                    # 迷路階層を生成（リトライ機能付き）
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            self.rooms = self.maze_builder.build_dungeon(self.tiles)
+                            game_logger.debug("Generated maze dungeon (no rooms)")
 
-                    # 特別部屋の処理はスキップ（迷路には部屋が存在しない）
-                    # ドアの配置もスキップ
+                            # 特別部屋の処理はスキップ（迷路には部屋が存在しない）
+                            # ドアの配置もスキップ
 
-                    # 階段の配置（迷路専用）
-                    start_pos, end_pos = self.stairs_manager.place_stairs_for_maze(
-                        self.floor, self.tiles
-                    )
+                            # 階段の配置（迷路専用）
+                            start_pos, end_pos = self.stairs_manager.place_stairs_for_maze(self.floor, self.tiles)
 
-                    # 最終検証（迷路専用）
-                    self.validation_manager.validate_maze_dungeon(
-                        start_pos, end_pos, self.tiles, self.floor
-                    )
-                else:
+                            # 最終検証（迷路専用）
+                            self.validation_manager.validate_maze_dungeon(start_pos, end_pos, self.tiles, self.floor)
+                            break  # 成功した場合はループを抜ける
+                        except Exception as e:
+                            game_logger.warning(f"Maze generation attempt {attempt + 1} failed: {e}")
+                            if attempt == max_retries - 1:
+                                game_logger.error("Maze generation failed after all retries, using fallback")
+                                # フォールバック: BSPベースシステムを使用
+                                self.dungeon_type = "normal"
+                                self.rooms = self.bsp_builder.build_dungeon(self.tiles)
+                                game_logger.debug(f"Fallback: Generated {len(self.rooms)} rooms using BSP system")
+                                break
+                            else:
+                                # タイルを再初期化してリトライ
+                                self.tiles = self.tiles_manager.initialize_tiles()
+                                game_logger.debug(f"Retrying maze generation (attempt {attempt + 2})")
+
+                if self.dungeon_type != "maze":  # 通常ダンジョンまたはフォールバック処理
                     # BSPベースシステムを使用
                     # 1. BSPで部屋と通路を生成
                     self.rooms = self.bsp_builder.build_dungeon(self.tiles)
-                    game_logger.debug(
-                        f"Generated {len(self.rooms)} rooms using BSP system"
-                    )
+                    game_logger.debug(f"Generated {len(self.rooms)} rooms using BSP system")
 
                     # 2. 特別部屋の処理
                     self.special_room_builder.process_special_rooms(self.rooms)
 
                     # 3. 孤立部屋群の生成（特定の階層のみ）
                     if self._should_generate_isolated_rooms():
-                        isolated_groups = (
-                            self.isolated_room_builder.generate_isolated_rooms(
-                                self.tiles, self.rooms, max_groups=2
-                            )
+                        isolated_groups = self.isolated_room_builder.generate_isolated_rooms(
+                            self.tiles, self.rooms, max_groups=2
                         )
-                        game_logger.debug(
-                            f"Generated {len(isolated_groups)} isolated room groups"
-                        )
+                        game_logger.debug(f"Generated {len(isolated_groups)} isolated room groups")
 
                     # 4. ドアの配置
                     self.door_manager.place_doors(self.rooms, [], self.tiles)
@@ -147,20 +155,14 @@ class DungeonDirector:
                             self.rooms, darkness_probability=0.4
                         )
                         # 暗い部屋に光源を配置
-                        self.dark_room_builder.place_light_sources(
-                            dark_rooms, self.tiles
-                        )
+                        self.dark_room_builder.place_light_sources(dark_rooms, self.tiles)
                         game_logger.debug(f"Generated {len(dark_rooms)} dark rooms")
 
                     # 6. 階段の配置
-                    start_pos, end_pos = self.stairs_manager.place_stairs(
-                        self.rooms, self.floor, self.tiles
-                    )
+                    start_pos, end_pos = self.stairs_manager.place_stairs(self.rooms, self.floor, self.tiles)
 
                     # 7. 最終検証
-                    self.validation_manager.validate_dungeon(
-                        self.rooms, [], start_pos, end_pos, self.tiles
-                    )
+                    self.validation_manager.validate_dungeon(self.rooms, [], start_pos, end_pos, self.tiles)
             else:
                 # 従来のシステムを使用
                 # 1. 基本部屋構造の生成
@@ -174,23 +176,17 @@ class DungeonDirector:
                 self._place_rooms_on_tiles()
 
                 # 4. 通路の生成
-                self.corridors = self.corridor_builder.connect_rooms_rogue_style(
-                    self.rooms, self.tiles
-                )
+                self.corridors = self.corridor_builder.connect_rooms_rogue_style(self.rooms, self.tiles)
                 game_logger.debug(f"Generated {len(self.corridors)} corridor segments")
 
                 # 5. ドアの配置
                 self.door_manager.place_doors(self.rooms, self.corridors, self.tiles)
 
                 # 6. 階段の配置
-                start_pos, end_pos = self.stairs_manager.place_stairs(
-                    self.rooms, self.floor, self.tiles
-                )
+                start_pos, end_pos = self.stairs_manager.place_stairs(self.rooms, self.floor, self.tiles)
 
                 # 7. 最終検証
-                self.validation_manager.validate_dungeon(
-                    self.rooms, self.corridors, start_pos, end_pos, self.tiles
-                )
+                self.validation_manager.validate_dungeon(self.rooms, self.corridors, start_pos, end_pos, self.tiles)
 
             game_logger.info(f"Dungeon generation completed for floor {self.floor}")
             return self.tiles, start_pos, end_pos
@@ -224,10 +220,7 @@ class DungeonDirector:
                 for y in range(room.y, room.y + room.height):
                     # 境界（外周）かつ内部でない位置
                     if (
-                        x == room.x
-                        or x == room.x + room.width - 1
-                        or y == room.y
-                        or y == room.y + room.height - 1
+                        x == room.x or x == room.x + room.width - 1 or y == room.y or y == room.y + room.height - 1
                     ) and (x, y) not in room.inner:
                         # 現在のタイルが床の場合のみ壁に変更
                         # （ドアや階段は保護）
@@ -255,17 +248,11 @@ class DungeonDirector:
 
         """
         total_floor_tiles = sum(
-            1
-            for y in range(self.height)
-            for x in range(self.width)
-            if isinstance(self.tiles[y, x], Floor)
+            1 for y in range(self.height) for x in range(self.width) if isinstance(self.tiles[y, x], Floor)
         )
 
         total_wall_tiles = sum(
-            1
-            for y in range(self.height)
-            for x in range(self.width)
-            if isinstance(self.tiles[y, x], Wall)
+            1 for y in range(self.height) for x in range(self.width) if isinstance(self.tiles[y, x], Wall)
         )
 
         return {
@@ -280,12 +267,12 @@ class DungeonDirector:
 
     def set_custom_builders(
         self,
-        room_builder: RoomBuilder = None,
-        corridor_builder: CorridorBuilder = None,
-        door_manager: DoorManager = None,
-        special_room_builder: SpecialRoomBuilder = None,
-        stairs_manager: StairsManager = None,
-        validation_manager: ValidationManager = None,
+        room_builder: RoomBuilder | None = None,
+        corridor_builder: CorridorBuilder | None = None,
+        door_manager: DoorManager | None = None,
+        special_room_builder: SpecialRoomBuilder | None = None,
+        stairs_manager: StairsManager | None = None,
+        validation_manager: ValidationManager | None = None,
     ) -> None:
         """
         カスタムビルダーコンポーネントを設定。
@@ -345,16 +332,14 @@ class DungeonDirector:
             ダンジョンタイプ文字列
 
         """
-        import os
-        import random
+        from pyrogue.config.env import is_test_mode
 
         # テスト環境では一貫した結果を保証するため、ランダム性を制御
-        if os.environ.get("PYTEST_CURRENT_TEST"):
+        if is_test_mode():
             # テスト中は特定の階層のみ迷路にして、その他はBSPにする
             if floor in [7, 13, 19]:
                 return "maze"
-            else:
-                return "bsp"
+            return "bsp"
 
         # 特定の階層は必ず迷路にする（例：7階、13階、19階）
         if floor in [7, 13, 19]:
@@ -370,17 +355,17 @@ class DungeonDirector:
         Returns
         -------
             孤立部屋群を生成する場合True
+
         """
         # 特定の階層で孤立部屋群を生成
         # 浅い階層では低確率、深い階層では高確率
         if self.floor <= 3:
             return False  # 浅い階層では生成しない
-        elif self.floor <= 10:
+        if self.floor <= 10:
             return self.floor in [4, 8]  # 4階、8階で確実に生成
-        elif self.floor <= 20:
+        if self.floor <= 20:
             return self.floor in [11, 15, 18]  # 11階、15階、18階で確実に生成
-        else:
-            return self.floor in [22, 25]  # 22階、25階で確実に生成
+        return self.floor in [22, 25]  # 22階、25階で確実に生成
 
     def _should_generate_dark_rooms(self) -> bool:
         """
@@ -389,14 +374,14 @@ class DungeonDirector:
         Returns
         -------
             暗い部屋を生成する場合True
+
         """
         # 特定の階層で暗い部屋を生成
         # 深い階層ほど暗い部屋が多くなる
         if self.floor <= 5:
             return False  # 浅い階層では生成しない
-        elif self.floor <= 12:
+        if self.floor <= 12:
             return self.floor in [6, 10]  # 6階、10階で確実に生成
-        elif self.floor <= 20:
+        if self.floor <= 20:
             return self.floor in [14, 17, 20]  # 14階、17階、20階で確実に生成
-        else:
-            return self.floor in [23, 24]  # 深層では23階、24階で確実に生成
+        return self.floor in [23, 24]  # 深層では23階、24階で確実に生成

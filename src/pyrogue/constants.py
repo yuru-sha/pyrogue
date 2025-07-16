@@ -25,7 +25,6 @@ class GameConstants:
     PLAYER_INITIAL_LEVEL: int = 1
     PLAYER_INITIAL_GOLD: int = 0
     PLAYER_INITIAL_HUNGER: int = 100
-    PLAYER_INITIAL_MP: int = 5
 
     # FOV関連
     DEFAULT_FOV_RADIUS: int = 8
@@ -49,6 +48,12 @@ class ProbabilityConstants:
     # モンスター関連
     MONSTER_MOVE_CHANCE: float = 0.7  # モンスターが移動する確率
     MONSTER_SPAWN_BASE_CHANCE: float = 0.1  # 基本スポーン確率
+
+    # AI行動関連
+    MONSTER_FLEE_THRESHOLD: float = 0.3  # モンスターが逃走するHP閾値
+    MONSTER_SPECIAL_ATTACK_CHANCE: float = 0.3  # 特殊攻撃発動確率
+    MONSTER_SPLIT_CHANCE: float = 0.3  # 分裂確率
+    MONSTER_RANGED_ATTACK_HIT_RATE: float = 0.8  # 遠距離攻撃命中率
 
     # アイテム関連
     ITEM_SPAWN_BASE_CHANCE: float = 0.05  # 基本アイテムスポーン確率
@@ -74,11 +79,17 @@ class CombatConstants:
     CRITICAL_HIT_MULTIPLIER: float = 2.0
     CRITICAL_HIT_CHANCE: float = 0.05
 
+    # 隣接判定
+    ADJACENT_DISTANCE_THRESHOLD: float = 1.5  # 隣接とみなす距離の閾値
+
+    # 戦闘効果
+    HALLUCINATION_EFFECT_CHANCE: float = 0.3  # 幻覚効果発動確率
+    GOLD_DROP_CHANCE: float = 0.3  # 金貨ドロップ確率
+
     # レベルアップ
     EXP_PER_LEVEL_BASE: int = 100
     EXP_LEVEL_MULTIPLIER: float = 1.5
     HP_GAIN_PER_LEVEL: int = 5
-    MP_GAIN_PER_LEVEL: int = 2
 
     # 攻撃・防御
     MIN_DAMAGE: int = 1
@@ -138,38 +149,6 @@ class HungerConstants:
 
     # 飢餓ボーナス
     FULL_HP_REGEN_CHANCE: float = 0.05  # 満腹時のHP自然回復確率
-    FULL_MP_REGEN_BONUS: float = 0.15  # 満腹時のMP回復ボーナス確率
-
-
-@dataclass(frozen=True)
-class MagicConstants:
-    """魔法に関する定数。"""
-
-    # MP管理
-    MP_RECOVERY_RATE: int = 1  # ターンあたりのMP回復量
-    MP_RECOVERY_INTERVAL: int = 5  # 回復間隔（ターン）
-
-    # 呪文コスト
-    MAGIC_MISSILE_COST: int = 3
-    HEAL_COST: int = 5
-    CURE_POISON_COST: int = 4
-    POISON_BOLT_COST: int = 4
-    TELEPORT_COST: int = 8
-
-    # 魔法効果
-    MAGIC_MISSILE_DAMAGE: int = 6
-    HEAL_AMOUNT: int = 10
-    TELEPORT_MAX_ATTEMPTS: int = 100
-
-
-@dataclass(frozen=True)
-class FeatureConstants:
-    """機能の有効/無効を制御する定数。"""
-
-    # NPCシステムの制御
-    ENABLE_NPC_SYSTEM: bool = False  # NPCシステムを無効化（将来の拡張のため残す）
-    ENABLE_DIALOGUE: bool = False  # 対話システムを無効化
-    ENABLE_TRADING: bool = False  # 取引システムを無効化
 
 
 @dataclass(frozen=True)
@@ -208,10 +187,10 @@ class FileConstants:
     SAVE_FILE_DIR: str = "saves"
 
     # フォント
-    FONT_FILE: str = "data/assets/fonts/dejavu10x10_gs_tc.png"
+    FONT_FILE: str = "assets/fonts/dejavu10x10_gs_tc.png"
 
     # ログファイル
-    LOG_FILE_DIR: str = "data/logs"
+    LOG_FILE_DIR: str = "logs"
     LOG_FILE_NAME: str = "pyrogue.log"
 
 

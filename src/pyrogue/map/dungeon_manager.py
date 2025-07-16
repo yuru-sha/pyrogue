@@ -21,6 +21,7 @@ Example:
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,7 +31,6 @@ if TYPE_CHECKING:
     from pyrogue.entities.items.item_spawner import ItemSpawner
 
 from pyrogue.entities.actors.monster_spawner import MonsterSpawner
-from pyrogue.entities.actors.npc_spawner import NPCSpawner
 from pyrogue.entities.items.item_spawner import ItemSpawner
 from pyrogue.entities.traps.trap import TrapManager
 
@@ -50,7 +50,6 @@ class FloorData:
         up_pos: 上り階段の位置 (x, y)
         down_pos: 下り階段の位置 (x, y)
         monster_spawner: モンスター管理インスタンス
-        npc_spawner: NPC管理インスタンス
         item_spawner: アイテム管理インスタンス
         trap_manager: トラップ管理インスタンス
         explored: 探索済み領域のブール配列
@@ -65,7 +64,6 @@ class FloorData:
         up_pos: tuple[int, int],
         down_pos: tuple[int, int],
         monster_spawner: MonsterSpawner,
-        npc_spawner: NPCSpawner,
         item_spawner: ItemSpawner,
         trap_manager: TrapManager,
         explored: np.ndarray,
@@ -80,7 +78,6 @@ class FloorData:
             up_pos: 上り階段の位置
             down_pos: 下り階段の位置
             monster_spawner: モンスター管理インスタンス
-            npc_spawner: NPC管理インスタンス
             item_spawner: アイテム管理インスタンス
             trap_manager: トラップ管理インスタンス
             explored: 探索済み領域のブール配列
@@ -91,26 +88,25 @@ class FloorData:
         self.up_pos = up_pos
         self.down_pos = down_pos
         self.monster_spawner = monster_spawner
-        self.npc_spawner = npc_spawner
         self.item_spawner = item_spawner
         self.trap_manager = trap_manager
         self.explored = explored
 
+        # width/height属性を追加（tilesの形状から導出）
+        self.height, self.width = tiles.shape if tiles is not None else (0, 0)
+
         # 開始位置を設定
         if floor_number == 1:
             # 1階では階段から離れた安全な位置を動的に探す
-            self.start_pos = self._find_safe_start_position_for_floor1(
-                tiles, up_pos, down_pos
-            )
+            self.start_pos = self._find_safe_start_position_for_floor1(tiles, up_pos, down_pos)
+        # 2階以降では上り階段の位置を使用
+        elif up_pos is not None:
+            self.start_pos = up_pos
+        elif down_pos is not None:
+            self.start_pos = down_pos
         else:
-            # 2階以降では上り階段の位置を使用
-            if up_pos is not None:
-                self.start_pos = up_pos
-            elif down_pos is not None:
-                self.start_pos = down_pos
-            else:
-                # フォールバック：適切な位置
-                self.start_pos = (1, 1)  # 最小限の安全な位置
+            # フォールバック：適切な位置
+            self.start_pos = (1, 1)  # 最小限の安全な位置
 
     def is_valid_position(self, x: int, y: int) -> bool:
         """
@@ -124,6 +120,7 @@ class FloorData:
         Returns:
         -------
             有効な座標の場合True
+
         """
         return 0 <= x < self.tiles.shape[1] and 0 <= y < self.tiles.shape[0]
 
@@ -139,10 +136,79 @@ class FloorData:
         Returns:
         -------
             タイルインスタンス、無効な座標の場合None
+
         """
         if self.is_valid_position(x, y):
             return self.tiles[y, x]
         return None
+
+    def get_monster_at(self, x: int, y: int):
+        """
+        指定位置にいるモンスターを取得。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            モンスターインスタンス、存在しない場合None
+
+        """
+        if self.monster_spawner:
+            return self.monster_spawner.get_monster_at(x, y)
+        return None
+
+    def get_items_at(self, x: int, y: int) -> list:
+        """
+        指定位置にあるアイテムを取得。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            アイテムのリスト
+
+        """
+        if self.item_spawner:
+            return [item for item in self.item_spawner.items if item.x == x and item.y == y]
+        return []
+
+    def has_monster_at(self, x: int, y: int) -> bool:
+        """
+        指定位置にモンスターがいるかチェック。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            モンスターがいる場合True
+
+        """
+        return self.get_monster_at(x, y) is not None
+
+    def has_items_at(self, x: int, y: int) -> bool:
+        """
+        指定位置にアイテムがあるかチェック。
+
+        Args:
+        ----
+            x: X座標
+            y: Y座標
+
+        Returns:
+        -------
+            アイテムがある場合True
+
+        """
+        return len(self.get_items_at(x, y)) > 0
 
     def set_tile_walkable(self, x: int, y: int, walkable: bool) -> None:
         """
@@ -153,6 +219,7 @@ class FloorData:
             x: X座標
             y: Y座標
             walkable: 通行可能かどうか
+
         """
         if self.is_valid_position(x, y):
             tile = self.tiles[y, x]
@@ -168,6 +235,7 @@ class FloorData:
             x: X座標
             y: Y座標
             tile_type: タイルタイプ
+
         """
         if self.is_valid_position(x, y):
             # タイルタイプに応じたタイルインスタンスを作成
@@ -226,7 +294,7 @@ class FloorData:
             安全な開始位置のタプル (x, y)
 
         """
-        from pyrogue.map.tile import Floor, StairsDown, StairsUp
+        from pyrogue.map.tile import Floor
 
         height, width = tiles.shape
 
@@ -476,10 +544,6 @@ class DungeonManager:
         monster_spawner = MonsterSpawner(floor_number)
         monster_spawner.spawn_monsters(tiles, dungeon_director.rooms)
 
-        # NPCを生成
-        npc_spawner = NPCSpawner(floor_number)
-        npc_spawner.spawn_npcs(tiles, dungeon_director.rooms)
-
         item_spawner = ItemSpawner(floor_number)
         item_spawner.spawn_items(tiles, dungeon_director.rooms)
 
@@ -497,7 +561,6 @@ class DungeonManager:
             up_pos=up_pos,
             down_pos=down_pos,
             monster_spawner=monster_spawner,
-            npc_spawner=npc_spawner,
             item_spawner=item_spawner,
             trap_manager=trap_manager,
             explored=explored,
@@ -534,6 +597,11 @@ class DungeonManager:
             (PoisonNeedleTrap, 30),  # 毒針（中程度）
             (TeleportTrap, 20),  # テレポート（稀）
         ]
+
+        # 迷路階層の場合（部屋がない場合）の対応
+        if not rooms:
+            self._spawn_traps_in_maze(trap_manager, tiles, trap_types, floor_number)
+            return
 
         # 階層が深いほどトラップの数を増加
         max_traps_per_room = min(3, 1 + floor_number // 5)
@@ -573,6 +641,60 @@ class DungeonManager:
 
                     attempts += 1
 
+    def _spawn_traps_in_maze(
+        self,
+        trap_manager: TrapManager,
+        tiles: np.ndarray,
+        trap_types: list,
+        floor_number: int,
+    ) -> None:
+        """
+        迷路階層でトラップを配置。
+
+        Args:
+        ----
+            trap_manager: トラップ管理インスタンス
+            tiles: ダンジョンタイルの2次元配列
+            trap_types: トラップの種類と重みのリスト
+            floor_number: 現在の階層番号
+
+        """
+        from pyrogue.map.tile import Floor
+
+        # 迷路の床タイル（通路）を全て取得
+        floor_positions = []
+        height, width = tiles.shape
+
+        for y in range(height):
+            for x in range(width):
+                if isinstance(tiles[y, x], Floor):
+                    floor_positions.append((x, y))
+
+        # 迷路での基本トラップ数を決定（通路数に応じて調整）
+        base_trap_count = max(2, len(floor_positions) // 50)  # 50床タイルごとに1つのトラップ
+        level_bonus = floor_number // 5  # 階層ボーナス
+        total_traps = min(base_trap_count + level_bonus, len(floor_positions) // 10)  # 最大密度制限
+
+        # ランダムに配置位置を選択
+        random.shuffle(floor_positions)
+
+        # トラップを配置
+        for i in range(min(total_traps, len(floor_positions))):
+            x, y = floor_positions[i]
+
+            # 同じ位置に既にトラップがないことを確認
+            if trap_manager.get_trap_at(x, y) is None:
+                # 重み付き抽選でトラップタイプを選択
+                trap_class = random.choices(
+                    [trap_type for trap_type, _ in trap_types],
+                    weights=[weight for _, weight in trap_types],
+                    k=1,
+                )[0]
+
+                # トラップを作成して追加
+                new_trap = trap_class(x, y)
+                trap_manager.add_trap(new_trap)
+
     def get_serializable_data(self) -> dict:
         """
         セーブ/ロード用のシリアライズ可能なデータを取得。
@@ -592,9 +714,7 @@ class DungeonManager:
                     "floor_number": data.floor_number,
                     "up_pos": data.up_pos,
                     "down_pos": data.down_pos,
-                    "explored": data.explored.tolist()
-                    if data.explored is not None
-                    else None,
+                    "explored": data.explored.tolist() if data.explored is not None else None,
                 }
                 for floor_num, data in self.floors.items()
             },

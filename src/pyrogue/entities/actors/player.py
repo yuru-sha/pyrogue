@@ -13,6 +13,12 @@ Example:
 
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyrogue.core.managers.game_context import GameContext
 
 from pyrogue.config import CONFIG
 from pyrogue.constants import HungerConstants
@@ -30,9 +36,9 @@ from pyrogue.entities.items.item import (
     Potion,
     Ring,
     Scroll,
+    Wand,
     Weapon,
 )
-from pyrogue.entities.magic.spells import Spellbook
 
 
 class Player(Actor):
@@ -51,8 +57,6 @@ class Player(Actor):
 
     Attributes
     ----------
-        mp: 現在のMP
-        max_mp: 最大MP
         exp: 経験値
         hunger: 満腹度（0-100）
         gold: 所持金貨
@@ -87,8 +91,6 @@ class Player(Actor):
         )
 
         # Player固有の属性を初期化
-        self.mp = 10
-        self.max_mp = 10
         self.exp = 0
         self.hunger = CONFIG.player.MAX_HUNGER
         self.gold = 0
@@ -108,13 +110,12 @@ class Player(Actor):
         # システムの初期化
         self.inventory = Inventory()
         self.status_effects = StatusEffectManager()
-        self.spellbook = Spellbook()
         self.identification = ItemIdentification()
 
     # move, heal は基底クラスから継承
     # take_damageはウィザードモード対応のためオーバーライド
 
-    def take_damage(self, amount: int, context=None) -> None:
+    def take_damage(self, amount: int, context: GameContext | None = None) -> None:
         """
         ダメージを受けてHPを減少（ウィザードモード対応）。
 
@@ -128,12 +129,12 @@ class Player(Actor):
 
         """
         # ウィザードモードチェック
-        if context and hasattr(context, 'game_logic') and context.game_logic.is_wizard_mode():
+        if context and hasattr(context, "game_logic") and context.game_logic.is_wizard_mode():
             # ウィザードモード時はダメージを無効化
-            if hasattr(context, 'add_message'):
+            if hasattr(context, "add_message"):
                 context.add_message(f"[Wizard] Damage {amount} blocked!")
             return
-        
+
         # 通常時は基底クラスの処理を実行
         super().take_damage(amount)
 
@@ -154,7 +155,7 @@ class Player(Actor):
 
         """
         from pyrogue.constants import get_exp_for_level
-        
+
         self.exp += amount
         required_exp = get_exp_for_level(self.level + 1)
         if self.exp >= required_exp:
@@ -166,22 +167,19 @@ class Player(Actor):
         """
         レベルアップ時の処理。
 
-        レベル、最大HP、最大MP、攻撃力、防御力を上昇させ、
-        HPとMPを全回復し、経験値をリセットします。
+        レベル、最大HP、攻撃力、防御力を上昇させ、
+        HPを全回復し、経験値をリセットします。
         """
         self.level += 1
         self.max_hp += CONFIG.player.LEVEL_UP_HP_BONUS
         self.hp = self.max_hp
-        # MPを5ずつ増加（レベルアップ時）
-        self.max_mp += 5
-        self.mp = self.max_mp
         self.attack += CONFIG.player.LEVEL_UP_ATTACK_BONUS
         self.defense += CONFIG.player.LEVEL_UP_DEFENSE_BONUS
         self.exp = 0
 
-    def consume_food(self, amount: int = 1, context=None) -> str | None:
+    def consume_food(self, amount: int = 1, context: GameContext | None = None) -> str | None:
         """
-        食料を消費して満腹度を減少し、MPの自然回復を行う。
+        食料を消費して満腹度を減少する。
 
         時間経過やアクションによる満腹度の減少を表現します。
         満腹度は0未満にはなりません。
@@ -197,14 +195,6 @@ class Player(Actor):
         """
         old_hunger = self.hunger
         self.hunger = max(0, self.hunger - amount)
-
-        # MPの自然回復（満腹状態でない場合）
-        if self.hunger > 0 and self.mp < self.max_mp:
-            # 10%の確率でMP+1回復
-            import random
-
-            if random.random() < 0.1:
-                self.mp = min(self.max_mp, self.mp + 1)
 
         # 飢餓状態をチェック
         if self.hunger <= 0:
@@ -280,56 +270,6 @@ class Player(Actor):
         """毒状態かどうかを判定。"""
         return self.has_status_effect("Poison")
 
-    def spend_mp(self, amount: int) -> bool:
-        """
-        MPを消費する。
-
-        Args:
-        ----
-            amount: 消費するMP量
-
-        Returns:
-        -------
-            消費に成功した場合はTrue、MPが不足している場合はFalse
-
-        """
-        if self.mp >= amount:
-            self.mp -= amount
-            return True
-        return False
-
-    def restore_mp(self, amount: int) -> int:
-        """
-        MPを回復する。
-
-        Args:
-        ----
-            amount: 回復するMP量
-
-        Returns:
-        -------
-            実際に回復したMP量
-
-        """
-        old_mp = self.mp
-        self.mp = min(self.max_mp, self.mp + amount)
-        return self.mp - old_mp
-
-    def has_enough_mp(self, amount: int) -> bool:
-        """
-        指定されたMP量があるかどうかを判定。
-
-        Args:
-        ----
-            amount: 必要なMP量
-
-        Returns:
-        -------
-            MP量が十分な場合はTrue、不足している場合はFalse
-
-        """
-        return self.mp >= amount
-
     def is_starving(self) -> bool:
         """飢餓状態かどうかを判定。"""
         return self.hunger <= 0
@@ -342,38 +282,35 @@ class Player(Actor):
         """現在の飢餓レベルを取得。"""
         if self.hunger >= HungerConstants.FULL_THRESHOLD:
             return "Full"
-        elif self.hunger >= HungerConstants.CONTENT_THRESHOLD:
+        if self.hunger >= HungerConstants.CONTENT_THRESHOLD:
             return "Content"
-        elif self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
             return "Hungry"
-        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
             return "Very Hungry"
-        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+        if self.hunger >= HungerConstants.STARVING_THRESHOLD:
             return "Starving"
-        else:
-            return "Dying"
+        return "Dying"
 
     def get_hunger_attack_penalty(self) -> int:
         """飢餓による攻撃力ペナルティを取得。"""
         if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
             return 0
-        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
             return HungerConstants.HUNGRY_ATTACK_PENALTY
-        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+        if self.hunger >= HungerConstants.STARVING_THRESHOLD:
             return HungerConstants.VERY_HUNGRY_ATTACK_PENALTY
-        else:
-            return HungerConstants.STARVING_ATTACK_PENALTY
+        return HungerConstants.STARVING_ATTACK_PENALTY
 
     def get_hunger_defense_penalty(self) -> int:
         """飢餓による防御力ペナルティを取得。"""
         if self.hunger >= HungerConstants.HUNGRY_THRESHOLD:
             return 0
-        elif self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
+        if self.hunger >= HungerConstants.VERY_HUNGRY_THRESHOLD:
             return HungerConstants.HUNGRY_DEFENSE_PENALTY
-        elif self.hunger >= HungerConstants.STARVING_THRESHOLD:
+        if self.hunger >= HungerConstants.STARVING_THRESHOLD:
             return HungerConstants.VERY_HUNGRY_DEFENSE_PENALTY
-        else:
-            return HungerConstants.STARVING_DEFENSE_PENALTY
+        return HungerConstants.STARVING_DEFENSE_PENALTY
 
     def eat_food(self, amount: int = 25) -> None:
         """
@@ -442,9 +379,11 @@ class Player(Actor):
         """
         if isinstance(item, (Weapon, Armor, Ring)):
             old_item = self.inventory.equip(item)
-            self.inventory.remove_item(item)
-            if old_item:
-                self.inventory.add_item(old_item)
+            # 装備成功時のみインベントリから削除
+            if self.inventory.is_equipped(item):
+                self.inventory.remove_item(item)
+                if old_item:
+                    self.inventory.add_item(old_item)
             return old_item
         return None
 
@@ -468,7 +407,7 @@ class Player(Actor):
             self.inventory.add_item(item)
         return item
 
-    def use_item(self, item: Item, context=None) -> bool:
+    def use_item(self, item: Item, context: GameContext | None = None) -> bool:
         """
         アイテムを使用して効果を適用。
 
@@ -491,9 +430,20 @@ class Player(Actor):
             # 新しいeffectシステムを使用
             success = item.apply_effect(context)
             if success:
-                self.inventory.remove_item(item)
+                # スタック可能アイテムの場合は1個のみ削除
+                if item.stackable and item.stack_count > 1:
+                    self.inventory.remove_item(item, 1)
+                else:
+                    self.inventory.remove_item(item)
                 self.record_item_use()
             return success
+
+        if isinstance(item, Wand):
+            # 杖の使用には方向が必要
+            if context is None:
+                return False
+            # 杖はインベントリからの直接使用はできない（方向選択が必要）
+            return False
 
         if isinstance(item, Gold):
             # 金貨を所持金に加算
@@ -562,6 +512,7 @@ class Player(Actor):
         Returns
         -------
             総合スコア
+
         """
         # オリジナルRogue風スコア計算
         score = 0

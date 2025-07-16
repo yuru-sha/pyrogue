@@ -59,8 +59,15 @@ class CombatManager:
         context.add_message(f"You attack the {monster.name} for {damage} damage!")
 
         # モンスター分裂判定（ダメージを受けた時）
-        if monster.hp > 0 and hasattr(context, "monster_ai_manager"):
-            context.monster_ai_manager.split_monster_on_damage(monster, context)
+        if monster.hp > 0 and hasattr(context, "monster_ai_manager") and context.monster_ai_manager:
+            try:
+                context.monster_ai_manager.split_monster_on_damage(monster, context)
+            except Exception as e:
+                # 分裂処理エラーを記録（ゲームを継続）
+                if hasattr(context, "add_message"):
+                    context.add_message(f"Monster split error: {e}")
+                else:
+                    print(f"Warning: Monster split error: {e}")
 
         # モンスターの死亡判定
         if monster.hp <= 0:
@@ -86,9 +93,9 @@ class CombatManager:
 
         # モンスターの攻撃処理
         damage = self._calculate_damage(monster, player)
-        
+
         # ウィザードモード時はダメージを受けない（無敵モード）
-        if hasattr(context, 'game_logic') and context.game_logic.is_wizard_mode():
+        if hasattr(context, "game_logic") and context.game_logic.is_wizard_mode():
             context.add_message(f"[Wizard] The {monster.name} attacks you for {damage} damage, but you are invincible!")
         else:
             player.hp -= damage
@@ -102,9 +109,7 @@ class CombatManager:
         if player.hp <= 0:
             self._handle_player_death(context, f"Killed by {monster.name}")
 
-    def _handle_special_attack_effects(
-        self, monster: Monster, context: GameContext
-    ) -> None:
+    def _handle_special_attack_effects(self, monster: Monster, context: GameContext) -> None:
         """
         モンスターの特殊攻撃効果を処理。
 
@@ -121,14 +126,12 @@ class CombatManager:
             "hallucinogenic",
             "psychic",
         ]:
-            if random.random() < 0.3:
+            if random.random() < CombatConstants.HALLUCINATION_EFFECT_CHANCE:
                 from pyrogue.entities.actors.status_effects import HallucinationEffect
 
                 hallucination = HallucinationEffect(duration=6)
                 player.status_effects.add_effect(hallucination)
-                context.add_message(
-                    f"The {monster.name}'s attack makes you see strange visions!"
-                )
+                context.add_message(f"The {monster.name}'s attack makes you see strange visions!")
 
         # その他の特殊攻撃効果もここに追加可能
         # 例：毒攻撃、麻痺攻撃など
@@ -293,19 +296,11 @@ class CombatManager:
 
             # ステータス上昇
             hp_gain = CombatConstants.HP_GAIN_PER_LEVEL
-            mp_gain = CombatConstants.MP_GAIN_PER_LEVEL
 
             player.max_hp += hp_gain
             player.hp += hp_gain  # HPも回復
 
-            if hasattr(player, "max_mp"):
-                player.max_mp += mp_gain
-                player.mp = min(player.mp + mp_gain, player.max_mp)
-
-            context.add_message(
-                f"Level up! You are now level {player.level}! "
-                f"(+{hp_gain} HP, +{mp_gain} MP)"
-            )
+            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP)")
 
             game_logger.info(f"Player leveled up: {old_level} -> {player.level}")
 
@@ -341,7 +336,7 @@ class CombatManager:
             return
 
         # 金貨ドロップの可能性
-        if random.random() < 0.3:  # 30%の確率で金貨ドロップ
+        if random.random() < CombatConstants.GOLD_DROP_CHANCE:  # 30%の確率で金貨ドロップ
             from pyrogue.entities.items.item import Gold
 
             gold_amount = random.randint(1, monster.level * 5)
@@ -350,9 +345,7 @@ class CombatManager:
             floor_data.item_spawner.items.append(gold)
             context.add_message(f"The {monster.name} dropped {gold_amount} gold!")
 
-    def _handle_player_death(
-        self, context: GameContext, death_cause: str = "Unknown"
-    ) -> None:
+    def _handle_player_death(self, context: GameContext, death_cause: str = "Unknown") -> None:
         """
         プレイヤーの死亡処理。
 
