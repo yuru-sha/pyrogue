@@ -245,15 +245,10 @@ class GameRenderer:
         # ステータス情報の描画位置（画面上部）
         status_y = 0
 
-        # 1行目: レベル、HP、MP、攻撃力、防御力、空腹度、経験値、所持金
-        mp_display = ""
-        if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            mp_display = f"MP:{player.mp}/{player.max_mp} "
-
+        # 1行目: レベル、HP、攻撃力、防御力、空腹度、経験値、所持金
         status_line1 = (
             f"Lv:{player.level} "
             f"HP:{player.hp}/{player.max_hp} "
-            f"{mp_display}"
             f"Atk:{player.get_attack()} "
             f"Def:{player.get_defense()} "
             f"Hunger:{player.hunger}% "

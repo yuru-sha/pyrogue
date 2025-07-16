@@ -36,6 +36,7 @@ from pyrogue.entities.items.item import (
     Potion,
     Ring,
     Scroll,
+    Wand,
     Weapon,
 )
 
@@ -378,9 +379,11 @@ class Player(Actor):
         """
         if isinstance(item, (Weapon, Armor, Ring)):
             old_item = self.inventory.equip(item)
-            self.inventory.remove_item(item)
-            if old_item:
-                self.inventory.add_item(old_item)
+            # 装備成功時のみインベントリから削除
+            if self.inventory.is_equipped(item):
+                self.inventory.remove_item(item)
+                if old_item:
+                    self.inventory.add_item(old_item)
             return old_item
         return None
 
@@ -427,9 +430,20 @@ class Player(Actor):
             # 新しいeffectシステムを使用
             success = item.apply_effect(context)
             if success:
-                self.inventory.remove_item(item)
+                # スタック可能アイテムの場合は1個のみ削除
+                if item.stackable and item.stack_count > 1:
+                    self.inventory.remove_item(item, 1)
+                else:
+                    self.inventory.remove_item(item)
                 self.record_item_use()
             return success
+        
+        if isinstance(item, Wand):
+            # 杖の使用には方向が必要
+            if context is None:
+                return False
+            # 杖はインベントリからの直接使用はできない（方向選択が必要）
+            return False
 
         if isinstance(item, Gold):
             # 金貨を所持金に加算

@@ -73,7 +73,8 @@ def test_remove_item_equipment_handling():
     removed = inventory.remove_item(weapon, 1)
     assert removed == 1
     assert len(inventory.items) == 0
-    assert inventory.equipped["weapon"] is None  # 装備スロットもクリア
+    # 修正: remove_item()では装備スロットはクリアしない（別途unequip()が必要）
+    assert inventory.equipped["weapon"] is weapon  # 装備スロットは保持される
 
 
 def test_stack_behavior_comprehensive():

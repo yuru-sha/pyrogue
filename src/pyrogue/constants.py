@@ -25,7 +25,6 @@ class GameConstants:
     PLAYER_INITIAL_LEVEL: int = 1
     PLAYER_INITIAL_GOLD: int = 0
     PLAYER_INITIAL_HUNGER: int = 100
-    PLAYER_INITIAL_MP: int = 5
 
     # FOV関連
     DEFAULT_FOV_RADIUS: int = 8
@@ -91,7 +90,6 @@ class CombatConstants:
     EXP_PER_LEVEL_BASE: int = 100
     EXP_LEVEL_MULTIPLIER: float = 1.5
     HP_GAIN_PER_LEVEL: int = 5
-    MP_GAIN_PER_LEVEL: int = 2
 
     # 攻撃・防御
     MIN_DAMAGE: int = 1
@@ -151,28 +149,7 @@ class HungerConstants:
 
     # 飢餓ボーナス
     FULL_HP_REGEN_CHANCE: float = 0.05  # 満腹時のHP自然回復確率
-    FULL_MP_REGEN_BONUS: float = 0.15  # 満腹時のMP回復ボーナス確率
 
-
-@dataclass(frozen=True)
-class MagicConstants:
-    """魔法に関する定数。"""
-
-    # MP管理
-    MP_RECOVERY_RATE: int = 1  # ターンあたりのMP回復量
-    MP_RECOVERY_INTERVAL: int = 5  # 回復間隔（ターン）
-
-    # 呪文コスト
-    MAGIC_MISSILE_COST: int = 3
-    HEAL_COST: int = 5
-    CURE_POISON_COST: int = 4
-    POISON_BOLT_COST: int = 4
-    TELEPORT_COST: int = 8
-
-    # 魔法効果
-    MAGIC_MISSILE_DAMAGE: int = 6
-    HEAL_AMOUNT: int = 10
-    TELEPORT_MAX_ATTEMPTS: int = 100
 
 
 @dataclass(frozen=True)

@@ -139,6 +139,8 @@ class SaveManager:
                     try:
                         with open(self.backup_file, "rb") as f:
                             game_data = pickle.load(f)
+                        # 後方互換性: 古いセーブファイルからMP関連属性を削除
+                        self._remove_legacy_mp_attributes(game_data)
                         game_logger.info("Game loaded from backup file after checksum failure")
                         return game_data
                     except Exception as backup_error:
@@ -160,6 +162,9 @@ class SaveManager:
             with open(self.save_file, "rb") as f:
                 game_data = pickle.load(f)
 
+            # 後方互換性: 古いセーブファイルからMP関連属性を削除
+            self._remove_legacy_mp_attributes(game_data)
+
             game_logger.info(f"Game loaded successfully from {self.save_file}")
             return game_data
 
@@ -170,12 +175,36 @@ class SaveManager:
                 try:
                     with open(self.backup_file, "rb") as f:
                         game_data = pickle.load(f)
+                    # 後方互換性: 古いセーブファイルからMP関連属性を削除
+                    self._remove_legacy_mp_attributes(game_data)
                     game_logger.info("Game loaded from backup file")
                     return game_data
                 except Exception as backup_error:
                     game_logger.error(f"Backup file also corrupted: {backup_error}")
 
             return None
+
+    def _remove_legacy_mp_attributes(self, game_data: dict[str, Any]) -> None:
+        """
+        古いセーブファイルからMP関連の属性を削除。
+
+        Args:
+        ----
+            game_data: ゲームデータ辞書
+
+        """
+        try:
+            # プレイヤーオブジェクトからMP関連属性を削除
+            if "player" in game_data:
+                player = game_data["player"]
+                if hasattr(player, "mp"):
+                    delattr(player, "mp")
+                    game_logger.debug("Removed legacy 'mp' attribute from player")
+                if hasattr(player, "max_mp"):
+                    delattr(player, "max_mp")
+                    game_logger.debug("Removed legacy 'max_mp' attribute from player")
+        except Exception as e:
+            game_logger.warning(f"Failed to remove legacy MP attributes: {e}")
 
     def _trigger_permadeath(self) -> None:
         """

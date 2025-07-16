@@ -83,11 +83,6 @@ class Inventory:
         actual_removed = item.stack_count if item.stackable else 1
         self.items.remove(item)
 
-        # 装備中のアイテムの場合は装備スロットもクリア
-        for slot, equipped_item in self.equipped.items():
-            if equipped_item is item:
-                self.equipped[slot] = None
-
         return actual_removed
 
     def get_item(self, index: int) -> Item | None:
@@ -133,9 +128,8 @@ class Inventory:
         if isinstance(item, Ring):
             # 左手の指輪が空いていれば左手に、そうでなければ右手に装備
             if self.equipped["ring_left"] is None:
-                old_item = self.equipped["ring_left"]
                 self.equipped["ring_left"] = item
-                return old_item
+                return None  # 交換されたアイテムはない
             old_item = self.equipped["ring_right"]
             self.equipped["ring_right"] = item
             return old_item
@@ -183,7 +177,7 @@ class Inventory:
         # 指輪のボーナス
         for ring_slot in ["ring_left", "ring_right"]:
             ring = self.equipped[ring_slot]
-            if isinstance(ring, Ring) and ring.effect == "attack":
+            if isinstance(ring, Ring) and ring.effect == "strength":
                 bonus += ring.bonus
 
         return bonus
@@ -207,7 +201,7 @@ class Inventory:
         # 指輪のボーナス
         for ring_slot in ["ring_left", "ring_right"]:
             ring = self.equipped[ring_slot]
-            if isinstance(ring, Ring) and ring.effect == "defense":
+            if isinstance(ring, Ring) and ring.effect == "protection":
                 bonus += ring.bonus
 
         return bonus
@@ -226,7 +220,32 @@ class Inventory:
 
         """
         item = self.equipped.get(slot)
-        return item.name if item else "None"
+        if not item:
+            return "None"
+        
+        # ボーナス情報を含む表示名を生成
+        if isinstance(item, Weapon):
+            sign = "+" if item.attack >= 0 else ""
+            enchant_text = f" {sign}{item.enchantment}" if item.enchantment != 0 else ""
+            return f"{item.name} (ATK {sign}{item.attack}{enchant_text})"
+        elif isinstance(item, Armor):
+            sign = "+" if item.defense >= 0 else ""
+            enchant_text = f" {sign}{item.enchantment}" if item.enchantment != 0 else ""
+            return f"{item.name} (DEF {sign}{item.defense}{enchant_text})"
+        elif isinstance(item, Ring):
+            sign = "+" if item.bonus >= 0 else ""
+            # 効果名をより読みやすく表示
+            effect_display = {
+                "protection": "DEF",
+                "strength": "ATK",
+                "sustain": "SUSTAIN",
+                "search": "SEARCH",
+                "see_invisible": "SEE INV",
+                "regeneration": "REGEN"
+            }.get(item.effect, item.effect.upper())
+            return f"{item.name} ({effect_display} {sign}{item.bonus})"
+        else:
+            return item.name
 
     def get_equipped_weapon(self) -> Weapon | None:
         """

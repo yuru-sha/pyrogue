@@ -39,7 +39,7 @@ class PlayerStatusFormatter:
         hunger_display = f"{hunger_level}({player.hunger}%)"
 
         return (
-            f"Lv:{player.level} HP:{player.hp}/{player.max_hp} MP:{player.mp}/{player.max_mp} "
+            f"Lv:{player.level} HP:{player.hp}/{player.max_hp} "
             f"Atk:{player.get_attack()} Def:{player.get_defense()} "
             f"Hunger:{hunger_display} Exp:{player.exp} Gold:{player.gold}{status_line}\n"
             f"Weap:{weapon} Armor:{armor} Ring(L):{ring_l} Ring(R):{ring_r}"

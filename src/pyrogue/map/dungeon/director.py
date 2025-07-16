@@ -100,19 +100,37 @@ class DungeonDirector:
         try:
             if self.use_section_based:
                 if self.dungeon_type == "maze":
-                    # 迷路階層を生成
-                    self.rooms = self.maze_builder.build_dungeon(self.tiles)
-                    game_logger.debug("Generated maze dungeon (no rooms)")
+                    # 迷路階層を生成（リトライ機能付き）
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            self.rooms = self.maze_builder.build_dungeon(self.tiles)
+                            game_logger.debug("Generated maze dungeon (no rooms)")
 
-                    # 特別部屋の処理はスキップ（迷路には部屋が存在しない）
-                    # ドアの配置もスキップ
+                            # 特別部屋の処理はスキップ（迷路には部屋が存在しない）
+                            # ドアの配置もスキップ
 
-                    # 階段の配置（迷路専用）
-                    start_pos, end_pos = self.stairs_manager.place_stairs_for_maze(self.floor, self.tiles)
+                            # 階段の配置（迷路専用）
+                            start_pos, end_pos = self.stairs_manager.place_stairs_for_maze(self.floor, self.tiles)
 
-                    # 最終検証（迷路専用）
-                    self.validation_manager.validate_maze_dungeon(start_pos, end_pos, self.tiles, self.floor)
-                else:
+                            # 最終検証（迷路専用）
+                            self.validation_manager.validate_maze_dungeon(start_pos, end_pos, self.tiles, self.floor)
+                            break  # 成功した場合はループを抜ける
+                        except Exception as e:
+                            game_logger.warning(f"Maze generation attempt {attempt + 1} failed: {e}")
+                            if attempt == max_retries - 1:
+                                game_logger.error("Maze generation failed after all retries, using fallback")
+                                # フォールバック: BSPベースシステムを使用
+                                self.dungeon_type = "normal"
+                                self.rooms = self.bsp_builder.build_dungeon(self.tiles)
+                                game_logger.debug(f"Fallback: Generated {len(self.rooms)} rooms using BSP system")
+                                break
+                            else:
+                                # タイルを再初期化してリトライ
+                                self.tiles = self.tiles_manager.initialize_tiles()
+                                game_logger.debug(f"Retrying maze generation (attempt {attempt + 2})")
+                
+                if self.dungeon_type != "maze":  # 通常ダンジョンまたはフォールバック処理
                     # BSPベースシステムを使用
                     # 1. BSPで部屋と通路を生成
                     self.rooms = self.bsp_builder.build_dungeon(self.tiles)

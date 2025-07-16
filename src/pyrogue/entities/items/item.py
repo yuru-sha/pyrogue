@@ -105,6 +105,20 @@ class Ring(Item):
         self.effect = effect
         self.bonus = bonus
 
+    def pick_up(self) -> str:
+        """指輪を拾った時のメッセージ"""
+        sign = "+" if self.bonus >= 0 else ""
+        # 効果名をより読みやすく表示
+        effect_display = {
+            "protection": "DEF",
+            "strength": "ATK",
+            "sustain": "SUSTAIN",
+            "search": "SEARCH",
+            "see_invisible": "SEE INV",
+            "regeneration": "REGEN"
+        }.get(self.effect, self.effect.upper())
+        return f"You pick up the {self.name} ({effect_display} {sign}{self.bonus})."
+
 
 class Scroll(Item):
     """巻物クラス"""

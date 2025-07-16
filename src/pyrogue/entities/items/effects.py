@@ -92,9 +92,12 @@ class HealingEffect(InstantEffect):
 
         if actual_heal > 0:
             _add_message_safe(context, f"You feel better! (+{actual_heal} HP)")
-            return True
-        _add_message_safe(context, "You are already at full health.")
-        return False
+        else:
+            _add_message_safe(context, "You are already at full health.")
+        
+        # HP MAXの場合でも、ポーションの使用アクションは成功とみなす
+        # （一般的なローグライクゲームでは効果がなくてもポーションは消費される）
+        return True
 
 
 class TeleportEffect(InstantEffect):
@@ -195,9 +198,12 @@ class NutritionEffect(InstantEffect):
         hunger_gained = player.hunger - old_hunger
         if hunger_gained > 0:
             _add_message_safe(context, f"You feel satisfied. (+{hunger_gained} hunger)")
-            return True
-        _add_message_safe(context, "You are already full.")
-        return False
+        else:
+            _add_message_safe(context, "You are already full.")
+        
+        # 満腹の場合でも、食料の使用アクションは成功とみなす
+        # （一般的なローグライクゲームでは効果がなくても食料は消費される）
+        return True
 
 
 class RemoveCurseEffect(InstantEffect):
@@ -247,7 +253,8 @@ class EnchantWeaponEffect(InstantEffect):
         # Check enchantment limit (max +9)
         if weapon.enchantment >= 9:
             _add_message_safe(context, "Your weapon glows briefly, but nothing happens.")
-            return False
+            # 強化限界でも巻物は正常に使用されたとみなす（効果がなかっただけ）
+            return True
 
         weapon.enchantment += 1
         enchant_text = f"+{weapon.enchantment}" if weapon.enchantment > 0 else ""
@@ -275,7 +282,8 @@ class EnchantArmorEffect(InstantEffect):
         # Check enchantment limit (max +9)
         if armor.enchantment >= 9:
             _add_message_safe(context, "Your armor gleams briefly, but nothing happens.")
-            return False
+            # 強化限界でも巻物は正常に使用されたとみなす（効果がなかっただけ）
+            return True
 
         armor.enchantment += 1
         enchant_text = f"+{armor.enchantment}" if armor.enchantment > 0 else ""

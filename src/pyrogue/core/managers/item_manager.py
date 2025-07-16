@@ -226,9 +226,14 @@ class ItemManager:
                 self.context.add_message(f"You can't drop the {item_name}! It's cursed!")
                 return False
 
-            # 装備解除
-            inventory.unequip(item)
-            self.context.add_message(f"You unequip the {item_name}.")
+            # 装備解除（スロット指定）
+            slot = inventory.get_equipped_slot(item)
+            if slot:
+                inventory.unequip(slot)
+                self.context.add_message(f"You unequip the {item_name}.")
+            else:
+                self.context.add_message(f"Failed to unequip the {item_name}.")
+                return False
 
         # インベントリから削除（スタック可能アイテムは全スタック削除）
         if item.stackable and item.stack_count > 1:

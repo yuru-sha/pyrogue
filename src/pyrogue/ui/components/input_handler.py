@@ -132,21 +132,8 @@ class InputHandler:
                 self.game_screen.engine.state = GameStates.SHOW_INVENTORY
 
         elif key == ord("z"):
-            # ワンドを振る（方向選択・CommonCommandHandler経由）
-            # 簡単な実装：最初のワンドを北に向けて使用
-            player = self.game_screen.player
-            inventory = self.game_screen.game_logic.inventory
-            
-            wands = [item for item in inventory.items 
-                    if hasattr(item, 'charges') and item.charges > 0]
-            
-            if wands:
-                wand_name = wands[0].name
-                result = self.command_handler.handle_command("zap", [wand_name, "north"])
-                if result.should_end_turn:
-                    self.game_screen.game_logic.handle_turn_end()
-            else:
-                self.game_screen.game_logic.add_message("You have no charged wands.")
+            # ワンドを振る（方向選択機能を使用）
+            self._handle_zap_wand_action()
 
         elif key == tcod.event.KeySym.TAB:
             # FOV切り替え
@@ -992,10 +979,6 @@ Press any key to continue...
             if player.hp < player.max_hp:
                 player.hp = min(player.max_hp, player.hp + 1)
 
-        # MP自然回復（満腹時）
-        if hasattr(player, "mp") and hasattr(player, "max_mp") and hasattr(player, "hunger"):
-            if player.hunger >= 80 and player.mp < player.max_mp:
-                player.mp = min(player.max_mp, player.mp + 1)
 
         # 飢餓進行
         if hasattr(player, "consume_food"):

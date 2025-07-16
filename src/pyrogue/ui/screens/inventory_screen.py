@@ -8,7 +8,7 @@ import tcod
 import tcod.event
 from tcod.console import Console
 
-from pyrogue.entities.items.item import Armor, Food, Item, Potion, Ring, Scroll, Weapon
+from pyrogue.entities.items.item import Armor, Food, Item, Potion, Ring, Scroll, Wand, Weapon
 from pyrogue.ui.screens.screen import Screen
 
 if TYPE_CHECKING:
@@ -23,6 +23,7 @@ class InventoryScreen(Screen):
         self.game_screen = game_screen
         self.selected_index = 0
         self.show_help = False
+        self.unequip_mode = False
 
     def render(self, console: Console) -> None:
         """
@@ -103,7 +104,7 @@ class InventoryScreen(Screen):
                 "[?] Toggle help",
             ]
             for i, text in enumerate(help_text):
-                console.print(2, console.height - 10 + i, text, tcod.gray)
+                console.print(2, console.height - 10 + i, text, (127, 127, 127))
 
     def _get_equipment_info(self, item: Item | None, identification) -> str:
         """
@@ -136,7 +137,16 @@ class InventoryScreen(Screen):
             return f"{display_name} (DEF {defense_value})"
         elif isinstance(item, Ring):
             if item.effect and item.bonus != 0:
-                return f"{display_name} ({item.effect.upper()} {item.bonus:+d})"
+                # 効果名をより読みやすく表示
+                effect_display = {
+                    "protection": "DEF",
+                    "strength": "ATK",
+                    "sustain": "SUSTAIN",
+                    "search": "SEARCH",
+                    "see_invisible": "SEE INV",
+                    "regeneration": "REGEN"
+                }.get(item.effect, item.effect.upper())
+                return f"{display_name} ({effect_display} {item.bonus:+d})"
             return f"{display_name}"
         else:
             return display_name
@@ -151,6 +161,11 @@ class InventoryScreen(Screen):
 
         """
         from pyrogue.core.game_states import GameStates
+
+        # 装備解除モードの場合は専用処理
+        if self.unequip_mode:
+            self._handle_unequip_selection(event)
+            return
 
         # ESCでインベントリを閉じる
         if event.sym == tcod.event.KeySym.ESCAPE:
@@ -193,30 +208,36 @@ class InventoryScreen(Screen):
                     else:
                         # 装備を実行
                         old_item = self.game_screen.game_logic.inventory.equip(selected_item)
-                        self.game_screen.game_logic.inventory.remove_item(selected_item)
+                        
+                        # 装備成功判定（is_equippedで確認）
+                        if self.game_screen.game_logic.inventory.is_equipped(selected_item):
+                            # 装備成功！新しい装備をインベントリから削除
+                            self.game_screen.game_logic.inventory.remove_item(selected_item)
 
-                        # 前の装備をインベントリに戻す
-                        if old_item:
-                            if self.game_screen.game_logic.inventory.add_item(old_item):
-                                self.game_screen.game_logic.add_message(
-                                    f"You unequip the {old_item.name} and equip the {selected_item.name}."
-                                )
-                            else:
-                                # インベントリが満杯の場合はアイテムを地面にドロップ
-                                if self.game_screen.game_logic.drop_item_at(
-                                    old_item,
-                                    self.game_screen.game_logic.player.x,
-                                    self.game_screen.game_logic.player.y,
-                                ):
+                            # 前の装備をインベントリに戻す
+                            if old_item:
+                                if self.game_screen.game_logic.inventory.add_item(old_item):
                                     self.game_screen.game_logic.add_message(
-                                        f"You drop the {old_item.name} and equip the {selected_item.name}."
+                                        f"You unequip the {old_item.name} and equip the {selected_item.name}."
                                     )
                                 else:
-                                    self.game_screen.game_logic.add_message(
-                                        "Cannot drop the old equipment. Equipment failed."
-                                    )
+                                    # インベントリが満杯の場合はアイテムを地面にドロップ
+                                    if self.game_screen.game_logic.drop_item_at(
+                                        old_item,
+                                        self.game_screen.game_logic.player.x,
+                                        self.game_screen.game_logic.player.y,
+                                    ):
+                                        self.game_screen.game_logic.add_message(
+                                            f"You drop the {old_item.name} and equip the {selected_item.name}."
+                                        )
+                                    else:
+                                        self.game_screen.game_logic.add_message(
+                                            "Cannot drop the old equipment. Equipment failed."
+                                        )
+                            else:
+                                self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
                         else:
-                            self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
+                            self.game_screen.game_logic.add_message(f"Failed to equip the {selected_item.name}.")
                 else:
                     self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
                 return
@@ -247,6 +268,11 @@ class InventoryScreen(Screen):
                         self.game_screen.game_logic.add_message(
                             f"You cannot use the {selected_item.get_display_name(player.identification)}."
                         )
+                elif isinstance(selected_item, Wand):
+                    # 杖の使用には方向選択が必要
+                    player = self.game_screen.game_logic.player
+                    display_name = selected_item.get_display_name(player.identification)
+                    self.game_screen.game_logic.add_message(f"Use 'z' key to zap the {display_name}. Wands require direction.")
                 else:
                     player = self.game_screen.game_logic.player
                     display_name = selected_item.get_display_name(player.identification)
@@ -255,30 +281,8 @@ class InventoryScreen(Screen):
 
             # r: 装備解除
             if event.sym == tcod.event.KeySym.R:
-                if isinstance(selected_item, (Weapon, Armor, Ring)):
-                    # 装備スロットを取得
-                    slot = self.game_screen.game_logic.inventory.get_equipped_slot(selected_item)
-
-                    if slot:
-                        # 装備を外す
-                        unequipped_item = self.game_screen.game_logic.inventory.unequip(slot)
-                        if unequipped_item:
-                            # インベントリに追加
-                            if not self.game_screen.game_logic.inventory.add_item(unequipped_item):
-                                # インベントリが満杯の場合は再装備
-                                self.game_screen.game_logic.inventory.equipped[slot] = unequipped_item
-                                self.game_screen.game_logic.add_message("Your inventory is full!")
-                            else:
-                                self.game_screen.game_logic.add_message(f"You unequip the {selected_item.name}.")
-                        else:
-                            # 呪われたアイテムの場合
-                            self.game_screen.game_logic.add_message(
-                                f"The {selected_item.name} is cursed and cannot be removed!"
-                            )
-                    else:
-                        self.game_screen.game_logic.add_message(f"The {selected_item.name} is not equipped.")
-                else:
-                    self.game_screen.game_logic.add_message(f"You cannot unequip the {selected_item.name}.")
+                # 装備解除モードに入る
+                self._enter_unequip_mode()
                 return
 
             # d: ドロップ
@@ -303,3 +307,68 @@ class InventoryScreen(Screen):
                 else:
                     self.game_screen.game_logic.add_message(message)
                 return
+
+    def _enter_unequip_mode(self) -> None:
+        """装備解除モードに入る"""
+        # 装備中のアイテムを確認
+        equipped_items = []
+        equipped = self.game_screen.game_logic.inventory.equipped
+        
+        if equipped["weapon"]:
+            equipped_items.append(("weapon", equipped["weapon"]))
+        if equipped["armor"]:
+            equipped_items.append(("armor", equipped["armor"]))
+        if equipped["ring_left"]:
+            equipped_items.append(("ring_left", equipped["ring_left"]))
+        if equipped["ring_right"]:
+            equipped_items.append(("ring_right", equipped["ring_right"]))
+        
+        if not equipped_items:
+            self.game_screen.game_logic.add_message("You have no equipment to remove.")
+            return
+        
+        # 装備解除選択画面を表示
+        self.game_screen.game_logic.add_message("Select item to unequip:")
+        for i, (slot, item) in enumerate(equipped_items):
+            slot_name = {"weapon": "Weapon", "armor": "Armor", "ring_left": "Ring(L)", "ring_right": "Ring(R)"}[slot]
+            display_name = item.get_display_name(self.game_screen.game_logic.player.identification)
+            self.game_screen.game_logic.add_message(f"{chr(ord('a') + i)}) {slot_name}: {display_name}")
+        
+        self.unequip_mode = True
+        self.equipped_items = equipped_items
+        self.game_screen.game_logic.add_message("Press a-z to select, ESC to cancel.")
+    
+    def _handle_unequip_selection(self, event: tcod.event.KeyDown) -> None:
+        """装備解除選択の処理"""
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            self.unequip_mode = False
+            self.game_screen.game_logic.add_message("Cancelled.")
+            return
+        
+        # a-z キーの処理
+        if event.sym >= ord('a') and event.sym <= ord('z'):
+            index = event.sym - ord('a')
+            if 0 <= index < len(self.equipped_items):
+                slot, item = self.equipped_items[index]
+                
+                # 装備を外す
+                unequipped_item = self.game_screen.game_logic.inventory.unequip(slot)
+                if unequipped_item:
+                    # インベントリに追加
+                    if self.game_screen.game_logic.inventory.add_item(unequipped_item):
+                        self.game_screen.game_logic.add_message(f"You unequip the {unequipped_item.name}.")
+                    else:
+                        # インベントリが満杯の場合は再装備
+                        self.game_screen.game_logic.inventory.equipped[slot] = unequipped_item
+                        self.game_screen.game_logic.add_message("Your inventory is full!")
+                else:
+                    # 呪われたアイテムの場合
+                    self.game_screen.game_logic.add_message(
+                        f"The {item.name} is cursed and cannot be removed!"
+                    )
+            else:
+                self.game_screen.game_logic.add_message("Invalid selection.")
+            
+            self.unequip_mode = False
+        else:
+            self.game_screen.game_logic.add_message("Press a-z to select, ESC to cancel.")

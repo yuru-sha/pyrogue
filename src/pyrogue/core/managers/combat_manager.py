@@ -289,16 +289,11 @@ class CombatManager:
 
             # ステータス上昇
             hp_gain = CombatConstants.HP_GAIN_PER_LEVEL
-            mp_gain = CombatConstants.MP_GAIN_PER_LEVEL
 
             player.max_hp += hp_gain
             player.hp += hp_gain  # HPも回復
 
-            if hasattr(player, "max_mp"):
-                player.max_mp += mp_gain
-                player.mp = min(player.mp + mp_gain, player.max_mp)
-
-            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP, +{mp_gain} MP)")
+            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP)")
 
             game_logger.info(f"Player leveled up: {old_level} -> {player.level}")
 
