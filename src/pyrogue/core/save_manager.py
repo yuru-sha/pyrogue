@@ -41,15 +41,18 @@ class SaveManager:
 
     """
 
-    def __init__(self, save_dir: str = "saves") -> None:
+    def __init__(self, save_dir: str | None = None) -> None:
         """
         SaveManagerを初期化。
 
         Args:
         ----
-            save_dir: セーブデータを保存するディレクトリ
+            save_dir: セーブデータを保存するディレクトリ（Noneの場合は環境変数から取得）
 
         """
+        if save_dir is None:
+            from pyrogue.config.env import get_save_directory
+            save_dir = get_save_directory()
         self.save_dir = Path(save_dir)
         self.save_file = self.save_dir / "game_save.pkl"
         self.backup_file = self.save_dir / "game_save_backup.pkl"

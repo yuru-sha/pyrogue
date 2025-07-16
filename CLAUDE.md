@@ -147,8 +147,6 @@ cp .env.example .env  # 設定例をコピー
 **主要な環境変数:**
 - `DEBUG`: デバッグモード有効化 (true/false)
 - `LOG_LEVEL`: ログレベル設定 (DEBUG/INFO/WARNING/ERROR)
-- `WINDOW_WIDTH/HEIGHT`: ウィンドウサイズ設定
-- `FPS_LIMIT`: FPS制限設定
 - `AUTO_SAVE_ENABLED`: オートセーブ機能 (true/false)
 
 ### ゲーム実行

@@ -1287,9 +1287,6 @@ class ConfigManager:
         self.config = {
             'DEBUG': self._get_bool('DEBUG', False),
             'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
-            'WINDOW_WIDTH': self._get_int('WINDOW_WIDTH', 80),
-            'WINDOW_HEIGHT': self._get_int('WINDOW_HEIGHT', 50),
-            'FPS_LIMIT': self._get_int('FPS_LIMIT', 60),
             'AUTO_SAVE_ENABLED': self._get_bool('AUTO_SAVE_ENABLED', True),
             'SAVE_INTERVAL': self._get_int('SAVE_INTERVAL', 10),
         }

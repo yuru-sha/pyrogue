@@ -1,8 +1,9 @@
 """
 PyRogueゲームの設定定数。
 
-このモジュールは後方互換性のため保持されています。
-新しいコードでは pyrogue.constants を使用してください。
+このモジュールは構造化されたゲーム設定を提供します。
+新しいコードでは pyrogue.constants を使用することを推奨しますが、
+グループ化された設定値が必要な場合はこのモジュールを使用してください。
 """
 
 from dataclasses import dataclass, field

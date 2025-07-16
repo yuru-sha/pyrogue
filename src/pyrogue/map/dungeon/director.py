@@ -314,10 +314,10 @@ class DungeonDirector:
             ダンジョンタイプ文字列
 
         """
-        import os
+        from pyrogue.config.env import is_test_mode
 
         # テスト環境では一貫した結果を保証するため、ランダム性を制御
-        if os.environ.get("PYTEST_CURRENT_TEST"):
+        if is_test_mode():
             # テスト中は特定の階層のみ迷路にして、その他はBSPにする
             if floor in [7, 13, 19]:
                 return "maze"

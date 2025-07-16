@@ -312,13 +312,13 @@ class GameRenderer:
             return
 
         # メッセージ表示エリアの設定
-        message_y_start = self.game_screen.dungeon_height + 4
-        max_messages = 3  # 最大3つのメッセージを表示
+        message_y = self.game_screen.dungeon_height + 2
+        max_messages = 7  # 最大7つのメッセージを表示
 
         # 最新のメッセージから表示
         recent_messages = messages[-max_messages:]
         for i, message in enumerate(recent_messages):
-            console.print(0, message_y_start + i, message, fg=(255, 255, 255))
+            console.print(0, message_y + i, message, fg=(255, 255, 255))
 
     def _get_hallucination_char(self) -> str:
         """
