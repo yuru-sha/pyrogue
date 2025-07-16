@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import tcod.event
 
 from pyrogue.core.game_states import GameStates
+from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
@@ -47,6 +48,10 @@ class InputHandler:
         self.targeting_y = 0
         self.wand_direction_mode = False
         self.selected_wand = None
+        
+        # CommonCommandHandlerを初期化
+        self.command_context = GUICommandContext(game_screen)
+        self.command_handler = CommonCommandHandler(self.command_context)
 
     def handle_key(self, event: tcod.event.KeyDown) -> None:
         """
@@ -127,8 +132,21 @@ class InputHandler:
                 self.game_screen.engine.state = GameStates.SHOW_INVENTORY
 
         elif key == ord("z"):
-            # ワンドを振る（方向選択）
-            self._handle_zap_wand_action()
+            # ワンドを振る（方向選択・CommonCommandHandler経由）
+            # 簡単な実装：最初のワンドを北に向けて使用
+            player = self.game_screen.player
+            inventory = self.game_screen.game_logic.inventory
+            
+            wands = [item for item in inventory.items 
+                    if hasattr(item, 'charges') and item.charges > 0]
+            
+            if wands:
+                wand_name = wands[0].name
+                result = self.command_handler.handle_command("zap", [wand_name, "north"])
+                if result.should_end_turn:
+                    self.game_screen.game_logic.handle_turn_end()
+            else:
+                self.game_screen.game_logic.add_message("You have no charged wands.")
 
         elif key == tcod.event.KeySym.TAB:
             # FOV切り替え
@@ -140,8 +158,8 @@ class InputHandler:
             self._handle_door_action(True)
             
         elif key == ord("O"):
-            # 自動探索コマンド（大文字O）
-            self._handle_auto_explore_action()
+            # 自動探索コマンド（大文字O・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("auto_explore")
 
         elif key == ord("c"):
             # ドア閉鎖
@@ -198,20 +216,35 @@ class InputHandler:
             self.game_screen.game_logic.wizard_reveal_all()
             
         elif key == ord("m") and mod & tcod.event.Modifier.CTRL:
-            # Ctrl+M で最後のメッセージ表示
-            self._handle_last_message_action()
+            # Ctrl+M で最後のメッセージ表示（CommonCommandHandler経由）
+            result = self.command_handler.handle_command("last_message")
 
         elif key == ord("s"):
             # 隠しドア探索（Ctrlが押されていない場合のみ）
             self._handle_search_action()
 
         elif key == ord("t"):
-            # 投げるコマンド
-            self._handle_throw_action()
+            # 投げるコマンド（CommonCommandHandler経由）
+            # 簡単な実装：最初の投擲可能アイテムを投げる
+            player = self.game_screen.player
+            inventory = self.game_screen.game_logic.inventory
+            
+            throwable_items = [item for item in inventory.items 
+                             if hasattr(item, 'attack') or hasattr(item, 'effect')]
+            
+            if throwable_items:
+                item_name = throwable_items[0].name
+                result = self.command_handler.handle_command("throw", [item_name])
+                if result.should_end_turn:
+                    self.game_screen.game_logic.handle_turn_end()
+            else:
+                self.game_screen.game_logic.add_message("You have nothing to throw.")
 
         elif key == ord("x"):
-            # 調査・検査コマンド
-            self._handle_examine_action()
+            # 調査・検査コマンド（CommonCommandHandler経由）
+            result = self.command_handler.handle_command("examine")
+            if result.should_end_turn:
+                self.game_screen.game_logic.handle_turn_end()
 
         elif (
             key == tcod.event.KeySym.QUESTION
@@ -224,32 +257,49 @@ class InputHandler:
             key == tcod.event.KeySym.SLASH
             or unicode_char == "/"
         ):
-            # シンボル説明（JIS配列対応）
-            self._handle_symbol_explanation_action()
+            # シンボル説明（JIS配列対応・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("symbol_explanation")
 
         elif key == tcod.event.KeySym.PERIOD or unicode_char == ".":
-            # 休憩コマンド（ピリオド）
-            self._handle_rest_action()
+            # 休憩コマンド（ピリオド・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("rest")
+            if result.should_end_turn:
+                self.game_screen.game_logic.handle_turn_end()
 
         elif key == ord("R"):
-            # 長時間休憩コマンド（大文字R）
-            self._handle_long_rest_action()
+            # 長時間休憩コマンド（大文字R・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("long_rest")
+            if result.should_end_turn:
+                self.game_screen.game_logic.handle_turn_end()
             
         elif key == tcod.event.KeySym.BACKSLASH or unicode_char == "\\":
-            # アイテム識別状況表示（\キー）
-            self._handle_identification_status_action()
+            # アイテム識別状況表示（\キー・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("identification_status")
             
         elif key == tcod.event.KeySym.AT or unicode_char == "@":
-            # キャラクター詳細表示（@キー）
-            self._handle_character_details_action()
+            # キャラクター詳細表示（@キー・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("character_details")
             
         elif key == ord("w"):
-            # 直接装備コマンド（wキー）
-            self._handle_direct_wear_action()
+            # 直接装備コマンド（wキー・CommonCommandHandler経由）
+            # 簡単な実装：最初の装備可能アイテムを装備
+            player = self.game_screen.player
+            inventory = self.game_screen.game_logic.inventory
+            
+            equippable_items = [item for item in inventory.items 
+                              if hasattr(item, 'attack') or hasattr(item, 'defense')]
+            
+            if equippable_items:
+                item_name = equippable_items[0].name
+                result = self.command_handler.handle_command("wear", [item_name])
+                if result.should_end_turn:
+                    self.game_screen.game_logic.handle_turn_end()
+            else:
+                self.game_screen.game_logic.add_message("You have no items to equip.")
             
         elif key == ord("l"):
-            # 足元・周囲調査コマンド（lキー）
-            self._handle_look_action()
+            # 足元・周囲調査コマンド（lキー・CommonCommandHandler経由）
+            result = self.command_handler.handle_command("look")
 
         # ゲーム終了
         elif key == tcod.event.KeySym.ESCAPE:
