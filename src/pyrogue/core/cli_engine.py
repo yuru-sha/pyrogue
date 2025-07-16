@@ -186,6 +186,10 @@ class CLIEngine:
             self.running = False
             return True
 
+        # コマンド処理後にメッセージを表示（CommonCommandHandlerで追加されたメッセージ）
+        if result.success:
+            self.display_recent_messages()
+
         if result.should_quit or not result.success:
             return False
 

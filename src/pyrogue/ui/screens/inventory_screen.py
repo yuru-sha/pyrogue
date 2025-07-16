@@ -37,7 +37,7 @@ class InventoryScreen(Screen):
         console.clear()
 
         # タイトルを描画
-        console.print(1, 1, "Inventory", tcod.yellow)
+        console.print(1, 1, "Inventory", (255, 255, 0))
 
         # インベントリの内容を描画
         for i, item in enumerate(self.game_screen.game_logic.inventory.items):
@@ -45,7 +45,7 @@ class InventoryScreen(Screen):
             index_char = chr(ord("a") + i)
 
             # 選択中のアイテムはハイライト
-            fg = tcod.white if i != self.selected_index else tcod.yellow
+            fg = (255, 255, 255) if i != self.selected_index else (255, 255, 0)
 
             # アイテム情報を表示（識別システムを使用）
             player = self.game_screen.game_logic.player
@@ -63,14 +63,14 @@ class InventoryScreen(Screen):
                     item_text += " (equipped - right)"
                 else:
                     item_text += " (equipped)"
-                fg = tcod.green if i != self.selected_index else tcod.yellow
+                fg = (0, 255, 0) if i != self.selected_index else (255, 255, 0)
 
             console.print(2, 3 + i, item_text, fg)
 
         # 装備情報を表示
         equipped = self.game_screen.game_logic.inventory.equipped
         player = self.game_screen.game_logic.player
-        console.print(40, 3, "Equipment:", tcod.yellow)
+        console.print(40, 3, "Equipment:", (255, 255, 0))
 
         # 装備品の表示に識別システムを使用（能力値も表示）
         weapon_info = self._get_equipment_info(equipped["weapon"], player.identification)

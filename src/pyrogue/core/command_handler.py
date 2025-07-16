@@ -1221,8 +1221,8 @@ Character Details:
         
         dungeon_manager = self.context.game_logic.dungeon_manager
 
-        # 既存のフロアをクリア
-        dungeon_manager.floors.clear()
+        # 既存のフロアをクリア（復元成功時のみ）
+        floors_backup = dungeon_manager.floors.copy()
 
         # セーブされたフロアデータを復元
         if not floor_data:
@@ -1230,6 +1230,9 @@ Character Details:
             return
 
         try:
+            # 復元成功時のみ既存フロアをクリア
+            dungeon_manager.floors.clear()
+            
             for floor_num_str, saved_floor_data in floor_data.items():
                 floor_num = int(floor_num_str)
                 
@@ -1248,7 +1251,7 @@ Character Details:
                     explored = np.zeros_like(tiles, dtype=bool)
                 
                 # MonsterSpawnerを復元
-                monster_spawner = MonsterSpawner()
+                monster_spawner = MonsterSpawner(floor_num)
                 monsters_data = saved_floor_data.get("monsters", [])
                 for monster_data in monsters_data:
                     monster = self._deserialize_monster(monster_data)
@@ -1256,7 +1259,7 @@ Character Details:
                         monster_spawner.monsters.append(monster)
                 
                 # ItemSpawnerを復元
-                item_spawner = ItemSpawner()
+                item_spawner = ItemSpawner(floor_num)
                 items_data = saved_floor_data.get("items", [])
                 for item_data in items_data:
                     item = self._deserialize_item(item_data)
@@ -1309,8 +1312,9 @@ Character Details:
             
         except Exception as e:
             self.context.add_message(f"Error restoring floor data: {e}")
-            # エラーが発生した場合は再生成に依存
-            dungeon_manager.floors.clear()
+            # エラーが発生した場合はバックアップから復元
+            dungeon_manager.floors = floors_backup
+            self.context.add_message("Floor data restored from backup - some floors may be regenerated")
 
     def _load_current_floor(self) -> None:
         """
@@ -1349,6 +1353,8 @@ Character Details:
             "level": monster.level,
             "exp_value": getattr(monster, "exp_value", 0),
             "ai_pattern": getattr(monster, "ai_pattern", "basic"),
+            "color": getattr(monster, "color", (255, 255, 255)),
+            "view_range": getattr(monster, "view_range", 3),
         }
 
     def _serialize_trap(self, trap) -> dict[str, Any]:
@@ -1380,8 +1386,8 @@ Character Details:
                 defense=monster_data.get("defense", 0),
                 level=monster_data.get("level", 1),
                 exp_value=monster_data.get("exp_value", 10),
-                view_range=3,  # デフォルト値
-                color=(255, 255, 255),  # デフォルト値
+                view_range=monster_data.get("view_range", 3),
+                color=monster_data.get("color", (255, 255, 255)),
             )
             
             # AI パターンの復元

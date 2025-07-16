@@ -82,9 +82,10 @@ class GameContext:
         """
         self.message_log.append(message)
 
-        # メッセージログのサイズ制限
-        if len(self.message_log) > 100:
-            self.message_log = self.message_log[-50:]  # 最新50件を保持
+        # メッセージログのサイズ制限（段階的に削減）
+        if len(self.message_log) > 200:
+            # 200件を超えた場合、150件まで削減（段階的な削減）
+            self.message_log = self.message_log[-150:]
 
     def get_current_floor_data(self):
         """現在のフロアデータを取得。"""
