@@ -151,7 +151,6 @@ class HungerConstants:
     FULL_HP_REGEN_CHANCE: float = 0.05  # 満腹時のHP自然回復確率
 
 
-
 @dataclass(frozen=True)
 class DisplayConstants:
     """表示に関する定数。"""

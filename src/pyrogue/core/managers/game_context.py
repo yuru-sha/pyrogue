@@ -80,12 +80,18 @@ class GameContext:
             message: 追加するメッセージ
 
         """
-        self.message_log.append(message)
+        try:
+            # 安全な文字列変換
+            safe_message = str(message)[:200]  # 過度に長いメッセージを切り詰め
+            self.message_log.append(safe_message)
 
-        # メッセージログのサイズ制限（段階的に削減）
-        if len(self.message_log) > 200:
-            # 200件を超えた場合、150件まで削減（段階的な削減）
-            self.message_log = self.message_log[-150:]
+            # 原子的なサイズ制限処理（インプレース更新）
+            if len(self.message_log) > 200:
+                # 200件を超えた場合、150件まで削減（段階的な削減）
+                self.message_log[:] = self.message_log[-150:]
+        except Exception as e:
+            # メッセージ追加エラーを記録（重要：無限ループを避けるためprintを使用）
+            print(f"Warning: Failed to add message '{message}': {e}")
 
     def get_current_floor_data(self):
         """現在のフロアデータを取得。"""

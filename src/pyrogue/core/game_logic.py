@@ -859,7 +859,7 @@ class GameLogic:
         """
         # TurnManagerによるターン処理
         self.turn_manager.process_turn(self.context)
-        
+
         # オートセーブ機能の実行
         self._handle_auto_save()
 
@@ -870,11 +870,11 @@ class GameLogic:
         環境変数でオートセーブが有効な場合、一定間隔でゲームを自動保存します。
         """
         from pyrogue.config.env import get_auto_save_enabled
-        
+
         # オートセーブが無効の場合は処理しない
         if not get_auto_save_enabled():
             return
-            
+
         # 一定ターン数毎にオートセーブを実行（10ターン毎）
         if self.turn_manager.turn_count % 10 == 0:
             self._perform_auto_save()
@@ -889,18 +889,18 @@ class GameLogic:
             # プレイヤーが死亡している場合はオートセーブしない
             if self.player.hp <= 0:
                 return
-                
+
             # SaveManagerを直接使用してオートセーブを実行
             from pyrogue.core.save_manager import SaveManager
-            
+
             save_manager = SaveManager()
-            
+
             # 現在のゲーム状態を収集
             save_data = self._create_auto_save_data()
-            
+
             # オートセーブを実行
             success = save_manager.save_game_state(save_data)
-            
+
             if success:
                 # オートセーブ成功メッセージ（デバッグモード時のみ）
                 if self.wizard_mode:
@@ -909,17 +909,19 @@ class GameLogic:
                 # オートセーブ失敗時のメッセージ
                 if self.wizard_mode:
                     self.add_message("[Auto-save] Failed to save game")
-                    
+
         except Exception as e:
             # エラーが発生した場合のログ出力
             from pyrogue.utils import game_logger
+
             game_logger.error(f"Auto-save failed: {e}")
 
     def _create_auto_save_data(self) -> dict:
         """
         オートセーブ用のデータを作成。
-        
-        Returns:
+
+        Returns
+        -------
             dict: セーブデータ辞書
         """
         # CommonCommandHandlerと同じ形式でセーブデータを作成
@@ -934,7 +936,7 @@ class GameLogic:
             "auto_save": True,  # オートセーブフラグ
             "version": "1.0",
         }
-        
+
         return save_data
 
     def _serialize_player(self, player) -> dict:
@@ -983,7 +985,7 @@ class GameLogic:
         """アイテムをシリアライズ。"""
         if item is None:
             return None
-            
+
         return {
             "item_type": getattr(item, "item_type", "MISC"),
             "name": item.name,
@@ -1046,7 +1048,7 @@ class GameLogic:
         """
         メッセージ履歴を取得。
 
-        Returns:
+        Returns
         -------
             メッセージ履歴のリスト
         """

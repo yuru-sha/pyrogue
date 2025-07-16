@@ -52,6 +52,7 @@ class SaveManager:
         """
         if save_dir is None:
             from pyrogue.config.env import get_save_directory
+
             save_dir = get_save_directory()
         self.save_dir = Path(save_dir)
         self.save_file = self.save_dir / "game_save.pkl"
@@ -94,15 +95,24 @@ class SaveManager:
 
             # 既存のファイルをバックアップ
             if self.save_file.exists():
-                self.save_file.rename(self.backup_file)
+                try:
+                    self.save_file.rename(self.backup_file)
+                except (OSError, PermissionError) as e:
+                    raise SaveError(f"Failed to backup save file: {e}") from e
 
             # メインセーブファイルを保存
-            with open(self.save_file, "wb") as f:
-                pickle.dump(game_data, f)
+            try:
+                with open(self.save_file, "wb") as f:
+                    pickle.dump(game_data, f)
+            except (OSError, PermissionError, pickle.PickleError) as e:
+                raise SaveError(f"Failed to save game data: {e}") from e
 
             # メタデータを保存
-            with open(self.metadata_file, "w") as f:
-                json.dump(metadata, f, indent=2)
+            try:
+                with open(self.metadata_file, "w") as f:
+                    json.dump(metadata, f, indent=2)
+            except (OSError, PermissionError, json.JSONEncodeError) as e:
+                raise SaveError(f"Failed to save metadata: {e}") from e
 
             # セーブファイルのチェックサムを計算・保存
             self._save_checksum()

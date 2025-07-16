@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING
 
 import tcod.bsp
 
-from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.dungeon.constants import BSPConstants, DoorConstants
 from pyrogue.map.dungeon.line_drawer import LineDrawer
+from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Door, Floor, SecretDoor
 from pyrogue.utils import game_logger
 
@@ -48,12 +48,12 @@ class BSPDungeonBuilder:
         self.rooms: list[Room] = []
         self.room_id_counter = 0
         self.door_positions: set[tuple[int, int]] = set()  # ドア配置済み位置を記録
-        
+
         # BSP設定（定数クラスから）
         self._depth = BSPConstants.DEPTH
         self._min_size = BSPConstants.MIN_SIZE
         self._full_rooms = BSPConstants.FULL_ROOMS
-        
+
         # 線描画器を初期化
         self.line_drawer = LineDrawer(self._place_corridor_tile)
 
@@ -201,10 +201,12 @@ class BSPDungeonBuilder:
             horizontal_first = random.random() < 0.5
             self.line_drawer.draw_connection_line(
                 tiles,
-                center1[0], center1[1],
-                center2[0], center2[1],
+                center1[0],
+                center1[1],
+                center2[0],
+                center2[1],
                 horizontal_first=horizontal_first,
-                boundary_door_placer=self._place_boundary_door_tile
+                boundary_door_placer=self._place_boundary_door_tile,
             )
         else:
             game_logger.warning("No rooms found in nodes for connection")
@@ -402,7 +404,9 @@ class BSPDungeonBuilder:
 
     def _hline_left(self, tiles: np.ndarray, x1: int, x2: int, y: int) -> None:
         """水平線を掘る（逆順、LineDrawerへのラッパー）。"""
-        self.line_drawer.draw_horizontal_line(tiles, x1, x2, y, reverse=True, boundary_door_placer=self._place_boundary_door_tile)
+        self.line_drawer.draw_horizontal_line(
+            tiles, x1, x2, y, reverse=True, boundary_door_placer=self._place_boundary_door_tile
+        )
 
     def _vline(self, tiles: np.ndarray, x: int, y1: int, y2: int) -> None:
         """垂直線を掘る（LineDrawerへのラッパー）。"""
@@ -410,7 +414,9 @@ class BSPDungeonBuilder:
 
     def _vline_up(self, tiles: np.ndarray, x: int, y1: int, y2: int) -> None:
         """垂直線を掘る（逆順、LineDrawerへのラッパー）。"""
-        self.line_drawer.draw_vertical_line(tiles, x, y1, y2, reverse=True, boundary_door_placer=self._place_boundary_door_tile)
+        self.line_drawer.draw_vertical_line(
+            tiles, x, y1, y2, reverse=True, boundary_door_placer=self._place_boundary_door_tile
+        )
 
     def reset(self) -> None:
         """ビルダーの状態をリセット。"""

@@ -39,16 +39,16 @@ def setup_game_logger() -> logging.Logger:
     # Set log level based on environment variable
     debug_mode = get_debug_mode()
     log_level = get_log_level()
-    
+
     # Map string log level to logging constants
     level_mapping = {
         "DEBUG": logging.DEBUG,
         "INFO": logging.INFO,
         "WARNING": logging.WARNING,
         "ERROR": logging.ERROR,
-        "CRITICAL": logging.CRITICAL
+        "CRITICAL": logging.CRITICAL,
     }
-    
+
     # Use specified log level or fallback to DEBUG/INFO based on debug mode
     if log_level.upper() in level_mapping:
         logger.setLevel(level_mapping[log_level.upper()])

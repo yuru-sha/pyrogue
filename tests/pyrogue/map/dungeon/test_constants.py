@@ -5,12 +5,11 @@
 値が適切に定義されていることを検証します。
 """
 
-import pytest
 
 from pyrogue.map.dungeon.constants import (
     BSPConstants,
-    DoorConstants,
     CorridorConstants,
+    DoorConstants,
     MazeConstants,
     RoomConstants,
     StairsConstants,
@@ -23,11 +22,11 @@ class TestBSPConstants:
 
     def test_bsp_constants_exist(self):
         """BSP定数が存在することを確認。"""
-        assert hasattr(BSPConstants, 'DEPTH')
-        assert hasattr(BSPConstants, 'MIN_SIZE')
-        assert hasattr(BSPConstants, 'FULL_ROOMS')
-        assert hasattr(BSPConstants, 'MIN_ROOM_SIZE')
-        assert hasattr(BSPConstants, 'MAX_ROOM_SIZE_RATIO')
+        assert hasattr(BSPConstants, "DEPTH")
+        assert hasattr(BSPConstants, "MIN_SIZE")
+        assert hasattr(BSPConstants, "FULL_ROOMS")
+        assert hasattr(BSPConstants, "MIN_ROOM_SIZE")
+        assert hasattr(BSPConstants, "MAX_ROOM_SIZE_RATIO")
 
     def test_bsp_constants_values(self):
         """BSP定数の値が妥当であることを確認。"""
@@ -51,12 +50,12 @@ class TestDoorConstants:
 
     def test_door_constants_exist(self):
         """ドア定数が存在することを確認。"""
-        assert hasattr(DoorConstants, 'SECRET_DOOR_CHANCE')
-        assert hasattr(DoorConstants, 'OPEN_DOOR_CHANCE')
-        assert hasattr(DoorConstants, 'CLOSED_DOOR_CHANCE')
-        assert hasattr(DoorConstants, 'MIN_DOOR_DISTANCE')
-        assert hasattr(DoorConstants, 'MAX_DOORS_PER_ROOM')
-        assert hasattr(DoorConstants, 'HIDDEN_DOOR_SEARCH_RANGE')
+        assert hasattr(DoorConstants, "SECRET_DOOR_CHANCE")
+        assert hasattr(DoorConstants, "OPEN_DOOR_CHANCE")
+        assert hasattr(DoorConstants, "CLOSED_DOOR_CHANCE")
+        assert hasattr(DoorConstants, "MIN_DOOR_DISTANCE")
+        assert hasattr(DoorConstants, "MAX_DOORS_PER_ROOM")
+        assert hasattr(DoorConstants, "HIDDEN_DOOR_SEARCH_RANGE")
 
     def test_door_constants_values(self):
         """ドア定数の値が妥当であることを確認。"""
@@ -69,11 +68,7 @@ class TestDoorConstants:
 
     def test_door_probabilities_sum_to_one(self):
         """ドア確率の合計が1.0になることを確認。"""
-        total = (
-            DoorConstants.SECRET_DOOR_CHANCE +
-            DoorConstants.OPEN_DOOR_CHANCE +
-            DoorConstants.CLOSED_DOOR_CHANCE
-        )
+        total = DoorConstants.SECRET_DOOR_CHANCE + DoorConstants.OPEN_DOOR_CHANCE + DoorConstants.CLOSED_DOOR_CHANCE
         assert abs(total - 1.0) < 0.001  # 浮動小数点の誤差を考慮
 
     def test_door_constants_types(self):
@@ -91,11 +86,11 @@ class TestCorridorConstants:
 
     def test_corridor_constants_exist(self):
         """通路定数が存在することを確認。"""
-        assert hasattr(CorridorConstants, 'ADDITIONAL_CONNECTION_CHANCE')
-        assert hasattr(CorridorConstants, 'MIN_ROOMS_FOR_ADDITIONAL')
-        assert hasattr(CorridorConstants, 'CORRIDOR_WIDTH')
-        assert hasattr(CorridorConstants, 'MIN_CORRIDOR_LENGTH')
-        assert hasattr(CorridorConstants, 'CONNECTION_POINT_OFFSET')
+        assert hasattr(CorridorConstants, "ADDITIONAL_CONNECTION_CHANCE")
+        assert hasattr(CorridorConstants, "MIN_ROOMS_FOR_ADDITIONAL")
+        assert hasattr(CorridorConstants, "CORRIDOR_WIDTH")
+        assert hasattr(CorridorConstants, "MIN_CORRIDOR_LENGTH")
+        assert hasattr(CorridorConstants, "CONNECTION_POINT_OFFSET")
 
     def test_corridor_constants_values(self):
         """通路定数の値が妥当であることを確認。"""
@@ -119,13 +114,13 @@ class TestMazeConstants:
 
     def test_maze_constants_exist(self):
         """迷路定数が存在することを確認。"""
-        assert hasattr(MazeConstants, 'MIN_FLOOR_DENSITY')
-        assert hasattr(MazeConstants, 'MAX_FLOOR_DENSITY')
-        assert hasattr(MazeConstants, 'TARGET_FLOOR_DENSITY')
-        assert hasattr(MazeConstants, 'CELLULAR_AUTOMATA_ITERATIONS')
-        assert hasattr(MazeConstants, 'BIRTH_LIMIT')
-        assert hasattr(MazeConstants, 'DEATH_LIMIT')
-        assert hasattr(MazeConstants, 'MAZE_FLOORS')
+        assert hasattr(MazeConstants, "MIN_FLOOR_DENSITY")
+        assert hasattr(MazeConstants, "MAX_FLOOR_DENSITY")
+        assert hasattr(MazeConstants, "TARGET_FLOOR_DENSITY")
+        assert hasattr(MazeConstants, "CELLULAR_AUTOMATA_ITERATIONS")
+        assert hasattr(MazeConstants, "BIRTH_LIMIT")
+        assert hasattr(MazeConstants, "DEATH_LIMIT")
+        assert hasattr(MazeConstants, "MAZE_FLOORS")
 
     def test_maze_constants_values(self):
         """迷路定数の値が妥当であることを確認。"""
@@ -135,7 +130,7 @@ class TestMazeConstants:
         assert MazeConstants.CELLULAR_AUTOMATA_ITERATIONS == 5
         assert MazeConstants.BIRTH_LIMIT == 4
         assert MazeConstants.DEATH_LIMIT == 3
-        assert MazeConstants.MAZE_FLOORS == [7, 13, 19]
+        assert [7, 13, 19] == MazeConstants.MAZE_FLOORS
 
     def test_maze_density_relationships(self):
         """迷路密度の関係が妥当であることを確認。"""
@@ -158,13 +153,13 @@ class TestRoomConstants:
 
     def test_room_constants_exist(self):
         """部屋定数が存在することを確認。"""
-        assert hasattr(RoomConstants, 'MIN_ROOM_WIDTH')
-        assert hasattr(RoomConstants, 'MIN_ROOM_HEIGHT')
-        assert hasattr(RoomConstants, 'MAX_ROOM_WIDTH')
-        assert hasattr(RoomConstants, 'MAX_ROOM_HEIGHT')
-        assert hasattr(RoomConstants, 'MIN_ROOM_DISTANCE')
-        assert hasattr(RoomConstants, 'ROOM_PADDING')
-        assert hasattr(RoomConstants, 'SPECIAL_ROOM_CHANCE')
+        assert hasattr(RoomConstants, "MIN_ROOM_WIDTH")
+        assert hasattr(RoomConstants, "MIN_ROOM_HEIGHT")
+        assert hasattr(RoomConstants, "MAX_ROOM_WIDTH")
+        assert hasattr(RoomConstants, "MAX_ROOM_HEIGHT")
+        assert hasattr(RoomConstants, "MIN_ROOM_DISTANCE")
+        assert hasattr(RoomConstants, "ROOM_PADDING")
+        assert hasattr(RoomConstants, "SPECIAL_ROOM_CHANCE")
 
     def test_room_constants_values(self):
         """部屋定数の値が妥当であることを確認。"""
@@ -197,9 +192,9 @@ class TestStairsConstants:
 
     def test_stairs_constants_exist(self):
         """階段定数が存在することを確認。"""
-        assert hasattr(StairsConstants, 'MIN_STAIRS_DISTANCE')
-        assert hasattr(StairsConstants, 'STAIRS_ROOM_PREFERENCE')
-        assert hasattr(StairsConstants, 'STAIRS_SAFE_RADIUS')
+        assert hasattr(StairsConstants, "MIN_STAIRS_DISTANCE")
+        assert hasattr(StairsConstants, "STAIRS_ROOM_PREFERENCE")
+        assert hasattr(StairsConstants, "STAIRS_SAFE_RADIUS")
 
     def test_stairs_constants_values(self):
         """階段定数の値が妥当であることを確認。"""
@@ -219,12 +214,12 @@ class TestValidationConstants:
 
     def test_validation_constants_exist(self):
         """検証定数が存在することを確認。"""
-        assert hasattr(ValidationConstants, 'MIN_REACHABLE_TILES')
-        assert hasattr(ValidationConstants, 'MAX_ISOLATED_AREAS')
-        assert hasattr(ValidationConstants, 'MIN_ROOMS_PER_FLOOR')
-        assert hasattr(ValidationConstants, 'MAX_ROOMS_PER_FLOOR')
-        assert hasattr(ValidationConstants, 'MIN_CORRIDOR_COUNT')
-        assert hasattr(ValidationConstants, 'MAX_CORRIDOR_COMPLEXITY')
+        assert hasattr(ValidationConstants, "MIN_REACHABLE_TILES")
+        assert hasattr(ValidationConstants, "MAX_ISOLATED_AREAS")
+        assert hasattr(ValidationConstants, "MIN_ROOMS_PER_FLOOR")
+        assert hasattr(ValidationConstants, "MAX_ROOMS_PER_FLOOR")
+        assert hasattr(ValidationConstants, "MIN_CORRIDOR_COUNT")
+        assert hasattr(ValidationConstants, "MAX_CORRIDOR_COMPLEXITY")
 
     def test_validation_constants_values(self):
         """検証定数の値が妥当であることを確認。"""

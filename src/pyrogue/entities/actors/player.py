@@ -437,7 +437,7 @@ class Player(Actor):
                     self.inventory.remove_item(item)
                 self.record_item_use()
             return success
-        
+
         if isinstance(item, Wand):
             # 杖の使用には方向が必要
             if context is None:

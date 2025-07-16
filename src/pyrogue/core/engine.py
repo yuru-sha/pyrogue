@@ -241,7 +241,18 @@ class Engine:
         """
         # Get appropriate screen context for current state
         context = self._get_current_screen()
-        return self.state_manager.handle_input(event, self.state, context)
+
+        # コンテキストがNoneの場合の安全な処理
+        if context is None:
+            # デフォルトの処理（通常は発生しないが安全のため）
+            return self.state
+
+        try:
+            return self.state_manager.handle_input(event, self.state, context)
+        except Exception as e:
+            # 入力処理エラーを記録してゲームを継続
+            print(f"Warning: Input handling error: {e}")
+            return self.state
 
     def _get_current_screen(self):
         """Get the current screen instance based on state."""

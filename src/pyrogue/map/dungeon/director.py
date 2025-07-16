@@ -129,7 +129,7 @@ class DungeonDirector:
                                 # タイルを再初期化してリトライ
                                 self.tiles = self.tiles_manager.initialize_tiles()
                                 game_logger.debug(f"Retrying maze generation (attempt {attempt + 2})")
-                
+
                 if self.dungeon_type != "maze":  # 通常ダンジョンまたはフォールバック処理
                     # BSPベースシステムを使用
                     # 1. BSPで部屋と通路を生成

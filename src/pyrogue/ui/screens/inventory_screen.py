@@ -144,7 +144,7 @@ class InventoryScreen(Screen):
                     "sustain": "SUSTAIN",
                     "search": "SEARCH",
                     "see_invisible": "SEE INV",
-                    "regeneration": "REGEN"
+                    "regeneration": "REGEN",
                 }.get(item.effect, item.effect.upper())
                 return f"{display_name} ({effect_display} {item.bonus:+d})"
             return f"{display_name}"
@@ -208,7 +208,7 @@ class InventoryScreen(Screen):
                     else:
                         # 装備を実行
                         old_item = self.game_screen.game_logic.inventory.equip(selected_item)
-                        
+
                         # 装備成功判定（is_equippedで確認）
                         if self.game_screen.game_logic.inventory.is_equipped(selected_item):
                             # 装備成功！新しい装備をインベントリから削除
@@ -272,7 +272,9 @@ class InventoryScreen(Screen):
                     # 杖の使用には方向選択が必要
                     player = self.game_screen.game_logic.player
                     display_name = selected_item.get_display_name(player.identification)
-                    self.game_screen.game_logic.add_message(f"Use 'z' key to zap the {display_name}. Wands require direction.")
+                    self.game_screen.game_logic.add_message(
+                        f"Use 'z' key to zap the {display_name}. Wands require direction."
+                    )
                 else:
                     player = self.game_screen.game_logic.player
                     display_name = selected_item.get_display_name(player.identification)
@@ -313,7 +315,7 @@ class InventoryScreen(Screen):
         # 装備中のアイテムを確認
         equipped_items = []
         equipped = self.game_screen.game_logic.inventory.equipped
-        
+
         if equipped["weapon"]:
             equipped_items.append(("weapon", equipped["weapon"]))
         if equipped["armor"]:
@@ -322,35 +324,35 @@ class InventoryScreen(Screen):
             equipped_items.append(("ring_left", equipped["ring_left"]))
         if equipped["ring_right"]:
             equipped_items.append(("ring_right", equipped["ring_right"]))
-        
+
         if not equipped_items:
             self.game_screen.game_logic.add_message("You have no equipment to remove.")
             return
-        
+
         # 装備解除選択画面を表示
         self.game_screen.game_logic.add_message("Select item to unequip:")
         for i, (slot, item) in enumerate(equipped_items):
             slot_name = {"weapon": "Weapon", "armor": "Armor", "ring_left": "Ring(L)", "ring_right": "Ring(R)"}[slot]
             display_name = item.get_display_name(self.game_screen.game_logic.player.identification)
             self.game_screen.game_logic.add_message(f"{chr(ord('a') + i)}) {slot_name}: {display_name}")
-        
+
         self.unequip_mode = True
         self.equipped_items = equipped_items
         self.game_screen.game_logic.add_message("Press a-z to select, ESC to cancel.")
-    
+
     def _handle_unequip_selection(self, event: tcod.event.KeyDown) -> None:
         """装備解除選択の処理"""
         if event.sym == tcod.event.KeySym.ESCAPE:
             self.unequip_mode = False
             self.game_screen.game_logic.add_message("Cancelled.")
             return
-        
+
         # a-z キーの処理
-        if event.sym >= ord('a') and event.sym <= ord('z'):
-            index = event.sym - ord('a')
+        if event.sym >= ord("a") and event.sym <= ord("z"):
+            index = event.sym - ord("a")
             if 0 <= index < len(self.equipped_items):
                 slot, item = self.equipped_items[index]
-                
+
                 # 装備を外す
                 unequipped_item = self.game_screen.game_logic.inventory.unequip(slot)
                 if unequipped_item:
@@ -363,12 +365,10 @@ class InventoryScreen(Screen):
                         self.game_screen.game_logic.add_message("Your inventory is full!")
                 else:
                     # 呪われたアイテムの場合
-                    self.game_screen.game_logic.add_message(
-                        f"The {item.name} is cursed and cannot be removed!"
-                    )
+                    self.game_screen.game_logic.add_message(f"The {item.name} is cursed and cannot be removed!")
             else:
                 self.game_screen.game_logic.add_message("Invalid selection.")
-            
+
             self.unequip_mode = False
         else:
             self.game_screen.game_logic.add_message("Press a-z to select, ESC to cancel.")

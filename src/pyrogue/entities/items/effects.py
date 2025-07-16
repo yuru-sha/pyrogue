@@ -94,7 +94,7 @@ class HealingEffect(InstantEffect):
             _add_message_safe(context, f"You feel better! (+{actual_heal} HP)")
         else:
             _add_message_safe(context, "You are already at full health.")
-        
+
         # HP MAXの場合でも、ポーションの使用アクションは成功とみなす
         # （一般的なローグライクゲームでは効果がなくてもポーションは消費される）
         return True
@@ -200,7 +200,7 @@ class NutritionEffect(InstantEffect):
             _add_message_safe(context, f"You feel satisfied. (+{hunger_gained} hunger)")
         else:
             _add_message_safe(context, "You are already full.")
-        
+
         # 満腹の場合でも、食料の使用アクションは成功とみなす
         # （一般的なローグライクゲームでは効果がなくても食料は消費される）
         return True

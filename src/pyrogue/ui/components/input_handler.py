@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 import tcod.event
 
-from pyrogue.core.game_states import GameStates
 from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+from pyrogue.core.game_states import GameStates
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
@@ -48,7 +48,7 @@ class InputHandler:
         self.targeting_y = 0
         self.wand_direction_mode = False
         self.selected_wand = None
-        
+
         # CommonCommandHandlerを初期化
         self.command_context = GUICommandContext(game_screen)
         self.command_handler = CommonCommandHandler(self.command_context)
@@ -143,7 +143,7 @@ class InputHandler:
         elif key == ord("o"):
             # ドア開放
             self._handle_door_action(True)
-            
+
         elif key == ord("O"):
             # 自動探索コマンド（大文字O・CommonCommandHandler経由）
             result = self.command_handler.handle_command("auto_explore")
@@ -201,7 +201,7 @@ class InputHandler:
         elif key == ord("r") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+R で全マップ探索
             self.game_screen.game_logic.wizard_reveal_all()
-            
+
         elif key == ord("m") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+M で最後のメッセージ表示（CommonCommandHandler経由）
             result = self.command_handler.handle_command("last_message")
@@ -215,10 +215,9 @@ class InputHandler:
             # 簡単な実装：最初の投擲可能アイテムを投げる
             player = self.game_screen.player
             inventory = self.game_screen.game_logic.inventory
-            
-            throwable_items = [item for item in inventory.items 
-                             if hasattr(item, 'attack') or hasattr(item, 'effect')]
-            
+
+            throwable_items = [item for item in inventory.items if hasattr(item, "attack") or hasattr(item, "effect")]
+
             if throwable_items:
                 item_name = throwable_items[0].name
                 result = self.command_handler.handle_command("throw", [item_name])
@@ -233,17 +232,11 @@ class InputHandler:
             if result.should_end_turn:
                 self.game_screen.game_logic.handle_turn_end()
 
-        elif (
-            key == tcod.event.KeySym.QUESTION
-            or unicode_char == "?"
-        ):
+        elif key == tcod.event.KeySym.QUESTION or unicode_char == "?":
             # ヘルプ表示（JIS配列対応）
             self._handle_help_action()
-            
-        elif (
-            key == tcod.event.KeySym.SLASH
-            or unicode_char == "/"
-        ):
+
+        elif key == tcod.event.KeySym.SLASH or unicode_char == "/":
             # シンボル説明（JIS配列対応・CommonCommandHandler経由）
             result = self.command_handler.handle_command("symbol_explanation")
 
@@ -258,24 +251,23 @@ class InputHandler:
             result = self.command_handler.handle_command("long_rest")
             if result.should_end_turn:
                 self.game_screen.game_logic.handle_turn_end()
-            
+
         elif key == tcod.event.KeySym.BACKSLASH or unicode_char == "\\":
             # アイテム識別状況表示（\キー・CommonCommandHandler経由）
             result = self.command_handler.handle_command("identification_status")
-            
+
         elif key == tcod.event.KeySym.AT or unicode_char == "@":
             # キャラクター詳細表示（@キー・CommonCommandHandler経由）
             result = self.command_handler.handle_command("character_details")
-            
+
         elif key == ord("w"):
             # 直接装備コマンド（wキー・CommonCommandHandler経由）
             # 簡単な実装：最初の装備可能アイテムを装備
             player = self.game_screen.player
             inventory = self.game_screen.game_logic.inventory
-            
-            equippable_items = [item for item in inventory.items 
-                              if hasattr(item, 'attack') or hasattr(item, 'defense')]
-            
+
+            equippable_items = [item for item in inventory.items if hasattr(item, "attack") or hasattr(item, "defense")]
+
             if equippable_items:
                 item_name = equippable_items[0].name
                 result = self.command_handler.handle_command("wear", [item_name])
@@ -283,7 +275,7 @@ class InputHandler:
                     self.game_screen.game_logic.handle_turn_end()
             else:
                 self.game_screen.game_logic.add_message("You have no items to equip.")
-            
+
         elif key == ord("l"):
             # 足元・周囲調査コマンド（lキー・CommonCommandHandler経由）
             result = self.command_handler.handle_command("look")
@@ -454,73 +446,78 @@ class InputHandler:
         """
         player = self.game_screen.game_logic.player
         inventory = self.game_screen.game_logic.inventory
-        
+
         # 投擲可能なアイテムを検索
         throwable_items = []
         for item in inventory.items:
             # 武器、ポーション、食料は投擲可能
-            if hasattr(item, 'attack') or hasattr(item, 'effect') or item.name.lower().find('food') != -1:
+            if hasattr(item, "attack") or hasattr(item, "effect") or item.name.lower().find("food") != -1:
                 throwable_items.append(item)
-        
+
         if not throwable_items:
             self.game_screen.game_logic.add_message("You have nothing to throw.")
             return
-        
+
         # 最初の投擲可能アイテムを選択（簡単な実装）
         item_to_throw = throwable_items[0]
-        
+
         # 8方向から投擲方向を選択（北を選択）
         directions = [
-            (-1, -1), (0, -1), (1, -1),  # 左上、上、右上
-            (-1,  0),          (1,  0),  # 左、右
-            (-1,  1), (0,  1), (1,  1)   # 左下、下、右下
+            (-1, -1),
+            (0, -1),
+            (1, -1),  # 左上、上、右上
+            (-1, 0),
+            (1, 0),  # 左、右
+            (-1, 1),
+            (0, 1),
+            (1, 1),  # 左下、下、右下
         ]
-        
+
         # 北方向（上）に投擲
         dx, dy = directions[1]  # (0, -1)
         target_x = player.x + dx
         target_y = player.y + dy
-        
+
         # 投擲処理
         dungeon = self.game_screen.game_logic.dungeon
-        
+
         # 範囲チェック
         if not (0 <= target_x < dungeon.width and 0 <= target_y < dungeon.height):
             self.game_screen.game_logic.add_message("You can't throw in that direction.")
             return
-        
+
         # 投擲実行
         inventory.remove_item(item_to_throw)
-        
+
         # ダメージ計算
         damage = 1
-        if hasattr(item_to_throw, 'attack'):
+        if hasattr(item_to_throw, "attack"):
             damage = item_to_throw.attack
-        
+
         # 投擲先にモンスターがいるかチェック
         target_monster = None
         for monster in dungeon.monsters:
             if monster.x == target_x and monster.y == target_y:
                 target_monster = monster
                 break
-        
+
         if target_monster:
             # モンスターに命中
             actual_damage = max(1, damage - target_monster.defense)
             target_monster.hp -= actual_damage
-            
+
             display_name = item_to_throw.get_display_name(player.identification)
             self.game_screen.game_logic.add_message(
                 f"You throw the {display_name} at the {target_monster.name} for {actual_damage} damage!"
             )
-            
+
             # モンスターが死亡したかチェック
             if target_monster.hp <= 0:
                 self.game_screen.game_logic.add_message(f"The {target_monster.name} dies!")
                 dungeon.monsters.remove(target_monster)
                 player.exp += target_monster.exp
                 player.kill_count += 1
-                
+
                 # レベルアップチェック
                 if player.exp >= player.exp_to_next_level:
                     player.level_up()
@@ -529,10 +526,10 @@ class InputHandler:
             # 何もない場所に投擲
             display_name = item_to_throw.get_display_name(player.identification)
             self.game_screen.game_logic.add_message(f"You throw the {display_name}. It falls to the ground.")
-            
+
             # アイテムを地面に配置
             self.game_screen.game_logic.drop_item_at(item_to_throw, target_x, target_y)
-        
+
         # ターン消費
         self.game_screen.game_logic.handle_turn_end()
 
@@ -544,7 +541,7 @@ class InputHandler:
         """
         player = self.game_screen.game_logic.player
         dungeon = self.game_screen.game_logic.dungeon
-        
+
         # 敵が近くにいるかチェック
         for monster in dungeon.monsters:
             dx = abs(monster.x - player.x)
@@ -552,19 +549,24 @@ class InputHandler:
             if dx <= 3 and dy <= 3:  # 3マス以内に敵がいる
                 self.game_screen.game_logic.add_message("You sense danger nearby. Auto-explore stopped.")
                 return
-        
+
         # 未探索エリアを探索（簡単な実装）
         # 8方向をチェックして、最初の歩ける場所に移動
         directions = [
-            (-1, -1), (0, -1), (1, -1),  # 左上、上、右上
-            (-1,  0),          (1,  0),  # 左、右
-            (-1,  1), (0,  1), (1,  1)   # 左下、下、右下
+            (-1, -1),
+            (0, -1),
+            (1, -1),  # 左上、上、右上
+            (-1, 0),
+            (1, 0),  # 左、右
+            (-1, 1),
+            (0, 1),
+            (1, 1),  # 左下、下、右下
         ]
-        
+
         for dx, dy in directions:
             new_x = player.x + dx
             new_y = player.y + dy
-            
+
             # 境界チェック
             if 0 <= new_x < dungeon.width and 0 <= new_y < dungeon.height:
                 tile = dungeon.tiles[new_y][new_x]
@@ -572,7 +574,7 @@ class InputHandler:
                     # 移動可能な場所を発見
                     self.game_screen.game_logic.handle_player_move(dx, dy)
                     return
-        
+
         # 移動できる場所がない
         self.game_screen.game_logic.add_message("No unexplored areas found nearby.")
 
@@ -584,56 +586,61 @@ class InputHandler:
         """
         player = self.game_screen.game_logic.player
         dungeon = self.game_screen.game_logic.dungeon
-        
+
         look_text = "\n=== Look Around ===\n"
-        
+
         # プレイヤーの足元をチェック
         look_text += f"\nAt your feet ({player.x}, {player.y}):\n"
-        
+
         # 足元のアイテムをチェック
         items_at_feet = []
         for item in dungeon.items:
             if item.x == player.x and item.y == player.y:
                 items_at_feet.append(item)
-        
+
         if items_at_feet:
             for item in items_at_feet:
                 display_name = item.get_display_name(player.identification)
                 look_text += f"  {display_name}\n"
         else:
             look_text += "  Nothing special.\n"
-        
+
         # 周囲8マスをチェック
         look_text += "\nSurrounding areas:\n"
-        
+
         directions = [
-            (-1, -1, "Northwest"), (0, -1, "North"), (1, -1, "Northeast"),
-            (-1,  0, "West"),                        (1,  0, "East"),
-            (-1,  1, "Southwest"), (0,  1, "South"), (1,  1, "Southeast")
+            (-1, -1, "Northwest"),
+            (0, -1, "North"),
+            (1, -1, "Northeast"),
+            (-1, 0, "West"),
+            (1, 0, "East"),
+            (-1, 1, "Southwest"),
+            (0, 1, "South"),
+            (1, 1, "Southeast"),
         ]
-        
+
         for dx, dy, direction in directions:
             new_x = player.x + dx
             new_y = player.y + dy
-            
+
             # 境界チェック
             if 0 <= new_x < dungeon.width and 0 <= new_y < dungeon.height:
                 tile = dungeon.tiles[new_y][new_x]
-                
+
                 # 地形情報
                 terrain_info = ""
                 if tile.walkable:
                     terrain_info = "floor"
                 else:
                     terrain_info = "wall"
-                
+
                 # モンスターをチェック
                 monster_at_pos = None
                 for monster in dungeon.monsters:
                     if monster.x == new_x and monster.y == new_y:
                         monster_at_pos = monster
                         break
-                
+
                 if monster_at_pos:
                     look_text += f"  {direction}: {monster_at_pos.name} on {terrain_info}\n"
                 else:
@@ -643,7 +650,7 @@ class InputHandler:
                         if item.x == new_x and item.y == new_y:
                             item_at_pos = item
                             break
-                    
+
                     if item_at_pos:
                         display_name = item_at_pos.get_display_name(player.identification)
                         look_text += f"  {direction}: {display_name} on {terrain_info}\n"
@@ -651,9 +658,9 @@ class InputHandler:
                         look_text += f"  {direction}: {terrain_info}\n"
             else:
                 look_text += f"  {direction}: out of bounds\n"
-        
+
         look_text += "\nPress any key to continue..."
-        
+
         self.game_screen.game_logic.add_message(look_text.strip())
 
     def _handle_help_action(self) -> None:
@@ -776,19 +783,19 @@ Press any key to continue...
         """
         # メッセージ履歴を取得
         messages = self.game_screen.game_logic.get_message_history()
-        
+
         if not messages:
             self.game_screen.game_logic.add_message("No messages in history.")
             return
-            
+
         # 最後の10件のメッセージを表示
         recent_messages = messages[-10:]
-        
+
         history_text = "\n=== Recent Messages ===\n"
         for i, msg in enumerate(recent_messages, 1):
             history_text += f"{i:2d}. {msg}\n"
         history_text += "\nPress any key to continue..."
-        
+
         self.game_screen.game_logic.add_message(history_text.strip())
 
     def _handle_identification_status_action(self) -> None:
@@ -799,9 +806,9 @@ Press any key to continue...
         """
         player = self.game_screen.game_logic.player
         identification = player.identification
-        
+
         status_text = "\n=== Item Identification Status ===\n"
-        
+
         # ポーション識別状況
         status_text += "\nPotions:\n"
         potion_types = ["Healing Potion", "Poison Potion", "Strength Potion", "Restore Potion"]
@@ -812,7 +819,7 @@ Press any key to continue...
                 else:
                     display_name = identification.get_display_name(potion_type, "POTION")
                     status_text += f"  {display_name}: Unknown\n"
-        
+
         # 巻物識別状況
         status_text += "\nScrolls:\n"
         scroll_types = ["Scroll of Identify", "Scroll of Teleport", "Scroll of Magic Mapping", "Scroll of Light"]
@@ -823,7 +830,7 @@ Press any key to continue...
                 else:
                     display_name = identification.get_display_name(scroll_type, "SCROLL")
                     status_text += f"  {display_name}: Unknown\n"
-        
+
         # 指輪識別状況
         status_text += "\nRings:\n"
         ring_types = ["Ring of Strength", "Ring of Defense", "Ring of Regeneration"]
@@ -834,9 +841,9 @@ Press any key to continue...
                 else:
                     display_name = identification.get_display_name(ring_type, "RING")
                     status_text += f"  {display_name}: Unknown\n"
-        
+
         status_text += "\nPress any key to continue..."
-        
+
         self.game_screen.game_logic.add_message(status_text.strip())
 
     def _handle_character_details_action(self) -> None:
@@ -847,9 +854,9 @@ Press any key to continue...
         """
         player = self.game_screen.game_logic.player
         inventory = self.game_screen.game_logic.inventory
-        
+
         details_text = "\n=== Character Details ===\n"
-        
+
         # 基本ステータス
         details_text += f"\nLevel: {player.level}\n"
         details_text += f"Experience: {player.exp}/{player.exp_to_next_level}\n"
@@ -857,39 +864,39 @@ Press any key to continue...
         details_text += f"Gold: {player.gold}\n"
         details_text += f"Hunger: {player.hunger_status}\n"
         details_text += f"Turn: {player.turn_count}\n"
-        
+
         # 能力値
         base_attack = player.attack
         base_defense = player.defense
         attack_bonus = inventory.get_attack_bonus()
         defense_bonus = inventory.get_defense_bonus()
-        
-        details_text += f"\nAttributes:\n"
+
+        details_text += "\nAttributes:\n"
         details_text += f"  Attack: {base_attack} + {attack_bonus} = {base_attack + attack_bonus}\n"
         details_text += f"  Defense: {base_defense} + {defense_bonus} = {base_defense + defense_bonus}\n"
-        
+
         # 装備状況
-        details_text += f"\nEquipment:\n"
+        details_text += "\nEquipment:\n"
         equipped = inventory.equipped
-        
+
         weapon_name = equipped["weapon"].name if equipped["weapon"] else "None"
         armor_name = equipped["armor"].name if equipped["armor"] else "None"
         ring_left_name = equipped["ring_left"].name if equipped["ring_left"] else "None"
         ring_right_name = equipped["ring_right"].name if equipped["ring_right"] else "None"
-        
+
         details_text += f"  Weapon: {weapon_name}\n"
         details_text += f"  Armor: {armor_name}\n"
         details_text += f"  Ring (Left): {ring_left_name}\n"
         details_text += f"  Ring (Right): {ring_right_name}\n"
-        
+
         # 状態異常
         if player.status_effects:
-            details_text += f"\nStatus Effects:\n"
+            details_text += "\nStatus Effects:\n"
             for effect in player.status_effects:
                 details_text += f"  {effect.name}: {effect.duration} turns\n"
-        
+
         details_text += "\nPress any key to continue..."
-        
+
         self.game_screen.game_logic.add_message(details_text.strip())
 
     def _handle_direct_wear_action(self) -> None:
@@ -900,25 +907,25 @@ Press any key to continue...
         """
         player = self.game_screen.game_logic.player
         inventory = self.game_screen.game_logic.inventory
-        
+
         # 装備可能なアイテムを検索
         equippable_items = []
         for item in inventory.items:
-            if hasattr(item, 'attack') or hasattr(item, 'defense') or hasattr(item, 'effect'):
+            if hasattr(item, "attack") or hasattr(item, "defense") or hasattr(item, "effect"):
                 equippable_items.append(item)
-        
+
         if not equippable_items:
             self.game_screen.game_logic.add_message("You have no items to equip.")
             return
-        
+
         # 簡単な選択UI（最初の装備可能アイテムを装備）
         item_to_equip = equippable_items[0]
-        
+
         # 装備処理
         if not inventory.is_equipped(item_to_equip):
             old_item = inventory.equip(item_to_equip)
             inventory.remove_item(item_to_equip)
-            
+
             # 前の装備をインベントリに戻す
             if old_item:
                 if inventory.add_item(old_item):
@@ -927,9 +934,7 @@ Press any key to continue...
                     )
                 else:
                     # インベントリが満杯の場合は地面にドロップ
-                    if self.game_screen.game_logic.drop_item_at(
-                        old_item, player.x, player.y
-                    ):
+                    if self.game_screen.game_logic.drop_item_at(old_item, player.x, player.y):
                         self.game_screen.game_logic.add_message(
                             f"You drop the {old_item.name} and equip the {item_to_equip.name}."
                         )
@@ -978,7 +983,6 @@ Press any key to continue...
         if hasattr(player, "hunger") and player.hunger >= 80:  # 満腹時
             if player.hp < player.max_hp:
                 player.hp = min(player.max_hp, player.hp + 1)
-
 
         # 飢餓進行
         if hasattr(player, "consume_food"):

@@ -59,8 +59,15 @@ class CombatManager:
         context.add_message(f"You attack the {monster.name} for {damage} damage!")
 
         # モンスター分裂判定（ダメージを受けた時）
-        if monster.hp > 0 and hasattr(context, "monster_ai_manager"):
-            context.monster_ai_manager.split_monster_on_damage(monster, context)
+        if monster.hp > 0 and hasattr(context, "monster_ai_manager") and context.monster_ai_manager:
+            try:
+                context.monster_ai_manager.split_monster_on_damage(monster, context)
+            except Exception as e:
+                # 分裂処理エラーを記録（ゲームを継続）
+                if hasattr(context, "add_message"):
+                    context.add_message(f"Monster split error: {e}")
+                else:
+                    print(f"Warning: Monster split error: {e}")
 
         # モンスターの死亡判定
         if monster.hp <= 0:

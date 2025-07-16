@@ -12,8 +12,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.dungeon.constants import CorridorConstants
+from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Floor
 from pyrogue.utils import game_logger
 
@@ -313,7 +313,10 @@ class CorridorBuilder:
 
         """
         # 定数で定義された確率で追加接続を作成
-        if random.random() < CorridorConstants.ADDITIONAL_CONNECTION_CHANCE and len(rooms) >= CorridorConstants.MIN_ROOMS_FOR_ADDITIONAL:
+        if (
+            random.random() < CorridorConstants.ADDITIONAL_CONNECTION_CHANCE
+            and len(rooms) >= CorridorConstants.MIN_ROOMS_FOR_ADDITIONAL
+        ):
             room1 = random.choice(rooms)
             room2 = random.choice([r for r in rooms if r.id != room1.id])
 

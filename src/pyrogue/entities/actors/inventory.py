@@ -222,7 +222,7 @@ class Inventory:
         item = self.equipped.get(slot)
         if not item:
             return "None"
-        
+
         # ボーナス情報を含む表示名を生成
         if isinstance(item, Weapon):
             sign = "+" if item.attack >= 0 else ""
@@ -241,7 +241,7 @@ class Inventory:
                 "sustain": "SUSTAIN",
                 "search": "SEARCH",
                 "see_invisible": "SEE INV",
-                "regeneration": "REGEN"
+                "regeneration": "REGEN",
             }.get(item.effect, item.effect.upper())
             return f"{item.name} ({effect_display} {sign}{item.bonus})"
         else:

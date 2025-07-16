@@ -115,7 +115,7 @@ class Ring(Item):
             "sustain": "SUSTAIN",
             "search": "SEARCH",
             "see_invisible": "SEE INV",
-            "regeneration": "REGEN"
+            "regeneration": "REGEN",
         }.get(self.effect, self.effect.upper())
         return f"You pick up the {self.name} ({effect_display} {sign}{self.bonus})."
 

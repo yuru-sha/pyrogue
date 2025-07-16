@@ -292,7 +292,6 @@ class TurnManager:
                     final_floor = context.get_current_floor_number()
                     context.engine.game_over(player_stats, final_floor, "Hunger")
 
-
     def _check_end_turn_conditions(self, context: GameContext) -> None:
         """
         ターン終了時の状態チェック。

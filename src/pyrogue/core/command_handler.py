@@ -469,38 +469,39 @@ Available Commands:
         """調査・検査コマンドの処理。"""
         player = self.context.player
         game_logic = self.context.game_logic
-        
+
         # プレイヤーの足元と周囲8マスを調査
         examination_results = []
-        
+
         # 足元
         current_floor = game_logic.get_current_floor_data()
         if current_floor:
             # 足元のタイル
             tile = current_floor.tiles[player.y, player.x]
             examination_results.append(f"You are standing on {tile.__class__.__name__}")
-            
+
             # 足元のアイテム
-            items_here = [item for item in current_floor.item_spawner.items 
-                         if item.x == player.x and item.y == player.y]
+            items_here = [
+                item for item in current_floor.item_spawner.items if item.x == player.x and item.y == player.y
+            ]
             if items_here:
                 examination_results.append(f"Items here: {', '.join(item.name for item in items_here)}")
-            
+
             # 周囲8マス
             for dy in [-1, 0, 1]:
                 for dx in [-1, 0, 1]:
                     if dx == 0 and dy == 0:
                         continue
-                    
+
                     x, y = player.x + dx, player.y + dy
                     if 0 <= x < current_floor.tiles.shape[1] and 0 <= y < current_floor.tiles.shape[0]:
                         tile = current_floor.tiles[y, x]
                         direction = self._get_direction_name(dx, dy)
                         examination_results.append(f"{direction}: {tile.__class__.__name__}")
-        
+
         for result in examination_results:
             self.context.add_message(result)
-        
+
         return CommandResult(True, should_end_turn=True)
 
     def _handle_rest(self) -> CommandResult:
@@ -513,7 +514,7 @@ Available Commands:
         """長時間休憩コマンドの処理。"""
         player = self.context.player
         game_logic = self.context.game_logic
-        
+
         # 敵が近くにいる場合は休憩不可
         current_floor = game_logic.get_current_floor_data()
         if current_floor:
@@ -522,17 +523,17 @@ Available Commands:
                 if distance <= 5:
                     self.context.add_message("You cannot rest with enemies nearby!")
                     return CommandResult(False)
-        
+
         # 完全回復するまで休憩
         turns_rested = 0
         while player.hp < player.max_hp:
             player.hp = min(player.max_hp, player.hp + 1)
             turns_rested += 1
-            
+
             # 100ターン以上は無理
             if turns_rested >= 100:
                 break
-        
+
         self.context.add_message(f"You rest for {turns_rested} turns and recover {turns_rested} HP.")
         return CommandResult(True, should_end_turn=True)
 
@@ -540,99 +541,103 @@ Available Commands:
         """投げるコマンドの処理。"""
         if not args:
             return CommandResult(False, "Usage: throw <item_name>")
-        
+
         item_name = " ".join(args)
         player = self.context.player
         inventory = self.context.game_logic.inventory
-        
+
         # アイテムを検索
         item_to_throw = None
         for item in inventory.items:
             if item.name.lower() == item_name.lower():
                 item_to_throw = item
                 break
-        
+
         if not item_to_throw:
             return CommandResult(False, f"You don't have {item_name}")
-        
+
         # 投擲処理（簡単な実装）
         inventory.remove_item(item_to_throw)
         self.context.add_message(f"You throw the {item_to_throw.name}.")
-        
+
         return CommandResult(True, should_end_turn=True)
 
     def _handle_wear(self, args: list[str]) -> CommandResult:
         """装備コマンドの処理。"""
         if not args:
             return CommandResult(False, "Usage: wear <item_name>")
-        
+
         item_name = " ".join(args)
         player = self.context.player
         inventory = self.context.game_logic.inventory
-        
+
         # アイテムを検索
         item_to_equip = None
         for item in inventory.items:
             if item.name.lower() == item_name.lower():
                 item_to_equip = item
                 break
-        
+
         if not item_to_equip:
             return CommandResult(False, f"You don't have {item_name}")
-        
+
         # 装備処理
         old_item = player.equip_item(item_to_equip)
         if old_item:
             self.context.add_message(f"You remove the {old_item.name} and wear the {item_to_equip.name}.")
         else:
             self.context.add_message(f"You wear the {item_to_equip.name}.")
-        
+
         return CommandResult(True, should_end_turn=True)
 
     def _handle_zap(self, args: list[str]) -> CommandResult:
         """ワンド使用コマンドの処理。"""
         if not args:
             return CommandResult(False, "Usage: zap <wand_name> <direction>")
-        
+
         if len(args) < 2:
             return CommandResult(False, "Usage: zap <wand_name> <direction>")
-        
+
         wand_name = args[0]
         direction = args[1]
-        
+
         player = self.context.player
         inventory = self.context.game_logic.inventory
-        
+
         # ワンドを検索
         wand_to_use = None
         for item in inventory.items:
-            if item.name.lower() == wand_name.lower() and hasattr(item, 'charges'):
+            if item.name.lower() == wand_name.lower() and hasattr(item, "charges"):
                 wand_to_use = item
                 break
-        
+
         if not wand_to_use:
             return CommandResult(False, f"You don't have a wand called {wand_name}")
-        
+
         if not wand_to_use.has_charges():
             return CommandResult(False, f"The {wand_to_use.name} has no charges left.")
-        
+
         # 方向を解析
         direction_map = {
-            "north": (0, -1), "n": (0, -1),
-            "south": (0, 1), "s": (0, 1),
-            "east": (1, 0), "e": (1, 0),
-            "west": (-1, 0), "w": (-1, 0),
+            "north": (0, -1),
+            "n": (0, -1),
+            "south": (0, 1),
+            "s": (0, 1),
+            "east": (1, 0),
+            "e": (1, 0),
+            "west": (-1, 0),
+            "w": (-1, 0),
         }
-        
+
         if direction.lower() not in direction_map:
             return CommandResult(False, "Invalid direction. Use north/south/east/west")
-        
+
         dx, dy = direction_map[direction.lower()]
-        
+
         # ワンドを使用
         context = self.context
         success = wand_to_use.apply_effect(context, (dx, dy))
-        
+
         if success:
             self.context.add_message(f"You zap the {wand_to_use.name} {direction}.")
             return CommandResult(True, should_end_turn=True)
@@ -645,42 +650,42 @@ Available Commands:
             player = self.context.player
             game_logic = self.context.game_logic
             current_floor = game_logic.get_current_floor_data()
-            
+
             if not current_floor:
                 self.context.add_message("Cannot auto-explore: no floor data available.")
                 return CommandResult(False)
-            
+
             # 敵が近くにいる場合は自動探索を停止
             nearby_enemies = self._check_nearby_enemies(current_floor, player)
             if nearby_enemies:
                 self.context.add_message(f"Auto-explore stopped: {nearby_enemies[0].name} nearby!")
                 return CommandResult(False)
-            
+
             # 未探索エリアを探す
             target_pos = self._find_nearest_unexplored_area(current_floor, player)
-            
+
             if target_pos is None:
                 self.context.add_message("Auto-explore complete: all areas explored.")
                 return CommandResult(True)
-            
+
             # 目標地点への次の一歩を計算
             next_move = self._calculate_next_move(current_floor, player, target_pos)
-            
+
             if next_move is None:
                 self.context.add_message("Auto-explore stopped: no safe path found.")
                 return CommandResult(False)
-            
+
             # 移動を実行
             dx, dy = next_move
             success = game_logic.handle_player_move(dx, dy)
-            
+
             if success:
                 self.context.add_message(f"Auto-exploring... (target: {target_pos[0]}, {target_pos[1]})")
                 return CommandResult(True, should_end_turn=True)
             else:
                 self.context.add_message("Auto-explore stopped: movement blocked.")
                 return CommandResult(False)
-                
+
         except Exception as e:
             self.context.add_message(f"Auto-explore error: {e}")
             return CommandResult(False)
@@ -688,32 +693,30 @@ Available Commands:
     def _check_nearby_enemies(self, current_floor, player) -> list:
         """プレイヤー周囲の敵をチェック。"""
         nearby_enemies = []
-        
+
         for monster in current_floor.monster_spawner.monsters:
             distance = abs(monster.x - player.x) + abs(monster.y - player.y)
             if distance <= 3:  # 3マス以内
                 nearby_enemies.append(monster)
-        
+
         return nearby_enemies
 
     def _find_nearest_unexplored_area(self, current_floor, player) -> tuple[int, int] | None:
         """最も近い未探索エリアを見つける。"""
         from pyrogue.map.tile import Floor
-        
+
         explored = current_floor.explored
         tiles = current_floor.tiles
         player_pos = (player.x, player.y)
-        
-        min_distance = float('inf')
+
+        min_distance = float("inf")
         target_pos = None
-        
+
         # 探索済みエリアの境界付近で未探索の床タイルを探す
         for y in range(1, tiles.shape[0] - 1):
             for x in range(1, tiles.shape[1] - 1):
                 # 未探索の床タイルかチェック
-                if (not explored[y, x] and 
-                    isinstance(tiles[y, x], Floor)):
-                    
+                if not explored[y, x] and isinstance(tiles[y, x], Floor):
                     # 隣接する探索済みエリアがあるかチェック
                     has_explored_neighbor = False
                     for dy in [-1, 0, 1]:
@@ -721,80 +724,77 @@ Available Commands:
                             if dx == 0 and dy == 0:
                                 continue
                             ny, nx = y + dy, x + dx
-                            if (0 <= ny < explored.shape[0] and 
-                                0 <= nx < explored.shape[1] and
-                                explored[ny, nx]):
+                            if 0 <= ny < explored.shape[0] and 0 <= nx < explored.shape[1] and explored[ny, nx]:
                                 has_explored_neighbor = True
                                 break
                         if has_explored_neighbor:
                             break
-                    
+
                     # 探索境界の未探索エリアを優先
                     if has_explored_neighbor:
                         distance = abs(x - player_pos[0]) + abs(y - player_pos[1])
                         if distance < min_distance:
                             min_distance = distance
                             target_pos = (x, y)
-        
+
         return target_pos
 
     def _calculate_next_move(self, current_floor, player, target_pos) -> tuple[int, int] | None:
         """目標地点への次の移動を計算（簡易A*アルゴリズム）。"""
-        from pyrogue.map.tile import Floor, Door
-        
+        from pyrogue.map.tile import Door, Floor
+
         tiles = current_floor.tiles
         player_pos = (player.x, player.y)
         target_x, target_y = target_pos
-        
+
         # 目標への大まかな方向を計算
         dx = 0
         dy = 0
-        
+
         if target_x > player.x:
             dx = 1
         elif target_x < player.x:
             dx = -1
-            
+
         if target_y > player.y:
             dy = 1
         elif target_y < player.y:
             dy = -1
-        
+
         # 候補移動方向のリスト（優先順位付き）
         moves = []
-        
+
         # 直接的な移動を最優先
         if dx != 0 or dy != 0:
             moves.append((dx, dy))
-        
+
         # 斜め移動が不可能な場合の代替案
         if dx != 0:
             moves.append((dx, 0))
         if dy != 0:
             moves.append((0, dy))
-        
+
         # 各移動候補をチェック
         for move_dx, move_dy in moves:
             new_x = player.x + move_dx
             new_y = player.y + move_dy
-            
+
             # 境界チェック
-            if (new_x < 0 or new_x >= tiles.shape[1] or
-                new_y < 0 or new_y >= tiles.shape[0]):
+            if new_x < 0 or new_x >= tiles.shape[1] or new_y < 0 or new_y >= tiles.shape[0]:
                 continue
-            
+
             # タイルの通行可能性をチェック
             tile = tiles[new_y, new_x]
             if isinstance(tile, (Floor, Door)):
                 # 扉の場合は開いているかチェック
                 if isinstance(tile, Door) and not tile.is_open:
                     continue
-                
+
                 # モンスターがいないかチェック
                 monster_at_pos = current_floor.monster_spawner.get_monster_at(new_x, new_y)
                 if monster_at_pos is None:
                     return (move_dx, move_dy)
-        
+
         return None
 
     def _handle_symbol_explanation(self) -> CommandResult:
@@ -826,16 +826,16 @@ Symbol Explanation:
         """アイテム識別状況の処理。"""
         player = self.context.player
         identification = player.identification
-        
+
         self.context.add_message("Identification Status:")
         self.context.add_message(f"Identified items: {len(identification.identified_items)}")
-        
+
         return CommandResult(True)
 
     def _handle_character_details(self) -> CommandResult:
         """キャラクター詳細の処理。"""
         player = self.context.player
-        
+
         details = f"""
 Character Details:
   Name: {player.name}
@@ -857,15 +857,15 @@ Character Details:
     def _handle_last_message(self) -> CommandResult:
         """最後のメッセージ表示の処理。"""
         game_logic = self.context.game_logic
-        
-        if hasattr(game_logic, 'message_log') and game_logic.message_log:
+
+        if hasattr(game_logic, "message_log") and game_logic.message_log:
             recent_messages = game_logic.message_log[-5:]  # 最新の5つ
             self.context.add_message("Recent messages:")
             for msg in recent_messages:
                 self.context.add_message(f"  {msg}")
         else:
             self.context.add_message("No recent messages.")
-        
+
         return CommandResult(True)
 
     def _get_direction_name(self, dx: int, dy: int) -> str:
@@ -1214,11 +1214,12 @@ Character Details:
         フロアデータを復元（完全実装）。
         """
         import numpy as np
-        from pyrogue.map.dungeon_manager import FloorData
+
         from pyrogue.entities.actors.monster_spawner import MonsterSpawner
         from pyrogue.entities.items.item_spawner import ItemSpawner
         from pyrogue.entities.traps.trap import TrapManager
-        
+        from pyrogue.map.dungeon_manager import FloorData
+
         dungeon_manager = self.context.game_logic.dungeon_manager
 
         # 既存のフロアをクリア（復元成功時のみ）
@@ -1232,24 +1233,24 @@ Character Details:
         try:
             # 復元成功時のみ既存フロアをクリア
             dungeon_manager.floors.clear()
-            
+
             for floor_num_str, saved_floor_data in floor_data.items():
                 floor_num = int(floor_num_str)
-                
+
                 # タイルデータを復元
                 tiles_list = saved_floor_data.get("tiles", [])
                 if tiles_list:
                     tiles = np.array(tiles_list, dtype=object)
                 else:
                     continue  # タイルデータがない場合はスキップ
-                
+
                 # 探索済みデータを復元
                 explored_list = saved_floor_data.get("explored", [])
                 if explored_list:
                     explored = np.array(explored_list, dtype=bool)
                 else:
                     explored = np.zeros_like(tiles, dtype=bool)
-                
+
                 # MonsterSpawnerを復元
                 monster_spawner = MonsterSpawner(floor_num)
                 monsters_data = saved_floor_data.get("monsters", [])
@@ -1257,7 +1258,7 @@ Character Details:
                     monster = self._deserialize_monster(monster_data)
                     if monster:
                         monster_spawner.monsters.append(monster)
-                
+
                 # ItemSpawnerを復元
                 item_spawner = ItemSpawner(floor_num)
                 items_data = saved_floor_data.get("items", [])
@@ -1265,7 +1266,7 @@ Character Details:
                     item = self._deserialize_item(item_data)
                     if item:
                         item_spawner.items.append(item)
-                
+
                 # TrapManagerを復元
                 trap_manager = TrapManager()
                 traps_data = saved_floor_data.get("traps", [])
@@ -1273,26 +1274,26 @@ Character Details:
                     trap = self._deserialize_trap(trap_data)
                     if trap:
                         trap_manager.traps.append(trap)
-                
+
                 # 階段位置を検索
                 up_pos = None
                 down_pos = None
-                
+
                 for y in range(tiles.shape[0]):
                     for x in range(tiles.shape[1]):
                         tile = tiles[y, x]
-                        tile_name = tile.__class__.__name__ if hasattr(tile, '__class__') else str(tile)
-                        if 'StairsUp' in tile_name or 'UpStairs' in tile_name:
+                        tile_name = tile.__class__.__name__ if hasattr(tile, "__class__") else str(tile)
+                        if "StairsUp" in tile_name or "UpStairs" in tile_name:
                             up_pos = (x, y)
-                        elif 'StairsDown' in tile_name or 'DownStairs' in tile_name:
+                        elif "StairsDown" in tile_name or "DownStairs" in tile_name:
                             down_pos = (x, y)
-                
+
                 # 階段が見つからない場合のデフォルト値
                 if up_pos is None:
                     up_pos = (1, 1)  # デフォルト位置
                 if down_pos is None:
                     down_pos = (tiles.shape[1] - 2, tiles.shape[0] - 2)  # デフォルト位置
-                
+
                 # FloorDataオブジェクトを作成
                 restored_floor = FloorData(
                     floor_number=floor_num,
@@ -1302,14 +1303,14 @@ Character Details:
                     monster_spawner=monster_spawner,
                     item_spawner=item_spawner,
                     trap_manager=trap_manager,
-                    explored=explored
+                    explored=explored,
                 )
-                
+
                 # DungeonManagerに追加
                 dungeon_manager.floors[floor_num] = restored_floor
-            
+
             self.context.add_message(f"Successfully restored {len(floor_data)} floors from save data")
-            
+
         except Exception as e:
             self.context.add_message(f"Error restoring floor data: {e}")
             # エラーが発生した場合はバックアップから復元
@@ -1373,7 +1374,7 @@ Character Details:
         モンスターデータをデシリアライズ。
         """
         from pyrogue.entities.actors.monster import Monster
-        
+
         try:
             monster = Monster(
                 x=monster_data.get("x", 0),
@@ -1389,13 +1390,13 @@ Character Details:
                 view_range=monster_data.get("view_range", 3),
                 color=monster_data.get("color", (255, 255, 255)),
             )
-            
+
             # AI パターンの復元
             if "ai_pattern" in monster_data:
                 monster.ai_pattern = monster_data["ai_pattern"]
-            
+
             return monster
-            
+
         except Exception as e:
             self.context.add_message(f"Error deserializing monster: {e}")
             return None
@@ -1409,27 +1410,31 @@ Character Details:
             x = trap_data.get("x", 0)
             y = trap_data.get("y", 0)
             is_hidden = trap_data.get("hidden", True)
-            
+
             # トラップタイプに応じてインスタンスを作成
             if trap_type == "PitTrap":
                 from pyrogue.entities.traps.trap import PitTrap
+
                 trap = PitTrap(x, y)
             elif trap_type == "PoisonNeedleTrap":
                 from pyrogue.entities.traps.trap import PoisonNeedleTrap
+
                 trap = PoisonNeedleTrap(x, y)
             elif trap_type == "TeleportTrap":
                 from pyrogue.entities.traps.trap import TeleportTrap
+
                 trap = TeleportTrap(x, y)
             else:
                 # 不明なトラップタイプの場合はPitTrapをデフォルトに
                 from pyrogue.entities.traps.trap import PitTrap
+
                 trap = PitTrap(x, y)
-            
+
             # 隠し状態を設定
             trap.is_hidden = is_hidden
-            
+
             return trap
-            
+
         except Exception as e:
             self.context.add_message(f"Error deserializing trap: {e}")
             return None
