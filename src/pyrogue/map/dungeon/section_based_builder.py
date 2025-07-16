@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 import tcod.bsp
 
+from pyrogue.map.dungeon.constants import BSPConstants, DoorConstants
+from pyrogue.map.dungeon.line_drawer import LineDrawer
 from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Door, Floor, SecretDoor
 from pyrogue.utils import game_logger
@@ -18,10 +20,8 @@ from pyrogue.utils import game_logger
 if TYPE_CHECKING:
     import numpy as np
 
-# RogueBasinチュートリアルに基づく定数
-BSP_DEPTH = 10
-BSP_MIN_SIZE = 8  # 部屋間の最小間隔3マス以上を確保するために8に変更
-FULL_ROOMS = False  # False: ランダムサイズ部屋, True: ノード全体を部屋に
+# RogueBasinチュートリアルに基づく定数（定数クラスから使用）
+# BSPConstants.DEPTH, BSPConstants.MIN_SIZE, BSPConstants.FULL_ROOMS を使用
 
 
 class BSPDungeonBuilder:
@@ -49,10 +49,13 @@ class BSPDungeonBuilder:
         self.room_id_counter = 0
         self.door_positions: set[tuple[int, int]] = set()  # ドア配置済み位置を記録
 
-        # カスタマイズ可能なパラメータ
-        self._depth = BSP_DEPTH
-        self._min_size = BSP_MIN_SIZE
-        self._full_rooms = FULL_ROOMS
+        # BSP設定（定数クラスから）
+        self._depth = BSPConstants.DEPTH
+        self._min_size = BSPConstants.MIN_SIZE
+        self._full_rooms = BSPConstants.FULL_ROOMS
+
+        # 線描画器を初期化
+        self.line_drawer = LineDrawer(self._place_corridor_tile)
 
         game_logger.info(f"RogueBasin BSP DungeonBuilder initialized: {width}x{height}")
 
@@ -194,14 +197,17 @@ class BSPDungeonBuilder:
             game_logger.debug(f"Connecting centers: {center1} -> {center2}")
 
             # L字型通路で中心同士を接続
-            if random.random() < 0.5:
-                # 水平→垂直
-                self._hline_with_connection_door(tiles, center1[0], center2[0], center1[1])
-                self._vline_with_connection_door(tiles, center2[0], center1[1], center2[1])
-            else:
-                # 垂直→水平
-                self._vline_with_connection_door(tiles, center1[0], center1[1], center2[1])
-                self._hline_with_connection_door(tiles, center1[0], center2[0], center2[1])
+            # ランダムにL字接続の方向を決定
+            horizontal_first = random.random() < 0.5
+            self.line_drawer.draw_connection_line(
+                tiles,
+                center1[0],
+                center1[1],
+                center2[0],
+                center2[1],
+                horizontal_first=horizontal_first,
+                boundary_door_placer=self._place_boundary_door_tile,
+            )
         else:
             game_logger.warning("No rooms found in nodes for connection")
 
@@ -273,13 +279,13 @@ class BSPDungeonBuilder:
                 tiles[y, x] = Floor()
 
     def _create_random_door(self) -> Door | SecretDoor:
-        """ランダムな状態のドアを作成（60%閉鎖、30%開放、10%隠し扉）。"""
+        """ランダムな状態のドアを作成（定数クラスの確率使用）。"""
         rand = random.random()
-        if rand < 0.10:  # 10% 隠し扉
+        if rand < DoorConstants.SECRET_DOOR_CHANCE:  # 10% 隠し扉
             return SecretDoor()
-        if rand < 0.40:  # 30% オープンドア (0.10-0.40)
+        if rand < DoorConstants.SECRET_DOOR_CHANCE + DoorConstants.OPEN_DOOR_CHANCE:  # 30% オープンドア
             return Door(state="open")
-        # 60% クローズドドア (0.40-1.00)
+        # 60% クローズドドア
         return Door(state="closed")
 
     def _place_boundary_door_tile(self, tiles: np.ndarray, x: int, y: int, allow_door: bool = True) -> None:
@@ -382,91 +388,35 @@ class BSPDungeonBuilder:
                 return True
         return False
 
+    # 水平線・垂直線描画メソッドは LineDrawer に統合されました
+    # 互換性のためのラッパーメソッドを維持
     def _hline_with_connection_door(self, tiles: np.ndarray, x1: int, x2: int, y: int) -> None:
-        """水平線を掘る（境界含む複数ドア配置可能）。"""
-        x_start, x_end = min(x1, x2), max(x1, x2)
-        for i, x in enumerate(range(x_start, x_end + 1)):
-            # 最初と最後の位置では特に積極的にドア配置
-            is_boundary = (i == 0) or (x == x_end)
-            allow_door = True
-
-            # 境界位置では部屋隣接チェックを緩和
-            if is_boundary:
-                self._place_boundary_door_tile(tiles, x, y, allow_door)
-            else:
-                self._place_corridor_tile(tiles, x, y, allow_door)
+        """水平線を掘る（LineDrawerへのラッパー）。"""
+        self.line_drawer.draw_horizontal_line(tiles, x1, x2, y, boundary_door_placer=self._place_boundary_door_tile)
 
     def _vline_with_connection_door(self, tiles: np.ndarray, x: int, y1: int, y2: int) -> None:
-        """垂直線を掘る（境界含む複数ドア配置可能）。"""
-        y_start, y_end = min(y1, y2), max(y1, y2)
-        for i, y in enumerate(range(y_start, y_end + 1)):
-            # 最初と最後の位置では特に積極的にドア配置
-            is_boundary = (i == 0) or (y == y_end)
-            allow_door = True
-
-            # 境界位置では部屋隣接チェックを緩和
-            if is_boundary:
-                self._place_boundary_door_tile(tiles, x, y, allow_door)
-            else:
-                self._place_corridor_tile(tiles, x, y, allow_door)
+        """垂直線を掘る（LineDrawerへのラッパー）。"""
+        self.line_drawer.draw_vertical_line(tiles, x, y1, y2, boundary_door_placer=self._place_boundary_door_tile)
 
     def _hline(self, tiles: np.ndarray, x1: int, x2: int, y: int) -> None:
-        """水平線を掘る（境界含む複数ドア配置可能）。"""
-        x_start, x_end = min(x1, x2), max(x1, x2)
-        for i, x in enumerate(range(x_start, x_end + 1)):
-            # 最初と最後の位置では特に積極的にドア配置
-            is_boundary = (i == 0) or (x == x_end)
-            allow_door = True
-
-            # 境界位置では部屋隣接チェックを緩和
-            if is_boundary:
-                self._place_boundary_door_tile(tiles, x, y, allow_door)
-            else:
-                self._place_corridor_tile(tiles, x, y, allow_door)
+        """水平線を掘る（LineDrawerへのラッパー）。"""
+        self.line_drawer.draw_horizontal_line(tiles, x1, x2, y, boundary_door_placer=self._place_boundary_door_tile)
 
     def _hline_left(self, tiles: np.ndarray, x1: int, x2: int, y: int) -> None:
-        """水平線を掘る（境界含む複数ドア配置可能）。"""
-        x_start, x_end = min(x1, x2), max(x1, x2)
-        x_values = list(range(x_end, x_start - 1, -1))
-        for i, x in enumerate(x_values):
-            # 最初と最後の位置では特に積極的にドア配置
-            is_boundary = (i == 0) or (i == len(x_values) - 1)
-            allow_door = True
-
-            # 境界位置では部屋隣接チェックを緩和
-            if is_boundary:
-                self._place_boundary_door_tile(tiles, x, y, allow_door)
-            else:
-                self._place_corridor_tile(tiles, x, y, allow_door)
+        """水平線を掘る（逆順、LineDrawerへのラッパー）。"""
+        self.line_drawer.draw_horizontal_line(
+            tiles, x1, x2, y, reverse=True, boundary_door_placer=self._place_boundary_door_tile
+        )
 
     def _vline(self, tiles: np.ndarray, x: int, y1: int, y2: int) -> None:
-        """垂直線を掘る（境界含む複数ドア配置可能）。"""
-        y_start, y_end = min(y1, y2), max(y1, y2)
-        for i, y in enumerate(range(y_start, y_end + 1)):
-            # 最初と最後の位置では特に積極的にドア配置
-            is_boundary = (i == 0) or (y == y_end)
-            allow_door = True
-
-            # 境界位置では部屋隣接チェックを緩和
-            if is_boundary:
-                self._place_boundary_door_tile(tiles, x, y, allow_door)
-            else:
-                self._place_corridor_tile(tiles, x, y, allow_door)
+        """垂直線を掘る（LineDrawerへのラッパー）。"""
+        self.line_drawer.draw_vertical_line(tiles, x, y1, y2, boundary_door_placer=self._place_boundary_door_tile)
 
     def _vline_up(self, tiles: np.ndarray, x: int, y1: int, y2: int) -> None:
-        """垂直線を掘る（境界含む複数ドア配置可能）。"""
-        y_start, y_end = min(y1, y2), max(y1, y2)
-        y_values = list(range(y_end, y_start - 1, -1))
-        for i, y in enumerate(y_values):
-            # 最初と最後の位置では特に積極的にドア配置
-            is_boundary = (i == 0) or (i == len(y_values) - 1)
-            allow_door = True
-
-            # 境界位置では部屋隣接チェックを緩和
-            if is_boundary:
-                self._place_boundary_door_tile(tiles, x, y, allow_door)
-            else:
-                self._place_corridor_tile(tiles, x, y, allow_door)
+        """垂直線を掘る（逆順、LineDrawerへのラッパー）。"""
+        self.line_drawer.draw_vertical_line(
+            tiles, x, y1, y2, reverse=True, boundary_door_placer=self._place_boundary_door_tile
+        )
 
     def reset(self) -> None:
         """ビルダーの状態をリセット。"""

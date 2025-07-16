@@ -15,7 +15,6 @@ from pyrogue.core.game_logic import GameLogic
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
 from pyrogue.ui.components.input_handler import InputHandler
-from pyrogue.ui.components.save_load_manager import SaveLoadManager
 
 if TYPE_CHECKING:
     from pyrogue.core.engine import Engine
@@ -36,7 +35,6 @@ class GameScreen:
         renderer: 描画処理コンポーネント
         input_handler: 入力処理コンポーネント
         fov_manager: FOV管理コンポーネント
-        save_load_manager: セーブ・ロード管理コンポーネント
         dungeon_width: ダンジョンの幅
         dungeon_height: ダンジョンの高さ
 
@@ -69,7 +67,6 @@ class GameScreen:
         self.renderer = GameRenderer(self)
         self.input_handler = InputHandler(self)
         self.fov_manager = FOVManager(self)
-        self.save_load_manager = SaveLoadManager(self)
 
         # ゲームロジックに自身の参照を設定
         self.game_logic.set_game_screen_reference(self)
@@ -128,25 +125,41 @@ class GameScreen:
 
     def save_game(self) -> bool:
         """
-        ゲーム状態を保存（セーブ・ロードマネージャーに委譲）。
+        ゲーム状態を保存（CommonCommandHandler経由の統合処理）。
 
         Returns
         -------
             保存に成功した場合True
 
         """
-        return self.save_load_manager.save_game()
+        from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+
+        context = GUICommandContext(self)
+        command_handler = CommonCommandHandler(context)
+        result = command_handler.handle_command("save")
+
+        return result.success
 
     def load_game(self) -> bool:
         """
-        ゲーム状態を読み込み（セーブ・ロードマネージャーに委譲）。
+        ゲーム状態を読み込み（CommonCommandHandler経由の統合処理）。
 
         Returns
         -------
             読み込みに成功した場合True
 
         """
-        return self.save_load_manager.load_game()
+        from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+
+        context = GUICommandContext(self)
+        command_handler = CommonCommandHandler(context)
+        result = command_handler.handle_command("load")
+
+        # ロード成功時にFOVを更新
+        if result.success:
+            self.fov_manager.update_fov()
+
+        return result.success
 
     # GameLogic連携プロパティ
     @property
@@ -163,6 +176,10 @@ class GameScreen:
     def game_screen(self):
         """ゲームスクリーン自身へのアクセス。"""
         return self
+
+    def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
+        """メッセージをゲームログに追加。"""
+        self.game_logic.add_message(message)
 
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
@@ -255,8 +272,14 @@ class GameScreen:
 
     def has_save_file(self) -> bool:
         """セーブファイルが存在するかチェック。"""
-        return self.save_load_manager.has_save_file()
+        from pyrogue.core.save_manager import SaveManager
+
+        save_manager = SaveManager()
+        return save_manager.has_save_file()
 
     def delete_save_file(self) -> bool:
         """セーブファイルを削除。"""
-        return self.save_load_manager.delete_save_file()
+        from pyrogue.core.save_manager import SaveManager
+
+        save_manager = SaveManager()
+        return save_manager.delete_save_data()

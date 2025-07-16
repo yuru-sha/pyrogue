@@ -62,6 +62,7 @@ class Trap(ABC):
         self.char: str = "^"
         self.color: tuple[int, int, int] = (255, 0, 0)
         self.name: str = "Trap"
+        self.trap_type: str = "base"
 
     def reveal(self, context: EffectContext | None = None) -> None:
         """
@@ -175,6 +176,7 @@ class PitTrap(Trap):
         """
         super().__init__(x, y)
         self.name = "Pit Trap"
+        self.trap_type = "pit"
         self.damage = damage
         self.char = "^"
         self.color = (139, 69, 19)  # 茶色
@@ -223,6 +225,7 @@ class PoisonNeedleTrap(Trap):
         """
         super().__init__(x, y)
         self.name = "Poison Needle Trap"
+        self.trap_type = "poison"
         self.poison_duration = poison_duration
         self.char = "^"
         self.color = (0, 255, 0)  # 緑色
@@ -270,6 +273,7 @@ class TeleportTrap(Trap):
         """
         super().__init__(x, y)
         self.name = "Teleport Trap"
+        self.trap_type = "teleport"
         self.char = "^"
         self.color = (255, 0, 255)  # マゼンタ色
 

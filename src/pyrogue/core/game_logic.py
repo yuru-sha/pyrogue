@@ -825,15 +825,6 @@ class GameLogic:
 
         return enemies
 
-    def get_npc_at(self, x: int, y: int):
-        """指定した座標にいるNPCを取得。"""
-        floor_data = self.get_current_floor_data()
-
-        if not floor_data or not hasattr(floor_data, "npc_spawner"):
-            return None
-
-        return floor_data.npc_spawner.get_npc_at_position(x, y)
-
     def record_game_over(self, death_cause: str = "Unknown") -> None:
         """ゲームオーバー時のスコア記録"""
         self.score_manager.add_score(
@@ -859,3 +850,206 @@ class GameLogic:
     def get_score_table(self, limit: int = 10) -> str:
         """スコアテーブルを取得"""
         return self.score_manager.format_score_table(limit)
+
+    def handle_turn_end(self) -> None:
+        """
+        ターン終了時の処理。
+
+        ターンマネージャーによるターン処理とオートセーブ機能を実行します。
+        """
+        # TurnManagerによるターン処理
+        self.turn_manager.process_turn(self.context)
+
+        # オートセーブ機能の実行
+        self._handle_auto_save()
+
+    def _handle_auto_save(self) -> None:
+        """
+        オートセーブ機能の処理。
+
+        環境変数でオートセーブが有効な場合、一定間隔でゲームを自動保存します。
+        """
+        from pyrogue.config.env import get_auto_save_enabled
+
+        # オートセーブが無効の場合は処理しない
+        if not get_auto_save_enabled():
+            return
+
+        # 一定ターン数毎にオートセーブを実行（10ターン毎）
+        if self.turn_manager.turn_count % 10 == 0:
+            self._perform_auto_save()
+
+    def _perform_auto_save(self) -> None:
+        """
+        実際のオートセーブを実行。
+
+        CommonCommandHandlerのセーブ機能を使用してゲームを保存します。
+        """
+        try:
+            # プレイヤーが死亡している場合はオートセーブしない
+            if self.player.hp <= 0:
+                return
+
+            # SaveManagerを直接使用してオートセーブを実行
+            from pyrogue.core.save_manager import SaveManager
+
+            save_manager = SaveManager()
+
+            # 現在のゲーム状態を収集
+            save_data = self._create_auto_save_data()
+
+            # オートセーブを実行
+            success = save_manager.save_game_state(save_data)
+
+            if success:
+                # オートセーブ成功メッセージ（デバッグモード時のみ）
+                if self.wizard_mode:
+                    self.add_message(f"[Auto-save] Game saved at turn {self.turn_manager.turn_count}")
+            else:
+                # オートセーブ失敗時のメッセージ
+                if self.wizard_mode:
+                    self.add_message("[Auto-save] Failed to save game")
+
+        except Exception as e:
+            # エラーが発生した場合のログ出力
+            from pyrogue.utils import game_logger
+
+            game_logger.error(f"Auto-save failed: {e}")
+
+    def _create_auto_save_data(self) -> dict:
+        """
+        オートセーブ用のデータを作成。
+
+        Returns
+        -------
+            dict: セーブデータ辞書
+        """
+        # CommonCommandHandlerと同じ形式でセーブデータを作成
+        save_data = {
+            "player": self._serialize_player(self.player),
+            "inventory": self._serialize_inventory(self.inventory),
+            "current_floor": self.dungeon_manager.current_floor,
+            "floor_data": self._serialize_all_floors(self.dungeon_manager.floors),
+            "message_log": self.message_log,
+            "has_amulet": getattr(self.player, "has_amulet", False),
+            "turn_count": self.turn_manager.turn_count,
+            "auto_save": True,  # オートセーブフラグ
+            "version": "1.0",
+        }
+
+        return save_data
+
+    def _serialize_player(self, player) -> dict:
+        """プレイヤーオブジェクトをシリアライズ。"""
+        return {
+            "x": player.x,
+            "y": player.y,
+            "hp": player.hp,
+            "max_hp": player.max_hp,
+            "level": player.level,
+            "exp": player.exp,
+            "gold": player.gold,
+            "attack": player.attack,
+            "defense": player.defense,
+            "hunger": getattr(player, "hunger", 100),
+            "mp": getattr(player, "mp", 0),
+            "max_mp": getattr(player, "max_mp", 0),
+            "has_amulet": getattr(player, "has_amulet", False),
+            "monsters_killed": getattr(player, "monsters_killed", 0),
+            "deepest_floor": getattr(player, "deepest_floor", 1),
+            "turns_played": getattr(player, "turns_played", 0),
+        }
+
+    def _serialize_inventory(self, inventory) -> dict:
+        """インベントリをシリアライズ。"""
+        if inventory is None:
+            return {"items": [], "equipped": {"weapon": None, "armor": None, "ring_left": None, "ring_right": None}}
+
+        return {
+            "items": [self._serialize_item(item) for item in inventory.items],
+            "equipped": {
+                "weapon": self._serialize_item(inventory.equipped["weapon"])
+                if inventory.equipped.get("weapon")
+                else None,
+                "armor": self._serialize_item(inventory.equipped["armor"]) if inventory.equipped.get("armor") else None,
+                "ring_left": self._serialize_item(inventory.equipped["ring_left"])
+                if inventory.equipped.get("ring_left")
+                else None,
+                "ring_right": self._serialize_item(inventory.equipped["ring_right"])
+                if inventory.equipped.get("ring_right")
+                else None,
+            },
+        }
+
+    def _serialize_item(self, item) -> dict:
+        """アイテムをシリアライズ。"""
+        if item is None:
+            return None
+
+        return {
+            "item_type": getattr(item, "item_type", "MISC"),
+            "name": item.name,
+            "char": getattr(item, "char", "?"),
+            "color": getattr(item, "color", (255, 255, 255)),
+            "x": getattr(item, "x", 0),
+            "y": getattr(item, "y", 0),
+            "quantity": getattr(item, "quantity", 1),
+            "stack_count": getattr(item, "stack_count", 1),
+            "enchantment": getattr(item, "enchantment", 0),
+            "cursed": getattr(item, "cursed", False),
+        }
+
+    def _serialize_all_floors(self, floors: dict) -> dict:
+        """すべてのフロアデータをシリアライズ。"""
+        serialized_floors = {}
+        for floor_num, floor_data in floors.items():
+            if floor_data is not None:
+                serialized_floors[floor_num] = self._serialize_floor_data_object(floor_data)
+        return serialized_floors
+
+    def _serialize_floor_data_object(self, floor_data) -> dict:
+        """フロアデータオブジェクトをシリアライズ。"""
+        return {
+            "tiles": floor_data.tiles.tolist(),
+            "monsters": [self._serialize_monster(monster) for monster in floor_data.monster_spawner.monsters],
+            "items": [self._serialize_item(item) for item in floor_data.item_spawner.items],
+            "explored": floor_data.explored.tolist(),
+            "traps": [
+                self._serialize_trap(trap) for trap in getattr(getattr(floor_data, "trap_manager", None), "traps", [])
+            ],
+        }
+
+    def _serialize_monster(self, monster) -> dict:
+        """モンスターをシリアライズ。"""
+        return {
+            "name": monster.name,
+            "char": monster.char,
+            "x": monster.x,
+            "y": monster.y,
+            "hp": monster.hp,
+            "max_hp": monster.max_hp,
+            "attack": monster.attack,
+            "defense": monster.defense,
+            "level": monster.level,
+            "exp_value": getattr(monster, "exp_value", 0),
+            "ai_pattern": getattr(monster, "ai_pattern", "basic"),
+        }
+
+    def _serialize_trap(self, trap) -> dict:
+        """トラップをシリアライズ。"""
+        return {
+            "trap_type": getattr(trap, "trap_type", "PitTrap"),
+            "x": trap.x,
+            "y": trap.y,
+            "hidden": getattr(trap, "is_hidden", True),
+        }
+
+    def get_message_history(self) -> list[str]:
+        """
+        メッセージ履歴を取得。
+
+        Returns
+        -------
+            メッセージ履歴のリスト
+        """
+        return self.message_log.copy()

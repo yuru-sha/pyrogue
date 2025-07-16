@@ -75,7 +75,7 @@ def setup_game_logger() -> logging.Logger:
     logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
     # ログディレクトリの自動作成
-    log_dir = Path("data/logs")
+    log_dir = Path("logs")
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # ファイルハンドラー（常時有効）
@@ -118,7 +118,7 @@ LOG_LEVEL=DEBUG         # ログレベル設定（将来対応）
 ```python
 # デュアル出力システム
 outputs = {
-    "file": "data/logs/game.log",      # 常時ファイル出力
+    "file": "logs/game.log",      # 常時ファイル出力
     "console": debug_mode_only         # デバッグ時のみコンソール出力
 }
 ```
@@ -214,7 +214,7 @@ def generate_dungeon(self, floor: int) -> list[list[Tile]]:
 
 ```bash
 # 実際のログファイル構成
-data/logs/
+logs/
 ├── game.log      (10.8MB - アクティブ)
 ├── game.log.1    (1.9KB)
 ├── game.log.2    (1.1KB)
@@ -361,7 +361,7 @@ def setup_rotating_logger() -> logging.Logger:
 
     # ローテーションハンドラー
     handler = RotatingFileHandler(
-        "data/logs/game.log",
+        "logs/game.log",
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5,
         encoding="utf-8"
@@ -415,7 +415,7 @@ game_logger.info("User action", sanitize_log_data(user_data))
 
 ```python
 # ログファイルの権限設定
-log_file = Path("data/logs/game.log")
+log_file = Path("logs/game.log")
 if log_file.exists():
     log_file.chmod(0o600)  # 所有者のみ読み書き可能
 ```
@@ -427,7 +427,7 @@ if log_file.exists():
 **ログファイルが作成されない:**
 ```python
 # ディレクトリ権限の確認
-log_dir = Path("data/logs")
+log_dir = Path("logs")
 try:
     log_dir.mkdir(parents=True, exist_ok=True)
     game_logger.info("Log directory created successfully")
@@ -467,11 +467,11 @@ def test_logging_functionality():
 
 ```bash
 # ログ統計の取得
-grep "ERROR" data/logs/game.log | wc -l
-grep "WARNING" data/logs/game.log | wc -l
+grep "ERROR" logs/game.log | wc -l
+grep "WARNING" logs/game.log | wc -l
 
 # パフォーマンス分析
-grep "PERF:" data/logs/game.log | tail -20
+grep "PERF:" logs/game.log | tail -20
 ```
 
 ## まとめ

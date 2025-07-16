@@ -59,8 +59,15 @@ class CombatManager:
         context.add_message(f"You attack the {monster.name} for {damage} damage!")
 
         # モンスター分裂判定（ダメージを受けた時）
-        if monster.hp > 0 and hasattr(context, "monster_ai_manager"):
-            context.monster_ai_manager.split_monster_on_damage(monster, context)
+        if monster.hp > 0 and hasattr(context, "monster_ai_manager") and context.monster_ai_manager:
+            try:
+                context.monster_ai_manager.split_monster_on_damage(monster, context)
+            except Exception as e:
+                # 分裂処理エラーを記録（ゲームを継続）
+                if hasattr(context, "add_message"):
+                    context.add_message(f"Monster split error: {e}")
+                else:
+                    print(f"Warning: Monster split error: {e}")
 
         # モンスターの死亡判定
         if monster.hp <= 0:
@@ -289,16 +296,11 @@ class CombatManager:
 
             # ステータス上昇
             hp_gain = CombatConstants.HP_GAIN_PER_LEVEL
-            mp_gain = CombatConstants.MP_GAIN_PER_LEVEL
 
             player.max_hp += hp_gain
             player.hp += hp_gain  # HPも回復
 
-            if hasattr(player, "max_mp"):
-                player.max_mp += mp_gain
-                player.mp = min(player.mp + mp_gain, player.max_mp)
-
-            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP, +{mp_gain} MP)")
+            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP)")
 
             game_logger.info(f"Player leveled up: {old_level} -> {player.level}")
 

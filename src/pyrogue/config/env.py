@@ -159,26 +159,11 @@ def get_save_directory() -> str:
     return env_config.get("SAVE_DIRECTORY", "saves")
 
 
-def get_window_width() -> int:
-    """ウィンドウ幅の設定を取得。"""
-    return env_config.get_int("WINDOW_WIDTH", 80)
-
-
-def get_window_height() -> int:
-    """ウィンドウ高さの設定を取得。"""
-    return env_config.get_int("WINDOW_HEIGHT", 50)
-
-
-def get_fps_limit() -> int:
-    """FPS制限の設定を取得。"""
-    return env_config.get_int("FPS_LIMIT", 60)
-
-
 def get_auto_save_enabled() -> bool:
     """オートセーブ機能の設定を取得。"""
     return env_config.get_bool("AUTO_SAVE_ENABLED", True)
 
 
-def get_sound_enabled() -> bool:
-    """音声機能の設定を取得。"""
-    return env_config.get_bool("SOUND_ENABLED", False)
+def is_test_mode() -> bool:
+    """テストモードで実行されているかを判定。"""
+    return env_config.get("PYTEST_CURRENT_TEST") is not None

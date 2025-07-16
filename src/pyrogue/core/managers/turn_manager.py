@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyrogue.constants import HungerConstants, MagicConstants
+from pyrogue.constants import HungerConstants
 from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:
@@ -55,9 +55,6 @@ class TurnManager:
 
         # 満腹度システムの処理
         self._process_hunger_system(context)
-
-        # MP自然回復の処理
-        self._process_mp_recovery(context)
 
         # ターン終了後の状態チェック
         self._check_end_turn_conditions(context)
@@ -237,12 +234,6 @@ class TurnManager:
             player.hp = min(player.max_hp, player.hp + 1)
             context.add_message("You feel refreshed!")
 
-        # MP回復ボーナス
-        if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            if player.mp < player.max_mp and random.random() < HungerConstants.FULL_MP_REGEN_BONUS:
-                player.mp = min(player.max_mp, player.mp + 1)
-                context.add_message("Your magical energy flows strongly!")
-
     def _process_hunger_damage(self, context: GameContext, player) -> None:
         """
         飢餓によるダメージを処理。
@@ -301,33 +292,6 @@ class TurnManager:
                     final_floor = context.get_current_floor_number()
                     context.engine.game_over(player_stats, final_floor, "Hunger")
 
-    def _process_mp_recovery(self, context: GameContext) -> None:
-        """
-        MP自然回復を処理。
-
-        Args:
-        ----
-            context: ゲームコンテキスト
-
-        """
-        player = context.player
-
-        if not hasattr(player, "mp") or not hasattr(player, "max_mp"):
-            return
-
-        # MP回復（一定ターンごと、満腹度が十分な場合のみ）
-        if (
-            self.turn_count % MagicConstants.MP_RECOVERY_INTERVAL == 0
-            and player.hunger > HungerConstants.HUNGRY_THRESHOLD
-        ):
-            if player.mp < player.max_mp:
-                recovery = MagicConstants.MP_RECOVERY_RATE
-                old_mp = player.mp
-                player.mp = min(player.max_mp, player.mp + recovery)
-
-                if player.mp > old_mp:
-                    game_logger.debug(f"MP recovered: {old_mp} -> {player.mp}")
-
     def _check_end_turn_conditions(self, context: GameContext) -> None:
         """
         ターン終了時の状態チェック。
@@ -360,8 +324,6 @@ class TurnManager:
             "turn_count": self.turn_count,
             "next_hunger_decrease": HungerConstants.HUNGER_DECREASE_INTERVAL
             - (self.turn_count % HungerConstants.HUNGER_DECREASE_INTERVAL),
-            "next_mp_recovery": MagicConstants.MP_RECOVERY_INTERVAL
-            - (self.turn_count % MagicConstants.MP_RECOVERY_INTERVAL),
         }
 
     def reset_turn_count(self) -> None:

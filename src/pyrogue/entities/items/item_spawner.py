@@ -18,7 +18,6 @@ from __future__ import annotations
 import random
 
 import numpy as np
-
 from pyrogue.map.dungeon import Room
 
 from .amulet import AmuletOfYendor
@@ -33,13 +32,14 @@ from .effects import (
     Effect,
     HealingEffect,
 )
-from .item import Armor, Food, Gold, Item, Potion, Ring, Scroll, Weapon
+from .item import Armor, Food, Gold, Item, Potion, Ring, Scroll, Wand, Weapon
 from .item_types import (
     ARMORS,
     FOODS,
     POTIONS,
     RINGS,
     SCROLLS,
+    WANDS,
     WEAPONS,
     get_available_items,
     get_gold_amount,
@@ -122,8 +122,8 @@ class ItemSpawner:
 
             # Determine item type
             item_type = random.choices(
-                ["weapon", "armor", "ring", "scroll", "potion", "food", "gold"],
-                weights=[15, 15, 10, 25, 25, 10, 35],
+                ["weapon", "armor", "ring", "scroll", "potion", "food", "wand", "gold"],
+                weights=[15, 15, 10, 25, 25, 10, 10, 35],
                 k=1,
             )[0]
 
@@ -140,6 +140,8 @@ class ItemSpawner:
                 item = self._create_potion()
             elif item_type == "food":
                 item = self._create_food()
+            elif item_type == "wand":
+                item = self._create_wand()
             else:  # gold
                 item = self._create_gold()
 
@@ -343,6 +345,27 @@ class ItemSpawner:
         effect = self._get_food_effect(food_type.nutrition)
         return Food(0, 0, food_type.name, effect)
 
+    def _create_wand(self) -> Wand | None:
+        """
+        ランダムなワンドを生成。
+
+        現在の階層で利用可能なワンドタイプから重み付き抽選で選択し、
+        チャージ数もランダムに決定します。
+
+        Returns
+        -------
+            生成されたワンド。利用可能なワンドがない場合はNone
+
+        """
+        available = get_available_items(self.floor, WANDS)
+        if not available:
+            return None
+
+        wand_type = random.choices(available, weights=[w.spawn_weight for w in available], k=1)[0]
+        charges = random.randint(*wand_type.charges_range)
+        effect = self._get_wand_effect(wand_type.effect)
+        return Wand(0, 0, wand_type.name, effect, charges)
+
     def _create_gold(self) -> Gold:
         """
         金貨の山を生成。
@@ -462,3 +485,29 @@ class ItemSpawner:
         # Convert nutrition to hunger restoration value
         hunger_value = nutrition // 36  # 900 -> 25, 600 -> 16
         return NutritionEffect(hunger_value)
+
+    def _get_wand_effect(self, effect_name: str) -> Effect:
+        """Map effect name to Effect object for wands."""
+        from .effects import (
+            LIGHT_WAND,
+            LIGHTNING_WAND,
+            MAGIC_MISSILE_WAND,
+            NOTHING_WAND,
+        )
+
+        effect_map = {
+            "magic_missile": MAGIC_MISSILE_WAND,
+            "lightning": LIGHTNING_WAND,
+            "light": LIGHT_WAND,
+            "nothing": NOTHING_WAND,
+            # 未実装の効果は一旦NOTHING_WANDを使用
+            "fire": NOTHING_WAND,
+            "cold": NOTHING_WAND,
+            "polymorph": NOTHING_WAND,
+            "teleport_monster": NOTHING_WAND,
+            "slow_monster": NOTHING_WAND,
+            "haste_monster": NOTHING_WAND,
+            "sleep": NOTHING_WAND,
+            "drain_life": NOTHING_WAND,
+        }
+        return effect_map.get(effect_name, NOTHING_WAND)

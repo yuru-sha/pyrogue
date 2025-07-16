@@ -114,23 +114,23 @@ class MonsterSpawner:
         # 迷路の床タイル（通路）を全て取得
         floor_positions = []
         height, width = dungeon_tiles.shape
-        
+
         for y in range(height):
             for x in range(width):
                 if isinstance(dungeon_tiles[y, x], Floor):
                     floor_positions.append((x, y))
-        
+
         # 床タイルが少ない場合は配置数を調整
         if len(floor_positions) < monster_count:
             monster_count = len(floor_positions) // 2  # 密度を考慮
-        
+
         # ランダムに配置位置を選択
         random.shuffle(floor_positions)
-        
+
         # モンスターを配置
         for i in range(min(monster_count, len(floor_positions))):
             x, y = floor_positions[i]
-            
+
             # 既に占有されていないかチェック
             if (x, y) not in self.occupied_positions:
                 monster = self._create_monster(x, y)

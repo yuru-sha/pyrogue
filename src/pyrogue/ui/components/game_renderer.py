@@ -98,9 +98,6 @@ class GameRenderer:
                         # モンスターの描画
                         self._render_monsters_at(console, x, y, floor_data, map_offset_y)
 
-                        # NPCの描画
-                        self._render_npcs_at(console, x, y, floor_data, map_offset_y)
-
                         # ウィザードモード時: トラップの描画
                         if wizard_mode:
                             self._render_traps_at(console, x, y, floor_data, map_offset_y)
@@ -158,7 +155,13 @@ class GameRenderer:
             char = "?"
             color = (255, 0, 255) if visible else (128, 0, 128)
 
-        console.print(x, y, char, fg=color)
+        # 座標範囲チェック付きの安全な描画
+        try:
+            if 0 <= x < console.width and 0 <= y < console.height:
+                console.print(x, y, char, fg=color)
+        except Exception as e:
+            # 描画エラーを記録（ゲームを継続）
+            print(f"Warning: Drawing error at ({x}, {y}): {e}")
 
     def _render_traps_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
         """
@@ -248,15 +251,10 @@ class GameRenderer:
         # ステータス情報の描画位置（画面上部）
         status_y = 0
 
-        # 1行目: レベル、HP、MP、攻撃力、防御力、空腹度、経験値、所持金
-        mp_display = ""
-        if hasattr(player, "mp") and hasattr(player, "max_mp"):
-            mp_display = f"MP:{player.mp}/{player.max_mp} "
-
+        # 1行目: レベル、HP、攻撃力、防御力、空腹度、経験値、所持金
         status_line1 = (
             f"Lv:{player.level} "
             f"HP:{player.hp}/{player.max_hp} "
-            f"{mp_display}"
             f"Atk:{player.get_attack()} "
             f"Def:{player.get_defense()} "
             f"Hunger:{player.hunger}% "
@@ -310,38 +308,37 @@ class GameRenderer:
             console: TCODコンソール
 
         """
-        messages = self.game_screen.game_logic.message_log
-        if not messages:
-            return
+        try:
+            # 安全な参照アクセス
+            if not hasattr(self.game_screen, "game_logic") or not self.game_screen.game_logic:
+                return
 
-        # メッセージ表示エリアの設定
-        message_y_start = self.game_screen.dungeon_height + 4
-        max_messages = 3  # 最大3つのメッセージを表示
+            messages = self.game_screen.game_logic.message_log
+            if not messages:
+                return
 
-        # 最新のメッセージから表示
-        recent_messages = messages[-max_messages:]
-        for i, message in enumerate(recent_messages):
-            console.print(0, message_y_start + i, message, fg=(255, 255, 255))
+            # メッセージ表示エリアの設定
+            message_y = self.game_screen.dungeon_height + 2
+            max_messages = 7  # 最大7つのメッセージを表示
 
-    def _render_npcs_at(self, console: tcod.Console, x: int, y: int, floor_data, map_offset_y: int) -> None:
-        """
-        指定した位置にいるNPCを描画。
-
-        Args:
-        ----
-            console: TCODコンソール
-            x: 描画位置のX座標
-            y: 描画位置のY座標
-            floor_data: 現在のフロアデータ
-            map_offset_y: マップのYオフセット
-
-        """
-        if not hasattr(floor_data, "npc_spawner"):
-            return
-
-        npc = floor_data.npc_spawner.get_npc_at_position(x, y)
-        if npc:
-            console.print(x, y + map_offset_y, npc.char, fg=npc.color)
+            # 最新のメッセージから表示
+            recent_messages = messages[-max_messages:]
+            for i, message in enumerate(recent_messages):
+                try:
+                    # 安全な文字列処理
+                    safe_message = str(message)[:80]  # 長すぎるメッセージを切り詰め
+                    console.print(0, message_y + i, safe_message, fg=(255, 255, 255))
+                except Exception as msg_error:
+                    # 個別メッセージの描画エラー
+                    console.print(0, message_y + i, f"[Message error: {msg_error}]", fg=(255, 100, 100))
+        except Exception as e:
+            # 全体的なエラーのフォールバック
+            try:
+                message_y = self.game_screen.dungeon_height + 2
+                console.print(0, message_y, f"Message system error: {e}", fg=(255, 0, 0))
+            except Exception:
+                # 最後の手段：何もしない（クラッシュを避ける）
+                pass
 
     def _get_hallucination_char(self) -> str:
         """

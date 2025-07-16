@@ -8,6 +8,7 @@ from dataclasses import dataclass
 class ItemType:
     """Item type class."""
 
+    item_id: int  # Unique item identifier
     char: str  # Character representation
     name: str  # Item name
     min_floor: int  # Minimum floor level where this item appears
@@ -62,66 +63,91 @@ class FoodType(ItemType):
     nutrition: int  # Nutrition value
 
 
+@dataclass
+class WandType(ItemType):
+    """Wand type class."""
+
+    effect: str  # Wand effect type
+    charges_range: tuple[int, int]  # Range of charges (min, max)
+    damage_range: tuple[int, int]  # Range of damage/effect power (min, max)
+
+
 # Weapon definitions - 階層に応じた段階的出現
 WEAPONS = [
-    WeaponType(")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),  # 序盤専用・初期装備
-    WeaponType(")", "Mace", 1, 10, 100, 8, 2, (-1, 3)),  # 序盤メイン武器
-    WeaponType(")", "Long Sword", 5, 20, 80, 15, 4, (-1, 4)),  # 中盤メイン武器
-    WeaponType(")", "Short Bow", 8, 22, 70, 15, 3, (0, 3)),  # 中盤～終盤
-    WeaponType(")", "Battle Axe", 12, 26, 60, 25, 6, (-2, 5)),  # 終盤武器
-    WeaponType(")", "Two-Handed Sword", 18, 26, 40, 40, 8, (-3, 6)),  # 最終武器
+    WeaponType(101, ")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),  # 序盤専用・初期装備
+    WeaponType(102, ")", "Mace", 1, 10, 100, 8, 2, (-1, 3)),  # 序盤メイン武器
+    WeaponType(103, ")", "Long Sword", 5, 20, 80, 15, 4, (-1, 4)),  # 中盤メイン武器
+    WeaponType(104, ")", "Short Bow", 8, 22, 70, 15, 3, (0, 3)),  # 中盤～終盤
+    WeaponType(105, ")", "Battle Axe", 12, 26, 60, 25, 6, (-2, 5)),  # 終盤武器
+    WeaponType(106, ")", "Two-Handed Sword", 18, 26, 40, 40, 8, (-3, 6)),  # 最終武器
 ]
 
 # Armor definitions - 階層に応じた段階的出現
 ARMORS = [
-    ArmorType("[", "Leather Armor", 1, 8, 100, 20, 2, (0, 2)),  # 序盤専用・初期装備
-    ArmorType("[", "Studded Leather", 3, 12, 90, 25, 3, (0, 3)),  # 序盤～中盤移行
-    ArmorType("[", "Ring Mail", 5, 15, 80, 30, 4, (-1, 3)),  # 中盤序盤
-    ArmorType("[", "Scale Mail", 8, 18, 70, 40, 5, (-2, 4)),  # 中盤メイン
-    ArmorType("[", "Chain Mail", 10, 22, 60, 50, 6, (-2, 4)),  # 中盤～終盤
-    ArmorType("[", "Splint Mail", 15, 26, 50, 60, 7, (-3, 5)),  # 終盤防具
-    ArmorType("[", "Banded Mail", 18, 26, 40, 70, 8, (-3, 5)),  # 高級防具
-    ArmorType("[", "Plate Mail", 20, 26, 30, 80, 9, (-4, 6)),  # 最高級防具
+    ArmorType(201, "[", "Leather Armor", 1, 8, 100, 20, 2, (0, 2)),  # 序盤専用・初期装備
+    ArmorType(202, "[", "Studded Leather", 3, 12, 90, 25, 3, (0, 3)),  # 序盤～中盤移行
+    ArmorType(203, "[", "Ring Mail", 5, 15, 80, 30, 4, (-1, 3)),  # 中盤序盤
+    ArmorType(204, "[", "Scale Mail", 8, 18, 70, 40, 5, (-2, 4)),  # 中盤メイン
+    ArmorType(205, "[", "Chain Mail", 10, 22, 60, 50, 6, (-2, 4)),  # 中盤～終盤
+    ArmorType(206, "[", "Splint Mail", 15, 26, 50, 60, 7, (-3, 5)),  # 終盤防具
+    ArmorType(207, "[", "Banded Mail", 18, 26, 40, 70, 8, (-3, 5)),  # 高級防具
+    ArmorType(208, "[", "Plate Mail", 20, 26, 30, 80, 9, (-4, 6)),  # 最高級防具
 ]
 
 # Ring definitions
 RINGS = [
-    RingType("=", "Ring of Protection", 3, 26, 50, 200, "protection", (-2, 3)),
-    RingType("=", "Ring of Add Strength", 3, 26, 50, 200, "strength", (-1, 3)),
-    RingType("=", "Ring of Sustain Strength", 3, 26, 40, 180, "sustain", (0, 0)),
-    RingType("=", "Ring of Searching", 3, 26, 40, 150, "search", (1, 3)),
-    RingType("=", "Ring of See Invisible", 3, 26, 40, 150, "see_invisible", (0, 0)),
-    RingType("=", "Ring of Regeneration", 5, 26, 30, 250, "regeneration", (0, 0)),
+    RingType(501, "=", "Ring of Protection", 3, 26, 50, 200, "protection", (-2, 3)),
+    RingType(502, "=", "Ring of Add Strength", 3, 26, 50, 200, "strength", (-1, 3)),
+    RingType(503, "=", "Ring of Sustain Strength", 3, 26, 40, 180, "sustain", (0, 0)),
+    RingType(504, "=", "Ring of Searching", 3, 26, 40, 150, "search", (1, 3)),
+    RingType(505, "=", "Ring of See Invisible", 3, 26, 40, 150, "see_invisible", (0, 0)),
+    RingType(506, "=", "Ring of Regeneration", 5, 26, 30, 250, "regeneration", (0, 0)),
 ]
 
 # Scroll definitions
 SCROLLS = [
-    ScrollType("?", "Scroll of Identify", 1, 26, 100, 50, "identify"),
-    ScrollType("?", "Scroll of Light", 1, 26, 90, 50, "light"),
-    ScrollType("?", "Scroll of Remove Curse", 1, 26, 80, 60, "remove_curse"),
-    ScrollType("?", "Scroll of Enchant Weapon", 2, 26, 70, 80, "enchant_weapon"),
-    ScrollType("?", "Scroll of Enchant Armor", 2, 26, 70, 80, "enchant_armor"),
-    ScrollType("?", "Scroll of Teleport", 3, 26, 60, 100, "teleport"),
-    ScrollType("?", "Scroll of Magic Mapping", 4, 26, 50, 120, "magic_mapping"),
+    ScrollType(401, "?", "Scroll of Identify", 1, 26, 100, 50, "identify"),
+    ScrollType(402, "?", "Scroll of Light", 1, 26, 90, 50, "light"),
+    ScrollType(403, "?", "Scroll of Remove Curse", 1, 26, 80, 60, "remove_curse"),
+    ScrollType(404, "?", "Scroll of Enchant Weapon", 2, 26, 70, 80, "enchant_weapon"),
+    ScrollType(405, "?", "Scroll of Enchant Armor", 2, 26, 70, 80, "enchant_armor"),
+    ScrollType(406, "?", "Scroll of Teleport", 3, 26, 60, 100, "teleport"),
+    ScrollType(407, "?", "Scroll of Magic Mapping", 4, 26, 50, 120, "magic_mapping"),
 ]
 
 # Potion definitions
 POTIONS = [
-    PotionType("!", "Potion of Healing", 1, 26, 100, 50, "healing", (10, 15)),
-    PotionType("!", "Potion of Extra Healing", 2, 26, 80, 100, "extra_healing", (20, 30)),
-    PotionType("!", "Potion of Strength", 2, 26, 70, 80, "strength", (1, 2)),
-    PotionType("!", "Potion of Restore Strength", 2, 26, 70, 80, "restore_strength", (0, 0)),
-    PotionType("!", "Potion of Haste Self", 3, 26, 60, 100, "haste_self", (5, 10)),
-    PotionType("!", "Potion of See Invisible", 3, 26, 50, 100, "see_invisible", (0, 0)),
-    PotionType("!", "Potion of Poison", 1, 26, 60, 30, "poison", (5, 10)),
-    PotionType("!", "Potion of Paralysis", 2, 26, 40, 40, "paralysis", (3, 5)),
-    PotionType("!", "Potion of Confusion", 1, 26, 50, 35, "confusion", (4, 6)),
+    PotionType(301, "!", "Potion of Healing", 1, 26, 100, 50, "healing", (10, 15)),
+    PotionType(302, "!", "Potion of Extra Healing", 2, 26, 80, 100, "extra_healing", (20, 30)),
+    PotionType(303, "!", "Potion of Strength", 2, 26, 70, 80, "strength", (1, 2)),
+    PotionType(304, "!", "Potion of Restore Strength", 2, 26, 70, 80, "restore_strength", (0, 0)),
+    PotionType(305, "!", "Potion of Haste Self", 3, 26, 60, 100, "haste_self", (5, 10)),
+    PotionType(306, "!", "Potion of See Invisible", 3, 26, 50, 100, "see_invisible", (0, 0)),
+    PotionType(307, "!", "Potion of Poison", 1, 26, 60, 30, "poison", (5, 10)),
+    PotionType(308, "!", "Potion of Paralysis", 2, 26, 40, 40, "paralysis", (3, 5)),
+    PotionType(309, "!", "Potion of Confusion", 1, 26, 50, 35, "confusion", (4, 6)),
 ]
 
 # Food definitions
 FOODS = [
-    FoodType("%", "Food Ration", 1, 26, 100, 30, 900),
-    FoodType("%", "Slime Mold", 1, 26, 80, 20, 600),
+    FoodType(701, "%", "Food Ration", 1, 26, 100, 30, 900),
+    FoodType(702, "%", "Slime Mold", 1, 26, 80, 20, 600),
+]
+
+# Wand definitions - オリジナルRogue準拠
+WANDS = [
+    WandType(601, "/", "Wand of Magic Missiles", 2, 26, 80, 150, "magic_missile", (3, 8), (3, 8)),
+    WandType(602, "/", "Wand of Light", 1, 26, 90, 100, "light", (10, 20), (0, 0)),
+    WandType(603, "/", "Wand of Lightning", 4, 26, 70, 200, "lightning", (5, 12), (6, 15)),
+    WandType(604, "/", "Wand of Fire", 3, 26, 75, 180, "fire", (4, 10), (4, 12)),
+    WandType(605, "/", "Wand of Cold", 3, 26, 75, 180, "cold", (4, 10), (4, 12)),
+    WandType(606, "/", "Wand of Polymorph", 5, 26, 60, 220, "polymorph", (5, 15), (0, 0)),
+    WandType(607, "/", "Wand of Teleport Monster", 4, 26, 65, 200, "teleport_monster", (5, 12), (0, 0)),
+    WandType(608, "/", "Wand of Slow Monster", 3, 26, 70, 160, "slow_monster", (4, 10), (0, 0)),
+    WandType(609, "/", "Wand of Haste Monster", 3, 26, 50, 140, "haste_monster", (4, 10), (0, 0)),
+    WandType(610, "/", "Wand of Sleep", 2, 26, 75, 120, "sleep", (6, 15), (0, 0)),
+    WandType(611, "/", "Wand of Drain Life", 8, 26, 40, 300, "drain_life", (3, 8), (8, 20)),
+    WandType(612, "/", "Wand of Nothing", 1, 26, 30, 50, "nothing", (5, 15), (0, 0)),
 ]
 
 

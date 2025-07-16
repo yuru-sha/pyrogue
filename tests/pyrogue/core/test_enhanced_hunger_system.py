@@ -136,31 +136,36 @@ class TestEnhancedHungerSystem:
 
     def test_full_bonus_effects(self):
         """満腹時のボーナス効果テスト。"""
-        # HPとMPを部分的に減らして満腹状態に
+        # HPを部分的に減らして満腹状態に
         self.player.hunger = HungerConstants.FULL_THRESHOLD + 10
         self.player.hp = self.player.max_hp - 5
-        self.player.mp = self.player.max_mp - 3
 
-        # ボーナス効果のテスト（確率的なので複数回実行）
-        hp_gained = False
-        mp_gained = False
+        # randomをモックして確実にHP回復が発動するようにする
+        import random
+        from unittest.mock import patch
 
-        for _ in range(50):  # 50回実行して効果を確認
+        with patch.object(random, "random", return_value=0.01):  # 5%確率より低い値でHP回復を確実に発動
             old_hp = self.player.hp
-            old_mp = self.player.mp
 
             self.turn_manager._apply_full_bonus_effects(self.context, self.player)
 
-            if self.player.hp > old_hp:
-                hp_gained = True
-            if self.player.mp > old_mp:
-                mp_gained = True
+            # HP回復効果が発動したことを確認
+            assert self.player.hp > old_hp
+            assert self.player.hp == old_hp + 1
 
-            if hp_gained and mp_gained:
-                break
+            # メッセージが追加されたことを確認
+            self.context.add_message.assert_called_with("You feel refreshed!")
 
-        # 少なくともどちらかの効果は発動するはず
-        assert hp_gained or mp_gained
+        # HP満タンの場合は効果が発動しないことを確認
+        self.player.hp = self.player.max_hp
+
+        with patch.object(random, "random", return_value=0.01):
+            old_hp = self.player.hp
+
+            self.turn_manager._apply_full_bonus_effects(self.context, self.player)
+
+            # HP満タンなので回復しない
+            assert self.player.hp == old_hp
 
     def test_starvation_damage(self):
         """飢餓状態でのダメージテスト。"""

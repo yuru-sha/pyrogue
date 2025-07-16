@@ -1,4 +1,5 @@
 # PyRogue
+https://deepwiki.com/badge-maker?url=https%3A%2F%2Fdeepwiki.com%2Fyuru-sha%2Fpyrogue
 
 Python 3.12とTCODライブラリを使用した**本格的なローグライクゲーム**です。オリジナルRogueの26階層構造を忠実に再現し、手続き生成ダンジョン、ターンベース戦闘、パーマデス、探索重視のゲームプレイを提供します。
 

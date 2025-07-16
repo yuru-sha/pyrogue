@@ -64,7 +64,10 @@ class MonsterAIManager:
                 return
 
             # 隣接している場合は特殊攻撃またはメレー攻撃
-            if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD:
+            if (
+                self._calculate_distance(monster.x, monster.y, player.x, player.y)
+                <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD
+            ):
                 if self._can_use_special_attack(monster):
                     self._use_special_attack(monster, player, context)
                 else:
@@ -223,7 +226,10 @@ class MonsterAIManager:
 
         """
         # プレイヤーとの距離が1の場合は攻撃
-        if self._calculate_distance(monster.x, monster.y, player.x, player.y) <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD:
+        if (
+            self._calculate_distance(monster.x, monster.y, player.x, player.y)
+            <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD
+        ):
             self._monster_attack_player(monster, context)
             return
 

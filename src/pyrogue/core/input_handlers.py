@@ -76,18 +76,8 @@ class StateManager:
             context.handle_input(event)
             return True, None
 
-        if current_state == GameStates.SHOW_MAGIC:
-            context.handle_key(event)
-            return True, None
-
         if current_state == GameStates.TARGETING:
             context.handle_targeting(event)
-            return True, None
-
-        if current_state == GameStates.DIALOGUE:
-            new_screen = context.handle_key(event)
-            if new_screen:
-                return True, GameStates.PLAYERS_TURN
             return True, None
 
         if current_state == GameStates.GAME_OVER or current_state == GameStates.VICTORY:
@@ -117,7 +107,6 @@ class StateManager:
             return GameStates.EXIT
         if current_state in (
             GameStates.SHOW_INVENTORY,
-            GameStates.SHOW_MAGIC,
             GameStates.TARGETING,
         ):
             return GameStates.PLAYERS_TURN
@@ -181,5 +170,11 @@ class StateManager:
             return "search"
         if key == ord("d"):
             return "disarm"
+        if key == ord("x"):
+            return "examine"
+        if key == ord("R"):
+            return "rest long"
+        if key == ord("."):
+            return "rest"
 
         return None

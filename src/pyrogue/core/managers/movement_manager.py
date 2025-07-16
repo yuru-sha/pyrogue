@@ -251,7 +251,13 @@ class MovementManager:
         if items_at_position:
             if len(items_at_position) == 1:
                 item = items_at_position[0]
-                self.context.add_message(f"You see a {item.name} here. Press 'g' to get it.")
+                player = self.context.player
+                identification = getattr(player, "identification", None)
+                if identification and hasattr(item, "get_display_name"):
+                    display_name = item.get_display_name(identification)
+                else:
+                    display_name = item.name
+                self.context.add_message(f"You see a {display_name} here. Press 'g' to get it.")
             else:
                 self.context.add_message(f"You see {len(items_at_position)} items here. Press 'g' to get them.")
 

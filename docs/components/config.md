@@ -80,9 +80,9 @@ def get_log_level() -> str:
     """ログレベルの設定を取得"""
     return env_config.get("LOG_LEVEL", "INFO")
 
-def get_window_width() -> int:
-    """ウィンドウ幅の設定を取得"""
-    return env_config.get_int("WINDOW_WIDTH", 80)
+def get_auto_save_enabled() -> bool:
+    """オートセーブ機能の設定を取得"""
+    return env_config.get_bool("AUTO_SAVE_ENABLED", True)
 ```
 
 ### レガシー設定 (legacy.py)
@@ -111,11 +111,8 @@ CONFIG = GameConfig()
 | `DEBUG` | bool | false | デバッグモード |
 | `LOG_LEVEL` | str | INFO | ログレベル |
 | `SAVE_DIRECTORY` | str | saves | セーブディレクトリ |
-| `WINDOW_WIDTH` | int | 80 | ウィンドウ幅 |
-| `WINDOW_HEIGHT` | int | 50 | ウィンドウ高さ |
-| `FPS_LIMIT` | int | 60 | FPS制限 |
 | `AUTO_SAVE_ENABLED` | bool | true | オートセーブ |
-| `SOUND_ENABLED` | bool | false | 音声機能（将来用） |
+| `FONT_PATH` | str | auto | フォントファイルパス |
 
 ### ゲーム定数
 
@@ -135,7 +132,7 @@ CONFIG = GameConfig()
 from pyrogue.config.env import (
     env_config,
     get_debug_mode,
-    get_window_width,
+    get_auto_save_enabled,
     get_log_level
 )
 
@@ -144,7 +141,7 @@ env_config.load_env()
 
 # 型安全なアクセス
 if get_debug_mode():
-    print(f"Debug mode enabled, window size: {get_window_width()}")
+    print(f"Debug mode enabled, auto save: {get_auto_save_enabled()}")
     print(f"Log level: {get_log_level()}")
 ```
 
@@ -164,9 +161,6 @@ player_config = CONFIG.player
 # .env
 DEBUG=true
 LOG_LEVEL=DEBUG
-WINDOW_WIDTH=120
-WINDOW_HEIGHT=40
-FPS_LIMIT=30
 AUTO_SAVE_ENABLED=false
 ```
 
