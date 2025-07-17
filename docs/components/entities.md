@@ -38,6 +38,7 @@ entities/
 - **Command Pattern**: 状態異常・魔法・アイテム効果の統一実行
 - **Strategy Pattern**: モンスターAI・魔法効果・トラップ動作の動的切り替え
 - **オリジナル忠実性**: Rogue本来のゲームメカニクスの厳密な再現
+- **Handler Pattern連携**: v0.1.0のHandler Patternとのシームレスな統合
 
 ## アクターシステム (actors/)
 
@@ -721,6 +722,133 @@ def find_items_by_type(self, item_type: str) -> list["Item"]:
     return [item for item in self.items if item.item_type == item_type]
 ```
 
+## Handler Pattern連携（v0.1.0）
+
+### エンティティシステムとHandler Patternの統合
+
+v0.1.0で導入されたHandler Patternとエンティティシステムは密接に連携し、以下の統合された処理を実現しています：
+
+#### アイテム管理の統合
+
+```python
+class InfoCommandHandler:
+    def handle_item_info(self, item_letter: str) -> CommandResult:
+        """アイテム情報表示（エンティティシステム連携）"""
+        inventory = self.context.game_context.player.inventory
+
+        try:
+            item_index = ord(item_letter.lower()) - ord('a')
+            if 0 <= item_index < len(inventory.items):
+                item = inventory.items[item_index]
+                # アイテム識別システムとの連携
+                if inventory.identification_system.is_identified(item):
+                    info_msg = f"{item.name}: {item.get_description()}"
+                else:
+                    info_msg = f"{item.unidentified_name}: Unknown item"
+
+                self.context.add_message(info_msg)
+                return CommandResult.success()
+
+        except (ValueError, IndexError):
+            return CommandResult.failure("Invalid item letter")
+```
+
+#### デバッグコマンドとエンティティ制御
+
+```python
+class DebugCommandHandler:
+    def handle_spawn_monster(self, args: list[str]) -> CommandResult:
+        """モンスター生成（デバッグ）"""
+        if not args:
+            return CommandResult.failure("Monster type required")
+
+        monster_type = args[0].upper()
+        player = self.context.game_context.player
+        dungeon = self.context.game_context.dungeon_manager.current_dungeon
+
+        # エンティティシステムを使ったモンスター生成
+        monster = Monster.create_monster(monster_type, x=player.x+1, y=player.y+1)
+        if monster:
+            dungeon.monsters.append(monster)
+            self.context.add_message(f"Spawned {monster.name}")
+            return CommandResult.success_with_turn()
+
+        return CommandResult.failure(f"Unknown monster type: {monster_type}")
+
+    def handle_grant_item(self, args: list[str]) -> CommandResult:
+        """アイテム付与（デバッグ）"""
+        if not args:
+            return CommandResult.failure("Item type required")
+
+        item_type = args[0].lower()
+        player = self.context.game_context.player
+
+        # エンティティシステムを使ったアイテム生成
+        from pyrogue.entities.items.item_spawner import ItemSpawner
+        spawner = ItemSpawner()
+        item = spawner.create_item(item_type)
+
+        if item and player.inventory.add_item(item):
+            self.context.add_message(f"Added {item.name} to inventory")
+            return CommandResult.success()
+
+        return CommandResult.failure("Failed to add item")
+```
+
+#### セーブ・ロードでのエンティティ状態管理
+
+```python
+class SaveLoadHandler:
+    def _save_entity_states(self, game_context: GameContext) -> dict:
+        """エンティティ状態の保存"""
+        return {
+            'player': self._serialize_player(game_context.player),
+            'monsters': [self._serialize_monster(m) for m in game_context.dungeon_manager.current_dungeon.monsters],
+            'items': [self._serialize_item(i) for i in game_context.dungeon_manager.current_dungeon.items],
+            'status_effects': self._serialize_status_effects(game_context.player.status_effects)
+        }
+
+    def _serialize_player(self, player: Player) -> dict:
+        """プレイヤー状態のシリアライズ"""
+        return {
+            'x': player.x, 'y': player.y,
+            'hp': player.hp, 'max_hp': player.max_hp,
+            'mp': player.mp, 'max_mp': player.max_mp,
+            'level': player.level, 'experience': player.experience,
+            'hunger_state': player.hunger_state.value,
+            'inventory': self._serialize_inventory(player.inventory),
+            'status_effects': [effect.to_dict() for effect in player.status_effects.effects]
+        }
+```
+
+#### 自動探索とエンティティ検出
+
+```python
+class AutoExploreHandler:
+    def _check_safety(self) -> bool:
+        """安全性確認（エンティティ検出）"""
+        player = self.context.game_context.player
+        dungeon = self.context.game_context.dungeon_manager.current_dungeon
+
+        # モンスター検出
+        for monster in dungeon.monsters:
+            distance = max(abs(monster.x - player.x), abs(monster.y - player.y))
+            if distance <= player.light_radius:
+                self.context.add_message(f"You see a {monster.name} nearby!")
+                return False
+
+        # トラップ検出
+        for trap in dungeon.traps:
+            if (trap.x, trap.y) == (player.x, player.y) and not trap.discovered:
+                # トラップ発見ロジック
+                if random.random() < 0.3:  # 30%の確率で発見
+                    trap.discovered = True
+                    self.context.add_message("You discovered a trap!")
+                    return False
+
+        return True
+```
+
 ## まとめ
 
 Entities コンポーネントは、PyRogueプロジェクトの中核として以下の価値を提供します：
@@ -730,5 +858,6 @@ Entities コンポーネントは、PyRogueプロジェクトの中核として�
 - **統合管理**: 状態異常・効果・AIの統一的な処理システム
 - **型安全性**: Protocol使用による堅牢な型システム
 - **テスト対応**: 依存性注入によるテスタビリティ
+- **Handler Pattern統合**: v0.1.0のHandler Patternとの完全な連携
 
 この設計により、26階層の本格的なローグライクゲームとして、オリジナルRogueの魅力を現代的な技術で蘇らせることに成功しています。エンティティシステムは、ゲームの核心的な楽しさを支える重要な基盤として機能しています。
