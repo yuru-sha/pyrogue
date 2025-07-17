@@ -126,7 +126,7 @@ class ItemSpawner:
             # 深い階層ほど食料の重みを増加（10階層以降は段階的に増加）
             floor_food_bonus = max(0, (self.floor - 10) // 3) * 5  # 3階層ごとに+5
             food_weight = base_food_weight + floor_food_bonus
-            
+
             item_type = random.choices(
                 ["weapon", "armor", "ring", "scroll", "potion", "food", "wand", "gold"],
                 weights=[15, 15, 10, 25, 25, food_weight, 10, 35],
