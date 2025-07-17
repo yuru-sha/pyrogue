@@ -287,11 +287,13 @@ class GameLogic:
         self.inventory.add_item(healing_potion1)
         self.inventory.add_item(healing_potion2)
 
-        # Food Ration x2（満腹度25回復）
+        # Food Ration x3（満腹度25回復）
         food_ration1 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
         food_ration2 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
+        food_ration3 = Food(x=0, y=0, name="Food Ration", effect=NutritionEffect(nutrition_value=25))
         self.inventory.add_item(food_ration1)
         self.inventory.add_item(food_ration2)
+        self.inventory.add_item(food_ration3)
 
         # Scroll of Light x1（視野拡大50ターン）
         light_scroll = Scroll(x=0, y=0, name="Scroll of Light", effect=LightEffect(duration=50, radius=15))

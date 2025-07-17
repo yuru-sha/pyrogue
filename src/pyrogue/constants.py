@@ -131,7 +131,7 @@ class HungerConstants:
 
     # 満腹度減少
     HUNGER_DECREASE_RATE: int = 1  # ターンあたりの減少量
-    HUNGER_DECREASE_INTERVAL: int = 12  # 減少間隔（ターン）- バランス調整で緩和
+    HUNGER_DECREASE_INTERVAL: int = 14  # 減少間隔（ターン）- バランス調整で緩和
 
     # 餓死ダメージ
     STARVING_DAMAGE: int = 1
