@@ -125,10 +125,10 @@ class FloorManager:
         """
         try:
             # フロアを変更
-            self.context.dungeon_manager.set_current_floor(target_floor)
+            self.context.dungeon_manager.set_current_floor(target_floor, self.context.player)
 
             # 新しいフロアのデータを取得
-            new_floor_data = self.context.dungeon_manager.get_current_floor_data()
+            new_floor_data = self.context.dungeon_manager.get_current_floor_data(self.context.player)
 
             if not new_floor_data:
                 self.context.add_message("Failed to generate the new floor.")

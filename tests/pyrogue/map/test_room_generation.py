@@ -4,6 +4,7 @@ BSPダンジョン生成の部屋アスペクト比テスト
 """
 
 import numpy as np
+
 from pyrogue.map.dungeon.section_based_builder import BSPDungeonBuilder
 from pyrogue.map.tile import Wall
 

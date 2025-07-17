@@ -29,6 +29,7 @@ class LineDrawer:
         Args:
         ----
             tile_placer: タイル配置関数 (tiles, x, y, allow_door) -> None
+
         """
         self.tile_placer = tile_placer
 
@@ -52,6 +53,7 @@ class LineDrawer:
             y: Y座標
             reverse: 逆順描画フラグ
             boundary_door_placer: 境界位置用のタイル配置関数（オプション）
+
         """
         x_start, x_end = min(x1, x2), max(x1, x2)
         x_values = list(range(x_start, x_end + 1))
@@ -90,6 +92,7 @@ class LineDrawer:
             y2: 終了Y座標
             reverse: 逆順描画フラグ
             boundary_door_placer: 境界位置用のタイル配置関数（オプション）
+
         """
         y_start, y_end = min(y1, y2), max(y1, y2)
         y_values = list(range(y_start, y_end + 1))
@@ -130,6 +133,7 @@ class LineDrawer:
             y2: 終了Y座標
             horizontal_first: 水平線から開始するかのフラグ
             boundary_door_placer: 境界位置用のタイル配置関数（オプション）
+
         """
         if horizontal_first:
             # 水平→垂直

@@ -5,6 +5,7 @@
 """
 
 import numpy as np
+
 from pyrogue.map.dungeon.dark_room_builder import DarkRoom, DarkRoomBuilder
 from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Floor, Wall

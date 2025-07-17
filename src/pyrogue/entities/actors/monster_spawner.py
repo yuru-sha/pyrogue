@@ -15,8 +15,9 @@ from .monster_types import FLOOR_MONSTERS, MONSTER_STATS
 class MonsterSpawner:
     """モンスターの生成と管理を行うクラス"""
 
-    def __init__(self, dungeon_level: int):
+    def __init__(self, dungeon_level: int, has_amulet: bool = False):
         self.dungeon_level = dungeon_level
+        self.has_amulet = has_amulet  # 復路判定用
         self.monsters: list[Monster] = []
         self.occupied_positions: set[tuple[int, int]] = set()
 
@@ -30,46 +31,81 @@ class MonsterSpawner:
             rooms: 部屋のリスト
 
         """
-        # 階層に応じたモンスター数を決定（基本3-6体、階層が上がるごとに若干増加）
-        base_count = random.randint(3, 6)
-        level_bonus = min(4, self.dungeon_level // 3)  # 最大で4体まで追加
-        monster_count = base_count + level_bonus
+        # フロアサイズを基準としたモンスター数の計算
+        height, width = dungeon_tiles.shape
+        total_floor_tiles = self._count_floor_tiles(dungeon_tiles)
+
+        if self.has_amulet:
+            # ★★★ AMULET奪還のための全軍総攻撃 ★★★
+            # モンスターたちがアミュレットを取り戻すために総結集！
+
+            if self.dungeon_level <= 5:
+                # B1F-B5F: 地上封鎖のための最大密度総攻撃
+                density_ratio = 0.45  # フロアの45%を最強クラスで埋める
+                monster_count = int(total_floor_tiles * density_ratio)
+                monster_count = max(monster_count, 80)  # 最低80体の精鋭
+
+            elif self.dungeon_level <= 10:
+                # B6F-B10F: 第二波総攻撃
+                density_ratio = 0.40  # フロアの40%を強敵で埋める
+                monster_count = int(total_floor_tiles * density_ratio)
+                monster_count = max(monster_count, 70)  # 最低70体の強敵
+
+            else:
+                # B11F-B15F: 深層追撃部隊
+                density_ratio = 0.35  # フロアの35%を混成軍で埋める
+                monster_count = int(total_floor_tiles * density_ratio)
+                monster_count = max(monster_count, 60)  # 最低60体の混成軍
+
+        else:
+            # 通常時: 従来の計算方式
+            base_count = random.randint(8, 15)
+            level_bonus = min(10, self.dungeon_level // 2)
+            monster_count = base_count + level_bonus
 
         # 迷路階層の場合（部屋がない場合）の対応
         if not rooms:
             self._spawn_monsters_in_maze(dungeon_tiles, monster_count)
             return
 
-        # 通常の部屋ベース配置
-        for _ in range(monster_count):
-            # ランダムな部屋を選択（特別な部屋は除外）
-            available_rooms = [room for room in rooms if not room.is_special]
-            if not available_rooms:
-                break
+        if self.has_amulet:
+            # 魔除け所持時: フロア全体にモンスターを敷き詰める
+            self._spawn_monsters_everywhere(dungeon_tiles, monster_count)
+        else:
+            # 通常時: 部屋ベース配置
+            for _ in range(monster_count):
+                # ランダムな部屋を選択（特別な部屋は除外）
+                available_rooms = [room for room in rooms if not room.is_special]
+                if not available_rooms:
+                    break
 
-            room = random.choice(available_rooms)
+                room = random.choice(available_rooms)
 
-            # 部屋の内部の座標から、まだモンスターがいない場所を選択
-            available_positions = [
-                (x, y)
-                for x, y in room.inner
-                if isinstance(dungeon_tiles[y, x], Floor) and (x, y) not in self.occupied_positions
-            ]
+                # 部屋の内部の座標から、まだモンスターがいない場所を選択
+                available_positions = [
+                    (x, y)
+                    for x, y in room.inner
+                    if isinstance(dungeon_tiles[y, x], Floor) and (x, y) not in self.occupied_positions
+                ]
 
-            if not available_positions:
-                continue
+                if not available_positions:
+                    continue
 
-            pos = random.choice(available_positions)
-            monster = self._create_monster(pos[0], pos[1])
-            if monster:
-                self.monsters.append(monster)
-                self.occupied_positions.add(pos)
+                pos = random.choice(available_positions)
+                monster = self._create_monster(pos[0], pos[1])
+                if monster:
+                    self.monsters.append(monster)
+                    self.occupied_positions.add(pos)
 
     def _create_monster(self, x: int, y: int) -> Monster | None:
         """指定された位置にモンスターを生成"""
-        # 階層に応じたモンスター出現テーブルを取得
-        level = min(self.dungeon_level, 15)  # 15階以降は15階の設定を使用
-        monster_table = FLOOR_MONSTERS.get(level, FLOOR_MONSTERS[15])
+        # 復路の場合は特別なモンスター出現ルールを適用
+        if self.has_amulet:
+            monster_table = self._get_return_journey_monsters()
+        else:
+            # 階層に応じたモンスター出現テーブルを取得
+            level = min(self.dungeon_level, 15)  # 15階以降は15階の設定を使用
+            monster_table = FLOOR_MONSTERS.get(level, FLOOR_MONSTERS[15])
 
         # 出現確率に基づいてモンスターを選択
         total = sum(prob for _, prob in monster_table)
@@ -99,6 +135,131 @@ class MonsterSpawner:
 
         return None
 
+    def _get_return_journey_monsters(self) -> list[tuple[str, int]]:
+        """
+        復路（アミュレット所持時）のモンスター出現テーブルを取得。
+
+        ★★★ AMULET OF YENDOR奪還のための全軍総攻撃 ★★★
+        モンスターたちが聖なるアミュレットを取り戻すために全勢力を結集！
+        地上に近いほどより強力な最強クラスの軍勢が襲いかかる！
+
+        Returns
+        -------
+            モンスター出現テーブル [(monster_id, probability), ...]
+
+        """
+        # ★ AMULET奪還作戦 ★
+        # B1F-B5F: 【第一総攻撃】最強クラスの精鋭部隊による地上封鎖
+        # B6F-B10F: 【第二総攻撃】深層精鋭の追撃部隊
+        # B11F-B15F: 【深層追撃】全階層からの最強クラス混成軍
+
+        if self.dungeon_level <= 5:
+            # B1F-B5F: AMULET奪還のための最強クラスの総攻撃！地上に近いほど最凶
+            return [
+                ("dragon", 50),  # ドラゴン（大幅増加）
+                ("phantom", 50),  # ファントム（大幅増加）
+                ("medusa", 45),  # メデューサ（大幅増加）
+                ("wraith", 45),  # レイス（大幅増加）
+                ("vampire", 50),  # ヴァンパイア（大幅増加）
+                ("troll", 40),  # トロル（大幅増加）
+                ("lich", 35),  # リッチ（大幅増加）
+                ("demon", 35),  # デーモン（大幅増加）
+                ("griffin", 30),  # グリフィン（上位追加）
+                ("manticore", 25),  # マンティコア（追加）
+            ]
+        if self.dungeon_level <= 10:
+            # B6F-B10F: AMULET奪還のための第二波総攻撃！最強クラス中心
+            return [
+                ("dragon", 45),  # ドラゴン（最強クラス中心）
+                ("phantom", 45),  # ファントム（最強クラス中心）
+                ("medusa", 40),  # メデューサ（大幅増加）
+                ("wraith", 40),  # レイス（大幅増加）
+                ("vampire", 45),  # ヴァンパイア（大幅増加）
+                ("troll", 35),  # トロル（大幅増加）
+                ("lich", 30),  # リッチ（上位から追加）
+                ("demon", 30),  # デーモン（上位から追加）
+                ("griffin", 35),  # グリフィン（大幅増加）
+                ("manticore", 20),  # マンティコア（上位から追加）
+            ]
+        # B11F-B15F: AMULET奪還のための深層からの追撃！最強クラス混合
+        return [
+            ("dragon", 35),  # ドラゴン（深層でも最強維持）
+            ("phantom", 35),  # ファントム（深層でも最強維持）
+            ("medusa", 30),  # メデューサ（強化）
+            ("wraith", 30),  # レイス（強化）
+            ("vampire", 35),  # ヴァンパイア（強化）
+            ("troll", 25),  # トロル（強化）
+            ("lich", 25),  # リッチ（強化）
+            ("demon", 25),  # デーモン（強化）
+            ("griffin", 30),  # グリフィン（強化）
+            ("ogre", 20),  # オーガ（従来の強敵）
+            ("centaur", 15),  # ケンタウロス（従来の強敵）
+        ]
+
+    def _count_floor_tiles(self, dungeon_tiles: np.ndarray) -> int:
+        """
+        ダンジョン内の床タイル数をカウント。
+
+        Args:
+        ----
+            dungeon_tiles: ダンジョンのタイル配列
+
+        Returns:
+        -------
+            int: 床タイルの総数
+
+        """
+        floor_count = 0
+        height, width = dungeon_tiles.shape
+
+        for y in range(height):
+            for x in range(width):
+                # Floor, Door, SecretDoorを歩行可能なタイルとしてカウント
+                if isinstance(dungeon_tiles[y, x], (Floor, Door, SecretDoor)):
+                    floor_count += 1
+
+        return floor_count
+
+    def _spawn_monsters_everywhere(self, dungeon_tiles: np.ndarray, monster_count: int) -> None:
+        """
+        魔除け所持時: フロア全体の歩行可能エリアにモンスターを大量配置。
+
+        Args:
+        ----
+            dungeon_tiles: ダンジョンのタイル配列
+            monster_count: 配置するモンスター数
+
+        """
+        # 全ての歩行可能位置を取得
+        walkable_positions = []
+        height, width = dungeon_tiles.shape
+
+        for y in range(height):
+            for x in range(width):
+                if isinstance(dungeon_tiles[y, x], (Floor, Door, SecretDoor)):
+                    walkable_positions.append((x, y))
+
+        # 物理的制限: 歩行可能タイルの90%まで
+        max_possible = int(len(walkable_positions) * 0.9)
+        monster_count = min(monster_count, max_possible)
+
+        # ランダムに配置位置を選択
+        random.shuffle(walkable_positions)
+
+        # 大量配置実行
+        placed_count = 0
+        for pos in walkable_positions:
+            if placed_count >= monster_count:
+                break
+
+            x, y = pos
+            if (x, y) not in self.occupied_positions:
+                monster = self._create_monster(x, y)
+                if monster:
+                    self.monsters.append(monster)
+                    self.occupied_positions.add(pos)
+                    placed_count += 1
+
     def _spawn_monsters_in_maze(self, dungeon_tiles: np.ndarray, monster_count: int) -> None:
         """
         迷路階層でモンスターを配置。
@@ -120,9 +281,27 @@ class MonsterSpawner:
                 if isinstance(dungeon_tiles[y, x], Floor):
                     floor_positions.append((x, y))
 
-        # 床タイルが少ない場合は配置数を調整
-        if len(floor_positions) < monster_count:
-            monster_count = len(floor_positions) // 2  # 密度を考慮
+        # ★★★ 迷路でのAMULET奪還総攻撃 ★★★
+        if self.has_amulet:
+            if self.dungeon_level <= 5:
+                # B1F-B5F迷路: 地上封鎖の最終防衛線
+                monster_count = int(len(floor_positions) * 0.50)  # 50%を最強クラスで
+                monster_count = max(monster_count, 120)  # 最低120体の精鋭軍
+            elif self.dungeon_level <= 10:
+                # B6F-B10F迷路: 第二波迷路総攻撃
+                monster_count = int(len(floor_positions) * 0.45)  # 45%を強敵で
+                monster_count = max(monster_count, 100)  # 最低100体の強敵軍
+            else:
+                # B11F-B15F迷路: 深層迷路追撃
+                monster_count = int(len(floor_positions) * 0.40)  # 40%を混成軍で
+                monster_count = max(monster_count, 80)  # 最低80体の混成軍
+        # 通常時の迷路階層調整
+        elif len(floor_positions) > monster_count * 3:
+            monster_count = int(monster_count * 1.5)  # 1.5倍に増やす
+
+        # 物理的制限: 全床タイルの90%まで（プレイヤーの移動スペース確保）
+        max_possible = int(len(floor_positions) * 0.9)
+        monster_count = min(monster_count, max_possible)
 
         # ランダムに配置位置を選択
         random.shuffle(floor_positions)

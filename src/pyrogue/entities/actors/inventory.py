@@ -228,11 +228,11 @@ class Inventory:
             sign = "+" if item.attack >= 0 else ""
             enchant_text = f" {sign}{item.enchantment}" if item.enchantment != 0 else ""
             return f"{item.name} (ATK {sign}{item.attack}{enchant_text})"
-        elif isinstance(item, Armor):
+        if isinstance(item, Armor):
             sign = "+" if item.defense >= 0 else ""
             enchant_text = f" {sign}{item.enchantment}" if item.enchantment != 0 else ""
             return f"{item.name} (DEF {sign}{item.defense}{enchant_text})"
-        elif isinstance(item, Ring):
+        if isinstance(item, Ring):
             sign = "+" if item.bonus >= 0 else ""
             # 効果名をより読みやすく表示
             effect_display = {
@@ -244,8 +244,7 @@ class Inventory:
                 "regeneration": "REGEN",
             }.get(item.effect, item.effect.upper())
             return f"{item.name} ({effect_display} {sign}{item.bonus})"
-        else:
-            return item.name
+        return item.name
 
     def get_equipped_weapon(self) -> Weapon | None:
         """

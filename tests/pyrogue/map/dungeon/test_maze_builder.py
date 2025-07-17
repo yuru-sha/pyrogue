@@ -5,6 +5,7 @@
 """
 
 import numpy as np
+
 from pyrogue.map.dungeon.maze_builder import MazeBuilder
 from pyrogue.map.tile import Floor, Wall
 

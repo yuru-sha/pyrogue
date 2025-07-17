@@ -5,6 +5,7 @@
 """
 
 import numpy as np
+
 from pyrogue.map.dungeon.isolated_room_builder import (
     IsolatedRoomBuilder,
     IsolatedRoomGroup,

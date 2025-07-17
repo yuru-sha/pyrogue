@@ -678,8 +678,8 @@ class MonsterAIManager:
             # ステータスも減少
             player.max_hp = max(10, player.max_hp - 5)
             player.hp = min(player.hp, player.max_hp)
-            player.max_mp = max(5, player.max_mp - 3)
-            player.mp = min(player.mp, player.max_mp)
+            # player.max_mp = max(5, player.max_mp - 3)
+            # player.mp = min(player.mp, player.max_mp)
             player.attack = max(1, player.attack - 2)
             player.defense = max(0, player.defense - 1)
 

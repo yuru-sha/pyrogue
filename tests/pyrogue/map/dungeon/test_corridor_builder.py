@@ -6,6 +6,7 @@
 """
 
 import numpy as np
+
 from pyrogue.map.dungeon.corridor_builder import Corridor, CorridorBuilder
 from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Floor, Wall

@@ -20,6 +20,11 @@ core/
 ├── input_handlers.py      # 入力処理システム
 ├── save_manager.py        # セーブ・ロード機能
 ├── score_manager.py       # スコアランキング
+├── command_handler.py     # 共通コマンドハンドラー (v0.1.0)
+├── auto_explore_handler.py # 自動探索ハンドラー (v0.1.0)
+├── debug_command_handler.py # デバッグコマンドハンドラー (v0.1.0)
+├── save_load_handler.py   # セーブ・ロードハンドラー (v0.1.0)
+├── info_command_handler.py # 情報表示ハンドラー (v0.1.0)
 └── managers/              # 専門マネージャー群
     ├── game_context.py    # 共有コンテキスト
     ├── turn_manager.py    # ターン制御
@@ -27,13 +32,12 @@ core/
     ├── monster_ai_manager.py # モンスターAI
     ├── movement_manager.py   # 移動処理
     ├── item_manager.py      # アイテム管理
-    ├── floor_manager.py     # フロア管理
-    ├── dialogue_manager.py  # 対話システム
-    └── trading_manager.py   # 取引システム
+    └── floor_manager.py     # フロア管理
 ```
 
 ### 設計原則
 
+- **Handler Pattern**: 機能別専用ハンドラーによる責務分離（v0.1.0で導入）
 - **責務分離**: 各マネージャーが単一責任を持つ
 - **依存関係注入**: GameContextによる統一的な依存管理
 - **状態管理**: 明確なゲーム状態とその遷移
@@ -128,6 +132,75 @@ class GameLogic:
         self.floor_manager = FloorManager(game_context)
         # ... 他のマネージャー
 ```
+
+### コマンド処理システム（Handler Pattern - v0.1.0）
+
+#### CommonCommandHandler (command_handler.py)
+
+機能別専用ハンドラーによる責務分離型コマンド処理システム。
+
+**Handler Pattern アーキテクチャ:**
+```
+CommonCommandHandler (コア)
+├── AutoExploreHandler     # 自動探索機能
+├── DebugCommandHandler    # デバッグコマンド
+├── SaveLoadHandler        # セーブ・ロード処理
+└── InfoCommandHandler     # 情報表示機能
+```
+
+**実装例:**
+```python
+class CommonCommandHandler:
+    def __init__(self, context: CommandContext) -> None:
+        self.context = context
+        # 遅延初期化によるメモリ効率化
+        self._auto_explore_handler = None
+        self._debug_handler = None
+        self._save_load_handler = None
+        self._info_handler = None
+
+    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
+        if command in ["auto_explore", "O"]:
+            return self._get_auto_explore_handler().handle_auto_explore()
+        if command == "debug":
+            return self._get_debug_handler().handle_debug_command(args)
+        # ...
+
+    def _get_auto_explore_handler(self):
+        """自動探索ハンドラーを取得（遅延初期化）"""
+        if self._auto_explore_handler is None:
+            self._auto_explore_handler = AutoExploreHandler(self.context)
+        return self._auto_explore_handler
+```
+
+**利点:**
+- **責務分離**: 各機能を専用ハンドラーに分離
+- **拡張性**: 新機能は新ハンドラー追加で対応
+- **保守性**: 修正範囲が明確に限定される
+- **テスト性**: 各ハンドラーを独立してテスト可能
+- **再利用性**: CLI/GUIで同一ハンドラーを共有
+
+#### 専用ハンドラー群
+
+**AutoExploreHandler**: 自動探索機能
+- 未探索エリアの検出
+- 安全ルート計算
+- 敵発見時の自動停止
+
+**DebugCommandHandler**: デバッグコマンド
+- イェンダーのアミュレット付与
+- 階層テレポート
+- HP・ダメージ調整
+
+**SaveLoadHandler**: セーブ・ロード処理
+- IDベースセーブシステム
+- 後方互換性維持
+- エラーハンドリング
+
+**InfoCommandHandler**: 情報表示機能
+- シンボル説明
+- アイテム識別状況
+- キャラクター詳細
 
 ### 入力処理システム
 
@@ -426,6 +499,40 @@ combat_manager.apply_damage(defender, damage)
 
 ## 拡張ガイド
 
+### 新しいハンドラーの追加（Handler Pattern）
+
+1. **ハンドラークラスの作成**
+```python
+class NewFeatureHandler:
+    def __init__(self, context: CommandContext):
+        self.context = context
+
+    def handle_new_feature(self, args: list[str]) -> CommandResult:
+        """新機能の処理"""
+        # 機能の実装
+        self.context.add_message("New feature executed!")
+        return CommandResult(True)
+```
+
+2. **CommonCommandHandlerへの統合**
+```python
+class CommonCommandHandler:
+    def __init__(self, context: CommandContext) -> None:
+        # 既存ハンドラー...
+        self._new_feature_handler = None
+
+    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
+        # 既存コマンド...
+        if command == "new_feature":
+            return self._get_new_feature_handler().handle_new_feature(args)
+
+    def _get_new_feature_handler(self):
+        """新機能ハンドラーを取得（遅延初期化）"""
+        if self._new_feature_handler is None:
+            self._new_feature_handler = NewFeatureHandler(self.context)
+        return self._new_feature_handler
+```
+
 ### 新しいマネージャーの追加
 
 1. **マネージャークラスの作成**
@@ -464,6 +571,131 @@ def handle_custom_command(self, command: str) -> bool:
         self._execute_custom_action()
         return True
     return False
+```
+
+## Handler Pattern 実装詳細
+
+### CommandContext設計
+
+Handler Pattern実装において、`CommandContext`はハンドラー間の共通インターフェースとして重要な役割を果たします。
+
+```python
+@dataclass
+class CommandContext:
+    """ハンドラー間で共有されるコマンド実行コンテキスト"""
+    game_context: GameContext
+    engine: Optional['Engine'] = None
+    cli_engine: Optional['CLIEngine'] = None
+
+    def add_message(self, message: str) -> None:
+        """メッセージログに追加"""
+        self.game_context.message_log.add_message(message)
+
+    def is_gui_mode(self) -> bool:
+        """GUI モードかどうかの判定"""
+        return self.engine is not None
+
+    def is_cli_mode(self) -> bool:
+        """CLI モードかどうかの判定"""
+        return self.cli_engine is not None
+```
+
+### CommandResult統一
+
+すべてのハンドラーは一貫したレスポンス形式を返します：
+
+```python
+@dataclass
+class CommandResult:
+    """コマンド実行結果"""
+    success: bool
+    message: Optional[str] = None
+    turn_consumed: bool = False
+    game_state_change: Optional[GameStates] = None
+
+    @classmethod
+    def success_with_turn(cls, message: str = None) -> 'CommandResult':
+        """ターン消費する成功結果"""
+        return cls(success=True, message=message, turn_consumed=True)
+
+    @classmethod
+    def failure(cls, message: str) -> 'CommandResult':
+        """失敗結果"""
+        return cls(success=False, message=message)
+```
+
+### ハンドラー間通信
+
+ハンドラー間でのデータ共有は、`CommandContext`を通じて行います：
+
+```python
+class SaveLoadHandler:
+    def handle_save(self) -> CommandResult:
+        """セーブ処理"""
+        if self._save_game():
+            # 他のハンドラーが参照可能な状態を更新
+            self.context.game_context.last_save_time = datetime.now()
+            return CommandResult.success("Game saved successfully")
+        return CommandResult.failure("Failed to save game")
+
+    def _save_game(self) -> bool:
+        """実際のセーブ処理"""
+        save_manager = SaveManager()
+        return save_manager.save_game(self.context.game_context)
+```
+
+### エラーハンドリング統一
+
+```python
+class BaseHandler:
+    """ハンドラーの基底クラス"""
+
+    def __init__(self, context: CommandContext):
+        self.context = context
+        self.logger = get_logger(self.__class__.__name__)
+
+    def safe_execute(self, func: Callable, *args, **kwargs) -> CommandResult:
+        """安全な実行ラッパー"""
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            self.logger.error(f"Handler error: {e}")
+            return CommandResult.failure(f"Internal error: {str(e)}")
+```
+
+### テスト戦略
+
+Handler Patternのテストは、各ハンドラーを独立してテスト可能にします：
+
+```python
+class TestAutoExploreHandler:
+    def test_auto_explore_basic(self):
+        """自動探索の基本動作テスト"""
+        # Arrange
+        mock_context = create_mock_context()
+        handler = AutoExploreHandler(mock_context)
+
+        # Act
+        result = handler.handle_auto_explore()
+
+        # Assert
+        assert result.success
+        assert result.turn_consumed
+        assert "Exploring" in result.message
+
+    def test_auto_explore_enemy_detection(self):
+        """敵発見時の自動停止テスト"""
+        # Arrange
+        mock_context = create_mock_context_with_enemy()
+        handler = AutoExploreHandler(mock_context)
+
+        # Act
+        result = handler.handle_auto_explore()
+
+        # Assert
+        assert result.success
+        assert not result.turn_consumed  # 敵発見時はターン消費しない
+        assert "Enemy detected" in result.message
 ```
 
 ## パフォーマンス最適化

@@ -7,6 +7,8 @@ cache_control: {"type": "ephemeral"}
 
 PyRogueは、モダンなソフトウェアアーキテクチャの原則に基づいて設計されたローグライクゲームです。責務分離、テスト可能性、拡張性、保守性を重視した設計により、高品質なゲーム体験と継続的な開発を可能にしています。
 
+**v0.1.0（2025年7月17日）**では、Handler Patternの導入により、さらなるモジュラー設計と拡張性を実現しました。
+
 ## アーキテクチャの基本原則
 
 ### 1. 責務分離 (Separation of Concerns)
@@ -78,6 +80,11 @@ core/
 ├── game_logic.py          # ゲームロジック管理
 ├── input_handlers.py      # 入力処理
 ├── save_manager.py        # セーブ・ロード
+├── command_handler.py     # 共通コマンドハンドラー（v0.1.0）
+├── auto_explore_handler.py # 自動探索ハンドラー（v0.1.0）
+├── debug_command_handler.py # デバッグコマンドハンドラー（v0.1.0）
+├── save_load_handler.py   # セーブ・ロードハンドラー（v0.1.0）
+├── info_command_handler.py # 情報表示ハンドラー（v0.1.0）
 └── managers/              # 各種マネージャー
     ├── game_context.py    # 共有コンテキスト
     ├── turn_manager.py    # ターン管理
@@ -147,7 +154,54 @@ ui/
 
 ## 設計パターンの活用
 
-### 1. Builder Pattern
+### 1. Handler Pattern (v0.1.0新規導入)
+**適用場所**: コマンド処理システム
+**実装**: `src/pyrogue/core/command_handler.py` + 専用ハンドラー群
+
+Handler Patternは、機能別の専用ハンドラーによってコマンド処理を分離し、保守性と拡張性を向上させる設計パターンです。
+
+#### アーキテクチャ構造
+```
+CommonCommandHandler (コア)
+├── AutoExploreHandler     # 自動探索機能
+├── DebugCommandHandler    # デバッグコマンド
+├── SaveLoadHandler        # セーブ・ロード処理
+└── InfoCommandHandler     # 情報表示機能
+```
+
+#### 実装例
+```python
+class CommonCommandHandler:
+    def __init__(self, context: CommandContext) -> None:
+        self.context = context
+        # 遅延初期化によるメモリ効率化
+        self._auto_explore_handler = None
+        self._debug_handler = None
+        self._save_load_handler = None
+        self._info_handler = None
+
+    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
+        if command in ["auto_explore", "O"]:
+            return self._get_auto_explore_handler().handle_auto_explore()
+        if command == "debug":
+            return self._get_debug_handler().handle_debug_command(args)
+        # ...
+
+    def _get_auto_explore_handler(self):
+        """自動探索ハンドラーを取得（遅延初期化）"""
+        if self._auto_explore_handler is None:
+            self._auto_explore_handler = AutoExploreHandler(self.context)
+        return self._auto_explore_handler
+```
+
+#### 利点
+- **責務分離**: 各機能を専用ハンドラーに分離
+- **拡張性**: 新機能は新ハンドラー追加で対応
+- **保守性**: 修正範囲が明確に限定される
+- **テスト性**: 各ハンドラーを独立してテスト可能
+- **再利用性**: CLI/GUIで同一ハンドラーを共有
+
+### 2. Builder Pattern
 **適用場所**: ダンジョン生成システム
 **実装**: `src/pyrogue/map/dungeon/`
 

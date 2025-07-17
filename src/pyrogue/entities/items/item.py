@@ -237,8 +237,7 @@ class Wand(Item):
         """チャージ情報を取得"""
         if self.identified:
             return f"({self.charges}/{self.max_charges} charges)"
-        else:
-            return ""
+        return ""
 
 
 class Gold(Item):

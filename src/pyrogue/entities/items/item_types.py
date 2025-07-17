@@ -72,36 +72,36 @@ class WandType(ItemType):
     damage_range: tuple[int, int]  # Range of damage/effect power (min, max)
 
 
-# Weapon definitions - 階層に応じた段階的出現
+# Weapon definitions - 階層に応じた段階的出現（強化版）
 WEAPONS = [
-    WeaponType(101, ")", "Dagger", 1, 8, 120, 5, 2, (-1, 3)),  # 序盤専用・初期装備
-    WeaponType(102, ")", "Mace", 1, 10, 100, 8, 2, (-1, 3)),  # 序盤メイン武器
-    WeaponType(103, ")", "Long Sword", 5, 20, 80, 15, 4, (-1, 4)),  # 中盤メイン武器
-    WeaponType(104, ")", "Short Bow", 8, 22, 70, 15, 3, (0, 3)),  # 中盤～終盤
-    WeaponType(105, ")", "Battle Axe", 12, 26, 60, 25, 6, (-2, 5)),  # 終盤武器
-    WeaponType(106, ")", "Two-Handed Sword", 18, 26, 40, 40, 8, (-3, 6)),  # 最終武器
+    WeaponType(101, ")", "Dagger", 1, 8, 120, 5, 3, (-1, 4)),  # 序盤専用・初期装備（強化）
+    WeaponType(102, ")", "Mace", 1, 10, 100, 8, 4, (-1, 4)),  # 序盤メイン武器（強化）
+    WeaponType(103, ")", "Long Sword", 5, 20, 80, 15, 6, (-1, 5)),  # 中盤メイン武器（強化）
+    WeaponType(104, ")", "Short Bow", 8, 22, 70, 15, 5, (0, 4)),  # 中盤～終盤（バランス調整）
+    WeaponType(105, ")", "Battle Axe", 12, 26, 60, 25, 9, (-2, 6)),  # 終盤武器（大幅強化）
+    WeaponType(106, ")", "Two-Handed Sword", 18, 26, 40, 40, 12, (-3, 8)),  # 最終武器（大幅強化）
 ]
 
-# Armor definitions - 階層に応じた段階的出現
+# Armor definitions - 階層に応じた段階的出現（強化版）
 ARMORS = [
-    ArmorType(201, "[", "Leather Armor", 1, 8, 100, 20, 2, (0, 2)),  # 序盤専用・初期装備
-    ArmorType(202, "[", "Studded Leather", 3, 12, 90, 25, 3, (0, 3)),  # 序盤～中盤移行
-    ArmorType(203, "[", "Ring Mail", 5, 15, 80, 30, 4, (-1, 3)),  # 中盤序盤
-    ArmorType(204, "[", "Scale Mail", 8, 18, 70, 40, 5, (-2, 4)),  # 中盤メイン
-    ArmorType(205, "[", "Chain Mail", 10, 22, 60, 50, 6, (-2, 4)),  # 中盤～終盤
-    ArmorType(206, "[", "Splint Mail", 15, 26, 50, 60, 7, (-3, 5)),  # 終盤防具
-    ArmorType(207, "[", "Banded Mail", 18, 26, 40, 70, 8, (-3, 5)),  # 高級防具
-    ArmorType(208, "[", "Plate Mail", 20, 26, 30, 80, 9, (-4, 6)),  # 最高級防具
+    ArmorType(201, "[", "Leather Armor", 1, 8, 100, 20, 3, (0, 3)),  # 序盤専用・初期装備（強化）
+    ArmorType(202, "[", "Studded Leather", 3, 12, 90, 25, 4, (0, 4)),  # 序盤～中盤移行（強化）
+    ArmorType(203, "[", "Ring Mail", 5, 15, 80, 30, 6, (-1, 4)),  # 中盤序盤（強化）
+    ArmorType(204, "[", "Scale Mail", 8, 18, 70, 40, 8, (-2, 5)),  # 中盤メイン（強化）
+    ArmorType(205, "[", "Chain Mail", 10, 22, 60, 50, 10, (-2, 6)),  # 中盤～終盤（強化）
+    ArmorType(206, "[", "Splint Mail", 15, 26, 50, 60, 12, (-3, 7)),  # 終盤防具（強化）
+    ArmorType(207, "[", "Banded Mail", 18, 26, 40, 70, 14, (-3, 8)),  # 高級防具（強化）
+    ArmorType(208, "[", "Plate Mail", 20, 26, 30, 80, 16, (-4, 10)),  # 最高級防具（大幅強化）
 ]
 
-# Ring definitions
+# Ring definitions（効果強化版）
 RINGS = [
-    RingType(501, "=", "Ring of Protection", 3, 26, 50, 200, "protection", (-2, 3)),
-    RingType(502, "=", "Ring of Add Strength", 3, 26, 50, 200, "strength", (-1, 3)),
-    RingType(503, "=", "Ring of Sustain Strength", 3, 26, 40, 180, "sustain", (0, 0)),
-    RingType(504, "=", "Ring of Searching", 3, 26, 40, 150, "search", (1, 3)),
-    RingType(505, "=", "Ring of See Invisible", 3, 26, 40, 150, "see_invisible", (0, 0)),
-    RingType(506, "=", "Ring of Regeneration", 5, 26, 30, 250, "regeneration", (0, 0)),
+    RingType(501, "=", "Ring of Protection", 3, 26, 50, 200, "protection", (-1, 5)),  # 負の効果軽減、正の効果強化
+    RingType(502, "=", "Ring of Add Strength", 3, 26, 50, 200, "strength", (0, 4)),  # 負の効果除去、効果向上
+    RingType(503, "=", "Ring of Sustain Strength", 3, 26, 40, 180, "sustain", (0, 1)),  # 微小な追加効果
+    RingType(504, "=", "Ring of Searching", 3, 26, 40, 150, "search", (1, 4)),  # 効果向上
+    RingType(505, "=", "Ring of See Invisible", 3, 26, 40, 150, "see_invisible", (0, 1)),  # 微小な追加効果
+    RingType(506, "=", "Ring of Regeneration", 5, 26, 30, 250, "regeneration", (0, 2)),  # レア指輪に効果追加
 ]
 
 # Scroll definitions
@@ -117,8 +117,8 @@ SCROLLS = [
 
 # Potion definitions
 POTIONS = [
-    PotionType(301, "!", "Potion of Healing", 1, 26, 100, 50, "healing", (10, 15)),
-    PotionType(302, "!", "Potion of Extra Healing", 2, 26, 80, 100, "extra_healing", (20, 30)),
+    PotionType(301, "!", "Potion of Healing", 1, 26, 120, 50, "healing", (15, 25)),  # 回復量と生成重み増加
+    PotionType(302, "!", "Potion of Extra Healing", 2, 26, 100, 100, "extra_healing", (30, 45)),  # 回復量と生成重み増加
     PotionType(303, "!", "Potion of Strength", 2, 26, 70, 80, "strength", (1, 2)),
     PotionType(304, "!", "Potion of Restore Strength", 2, 26, 70, 80, "restore_strength", (0, 0)),
     PotionType(305, "!", "Potion of Haste Self", 3, 26, 60, 100, "haste_self", (5, 10)),

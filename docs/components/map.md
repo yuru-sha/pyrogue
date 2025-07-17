@@ -35,6 +35,7 @@ map/
 - **Director Pattern**: 生成プロセスの統括管理
 - **Strategy Pattern**: ダンジョンタイプ別の生成戦略
 - **オリジナル忠実性**: Rogueの本質的構造の再現
+- **Handler Pattern統合**: v0.1.0のHandler Patternとの完全連携
 
 ## 基盤システム
 
@@ -743,6 +744,192 @@ def generate_with_quality_check(self, floor: int, max_attempts: int = 5) -> list
     return tiles
 ```
 
+## Handler Pattern連携（v0.1.0）
+
+### ダンジョンシステムとHandler Patternの統合
+
+v0.1.0で導入されたHandler Patternとダンジョンシステムは密接に連携し、以下の統合された処理を実現しています：
+
+#### 階層移動の統合処理
+
+```python
+class InfoCommandHandler:
+    def handle_floor_info(self) -> CommandResult:
+        """現在階層情報表示"""
+        dungeon_manager = self.context.game_context.dungeon_manager
+        current_floor = dungeon_manager.current_floor
+        floor_data = dungeon_manager.get_current_floor_data()
+
+        # ダンジョンタイプの判定
+        dungeon_type = "maze" if not floor_data.rooms else "rooms"
+        room_count = len(floor_data.rooms) if floor_data.rooms else 0
+
+        info_msg = f"Floor {current_floor}/26 ({dungeon_type}, {room_count} rooms)"
+        self.context.add_message(info_msg)
+        return CommandResult.success()
+```
+
+#### デバッグコマンドでのダンジョン操作
+
+```python
+class DebugCommandHandler:
+    def handle_teleport_to_stairs(self) -> CommandResult:
+        """階段にテレポート（デバッグ）"""
+        dungeon_manager = self.context.game_context.dungeon_manager
+        floor_data = dungeon_manager.get_current_floor_data()
+        player = self.context.game_context.player
+
+        # 下り階段の位置を取得
+        if floor_data.down_stairs:
+            player.x, player.y = floor_data.down_stairs
+            self.context.add_message("Teleported to down stairs")
+            return CommandResult.success_with_turn()
+
+        return CommandResult.failure("No stairs found on this floor")
+
+    def handle_reveal_map(self) -> CommandResult:
+        """全マップ探索（デバッグ）"""
+        dungeon_manager = self.context.game_context.dungeon_manager
+        floor_data = dungeon_manager.get_current_floor_data()
+
+        # 全タイルを発見済みにする
+        for row in floor_data.tiles:
+            for tile in row:
+                tile.discovered = True
+
+        self.context.add_message("Full map revealed")
+        return CommandResult.success()
+```
+
+#### 自動探索でのダンジョン解析
+
+```python
+class AutoExploreHandler:
+    def _analyze_dungeon_structure(self) -> dict[str, any]:
+        """ダンジョン構造の解析"""
+        dungeon_manager = self.context.game_context.dungeon_manager
+        floor_data = dungeon_manager.get_current_floor_data()
+
+        analysis = {
+            'unexplored_tiles': [],
+            'secret_doors': [],
+            'unreachable_areas': []
+        }
+
+        # 未探索タイルの検出
+        for y, row in enumerate(floor_data.tiles):
+            for x, tile in enumerate(row):
+                if tile.walkable and not tile.discovered:
+                    analysis['unexplored_tiles'].append((x, y))
+
+                # 隠しドアの検出
+                if isinstance(tile, SecretDoor) and not tile.discovered:
+                    analysis['secret_doors'].append((x, y))
+
+        return analysis
+
+    def handle_auto_explore(self) -> CommandResult:
+        """自動探索（ダンジョン構造活用）"""
+        analysis = self._analyze_dungeon_structure()
+
+        if not analysis['unexplored_tiles']:
+            self.context.add_message("No more areas to explore")
+            return CommandResult.success()
+
+        # 最も近い未探索タイルへの移動
+        player = self.context.game_context.player
+        target = self._find_nearest_unexplored(player.x, player.y, analysis['unexplored_tiles'])
+
+        if target:
+            # パスファインディングとダンジョン構造を使った移動
+            return self._move_towards_target(target)
+
+        return CommandResult.failure("Cannot find path to unexplored area")
+```
+
+#### セーブ・ロードでのダンジョン状態管理
+
+```python
+class SaveLoadHandler:
+    def _save_dungeon_states(self, game_context: GameContext) -> dict:
+        """ダンジョン状態の保存"""
+        dungeon_manager = game_context.dungeon_manager
+
+        # 全階層データの保存
+        floors_data = {}
+        for floor_num, floor_data in dungeon_manager.floors.items():
+            floors_data[floor_num] = {
+                'tiles': self._serialize_tiles(floor_data.tiles),
+                'monsters': [self._serialize_monster(m) for m in floor_data.monsters],
+                'items': [self._serialize_item(i) for i in floor_data.items],
+                'traps': [self._serialize_trap(t) for t in floor_data.traps],
+                'up_stairs': floor_data.up_stairs,
+                'down_stairs': floor_data.down_stairs,
+                'visited': floor_data.visited
+            }
+
+        return {
+            'current_floor': dungeon_manager.current_floor,
+            'floors': floors_data,
+            'dungeon_seed': dungeon_manager.generation_seed  # 再現可能性のため
+        }
+
+    def _serialize_tiles(self, tiles: list[list[Tile]]) -> list[list[dict]]:
+        """タイル状態のシリアライズ"""
+        serialized = []
+        for row in tiles:
+            serialized_row = []
+            for tile in row:
+                tile_data = {
+                    'type': tile.__class__.__name__,
+                    'discovered': tile.discovered
+                }
+
+                # タイル固有の状態保存
+                if isinstance(tile, Door):
+                    tile_data['open'] = tile.open
+                elif isinstance(tile, SecretDoor):
+                    tile_data['found'] = tile.discovered
+
+                serialized_row.append(tile_data)
+            serialized.append(serialized_row)
+
+        return serialized
+```
+
+### ダンジョン生成の統合ワークフロー
+
+```python
+class CommonCommandHandler:
+    def _handle_floor_transition(self, direction: str) -> CommandResult:
+        """階層移動の統合処理"""
+        dungeon_manager = self.context.game_context.dungeon_manager
+        player = self.context.game_context.player
+
+        # 現在階層のクリーンアップ
+        current_floor_data = dungeon_manager.get_current_floor_data()
+        current_floor_data.visited = True
+
+        # 新階層の準備
+        if direction == "down":
+            new_floor = dungeon_manager.current_floor + 1
+        else:
+            new_floor = dungeon_manager.current_floor - 1
+
+        # 階層移動の実行
+        dungeon_manager.move_to_floor(new_floor)
+        new_floor_data = dungeon_manager.get_current_floor_data()
+
+        # プレイヤー位置の設定
+        if direction == "down" and new_floor_data.up_stairs:
+            player.x, player.y = new_floor_data.up_stairs
+        elif direction == "up" and new_floor_data.down_stairs:
+            player.x, player.y = new_floor_data.down_stairs
+
+        self.context.add_message(f"Entered floor {new_floor}")
+        return CommandResult.success_with_turn()
+```
+
 ## まとめ
 
 Map コンポーネントは、PyRogueプロジェクトの世界生成において以下の価値を提供します：
@@ -752,5 +939,6 @@ Map コンポーネントは、PyRogueプロジェクトの世界生成におい
 - **品質保証**: 自動検証による安定したダンジョン生成
 - **多様性**: 部屋型・迷路型・BSP型の多彩な生成戦略
 - **スケーラビリティ**: 26階層の効率的な管理システム
+- **Handler Pattern統合**: v0.1.0のHandler Patternとの完全な連携
 
 この設計により、オリジナルRogueの魅力的なダンジョン探索体験を現代的な技術で実現し、さらなる拡張可能性を提供する堅牢なシステムを構築しています。

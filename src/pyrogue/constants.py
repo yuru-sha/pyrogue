@@ -131,7 +131,7 @@ class HungerConstants:
 
     # 満腹度減少
     HUNGER_DECREASE_RATE: int = 1  # ターンあたりの減少量
-    HUNGER_DECREASE_INTERVAL: int = 8  # 減少間隔（ターン）- より頻繁に
+    HUNGER_DECREASE_INTERVAL: int = 12  # 減少間隔（ターン）- バランス調整で緩和
 
     # 餓死ダメージ
     STARVING_DAMAGE: int = 1
@@ -141,14 +141,14 @@ class HungerConstants:
     # 飢餓ペナルティ
     HUNGRY_ATTACK_PENALTY: int = 1  # 空腹時の攻撃力ペナルティ
     VERY_HUNGRY_ATTACK_PENALTY: int = 2  # 非常に空腹時の攻撃力ペナルティ
-    STARVING_ATTACK_PENALTY: int = 4  # 飢餓時の攻撃力ペナルティ
+    STARVING_ATTACK_PENALTY: int = 3  # 飢餓時の攻撃力ペナルティ（緩和）
 
-    HUNGRY_DEFENSE_PENALTY: int = 1  # 空腹時の防御力ペナルティ
-    VERY_HUNGRY_DEFENSE_PENALTY: int = 2  # 非常に空腹時の防御力ペナルティ
-    STARVING_DEFENSE_PENALTY: int = 3  # 飢餓時の防御力ペナルティ
+    HUNGRY_DEFENSE_PENALTY: int = 0  # 空腹時の防御力ペナルティ（緩和）
+    VERY_HUNGRY_DEFENSE_PENALTY: int = 1  # 非常に空腹時の防御力ペナルティ
+    STARVING_DEFENSE_PENALTY: int = 2  # 飢餓時の防御力ペナルティ（緩和）
 
     # 飢餓ボーナス
-    FULL_HP_REGEN_CHANCE: float = 0.05  # 満腹時のHP自然回復確率
+    FULL_HP_REGEN_CHANCE: float = 0.1  # 満腹時のHP自然回復確率（向上）
 
 
 @dataclass(frozen=True)

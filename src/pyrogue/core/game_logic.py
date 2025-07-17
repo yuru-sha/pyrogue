@@ -173,7 +173,7 @@ class GameLogic:
             return
 
         self.player.hp = self.player.max_hp
-        self.player.mp = self.player.max_mp
+        # self.player.mp = self.player.max_mp
         self.add_message("[Wizard] Fully healed!")
 
     def wizard_reveal_all(self) -> None:
@@ -217,10 +217,10 @@ class GameLogic:
         self._setup_initial_equipment()
 
         # ダンジョンの生成
-        self.dungeon_manager.set_current_floor(1)
+        self.dungeon_manager.set_current_floor(1, self.player)
 
         # プレイヤーの開始位置を設定
-        floor_data = self.dungeon_manager.get_current_floor_data()
+        floor_data = self.dungeon_manager.get_current_floor_data(self.player)
         if floor_data and hasattr(floor_data, "start_pos"):
             self.player.x, self.player.y = floor_data.start_pos
 
@@ -272,12 +272,12 @@ class GameLogic:
         # 初期武器: Dagger (攻撃力+2) - item_types.pyのWEAPONSと統一
         dagger = Weapon(x=0, y=0, name="Dagger", attack_bonus=2)
         self.inventory.add_item(dagger)
-        self.inventory.equip(dagger)
+        self.player.equip_item(dagger)
 
         # 初期防具: Leather Armor (防御力+1)
         leather_armor = Armor(x=0, y=0, name="Leather Armor", defense_bonus=1)
         self.inventory.add_item(leather_armor)
-        self.inventory.equip(leather_armor)
+        self.player.equip_item(leather_armor)
 
         # 初期アイテム
 
@@ -420,10 +420,7 @@ class GameLogic:
             return False
 
         # モンスターがいないかチェック
-        if self._get_monster_at(x, y):
-            return False
-
-        return True
+        return not self._get_monster_at(x, y)
 
     def drop_item_at(self, item, x: int, y: int) -> bool:
         """
@@ -480,7 +477,7 @@ class GameLogic:
             self.add_message("You have reached the deepest part of the dungeon!")
             return False
 
-        self.dungeon_manager.set_current_floor(next_floor)
+        self.dungeon_manager.set_current_floor(next_floor, self.player)
         floor_data = self.get_current_floor_data()
 
         if floor_data:
@@ -526,7 +523,7 @@ class GameLogic:
             self.add_message("You need the Amulet of Yendor to escape!")
             return False
 
-        self.dungeon_manager.set_current_floor(prev_floor)
+        self.dungeon_manager.set_current_floor(prev_floor, self.player)
         floor_data = self.get_current_floor_data()
 
         if floor_data:
@@ -704,7 +701,7 @@ class GameLogic:
         return False
 
     # 魔法処理（MagicManagerに委譲予定）
-    def handle_target_selection(self, x: int, y: int) -> None:
+    def handle_target_selection(self, _x: int, _y: int) -> None:
         """ターゲット選択処理。"""
         # MagicManagerに委譲予定（現在未実装）
 
@@ -767,7 +764,7 @@ class GameLogic:
 
     def get_current_floor_data(self):
         """現在のフロアデータを取得。"""
-        return self.dungeon_manager.get_current_floor_data()
+        return self.dungeon_manager.get_current_floor_data(self.player)
 
     def get_explored_tiles(self):
         """探索済みタイルを取得。"""
@@ -804,7 +801,7 @@ class GameLogic:
 
         return False
 
-    def try_use_item(self, item) -> bool:
+    def try_use_item(self, _item) -> bool:
         """アイテムを使用。"""
         # ItemManagerに委譲予定（現在未実装）
         return False
@@ -905,10 +902,9 @@ class GameLogic:
                 # オートセーブ成功メッセージ（デバッグモード時のみ）
                 if self.wizard_mode:
                     self.add_message(f"[Auto-save] Game saved at turn {self.turn_manager.turn_count}")
-            else:
-                # オートセーブ失敗時のメッセージ
-                if self.wizard_mode:
-                    self.add_message("[Auto-save] Failed to save game")
+            # オートセーブ失敗時のメッセージ
+            elif self.wizard_mode:
+                self.add_message("[Auto-save] Failed to save game")
 
         except Exception as e:
             # エラーが発生した場合のログ出力
@@ -923,9 +919,10 @@ class GameLogic:
         Returns
         -------
             dict: セーブデータ辞書
+
         """
         # CommonCommandHandlerと同じ形式でセーブデータを作成
-        save_data = {
+        return {
             "player": self._serialize_player(self.player),
             "inventory": self._serialize_inventory(self.inventory),
             "current_floor": self.dungeon_manager.current_floor,
@@ -936,8 +933,6 @@ class GameLogic:
             "auto_save": True,  # オートセーブフラグ
             "version": "1.0",
         }
-
-        return save_data
 
     def _serialize_player(self, player) -> dict:
         """プレイヤーオブジェクトをシリアライズ。"""
@@ -952,8 +947,8 @@ class GameLogic:
             "attack": player.attack,
             "defense": player.defense,
             "hunger": getattr(player, "hunger", 100),
-            "mp": getattr(player, "mp", 0),
-            "max_mp": getattr(player, "max_mp", 0),
+            # "mp": getattr(player, "mp", 0),
+            # "max_mp": getattr(player, "max_mp", 0),
             "has_amulet": getattr(player, "has_amulet", False),
             "monsters_killed": getattr(player, "monsters_killed", 0),
             "deepest_floor": getattr(player, "deepest_floor", 1),
@@ -1051,5 +1046,6 @@ class GameLogic:
         Returns
         -------
             メッセージ履歴のリスト
+
         """
         return self.message_log.copy()
