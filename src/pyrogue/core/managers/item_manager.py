@@ -75,6 +75,10 @@ class ItemManager:
             # フロアからアイテムを削除
             floor_data.items.remove(item)
 
+            # 特殊アイテムの効果を適用（Amulet of Yendor等）
+            if hasattr(item, "apply_effect"):
+                item.apply_effect(self.context)
+
             # 取得メッセージ
             self.context.add_message(f"You pick up the {item.name}.")
             return item.name

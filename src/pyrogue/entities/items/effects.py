@@ -28,7 +28,8 @@ def _add_message_safe(context, message: str) -> None:
 def _get_floor_data_safe(context):
     """コンテキストから安全にフロアデータを取得するヘルパー関数。"""
     if hasattr(context, "dungeon_manager"):
-        return context.dungeon_manager.get_current_floor_data()
+        player = getattr(context, "player", None)
+        return context.dungeon_manager.get_current_floor_data(player)
     if hasattr(context, "dungeon"):
         return context.dungeon
     return None

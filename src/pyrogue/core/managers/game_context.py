@@ -95,7 +95,7 @@ class GameContext:
 
     def get_current_floor_data(self):
         """現在のフロアデータを取得。"""
-        return self.dungeon_manager.get_current_floor_data()
+        return self.dungeon_manager.get_current_floor_data(self.player)
 
     def get_current_floor_number(self) -> int:
         """現在のフロア番号を取得。"""

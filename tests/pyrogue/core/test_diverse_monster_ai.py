@@ -127,8 +127,8 @@ class TestDiverseMonsterAI:
         self.player.level = 5
         self.player.max_hp = 50
         self.player.hp = 50
-        self.player.max_mp = 25
-        self.player.mp = 25
+        # self.player.max_mp = 25
+        # self.player.mp = 25
         self.player.attack = 15
         self.player.defense = 8
 
@@ -139,7 +139,7 @@ class TestDiverseMonsterAI:
         # レベルが下がったことを確認
         assert self.player.level == 4
         assert self.player.max_hp == 45  # -5
-        assert self.player.max_mp == 22  # -3
+        # assert self.player.max_mp == 22  # -3
         assert self.player.attack == 13  # -2
         assert self.player.defense == 7  # -1
 

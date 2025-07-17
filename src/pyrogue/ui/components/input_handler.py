@@ -938,12 +938,11 @@ Press any key to continue...
                     self.game_screen.game_logic.add_message(
                         f"You unequip the {old_item.name} and equip the {item_to_equip.name}."
                     )
-                else:
-                    # インベントリが満杯の場合は地面にドロップ
-                    if self.game_screen.game_logic.drop_item_at(old_item, player.x, player.y):
-                        self.game_screen.game_logic.add_message(
-                            f"You drop the {old_item.name} and equip the {item_to_equip.name}."
-                        )
+                # インベントリが満杯の場合は地面にドロップ
+                elif self.game_screen.game_logic.drop_item_at(old_item, player.x, player.y):
+                    self.game_screen.game_logic.add_message(
+                        f"You drop the {old_item.name} and equip the {item_to_equip.name}."
+                    )
             else:
                 self.game_screen.game_logic.add_message(f"You equip the {item_to_equip.name}.")
         else:
@@ -1085,6 +1084,7 @@ Press any key to continue...
         Args:
         ----
             selected_wand: 選択されたワンド
+
         """
         # チャージをチェック
         if hasattr(selected_wand, "has_charges") and not selected_wand.has_charges():
@@ -1102,6 +1102,7 @@ Press any key to continue...
         Args:
         ----
             wand: 使用するワンド
+
         """
         # 方向選択モードの状態を設定
         self.wand_direction_mode = True
@@ -1114,6 +1115,7 @@ Press any key to continue...
         Args:
         ----
             event: キーイベント
+
         """
         key = event.sym
 
@@ -1162,6 +1164,7 @@ Press any key to continue...
         Args:
         ----
             direction: 発動方向
+
         """
         if not hasattr(self, "selected_wand") or not self.selected_wand:
             return
@@ -1252,6 +1255,7 @@ Press any key to continue...
         Returns:
         -------
             タイルの詳細情報文字列（何もない場合はNone）
+
         """
         info_parts = []
 
@@ -1297,6 +1301,7 @@ Press any key to continue...
         Returns:
         -------
             方向名の文字列
+
         """
         direction_map = {
             (-1, -1): "NW",
@@ -1321,6 +1326,7 @@ Press any key to continue...
         Returns:
         -------
             地形情報の文字列
+
         """
         from pyrogue.map.tile import TileType
 
@@ -1401,6 +1407,7 @@ Press any key to continue...
         Returns
         -------
             近くにモンスターがいる場合True
+
         """
         player = self.game_screen.game_logic.player
         dungeon = self.game_screen.game_logic.dungeon
@@ -1424,6 +1431,7 @@ Press any key to continue...
         ----
             dx: X方向の移動量
             dy: Y方向の移動量
+
         """
         player = self.game_screen.game_logic.player
         dungeon = self.game_screen.game_logic.dungeon
@@ -1473,6 +1481,7 @@ Press any key to continue...
         Returns
         -------
             走ることができる場合True
+
         """
         player = self.game_screen.game_logic.player
 
@@ -1500,6 +1509,7 @@ Press any key to continue...
         Returns:
         -------
             走り続けることができる場合True
+
         """
         dungeon = self.game_screen.game_logic.dungeon
 
@@ -1532,6 +1542,7 @@ Press any key to continue...
         Returns
         -------
             走り続けることができる場合True
+
         """
         player = self.game_screen.game_logic.player
         dungeon = self.game_screen.game_logic.dungeon

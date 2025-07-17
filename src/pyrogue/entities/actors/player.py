@@ -365,8 +365,7 @@ class Player(Actor):
         """
         アイテムを装備。
 
-        武器、防具、指輪のみ装備可能です。既に同じスロットに
-        装備がある場合は自動的に外してインベントリに戻します。
+        武器、防具、指輪のみ装備可能です。
 
         Args:
         ----
@@ -379,19 +378,12 @@ class Player(Actor):
         """
         if isinstance(item, (Weapon, Armor, Ring)):
             old_item = self.inventory.equip(item)
-            # 装備成功時のみインベントリから削除
-            if self.inventory.is_equipped(item):
-                self.inventory.remove_item(item)
-                if old_item:
-                    self.inventory.add_item(old_item)
             return old_item
         return None
 
     def unequip_item(self, slot: str) -> Item | None:
         """
         指定したスロットの装備を外す。
-
-        外したアイテムは自動的にインベントリに追加されます。
 
         Args:
         ----
@@ -403,8 +395,6 @@ class Player(Actor):
 
         """
         item = self.inventory.unequip(slot)
-        if item:
-            self.inventory.add_item(item)
         return item
 
     def use_item(self, item: Item, context: GameContext | None = None) -> bool:

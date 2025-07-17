@@ -118,6 +118,7 @@ class InventoryScreen(Screen):
         Returns:
         -------
             str: 表示用文字列
+
         """
         if not item:
             return "None"
@@ -130,12 +131,12 @@ class InventoryScreen(Screen):
             if item.enchantment != 0:
                 return f"{display_name} (ATK {attack_value:+d})"
             return f"{display_name} (ATK {attack_value})"
-        elif isinstance(item, Armor):
+        if isinstance(item, Armor):
             defense_value = item.defense + item.enchantment
             if item.enchantment != 0:
                 return f"{display_name} (DEF {defense_value:+d})"
             return f"{display_name} (DEF {defense_value})"
-        elif isinstance(item, Ring):
+        if isinstance(item, Ring):
             if item.effect and item.bonus != 0:
                 # 効果名をより読みやすく表示
                 effect_display = {
@@ -148,8 +149,7 @@ class InventoryScreen(Screen):
                 }.get(item.effect, item.effect.upper())
                 return f"{display_name} ({effect_display} {item.bonus:+d})"
             return f"{display_name}"
-        else:
-            return display_name
+        return display_name
 
     def handle_input(self, event: tcod.event.KeyDown) -> None:
         """
@@ -206,38 +206,20 @@ class InventoryScreen(Screen):
                     if self.game_screen.game_logic.inventory.is_equipped(selected_item):
                         self.game_screen.game_logic.add_message(f"The {selected_item.name} is already equipped.")
                     else:
-                        # 装備を実行
-                        old_item = self.game_screen.game_logic.inventory.equip(selected_item)
+                        # player.equip_itemを使用して装備処理を統一
+                        old_item = self.game_screen.game_logic.player.equip_item(selected_item)
 
-                        # 装備成功判定（is_equippedで確認）
-                        if self.game_screen.game_logic.inventory.is_equipped(selected_item):
-                            # 装備成功！新しい装備をインベントリから削除
-                            self.game_screen.game_logic.inventory.remove_item(selected_item)
-
-                            # 前の装備をインベントリに戻す
-                            if old_item:
-                                if self.game_screen.game_logic.inventory.add_item(old_item):
-                                    self.game_screen.game_logic.add_message(
-                                        f"You unequip the {old_item.name} and equip the {selected_item.name}."
-                                    )
-                                else:
-                                    # インベントリが満杯の場合はアイテムを地面にドロップ
-                                    if self.game_screen.game_logic.drop_item_at(
-                                        old_item,
-                                        self.game_screen.game_logic.player.x,
-                                        self.game_screen.game_logic.player.y,
-                                    ):
-                                        self.game_screen.game_logic.add_message(
-                                            f"You drop the {old_item.name} and equip the {selected_item.name}."
-                                        )
-                                    else:
-                                        self.game_screen.game_logic.add_message(
-                                            "Cannot drop the old equipment. Equipment failed."
-                                        )
-                            else:
-                                self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
+                        # 前の装備があった場合のメッセージ
+                        if old_item:
+                            self.game_screen.game_logic.add_message(
+                                f"You unequip the {old_item.name} and equip the {selected_item.name}."
+                            )
                         else:
-                            self.game_screen.game_logic.add_message(f"Failed to equip the {selected_item.name}.")
+                            self.game_screen.game_logic.add_message(f"You equip the {selected_item.name}.")
+
+                        # 選択インデックスを調整（装備したアイテムが削除されるため）
+                        if self.selected_index >= len(self.game_screen.game_logic.inventory.items):
+                            self.selected_index = max(0, len(self.game_screen.game_logic.inventory.items) - 1)
                 else:
                     self.game_screen.game_logic.add_message(f"You cannot equip the {selected_item.name}.")
                 return

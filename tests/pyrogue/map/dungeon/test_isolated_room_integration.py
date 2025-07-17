@@ -6,6 +6,7 @@
 """
 
 import pytest
+
 from pyrogue.map.dungeon.director import DungeonDirector
 from pyrogue.map.dungeon.isolated_room_builder import IsolatedRoomBuilder
 from pyrogue.map.tile import Floor, SecretDoor

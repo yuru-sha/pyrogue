@@ -207,12 +207,12 @@ class SaveManager:
             # プレイヤーオブジェクトからMP関連属性を削除
             if "player" in game_data:
                 player = game_data["player"]
-                if hasattr(player, "mp"):
-                    delattr(player, "mp")
-                    game_logger.debug("Removed legacy 'mp' attribute from player")
-                if hasattr(player, "max_mp"):
-                    delattr(player, "max_mp")
-                    game_logger.debug("Removed legacy 'max_mp' attribute from player")
+                # if hasattr(player, "mp"):
+                #     delattr(player, "mp")
+                #     game_logger.debug("Removed legacy 'mp' attribute from player")
+                # if hasattr(player, "max_mp"):
+                #     delattr(player, "max_mp")
+                #     game_logger.debug("Removed legacy 'max_mp' attribute from player")
         except Exception as e:
             game_logger.warning(f"Failed to remove legacy MP attributes: {e}")
 

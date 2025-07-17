@@ -1,6 +1,7 @@
 """Inventory improvements test module."""
 
 import pytest
+
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.items.effects import HealingEffect
 from pyrogue.entities.items.item import Potion

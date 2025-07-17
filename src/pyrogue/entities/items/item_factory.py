@@ -1,6 +1,5 @@
 """アイテムID→オブジェクト生成ファクトリーシステム"""
 
-from typing import Optional
 
 from pyrogue.entities.items.amulet import AmuletOfYendor
 from pyrogue.entities.items.effects import (
@@ -170,11 +169,10 @@ class ItemFactory:
         if item is not None:
             item.item_id = item_id
             return item
-        else:
-            raise ValueError(f"Failed to create item with ID: {item_id}")
+        raise ValueError(f"Failed to create item with ID: {item_id}")
 
     @staticmethod
-    def get_id_by_name(name: str) -> Optional[int]:
+    def get_id_by_name(name: str) -> int | None:
         """アイテム名からIDを取得（後方互換性用）"""
         name_to_id_map = {
             # 武器

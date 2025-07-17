@@ -8,6 +8,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
+
 from pyrogue.core.managers.combat_manager import CombatManager
 from pyrogue.core.managers.game_context import GameContext
 from pyrogue.entities.actors.monster import Monster

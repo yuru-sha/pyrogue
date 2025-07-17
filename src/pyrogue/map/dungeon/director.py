@@ -125,10 +125,9 @@ class DungeonDirector:
                                 self.rooms = self.bsp_builder.build_dungeon(self.tiles)
                                 game_logger.debug(f"Fallback: Generated {len(self.rooms)} rooms using BSP system")
                                 break
-                            else:
-                                # タイルを再初期化してリトライ
-                                self.tiles = self.tiles_manager.initialize_tiles()
-                                game_logger.debug(f"Retrying maze generation (attempt {attempt + 2})")
+                            # タイルを再初期化してリトライ
+                            self.tiles = self.tiles_manager.initialize_tiles()
+                            game_logger.debug(f"Retrying maze generation (attempt {attempt + 2})")
 
                 if self.dungeon_type != "maze":  # 通常ダンジョンまたはフォールバック処理
                     # BSPベースシステムを使用

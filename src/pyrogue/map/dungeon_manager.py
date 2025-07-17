@@ -407,7 +407,7 @@ class DungeonManager:
         self.dungeon_width = dungeon_width
         self.dungeon_height = dungeon_height
 
-    def get_floor(self, floor_number: int) -> FloorData:
+    def get_floor(self, floor_number: int, player=None) -> FloorData:
         """
         指定された階層のデータを取得。
 
@@ -416,6 +416,7 @@ class DungeonManager:
         Args:
         ----
             floor_number: 取得する階層番号
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
 
         Returns:
         -------
@@ -423,17 +424,18 @@ class DungeonManager:
 
         """
         if floor_number not in self.floors:
-            self._generate_floor(floor_number)
+            self._generate_floor(floor_number, player)
 
         return self.floors[floor_number]
 
-    def set_current_floor(self, floor_number: int) -> FloorData:
+    def set_current_floor(self, floor_number: int, player=None) -> FloorData:
         """
         現在の階層を設定し、そのデータを返す。
 
         Args:
         ----
             floor_number: 設定する階層番号
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
 
         Returns:
         -------
@@ -442,41 +444,53 @@ class DungeonManager:
         """
         self.previous_floor = self.current_floor
         self.current_floor = floor_number
-        return self.get_floor(floor_number)
+        return self.get_floor(floor_number, player)
 
-    def get_current_floor_data(self) -> FloorData:
+    def get_current_floor_data(self, player=None) -> FloorData:
         """
         現在の階層データを取得。
 
-        Returns
+        Args:
+        ----
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
+
+        Returns:
         -------
             現在の階層のFloorDataインスタンス
 
         """
-        return self.get_floor(self.current_floor)
+        return self.get_floor(self.current_floor, player)
 
-    def descend_stairs(self) -> FloorData:
+    def descend_stairs(self, player=None) -> FloorData:
         """
         階段を下りて次の階層に移動。
 
-        Returns
+        Args:
+        ----
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
+
+        Returns:
         -------
             移動先階層のFloorDataインスタンス
 
         """
-        return self.set_current_floor(self.current_floor + 1)
+        return self.set_current_floor(self.current_floor + 1, player)
 
-    def ascend_stairs(self) -> FloorData | None:
+    def ascend_stairs(self, player=None) -> FloorData | None:
         """
         階段を上って前の階層に移動。
 
-        Returns
+        Args:
+        ----
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
+
+        Returns:
         -------
             移動先階層のFloorDataインスタンス。1階より上には移動できない場合はNone
 
         """
         if self.current_floor > 1:
-            return self.set_current_floor(self.current_floor - 1)
+            return self.set_current_floor(self.current_floor - 1, player)
         return None
 
     def get_player_spawn_position(self, floor_data: FloorData) -> tuple[int, int]:
@@ -523,13 +537,14 @@ class DungeonManager:
         if floor_number in self.floors:
             self.floors[floor_number].explored = explored.copy()
 
-    def _generate_floor(self, floor_number: int) -> None:
+    def _generate_floor(self, floor_number: int, player=None) -> None:
         """
         新しい階層を生成。
 
         Args:
         ----
             floor_number: 生成する階層番号
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
 
         """
         # ダンジョンを生成
@@ -541,7 +556,8 @@ class DungeonManager:
         tiles, up_pos, down_pos = dungeon_director.build_dungeon()
 
         # モンスターとアイテムを生成
-        monster_spawner = MonsterSpawner(floor_number)
+        has_amulet = getattr(player, "has_amulet", False) if player else False
+        monster_spawner = MonsterSpawner(floor_number, has_amulet)
         monster_spawner.spawn_monsters(tiles, dungeon_director.rooms)
 
         item_spawner = ItemSpawner(floor_number)
@@ -720,13 +736,14 @@ class DungeonManager:
             },
         }
 
-    def load_from_serialized_data(self, data: dict) -> None:
+    def load_from_serialized_data(self, data: dict, player=None) -> None:
         """
         シリアライズされたデータから状態を復元。
 
         Args:
         ----
             data: シリアライズされたデータ
+            player: プレイヤーオブジェクト（has_amuletフラグ参照用）
 
         """
         self.current_floor = data.get("current_floor", 1)
@@ -743,7 +760,7 @@ class DungeonManager:
             floor_num = int(floor_num_str)
 
             # 最小限のデータで階層を再生成
-            self._generate_floor(floor_num)
+            self._generate_floor(floor_num, player)
 
             # 探索済み情報を復元
             if floor_info.get("explored"):

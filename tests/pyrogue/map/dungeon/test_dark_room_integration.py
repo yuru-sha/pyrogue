@@ -6,6 +6,7 @@
 """
 
 import pytest
+
 from pyrogue.entities.items.light_items import Lantern, LightRing, Torch
 from pyrogue.map.dungeon.dark_room_builder import DarkRoom, DarkRoomBuilder
 from pyrogue.map.dungeon.director import DungeonDirector

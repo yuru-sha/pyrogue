@@ -72,7 +72,8 @@ class AmuletOfYendor(Item):
                 dungeon_manager = game_logic.dungeon_manager
 
                 # B1F（地下1階）のデータを取得
-                b1f_data = dungeon_manager.get_floor(1)
+                player = getattr(context, "player", None)
+                b1f_data = dungeon_manager.get_floor(1, player)
                 if b1f_data:
                     stairs_pos = self._place_escape_stairs_on_floor(b1f_data)
                     context.add_message("A magical staircase to the surface appears on the first floor!")

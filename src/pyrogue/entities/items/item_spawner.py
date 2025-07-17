@@ -18,6 +18,7 @@ from __future__ import annotations
 import random
 
 import numpy as np
+
 from pyrogue.map.dungeon import Room
 
 from .amulet import AmuletOfYendor
@@ -123,7 +124,7 @@ class ItemSpawner:
             # Determine item type
             item_type = random.choices(
                 ["weapon", "armor", "ring", "scroll", "potion", "food", "wand", "gold"],
-                weights=[15, 15, 10, 25, 25, 10, 10, 35],
+                weights=[15, 15, 10, 25, 25, 20, 10, 35],  # 食料の重みを10→20に増加
                 k=1,
             )[0]
 

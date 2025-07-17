@@ -108,12 +108,12 @@ class WandSelectionScreen(Screen):
             if event.sym == tcod.event.KeySym.UP:
                 self.selected_index = (self.selected_index - 1) % len(self.wands)
                 return True
-            elif event.sym == tcod.event.KeySym.DOWN:
+            if event.sym == tcod.event.KeySym.DOWN:
                 self.selected_index = (self.selected_index + 1) % len(self.wands)
                 return True
 
             # Enterキーで確定
-            elif event.sym == tcod.event.KeySym.RETURN:
+            if event.sym == tcod.event.KeySym.RETURN:
                 if 0 <= self.selected_index < len(self.wands):
                     self.selected_wand = self.wands[self.selected_index]
                     # 方向選択モードに移行
@@ -124,7 +124,7 @@ class WandSelectionScreen(Screen):
                 return True
 
             # ESCキーでキャンセル
-            elif event.sym == tcod.event.KeySym.ESCAPE:
+            if event.sym == tcod.event.KeySym.ESCAPE:
                 self.game_screen.game_logic.add_message("Cancelled.")
                 self.game_screen.engine.state = self.game_screen.engine.last_state
                 return True

@@ -8,6 +8,7 @@
 from unittest.mock import Mock, call
 
 import numpy as np
+
 from pyrogue.map.dungeon.line_drawer import LineDrawer
 
 
