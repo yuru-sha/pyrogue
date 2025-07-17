@@ -92,7 +92,11 @@ class ScoreEntry:
 class ScoreManager:
     """スコアランキング管理クラス"""
 
-    def __init__(self, score_file: str = "scores.json") -> None:
+    def __init__(self, score_file: str | None = None) -> None:
+        if score_file is None:
+            from pyrogue.config.env import get_score_file_path
+
+            score_file = get_score_file_path()
         self.score_file = score_file
         self.scores: list[ScoreEntry] = []
         self.load_scores()

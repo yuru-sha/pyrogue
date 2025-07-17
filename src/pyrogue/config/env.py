@@ -156,12 +156,37 @@ def get_log_level() -> str:
 
 def get_save_directory() -> str:
     """セーブディレクトリの設定を取得。"""
-    return env_config.get("SAVE_DIRECTORY", "saves")
+    from pathlib import Path
+
+    # 環境変数からSAVE_DIRECTORYを取得（デフォルト: "saves"）
+    save_subdir = env_config.get("SAVE_DIRECTORY", "saves")
+
+    # ~/.pyrogue/${SAVE_DIRECTORY}形式のパスを作成
+    home_dir = Path.home()
+    save_dir = home_dir / ".pyrogue" / save_subdir
+
+    return str(save_dir)
+
+
+def get_score_file_path() -> str:
+    """スコアファイルのパスを取得。"""
+    from pathlib import Path
+
+    # ~/.pyrogue/scores.json固定
+    home_dir = Path.home()
+    score_file = home_dir / ".pyrogue" / "scores.json"
+
+    return str(score_file)
 
 
 def get_auto_save_enabled() -> bool:
     """オートセーブ機能の設定を取得。"""
     return env_config.get_bool("AUTO_SAVE_ENABLED", True)
+
+
+def get_log_directory() -> str:
+    """ログディレクトリの設定を取得。"""
+    return env_config.get("LOG_DIRECTORY", "logs")
 
 
 def is_test_mode() -> bool:
