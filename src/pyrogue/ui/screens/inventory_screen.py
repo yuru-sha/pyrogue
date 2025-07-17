@@ -102,6 +102,7 @@ class InventoryScreen(Screen):
                 "[r] Remove equipment",
                 "[ESC] Close inventory",
                 "[?] Toggle help",
+                "[a-z] Select item by letter",
             ]
             for i, text in enumerate(help_text):
                 console.print(2, console.height - 10 + i, text, (127, 127, 127))
@@ -195,12 +196,19 @@ class InventoryScreen(Screen):
                 self.selected_index = (self.selected_index + 1) % inventory_size
                 return
 
+        # 文字キーでアイテム選択 (a-z)
+        if ord("a") <= event.sym <= ord("z"):
+            item_index = event.sym - ord("a")
+            if 0 <= item_index < len(self.game_screen.game_logic.inventory.items):
+                self.selected_index = item_index
+            return
+
         # 選択中のアイテムに対する操作
         if len(self.game_screen.game_logic.inventory.items) > 0:
             selected_item = self.game_screen.game_logic.inventory.items[self.selected_index]
 
             # e: 装備
-            if event.sym == tcod.event.KeySym.E:
+            if event.sym == tcod.event.KeySym.E or event.sym == ord("e"):
                 if isinstance(selected_item, (Weapon, Armor, Ring)):
                     # 既に装備されているかチェック
                     if self.game_screen.game_logic.inventory.is_equipped(selected_item):
@@ -225,7 +233,7 @@ class InventoryScreen(Screen):
                 return
 
             # u: 使用
-            if event.sym == tcod.event.KeySym.U:
+            if event.sym == tcod.event.KeySym.U or event.sym == ord("u"):
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # アイテムを使用
                     player = self.game_screen.game_logic.player
@@ -264,13 +272,13 @@ class InventoryScreen(Screen):
                 return
 
             # r: 装備解除
-            if event.sym == tcod.event.KeySym.R:
+            if event.sym == tcod.event.KeySym.R or event.sym == ord("r"):
                 # 装備解除モードに入る
                 self._enter_unequip_mode()
                 return
 
             # d: ドロップ
-            if event.sym == tcod.event.KeySym.D:
+            if event.sym == tcod.event.KeySym.D or event.sym == ord("d"):
                 # インベントリのドロップ処理を使用
                 success, dropped_count, message = self.game_screen.game_logic.inventory.drop_item(selected_item)
 

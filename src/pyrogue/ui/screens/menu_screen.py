@@ -13,6 +13,7 @@ import tcod.console
 import tcod.event
 
 from pyrogue.core.game_states import GameStates
+from pyrogue.core.save_manager import SaveManager
 
 if TYPE_CHECKING:
     from pyrogue.core.engine import Engine
@@ -40,7 +41,8 @@ class MenuScreen:
         self.console = console
         self.engine = engine
         self.menu_selection = 0
-        self.menu_options = ["New Game", "Quit"]
+        self.save_manager = SaveManager()
+        self.menu_options = self._get_menu_options()
 
     def update_console(self, console: tcod.console.Console) -> None:
         """
@@ -54,6 +56,8 @@ class MenuScreen:
 
         """
         self.console = console
+        # コンソール更新時にメニューオプションも更新
+        self.menu_options = self._get_menu_options()
 
     def render(self) -> None:
         """
@@ -63,6 +67,13 @@ class MenuScreen:
         操作説明を表示します。
         """
         self.console.clear()
+
+        # メニューオプションを更新（セーブデータの状態が変わった場合を考慮）
+        self.menu_options = self._get_menu_options()
+
+        # 選択インデックスが範囲外の場合は調整
+        if self.menu_selection >= len(self.menu_options):
+            self.menu_selection = 0
 
         # ASCIIアートタイトルの表示
         title_art = [
@@ -106,8 +117,23 @@ class MenuScreen:
             fg=(150, 150, 150),
         )
 
+        # セーブデータの情報を表示（セーブデータが存在する場合）
+        if self.save_manager.has_save_file():
+            save_info = self.save_manager.get_save_info()
+            if save_info and "timestamp" in save_info:
+                import datetime
+
+                timestamp = datetime.datetime.fromtimestamp(save_info["timestamp"])
+                save_text = f"Save: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+                self.console.print(
+                    (self.console.width - len(save_text)) // 2,
+                    subtitle_y + 2,
+                    save_text,
+                    fg=(100, 100, 100),
+                )
+
         # メニューオプションの表示
-        menu_start_y = subtitle_y + 3
+        menu_start_y = subtitle_y + (5 if self.save_manager.has_save_file() else 3)
         for i, option in enumerate(self.menu_options):
             text = f"> {option}" if i == self.menu_selection else f"  {option}"
             color = (255, 255, 255) if i == self.menu_selection else (150, 150, 150)
@@ -154,11 +180,76 @@ class MenuScreen:
             if self.menu_options[self.menu_selection] == "New Game":
                 self.engine.new_game()
                 return GameStates.PLAYERS_TURN
-            # ゲームを継続
-            if self.menu_options[self.menu_selection] == "Continue":
-                return GameStates.PLAYERS_TURN
+            # ゲームを継続（セーブデータをロード）
+            if self.menu_options[self.menu_selection] == "Load Game":
+                return self._load_game()
             # ゲームを終了
             if self.menu_options[self.menu_selection] == "Quit":
                 return GameStates.EXIT
 
         return None
+
+    def _get_menu_options(self) -> list[str]:
+        """
+        セーブデータの存在に応じてメニューオプションを生成。
+
+        Returns
+        -------
+            list[str]: メニューオプションのリスト
+
+        """
+        options = ["New Game"]
+
+        # セーブデータが存在する場合は「Load Game」を2番目に表示
+        if self.save_manager.has_save_file():
+            options.append("Load Game")
+
+        options.append("Quit")
+
+        return options
+
+    def _load_game(self) -> GameStates:
+        """
+        セーブデータをロードしてゲームを継続。
+
+        Returns
+        -------
+            GameStates: ロード後のゲーム状態
+
+        """
+        try:
+            # セーブデータをロード
+            save_data = self.save_manager.load_game_state()
+
+            if save_data is None:
+                # セーブデータがない場合は新しいゲームを開始
+                self.engine.new_game()
+                return GameStates.PLAYERS_TURN
+
+            # ゲームエンジンにセーブデータを反映
+            self._restore_game_state(save_data)
+
+            return GameStates.PLAYERS_TURN
+
+        except Exception as e:
+            # ロードに失敗した場合は新しいゲームを開始
+            print(f"Failed to load save data: {e}")
+            self.engine.new_game()
+            return GameStates.PLAYERS_TURN
+
+    def _restore_game_state(self, save_data: dict) -> None:
+        """
+        セーブデータからゲーム状態を復元。
+
+        Args:
+        ----
+            save_data: セーブデータ辞書
+
+        """
+        # ゲームエンジンのゲームスクリーンを初期化
+        self.engine.new_game()
+
+        # ゲームスクリーンが存在する場合はセーブデータを復元
+        if hasattr(self.engine, "game_screen") and self.engine.game_screen:
+            # 既存のload_gameメソッドを使用してセーブデータを復元
+            self.engine.game_screen.load_game()
