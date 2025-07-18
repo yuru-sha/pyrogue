@@ -468,9 +468,9 @@ class TestCommonCommandHandler:
         assert result.success is True
         assert result.should_quit is True
 
+        # qはquaffコマンドになったため、quitではない
         result = self.handler.handle_command("q")
-        assert result.success is True
-        assert result.should_quit is True
+        assert result.success is False  # ポーションがないので失敗
 
     def test_save_command(self):
         """セーブコマンドのテスト。"""

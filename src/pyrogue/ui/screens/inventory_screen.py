@@ -177,6 +177,22 @@ class InventoryScreen(Screen):
         # ?でヘルプの表示/非表示を切り替え
         # 日本語キーボード対応のため、複数の方法で?キーを検出
         unicode_char = getattr(event, "text", getattr(event, "unicode", ""))
+
+        # JIS配列での?キー入力デバッグ
+        if (
+            unicode_char == "?"
+            or unicode_char == "/"
+            or event.sym == tcod.event.KeySym.QUESTION
+            or event.sym == tcod.event.KeySym.SLASH
+        ):
+            debug_msg = f"HELP KEY: sym={event.sym}, mod={event.mod}, unicode='{unicode_char}', char_code={ord(unicode_char) if unicode_char else 'None'}"
+            self.game_screen.game_logic.add_message(f"DEBUG: {debug_msg}")
+
+            # ログファイルにも記録
+            import logging
+
+            logging.getLogger("pyrogue").debug(f"Help key input: {debug_msg}")
+
         if (
             event.sym == tcod.event.KeySym.QUESTION
             or event.sym == tcod.event.KeySym.SLASH
@@ -196,19 +212,21 @@ class InventoryScreen(Screen):
                 self.selected_index = (self.selected_index + 1) % inventory_size
                 return
 
-        # 文字キーでアイテム選択 (a-z)
+        # 文字キーでアイテム選択 (a-z) - コマンドキーを除外
         if ord("a") <= event.sym <= ord("z"):
-            item_index = event.sym - ord("a")
-            if 0 <= item_index < len(self.game_screen.game_logic.inventory.items):
-                self.selected_index = item_index
-            return
+            # コマンドキー（u, e, d, r）は除外
+            if event.sym not in [ord("u"), ord("e"), ord("d"), ord("r")]:
+                item_index = event.sym - ord("a")
+                if 0 <= item_index < len(self.game_screen.game_logic.inventory.items):
+                    self.selected_index = item_index
+                return
 
         # 選択中のアイテムに対する操作
         if len(self.game_screen.game_logic.inventory.items) > 0:
             selected_item = self.game_screen.game_logic.inventory.items[self.selected_index]
 
             # e: 装備
-            if event.sym == tcod.event.KeySym.E or event.sym == ord("e"):
+            if event.sym == ord("e"):
                 if isinstance(selected_item, (Weapon, Armor, Ring)):
                     # 既に装備されているかチェック
                     if self.game_screen.game_logic.inventory.is_equipped(selected_item):
@@ -233,7 +251,7 @@ class InventoryScreen(Screen):
                 return
 
             # u: 使用
-            if event.sym == tcod.event.KeySym.U or event.sym == ord("u"):
+            if event.sym == ord("u"):
                 if isinstance(selected_item, (Scroll, Potion, Food)):
                     # アイテムを使用
                     player = self.game_screen.game_logic.player
@@ -272,13 +290,13 @@ class InventoryScreen(Screen):
                 return
 
             # r: 装備解除
-            if event.sym == tcod.event.KeySym.R or event.sym == ord("r"):
+            if event.sym == ord("r"):
                 # 装備解除モードに入る
                 self._enter_unequip_mode()
                 return
 
             # d: ドロップ
-            if event.sym == tcod.event.KeySym.D or event.sym == ord("d"):
+            if event.sym == ord("d"):
                 # インベントリのドロップ処理を使用
                 success, dropped_count, message = self.game_screen.game_logic.inventory.drop_item(selected_item)
 

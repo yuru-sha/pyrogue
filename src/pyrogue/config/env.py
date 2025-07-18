@@ -149,6 +149,11 @@ def get_debug_mode() -> bool:
     return env_config.get_bool("DEBUG", False)
 
 
+def is_debug_mode() -> bool:
+    """デバッグモードかどうかを判定。"""
+    return get_debug_mode()
+
+
 def get_log_level() -> str:
     """ログレベルの設定を取得。"""
     return env_config.get("LOG_LEVEL", "INFO")

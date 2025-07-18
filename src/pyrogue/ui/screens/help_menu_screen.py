@@ -133,6 +133,9 @@ class HelpMenuScreen:
             self.menu_selection = (self.menu_selection + 1) % len(self.help_sections)
         # ESCキーでメインメニューに戻る
         elif key.sym == tcod.event.KeySym.ESCAPE:
+            # ゲーム中から来た場合はゲームに戻る
+            if hasattr(self.engine, "previous_state") and self.engine.previous_state == GameStates.PLAYERS_TURN:
+                return GameStates.PLAYERS_TURN
             return GameStates.MENU
 
         return None

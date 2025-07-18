@@ -58,7 +58,8 @@ class GameRenderer:
         self._render_map(console)
         self._render_status(console)
         self._render_messages(console)
-        self._render_command_hints(console)
+        # コマンドヒントはデフォルトで無効化（メッセージエリアと干渉を避けるため）
+        # self._render_command_hints(console)
 
     def _render_map(self, console: tcod.Console) -> None:
         """
@@ -286,20 +287,26 @@ class GameRenderer:
         # 地下階層番号を右上に表示
         floor_info = f"B{self.game_screen.game_logic.dungeon_manager.current_floor}F"
 
+        # ウィザードモード表示
+        wizard_info = ""
+        if hasattr(self.game_screen.game_logic, "wizard_mode") and self.game_screen.game_logic.wizard_mode:
+            wizard_info = " [WIZARD]"
+
         # ステータス描画
         console.print(x=1, y=status_y, string=status_line1, fg=(255, 255, 255))
         console.print(x=1, y=status_y + 1, string=status_line2, fg=(255, 255, 255))
 
         # 地下階層番号を右上に表示
         console.print(
-            x=console.width - len(floor_info) - 1,
+            x=console.width - len(floor_info) - len(wizard_info) - 1,
             y=status_y,
-            string=floor_info,
-            fg=(255, 255, 255),
+            string=floor_info + wizard_info,
+            fg=(255, 255, 255) if not wizard_info else (255, 255, 0),  # ウィザードモード時は黄色
         )
 
-        # 3行目: ゲーム目標とプログレッション情報
-        self._render_game_progress(console, status_y + 2)
+        # オリジナルRogueには目標表示はありませんでした
+        # プレイヤーは自分で目標を理解する必要がありました
+        # self._render_game_progress(console, status_y + 2)
 
         # ステータス異常は必要に応じて別途表示（元の実装では基本2行のみ）
 
@@ -326,15 +333,14 @@ class GameRenderer:
             # アミュレット所持時: 脱出目標表示
             progress_text = f"ESCAPE TO SURFACE! ({current_floor}/26 floors climbed)"
             color = (255, 215, 0)  # 金色
+        # 通常時: 探索目標表示
+        elif current_floor < 26:
+            progress_text = f"Goal: Find Amulet of Yendor on B26F  (Currently: B{current_floor}F / B26F)"
+            color = (150, 200, 255)  # 薄青色
         else:
-            # 通常時: 探索目標表示
-            if current_floor < 26:
-                progress_text = f"Goal: Find Amulet of Yendor on B26F  (Currently: B{current_floor}F / B26F)"
-                color = (150, 200, 255)  # 薄青色
-            else:
-                # B26Fに到達済み
-                progress_text = "You have reached B26F! Find the Amulet of Yendor!"
-                color = (255, 255, 100)  # 黄色
+            # B26Fに到達済み
+            progress_text = "You have reached B26F! Find the Amulet of Yendor!"
+            color = (255, 255, 100)  # 黄色
 
         # 画面幅に収まるように調整
         if len(progress_text) > console.width - 2:
@@ -428,22 +434,10 @@ class GameRenderer:
         if not player:
             return
 
-        # プレイヤーのレベルが低い場合（レベル3以下）のみヒントを表示
-        if player.level > 3:
-            return
-
-        # 画面下部にヒント表示
-        hint_y = console.height - 1
-
-        # 基本的なヒント（状況に応じて動的に変更）
-        hints = []
-
-        # アイテムが足元にある場合
-        floor_data = game_screen.game_logic.get_current_floor_data()
-        if floor_data and floor_data.items:
-            items_at_player = [item for item in floor_data.items if item.x == player.x and item.y == player.y]
-            if items_at_player:
-                hints.append("Press ',' to pick up items")
+        # オリジナルRogueには現代的なヒント表示はありませんでした
+        # プレイヤーは ? キーでヘルプを見るか、手探りでコマンドを覚える必要がありました
+        # オリジナルRogue準拠のため、ヒント表示は無効化
+        return
 
         # インベントリが満杯でない場合の基本ヒント
         if len(hints) == 0:

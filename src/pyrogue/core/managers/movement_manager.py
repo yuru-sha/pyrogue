@@ -257,9 +257,9 @@ class MovementManager:
                     display_name = item.get_display_name(identification)
                 else:
                     display_name = item.name
-                self.context.add_message(f"You see a {display_name} here. Press 'g' to get it.")
+                self.context.add_message(f"You see a {display_name} here. Press ',' to get it.")
             else:
-                self.context.add_message(f"You see {len(items_at_position)} items here. Press 'g' to get them.")
+                self.context.add_message(f"You see {len(items_at_position)} items here. Press ',' to get them.")
 
     def _check_stairs(self) -> None:
         """階段の処理。"""

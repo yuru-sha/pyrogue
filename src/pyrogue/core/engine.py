@@ -36,6 +36,7 @@ from pyrogue.ui.screens.help_menu_screen import HelpMenuScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
 from pyrogue.ui.screens.quick_guide_screen import QuickGuideScreen
+from pyrogue.ui.screens.symbol_explanation_screen import SymbolExplanationScreen
 from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
 
@@ -91,11 +92,15 @@ class Engine:
         # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
         self.help_menu_screen = HelpMenuScreen(self.console, self)
+        self.symbol_explanation_screen = SymbolExplanationScreen(self.console, self)
         self.quick_guide_screen = QuickGuideScreen(self.console, self)
         self.game_screen = GameScreen(self)
         self.inventory_screen = InventoryScreen(self.game_screen)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
+
+        # 前の状態を記録する変数
+        self.previous_state = None
 
         game_logger.debug(
             "Initializing game engine",
@@ -161,6 +166,9 @@ class Engine:
 
         # 各画面インスタンスのコンソール参照を更新
         self.menu_screen.update_console(self.console)
+        self.help_menu_screen.update_console(self.console)
+        self.symbol_explanation_screen.update_console(self.console)
+        self.quick_guide_screen.update_console(self.console)
         self.game_screen.update_console(self.console)
         self.game_over_screen.update_console(self.console)
         self.victory_screen.update_console(self.console)
@@ -193,6 +201,8 @@ class Engine:
                     self.menu_screen.render()
                 elif self.state == GameStates.HELP_MENU:
                     self.help_menu_screen.render()
+                elif self.state == GameStates.SYMBOL_EXPLANATION:
+                    self.symbol_explanation_screen.render()
                 elif self.state == GameStates.QUICK_GUIDE:
                     self.quick_guide_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
@@ -221,6 +231,8 @@ class Engine:
                             self.running = False
                             break
                         if new_state:
+                            # 状態遷移時に前の状態を記録
+                            self.previous_state = self.state
                             self.state = new_state
 
         except Exception as e:
@@ -268,6 +280,8 @@ class Engine:
             return self.menu_screen
         if self.state == GameStates.HELP_MENU:
             return self.help_menu_screen
+        if self.state == GameStates.SYMBOL_EXPLANATION:
+            return self.symbol_explanation_screen
         if self.state == GameStates.QUICK_GUIDE:
             return self.quick_guide_screen
         if self.state == GameStates.PLAYERS_TURN:

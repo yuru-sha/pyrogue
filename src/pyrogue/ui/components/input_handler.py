@@ -53,7 +53,7 @@ class InputHandler:
         self.command_context = GUICommandContext(game_screen)
         self.command_handler = CommonCommandHandler(self.command_context)
 
-    def handle_key(self, event: tcod.event.KeyDown) -> None:
+    def handle_key(self, event: tcod.event.KeyDown) -> GameStates | None:
         """
         キー入力を処理。
 
@@ -61,15 +61,19 @@ class InputHandler:
         ----
             event: TCODキーイベント
 
+        Returns:
+        -------
+            新しいゲーム状態、またはNone
         """
         if self.targeting_mode:
             self._handle_targeting_key(event)
         elif self.wand_direction_mode:
             self._handle_wand_direction_key(event)
         else:
-            self._handle_normal_key(event)
+            return self._handle_normal_key(event)
+        return None
 
-    def _handle_normal_key(self, event: tcod.event.KeyDown) -> None:
+    def _handle_normal_key(self, event: tcod.event.KeyDown) -> GameStates | None:
         """
         通常モードのキー入力を処理。
 
@@ -82,6 +86,26 @@ class InputHandler:
         mod = event.mod
         # TCOD 19.0.0+ では unicode の代わりに text 属性を使用
         unicode_char = getattr(event, "text", getattr(event, "unicode", ""))
+
+        # JIS配列キー入力デバッグ用ログ（開発時のみ、環境変数で制御）
+        from pyrogue.config.env import is_debug_mode
+
+        if is_debug_mode() and hasattr(self.game_screen, "game_logic") and self.game_screen.game_logic:
+            # KeySymの実際の値を確認
+            sym_name = str(key)
+            if hasattr(tcod.event.KeySym, "QUESTION"):
+                question_sym = tcod.event.KeySym.QUESTION
+                slash_sym = tcod.event.KeySym.SLASH
+                debug_msg = f"Key: sym={sym_name}({key}), mod={mod}, unicode='{unicode_char}', char_code={ord(unicode_char) if unicode_char else 'None'}, QUESTION={question_sym}, SLASH={slash_sym}"
+            else:
+                debug_msg = f"Key: sym={sym_name}({key}), mod={mod}, unicode='{unicode_char}', char_code={ord(unicode_char) if unicode_char else 'None'}"
+
+            self.game_screen.game_logic.add_message(f"DEBUG: {debug_msg}")
+
+            # ログファイルにも記録
+            import logging
+
+            logging.getLogger("pyrogue").debug(f"Key input: {debug_msg}")
 
         # 移動コマンド（Vi-keys + 矢印キー + テンキー）
         movement_keys = {
@@ -119,88 +143,125 @@ class InputHandler:
                 self._handle_run_action(dx, dy)
             else:
                 self.game_screen.game_logic.handle_player_move(dx, dy)
-            return
+            return None
+
+        # 特殊キー（JIS配列対応のため最優先で処理）
+        if (
+            key == tcod.event.KeySym.QUESTION
+            or unicode_char == "?"
+            or (key == tcod.event.KeySym.SLASH and mod & tcod.event.Modifier.SHIFT)
+            or key == ord("?")  # 追加の安全策
+        ):
+            # ヘルプ表示（JIS配列対応・最優先処理）
+            return self._handle_help_action()
 
         # アクションコマンド（大文字小文字順）
         if key == ord("a"):
             # 最後のコマンドを繰り返す (repeat last command)
             self._handle_repeat_last_command_action()
+            return None
 
         elif key == ord("c"):
             # ドア閉鎖
             self._handle_door_action(False)
+            return None
 
         elif key == ord("d"):
             # トラップ解除
             self._handle_disarm_action()
+            return None
 
         elif key == ord("e"):
             # 食べる (eat food)
             self._handle_eat_action()
+            return None
 
         elif key == ord(",") or key == tcod.event.KeySym.COMMA:
             # アイテム取得 (オリジナルローグ準拠)
             self.game_screen.game_logic.handle_get_item()
+            return None
 
         elif key == ord("i"):
             # インベントリ画面
             if self.game_screen.engine:
-                self.game_screen.engine.state = GameStates.SHOW_INVENTORY
+                return GameStates.SHOW_INVENTORY
+            return None
 
         elif key == ord("o"):
             # ドア開放
             self._handle_door_action(True)
+            return None
 
         elif key == ord("q"):
             # ポーションを飲む (quaff potion)
             self._handle_quaff_action()
+            return None
 
-        elif key == ord("r"):
-            # 巻物を読む (read scroll)
+        elif key == ord("Q"):
+            # ポーションを飲む（大文字Q）- オリジナルRogue準拠
+            self._handle_quaff_action()
+            return None
+
+        elif key == ord("r") and not (mod & tcod.event.Modifier.CTRL):
+            # 巻物を読む (read scroll) - r (Ctrl+Rではない場合のみ)
             self._handle_read_action()
+            return None
 
         elif key == ord("s") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+S でセーブ - CommonCommandHandler経由で統一処理
             self._handle_save_command()
+            return None
 
-        elif key == ord("s"):
-            # 隠しドア探索
+        elif key == ord("s") and not (mod & tcod.event.Modifier.CTRL):
+            # 隠しドア探索 - s (Ctrl+Sではない場合のみ)
             self._handle_search_action()
+            return None
 
-        elif key == ord("t") or (
-            key == tcod.event.KeySym.PLUS or (key == tcod.event.KeySym.EQUALS and mod & tcod.event.Modifier.SHIFT)
-        ):
-            # 投げる (throw) - t または +
+        elif key == ord("t") and not (mod & tcod.event.Modifier.CTRL):
+            # 投げる (throw) - t (Ctrl+Tではない場合のみ)
             self._handle_throw_action()
+            return None
 
-        elif key == ord("w"):
-            # 武器を装備 (wield weapon)
+        elif key == tcod.event.KeySym.PLUS or (key == tcod.event.KeySym.EQUALS and mod & tcod.event.Modifier.SHIFT):
+            # 投げる (throw) - +
+            self._handle_throw_action()
+            return None
+
+        elif key == ord("w") and not (mod & tcod.event.Modifier.CTRL):
+            # 武器を装備 (wield weapon) - w (Ctrl+Wではない場合のみ)
             self._handle_wield_action()
+            return None
 
         elif key == ord("z") or (key == tcod.event.KeySym.MINUS and not (mod & tcod.event.Modifier.SHIFT)):
             # ワンドを振る (zap wand) - z または -
             self._handle_zap_wand_action()
+            return None
 
         elif key == ord("D"):
             # 発見済みアイテムリスト (list discovered items)
             self._handle_list_discovered_items_action()
+            return None
 
         elif key == ord("P"):
             # 指輪を装着 (put on ring)
             self._handle_put_on_ring_action()
+            return None
 
         elif key == ord("R"):
             # 指輪を外す (remove ring)
             self._handle_remove_ring_action()
+            return None
 
         elif key == ord("W"):
             # 防具を装備 (wear armor)
             self._handle_wear_action()
+            return None
 
         elif key == tcod.event.KeySym.TAB:
             # FOV切り替え
             message = self.game_screen.fov_manager.toggle_fov()
             self.game_screen.game_logic.add_message(message)
+            return None
 
         elif (
             (key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT)
@@ -209,6 +270,7 @@ class InputHandler:
         ):
             # 階段（下り） - Shift + . または > （JIS配列対応）
             self.game_screen.game_logic.descend_stairs()
+            return None
 
         elif (
             (key == tcod.event.KeySym.COMMA and mod & tcod.event.Modifier.SHIFT)
@@ -217,64 +279,73 @@ class InputHandler:
         ):
             # 階段（上り） - Shift + , または < （JIS配列対応）
             self.game_screen.game_logic.ascend_stairs()
+            return None
 
         # セーブ・ロード（Ctrlキーの組み合わせを先にチェック）
 
         elif key == ord("l") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+L でロード - CommonCommandHandler経由で統一処理
             self._handle_load_command()
+            return None
 
         elif key == ord("w") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+W でウィザードモード切り替え
             self.game_screen.game_logic.toggle_wizard_mode()
+            return None
 
         # ウィザードモード専用コマンド
         elif key == ord("t") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+T で階段にテレポート
             self.game_screen.game_logic.wizard_teleport_to_stairs()
+            return None
 
         elif key == ord("u") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+U でレベルアップ
             self.game_screen.game_logic.wizard_level_up()
+            return None
 
         elif key == ord("h") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+H で完全回復
             self.game_screen.game_logic.wizard_heal_full()
+            return None
 
         elif key == ord("r") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+R で全マップ探索
             self.game_screen.game_logic.wizard_reveal_all()
+            return None
 
         elif key == ord("m") and mod & tcod.event.Modifier.CTRL:
             # Ctrl+M で最後のメッセージ表示（CommonCommandHandler経由）
             result = self.command_handler.handle_command("last_message")
+            return None
 
         # xキーは削除（オリジナルRogueには存在しない）
-
-        elif (
-            key == tcod.event.KeySym.QUESTION
-            or unicode_char == "?"
-            or (key == tcod.event.KeySym.SLASH and mod & tcod.event.Modifier.SHIFT)
-        ):
-            # ヘルプ表示（JIS配列対応・Shift+/も追加）
-            self._handle_help_action()
 
         elif (key == tcod.event.KeySym.SLASH and not (mod & tcod.event.Modifier.SHIFT)) or (
             unicode_char == "/" and not (mod & tcod.event.Modifier.SHIFT)
         ):
-            # シンボル説明（JIS配列対応・CommonCommandHandler経由・Shift未押下時のみ）
-            result = self.command_handler.handle_command("symbol_explanation")
+            # シンボル説明（専用画面に遷移・Shift未押下時のみ）
+            if self.game_screen.engine:
+                return GameStates.SYMBOL_EXPLANATION
+            else:
+                # エンジンがない場合のフォールバック
+                self.game_screen.game_logic.add_message("Symbol explanation not available")
+                return None
 
         elif key == tcod.event.KeySym.PERIOD or unicode_char == ".":
             # 休憩コマンド（ピリオド・CommonCommandHandler経由）
             result = self.command_handler.handle_command("rest")
             if result.should_end_turn:
                 self.game_screen.game_logic.handle_turn_end()
+            return None
 
         # ゲーム終了
         elif key == tcod.event.KeySym.ESCAPE:
             if self.game_screen.engine:
-                self.game_screen.engine.state = GameStates.MENU
+                return GameStates.MENU
+            return None
+
+        return None
 
     def _handle_targeting_key(self, event: tcod.event.KeyDown) -> None:
         """
@@ -654,62 +725,19 @@ class InputHandler:
 
         self.game_screen.game_logic.add_message(look_text.strip())
 
-    def _handle_help_action(self) -> None:
+    def _handle_help_action(self) -> GameStates | None:
         """
         ヘルプ表示処理。
 
-        メインゲーム画面で使用可能な全コマンドの一覧を表示します。
+        メニューのヘルプ画面に遷移します。
         """
-        help_text = """
-=== PyRogue Help ===
-
-Movement:
-  hjkl, yubn  - Vi-style movement (8 directions)
-  Arrow keys  - Standard movement
-  Numpad 1-9  - Numeric movement
-
-Actions:
-  g  - Get item at your feet
-  i  - Open inventory
-  o  - Open door
-  c  - Close door
-  s  - Search for hidden doors/traps
-  d  - Disarm trap
-  t  - Throw item
-  z  - Zap a wand in a direction
-  .  - Rest for one turn
-  R  - Long rest (until full HP)
-  >  - Go down stairs
-  <  - Go up stairs
-  w  - Direct wear/equip item
-  O  - Auto-explore (until danger)
-  l  - Look around surroundings
-
-Information:
-  Tab - Toggle FOV display
-  ?   - Show this help (JIS: Shift+/ also works)
-  /   - Show symbol guide
-  x   - Examine surroundings
-  \\   - Show identification status
-  @   - Show character details
-
-System:
-  Ctrl+S - Save game
-  Ctrl+L - Load game
-  Ctrl+M - Show last message
-  Ctrl+W - Toggle wizard mode (debug)
-  ESC    - Return to menu
-
-Wizard Mode (Debug):
-  Ctrl+T - Teleport to stairs
-  Ctrl+U - Level up
-  Ctrl+H - Heal fully
-  Ctrl+R - Reveal all map
-
-Press any key to continue...
-        """
-
-        self.game_screen.game_logic.add_message(help_text.strip())
+        # ゲーム状態をヘルプメニューに変更
+        if self.game_screen.engine:
+            return GameStates.HELP_MENU
+        else:
+            # エンジンがない場合のフォールバック
+            self.game_screen.game_logic.add_message("Help screen not available")
+            return None
 
     def _handle_symbol_explanation_action(self) -> None:
         """

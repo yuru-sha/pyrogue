@@ -691,7 +691,7 @@ class CommonCommandHandler:
 | カテゴリ | コマンド | エイリアス | 説明 |
 |----------|----------|------------|------|
 | **移動** | move \<direction\> | north/n, south/s, east/e, west/w | 方向移動 |
-| **アクション** | get | g | アイテム取得 |
+| **アクション** | get | , | アイテム取得 |
 | | use \<item\> | u | アイテム使用 |
 | | attack | a | 攻撃 |
 | | open | o | 扉を開く |

@@ -25,6 +25,10 @@ from typing import Any
 from pyrogue.utils.logger import game_logger
 
 
+class SaveError(Exception):
+    """セーブ・ロード処理で発生するエラー。"""
+
+
 class SaveManager:
     """
     セーブ/ロード機能を管理するクラス。
