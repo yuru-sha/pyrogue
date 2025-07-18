@@ -86,10 +86,10 @@ class CombatConstants:
     HALLUCINATION_EFFECT_CHANCE: float = 0.3  # 幻覚効果発動確率
     GOLD_DROP_CHANCE: float = 0.3  # 金貨ドロップ確率
 
-    # レベルアップ
+    # レベルアップ（モンスター強化に対応した成長バランス調整）
     EXP_PER_LEVEL_BASE: int = 100
     EXP_LEVEL_MULTIPLIER: float = 1.5
-    HP_GAIN_PER_LEVEL: int = 5
+    HP_GAIN_PER_LEVEL: int = 8  # 5→8: モンスターのダメージ増加に対応
 
     # 攻撃・防御
     MIN_DAMAGE: int = 1

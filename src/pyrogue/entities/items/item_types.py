@@ -72,26 +72,26 @@ class WandType(ItemType):
     damage_range: tuple[int, int]  # Range of damage/effect power (min, max)
 
 
-# Weapon definitions - 階層に応じた段階的出現（強化版）
+# Weapon definitions - モンスター強化に対応したバランス調整版
 WEAPONS = [
-    WeaponType(101, ")", "Dagger", 1, 8, 120, 5, 3, (-1, 4)),  # 序盤専用・初期装備（強化）
-    WeaponType(102, ")", "Mace", 1, 10, 100, 8, 4, (-1, 4)),  # 序盤メイン武器（強化）
-    WeaponType(103, ")", "Long Sword", 5, 20, 80, 15, 6, (-1, 5)),  # 中盤メイン武器（強化）
-    WeaponType(104, ")", "Short Bow", 8, 22, 70, 15, 5, (0, 4)),  # 中盤～終盤（バランス調整）
-    WeaponType(105, ")", "Battle Axe", 12, 26, 60, 25, 9, (-2, 6)),  # 終盤武器（大幅強化）
-    WeaponType(106, ")", "Two-Handed Sword", 18, 26, 40, 40, 12, (-3, 8)),  # 最終武器（大幅強化）
+    WeaponType(101, ")", "Dagger", 1, 8, 120, 8, 4, (-1, 5)),  # 序盤強化: 3→4, ボーナス最大+5
+    WeaponType(102, ")", "Mace", 1, 10, 100, 12, 6, (-1, 5)),  # 序盤主力: 4→6, ボーナス最大+5
+    WeaponType(103, ")", "Long Sword", 4, 18, 80, 20, 8, (-1, 6)),  # 中盤主力: 6→8, 出現早4Fから
+    WeaponType(104, ")", "Short Bow", 6, 20, 70, 18, 7, (0, 5)),  # 中盤遠距離: 5→7
+    WeaponType(105, ")", "Battle Axe", 10, 24, 60, 35, 12, (-2, 7)),  # 終盤武器: 9→12, 出現早10Fから
+    WeaponType(106, ")", "Two-Handed Sword", 15, 26, 40, 50, 16, (-3, 10)),  # 最終武器: 12→16, 出現早15Fから
 ]
 
-# Armor definitions - 階層に応じた段階的出現（強化版）
+# Armor definitions - モンスター強化に対応した防御力強化版
 ARMORS = [
-    ArmorType(201, "[", "Leather Armor", 1, 8, 100, 20, 3, (0, 3)),  # 序盤専用・初期装備（強化）
-    ArmorType(202, "[", "Studded Leather", 3, 12, 90, 25, 4, (0, 4)),  # 序盤～中盤移行（強化）
-    ArmorType(203, "[", "Ring Mail", 5, 15, 80, 30, 6, (-1, 4)),  # 中盤序盤（強化）
-    ArmorType(204, "[", "Scale Mail", 8, 18, 70, 40, 8, (-2, 5)),  # 中盤メイン（強化）
-    ArmorType(205, "[", "Chain Mail", 10, 22, 60, 50, 10, (-2, 6)),  # 中盤～終盤（強化）
-    ArmorType(206, "[", "Splint Mail", 15, 26, 50, 60, 12, (-3, 7)),  # 終盤防具（強化）
-    ArmorType(207, "[", "Banded Mail", 18, 26, 40, 70, 14, (-3, 8)),  # 高級防具（強化）
-    ArmorType(208, "[", "Plate Mail", 20, 26, 30, 80, 16, (-4, 10)),  # 最高級防具（大幅強化）
+    ArmorType(201, "[", "Leather Armor", 1, 8, 100, 25, 4, (0, 4)),  # 序盤強化: 3→4, ボーナス最大+4
+    ArmorType(202, "[", "Studded Leather", 3, 12, 90, 30, 6, (0, 5)),  # 序盤～中盤: 4→6
+    ArmorType(203, "[", "Ring Mail", 4, 14, 80, 35, 8, (-1, 5)),  # 中盤序盤: 6→8, 出現早4Fから
+    ArmorType(204, "[", "Scale Mail", 6, 16, 70, 45, 10, (-1, 6)),  # 中盤主力: 8→10
+    ArmorType(205, "[", "Chain Mail", 8, 20, 60, 55, 12, (-2, 7)),  # 中盤～終盤: 10→12
+    ArmorType(206, "[", "Splint Mail", 12, 24, 50, 70, 15, (-2, 8)),  # 終盤防具: 12→15, 出現早12Fから
+    ArmorType(207, "[", "Banded Mail", 15, 26, 40, 85, 18, (-3, 9)),  # 高級防具: 14→18, 出現早15Fから
+    ArmorType(208, "[", "Plate Mail", 18, 26, 30, 100, 22, (-4, 12)),  # 最高級防具: 16→22, 出現早18Fから
 ]
 
 # Ring definitions（効果強化版）
