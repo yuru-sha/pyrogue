@@ -89,7 +89,7 @@ class SaveManager:
             # メタデータを作成
             metadata = {
                 "save_time": time.time(),
-                "save_version": "1.0",
+                "save_version": "0.2.0",
                 "player_level": game_data.get("player_stats", {}).get("level", 1),
                 "current_floor": game_data.get("current_floor", 1),
                 "player_hp": game_data.get("player_stats", {}).get("hp", 20),

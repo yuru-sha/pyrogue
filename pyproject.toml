@@ -1,6 +1,6 @@
 [project]
 name = "pyrogue"
-version = "0.1.0"
+version = "0.2.0"
 description = "A roguelike game built with Python and TCOD"
 authors = [
     { name = "yuru-sha", email = "yurusha11@gmail.com" },
