@@ -32,8 +32,10 @@ from pyrogue.core.input_handlers import StateManager
 from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_over_screen import GameOverScreen
 from pyrogue.ui.screens.game_screen import GameScreen
+from pyrogue.ui.screens.help_menu_screen import HelpMenuScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
+from pyrogue.ui.screens.quick_guide_screen import QuickGuideScreen
 from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
 
@@ -88,6 +90,8 @@ class Engine:
 
         # 各画面インスタンスの初期化
         self.menu_screen = MenuScreen(self.console, self)
+        self.help_menu_screen = HelpMenuScreen(self.console, self)
+        self.quick_guide_screen = QuickGuideScreen(self.console, self)
         self.game_screen = GameScreen(self)
         self.inventory_screen = InventoryScreen(self.game_screen)
         self.game_over_screen = GameOverScreen(self.console, self)
@@ -187,6 +191,10 @@ class Engine:
                 # 現在のゲーム状態に応じた画面を描画
                 if self.state == GameStates.MENU:
                     self.menu_screen.render()
+                elif self.state == GameStates.HELP_MENU:
+                    self.help_menu_screen.render()
+                elif self.state == GameStates.QUICK_GUIDE:
+                    self.quick_guide_screen.render()
                 elif self.state == GameStates.PLAYERS_TURN:
                     self.game_screen.render(self.console)
                 elif self.state == GameStates.SHOW_INVENTORY:
@@ -258,6 +266,10 @@ class Engine:
         """Get the current screen instance based on state."""
         if self.state == GameStates.MENU:
             return self.menu_screen
+        if self.state == GameStates.HELP_MENU:
+            return self.help_menu_screen
+        if self.state == GameStates.QUICK_GUIDE:
+            return self.quick_guide_screen
         if self.state == GameStates.PLAYERS_TURN:
             return self.game_screen
         if self.state == GameStates.SHOW_INVENTORY:
@@ -284,10 +296,10 @@ class Engine:
         """
         新しいゲームを開始。
 
-        ゲーム画面を初期化し、プレイヤーターン状態に遷移します。
+        ゲーム画面を初期化し、クイックガイドを表示してからプレイヤーターン状態に遷移します。
         """
         self.game_screen.setup_new_game()
-        self.state = GameStates.PLAYERS_TURN
+        self.state = GameStates.QUICK_GUIDE
 
     def game_over(self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown") -> None:
         """

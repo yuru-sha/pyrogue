@@ -183,6 +183,9 @@ class MenuScreen:
             # ゲームを継続（セーブデータをロード）
             if self.menu_options[self.menu_selection] == "Load Game":
                 return self._load_game()
+            # ヘルプを表示
+            if self.menu_options[self.menu_selection] == "Help":
+                return GameStates.HELP_MENU
             # ゲームを終了
             if self.menu_options[self.menu_selection] == "Quit":
                 return GameStates.EXIT
@@ -204,6 +207,8 @@ class MenuScreen:
         if self.save_manager.has_save_file():
             options.append("Load Game")
 
+        # ヘルプオプションを追加
+        options.append("Help")
         options.append("Quit")
 
         return options

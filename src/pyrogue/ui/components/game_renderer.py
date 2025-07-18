@@ -58,6 +58,7 @@ class GameRenderer:
         self._render_map(console)
         self._render_status(console)
         self._render_messages(console)
+        self._render_command_hints(console)
 
     def _render_map(self, console: tcod.Console) -> None:
         """
@@ -297,7 +298,54 @@ class GameRenderer:
             fg=(255, 255, 255),
         )
 
+        # 3行目: ゲーム目標とプログレッション情報
+        self._render_game_progress(console, status_y + 2)
+
         # ステータス異常は必要に応じて別途表示（元の実装では基本2行のみ）
+
+    def _render_game_progress(self, console: tcod.Console, y: int) -> None:
+        """
+        ゲーム進行状況と目標を表示。
+
+        Args:
+        ----
+            console: TCODコンソール
+            y: 表示Y座標
+
+        """
+        player = self.game_screen.player
+        current_floor = self.game_screen.game_logic.dungeon_manager.current_floor
+        
+        if not player:
+            return
+
+        # アミュレット所持状況をチェック
+        has_amulet = player.has_amulet
+
+        if has_amulet:
+            # アミュレット所持時: 脱出目標表示
+            progress_text = f"ESCAPE TO SURFACE! ({current_floor}/26 floors climbed)"
+            color = (255, 215, 0)  # 金色
+        else:
+            # 通常時: 探索目標表示
+            if current_floor < 26:
+                progress_text = f"Goal: Find Amulet of Yendor on B26F  (Currently: B{current_floor}F / B26F)"
+                color = (150, 200, 255)  # 薄青色
+            else:
+                # B26Fに到達済み
+                progress_text = "You have reached B26F! Find the Amulet of Yendor!"
+                color = (255, 255, 100)  # 黄色
+
+        # 画面幅に収まるように調整
+        if len(progress_text) > console.width - 2:
+            progress_text = progress_text[:console.width - 5] + "..."
+
+        console.print(
+            x=1,
+            y=y,
+            string=progress_text,
+            fg=color,
+        )
 
     def _render_messages(self, console: tcod.Console) -> None:
         """
@@ -362,3 +410,70 @@ class GameRenderer:
 
         """
         return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+    def _render_command_hints(self, console: tcod.Console) -> None:
+        """
+        重要なコマンドのヒント表示。
+
+        初心者プレイヤー向けに画面下部にコマンドヒントを表示します。
+
+        Args:
+        ----
+            console: TCODコンソール
+
+        """
+        game_screen = self.game_screen
+        player = game_screen.game_logic.get_player()
+        
+        if not player:
+            return
+
+        # プレイヤーのレベルが低い場合（レベル3以下）のみヒントを表示
+        if player.level > 3:
+            return
+
+        # 画面下部にヒント表示
+        hint_y = console.height - 1
+        
+        # 基本的なヒント（状況に応じて動的に変更）
+        hints = []
+        
+        # アイテムが足元にある場合
+        floor_data = game_screen.game_logic.get_current_floor_data()
+        if floor_data and floor_data.items:
+            items_at_player = [
+                item for item in floor_data.items 
+                if item.x == player.x and item.y == player.y
+            ]
+            if items_at_player:
+                hints.append("Press ',' to pick up items")
+            
+        # インベントリが満杯でない場合の基本ヒント
+        if len(hints) == 0:
+            if player.level == 1:
+                hints = [
+                    "hjkl/arrows: move  ?: help  i: inventory  o/c: doors"
+                ]
+            elif player.level == 2:
+                hints = [
+                    "s: search  ,: pick up  Ctrl+S: save  ?: detailed help"
+                ]
+            else:  # level 3
+                hints = [
+                    "Goal: Find Amulet of Yendor on B26F  ?: help anytime"
+                ]
+
+        if hints:
+            hint_text = hints[0]
+            # 画面幅に収まるように調整
+            if len(hint_text) > console.width - 2:
+                hint_text = hint_text[:console.width - 5] + "..."
+                
+            # 中央に表示
+            x = (console.width - len(hint_text)) // 2
+            console.print(
+                x,
+                hint_y,
+                hint_text,
+                fg=(100, 150, 100),  # 薄緑色
+            )
