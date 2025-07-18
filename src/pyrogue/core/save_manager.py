@@ -115,7 +115,7 @@ class SaveManager:
             try:
                 with open(self.metadata_file, "w") as f:
                     json.dump(metadata, f, indent=2)
-            except (OSError, PermissionError, json.JSONEncodeError) as e:
+            except (OSError, PermissionError, json.JSONDecodeError) as e:
                 raise SaveError(f"Failed to save metadata: {e}") from e
 
             # セーブファイルのチェックサムを計算・保存

@@ -28,6 +28,8 @@ PyRogueは現在、**完全に機能する本格的なローグライクゲー�
 - ✅ **スタック可能アイテムの数量管理修正**（2025-07-13修正・USE/DROP動作正常化）
 - ✅ **IDベースセーブシステム**（2025-07-16実装・アイテム名変更耐性・後方互換性維持）
 - ✅ **Handler Patternアーキテクチャ**（2025-07-17実装・モジュラー設計・拡張性向上）
+- ✅ **最適化されたモンスターAI**（2025-07-18実装・AI状態機械・A*経路探索・連携システム）
+- ✅ **コードベース最適化**（2025-07-18実装・型安全性・品質向上・モジュール構造最適化）
 
 ### 技術スタック
 - **Python 3.12**: 最新のPython機能を活用
@@ -83,7 +85,11 @@ CommonCommandHandler（コア）
 ├── AutoExploreHandler（自動探索機能）
 ├── DebugCommandHandler（デバッグコマンド）
 ├── SaveLoadHandler（セーブ・ロード処理）
-└── InfoCommandHandler（情報表示機能）
+├── InfoCommandHandler（情報表示機能）
+└── MonsterAIManager（モンスターAI統合）
+    ├── PathfindingManager（経路探索）
+    ├── MonsterCombatManager（戦闘・特殊攻撃）
+    └── MonsterBehaviorManager（行動・状態管理）
 ```
 
 ### 実装ファイル
@@ -92,12 +98,19 @@ CommonCommandHandler（コア）
 - `src/pyrogue/core/debug_command_handler.py`: デバッグコマンド専用ハンドラー
 - `src/pyrogue/core/save_load_handler.py`: セーブ・ロード専用ハンドラー
 - `src/pyrogue/core/info_command_handler.py`: 情報表示専用ハンドラー
+- `src/pyrogue/core/managers/monster_ai_manager.py`: MonsterAIManager（統合）
+- `src/pyrogue/core/managers/pathfinding_manager.py`: PathfindingManager（A*経路探索）
+- `src/pyrogue/core/managers/monster_combat_manager.py`: MonsterCombatManager（戦闘）
+- `src/pyrogue/core/managers/monster_behavior_manager.py`: MonsterBehaviorManager（行動）
+- `src/pyrogue/utils/coordinate_utils.py`: 座標計算ユーティリティ
 
 ### 利点
 - ✅ **保守性向上**: 機能別の明確な分離により修正範囲を限定
 - ✅ **拡張性**: 新ハンドラー追加による機能拡張が容易
 - ✅ **テスト性**: 各ハンドラーを独立してテスト可能
 - ✅ **再利用性**: CLI/GUIで同一ハンドラーを共有
+- ✅ **コード品質**: 単一責任原則によるモジュール性向上
+- ✅ **型安全性**: 完全な型ヒント対応とmypy準拠
 
 ## IDベースセーブシステム
 

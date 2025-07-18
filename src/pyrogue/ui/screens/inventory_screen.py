@@ -185,7 +185,10 @@ class InventoryScreen(Screen):
             or event.sym == tcod.event.KeySym.QUESTION
             or event.sym == tcod.event.KeySym.SLASH
         ):
-            debug_msg = f"HELP KEY: sym={event.sym}, mod={event.mod}, unicode='{unicode_char}', char_code={ord(unicode_char) if unicode_char else 'None'}"
+            debug_msg = (
+                f"HELP KEY: sym={event.sym}, mod={event.mod}, unicode='{unicode_char}', "
+                f"char_code={ord(unicode_char) if unicode_char else 'None'}"
+            )
             self.game_screen.game_logic.add_message(f"DEBUG: {debug_msg}")
 
             # ログファイルにも記録

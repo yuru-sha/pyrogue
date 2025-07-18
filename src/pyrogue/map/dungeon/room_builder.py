@@ -43,17 +43,18 @@ class Room:
 
     def is_connected_to(self, other_room: Room) -> bool:
         """他の部屋と接続されているかチェック。"""
-        return other_room.id in self.connected_rooms if other_room.id else False
+        return bool(other_room.id and self.connected_rooms and other_room.id in self.connected_rooms)
 
     def add_connection(self, other_room: Room) -> None:
         """他の部屋との接続を追加。"""
-        if other_room.id:
+        if other_room.id and self.connected_rooms is not None and other_room.connected_rooms is not None:
             self.connected_rooms.add(other_room.id)
             other_room.connected_rooms.add(self.id)
 
     def add_door(self, x: int, y: int) -> None:
         """ドアを追加。"""
-        self.doors.append((x, y))
+        if self.doors is not None:
+            self.doors.append((x, y))
 
     @property
     def inner(self) -> list[tuple[int, int]]:

@@ -97,9 +97,16 @@ class InputHandler:
             if hasattr(tcod.event.KeySym, "QUESTION"):
                 question_sym = tcod.event.KeySym.QUESTION
                 slash_sym = tcod.event.KeySym.SLASH
-                debug_msg = f"Key: sym={sym_name}({key}), mod={mod}, unicode='{unicode_char}', char_code={ord(unicode_char) if unicode_char else 'None'}, QUESTION={question_sym}, SLASH={slash_sym}"
+                debug_msg = (
+                    f"Key: sym={sym_name}({key}), mod={mod}, unicode='{unicode_char}', "
+                    f"char_code={ord(unicode_char) if unicode_char else 'None'}, "
+                    f"QUESTION={question_sym}, SLASH={slash_sym}"
+                )
             else:
-                debug_msg = f"Key: sym={sym_name}({key}), mod={mod}, unicode='{unicode_char}', char_code={ord(unicode_char) if unicode_char else 'None'}"
+                debug_msg = (
+                    f"Key: sym={sym_name}({key}), mod={mod}, unicode='{unicode_char}', "
+                    f"char_code={ord(unicode_char) if unicode_char else 'None'}"
+                )
 
             self.game_screen.game_logic.add_message(f"DEBUG: {debug_msg}")
 
