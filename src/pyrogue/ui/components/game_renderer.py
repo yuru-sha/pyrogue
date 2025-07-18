@@ -423,7 +423,7 @@ class GameRenderer:
 
         """
         game_screen = self.game_screen
-        player = game_screen.game_logic.get_player()
+        player = game_screen.player
 
         if not player:
             return
