@@ -532,12 +532,11 @@ Available Commands:
             potion_to_use = potion_items[0]
 
         # ポーションを使用
-        player = self.context.player
         message = potion_to_use.use()
         self.context.add_message(message)
 
         # ポーションの効果を適用
-        success = potion_to_use.apply_effect(self.context)
+        potion_to_use.apply_effect(self.context)
 
         # インベントリからポーションを削除
         inventory.remove_item(potion_to_use)

@@ -61,7 +61,7 @@ class TestDiverseMonsterAI:
 
         # アイテム盗取攻撃をテスト
         assert leprechaun.can_steal_items
-        self.ai_manager._steal_item(leprechaun, self.player, self.context)
+        self.ai_manager._combat_manager._steal_item(leprechaun, self.player, self.context)
 
         # アイテムが盗まれたことを確認
         assert test_item not in self.player.inventory.items
@@ -95,7 +95,7 @@ class TestDiverseMonsterAI:
         # ゴールド盗取攻撃をテスト
         assert nymph.can_steal_gold
         with patch("random.randint", return_value=25):
-            self.ai_manager._steal_gold(nymph, self.player, self.context)
+            self.ai_manager._combat_manager._steal_gold(nymph, self.player, self.context)
 
         # ゴールドが盗まれたことを確認
         assert self.player.gold == 75
@@ -134,7 +134,7 @@ class TestDiverseMonsterAI:
 
         # レベル下げ攻撃をテスト
         assert wraith.can_drain_level
-        self.ai_manager._drain_level(wraith, self.player, self.context)
+        self.ai_manager._combat_manager._drain_level(wraith, self.player, self.context)
 
         # レベルが下がったことを確認
         assert self.player.level == 4
@@ -166,11 +166,11 @@ class TestDiverseMonsterAI:
 
         # 遠距離攻撃が可能かテスト
         assert centaur.can_ranged_attack
-        assert self.ai_manager._can_use_ranged_attack(centaur, self.player)
+        assert self.ai_manager._combat_manager.can_use_ranged_attack(centaur, self.player)
 
         # 遠距離攻撃をテスト
         with patch("random.random", return_value=0.5):  # 命中
-            self.ai_manager._use_ranged_attack(centaur, self.player, self.context)
+            self.ai_manager._combat_manager.use_ranged_attack(centaur, self.player, self.context)
 
         # クールダウンが設定されることを確認
         assert centaur.special_ability_cooldown == 3
@@ -197,11 +197,11 @@ class TestDiverseMonsterAI:
 
         # 逃走判定をテスト
         assert bat.can_flee
-        assert self.ai_manager._should_flee(bat)  # HP25% < 30%閾値なので逃走
+        assert self.ai_manager._behavior_manager._should_flee(bat)  # HP25% < 30%閾値なので逃走
 
         # 逃走行動をテスト（移動チェックをモック）
-        self.ai_manager._try_move_monster = Mock(return_value=True)
-        self.ai_manager._flee_from_player(bat, self.player, self.context)
+        self.ai_manager._behavior_manager.try_move_monster = Mock(return_value=True)
+        self.ai_manager._behavior_manager._flee_from_player(bat, self.player, self.context)
 
         # モンスターがプレイヤーから遠ざかる方向に移動を試みることを確認
         # （実際の移動は地形によるが、逃走フラグは設定される）
@@ -230,11 +230,11 @@ class TestDiverseMonsterAI:
         assert ice_monster.can_split
 
         # モック用のマップ移動チェック
-        self.ai_manager._can_monster_move_to = Mock(return_value=True)
+        self.ai_manager._combat_manager._can_monster_move_to = Mock(return_value=True)
 
         # 分裂をテスト（30%の確率なので強制実行）
         with patch("random.random", return_value=0.2):  # 30%以下
-            self.ai_manager.split_monster_on_damage(ice_monster, self.context)
+            self.ai_manager._combat_manager.split_monster_on_damage(ice_monster, self.context)
 
         # 分裂が発生したことを確認
         assert len(self.floor_data.monster_spawner.monsters) == 1
@@ -270,20 +270,20 @@ class TestDiverseMonsterAI:
 
         # クールダウンなしで特殊攻撃可能（確率要素があるので複数回試行）
         with patch("random.random", return_value=0.1):  # 30%未満
-            assert self.ai_manager._can_use_special_attack(monster)
+            assert self.ai_manager._combat_manager.can_use_special_attack(monster)
 
         # 特殊攻撃を使用してクールダウンを設定
         monster.special_ability_cooldown = 5
 
         # クールダウン中は特殊攻撃不可
-        assert not self.ai_manager._can_use_special_attack(monster)
+        assert not self.ai_manager._combat_manager.can_use_special_attack(monster)
 
         # クールダウンを減少
         monster.special_ability_cooldown = 0
 
         # 再び特殊攻撃可能
         with patch("random.random", return_value=0.1):  # 30%未満
-            assert self.ai_manager._can_use_special_attack(monster)
+            assert self.ai_manager._combat_manager.can_use_special_attack(monster)
 
     def test_ai_pattern_integration(self):
         """AIパターン統合のテスト。"""
@@ -425,15 +425,25 @@ class TestDiverseMonsterAI:
         )
 
         # プレイヤーが見えるようにモック
-        self.ai_manager._can_monster_see_player = Mock(return_value=True)
-        self.ai_manager._can_use_special_attack = Mock(return_value=True)
-        self.ai_manager._use_special_attack = Mock()
+        self.ai_manager._can_monster_see_player_cached = Mock(return_value=True)
+        self.ai_manager._combat_manager.can_use_special_attack = Mock(return_value=True)
+        self.ai_manager._combat_manager.use_special_attack = Mock()
+
+        # モンスターを既に攻撃状態にして、隣接させる
+        from pyrogue.core.managers.monster_behavior_manager import MonsterAIState
+
+        monster_id = id(monster)
+        self.ai_manager._behavior_manager.set_monster_state(monster_id, MonsterAIState.ATTACKING)
+
+        # プレイヤーと隣接させる
+        self.player.x = 11
+        self.player.y = 11
 
         # AI処理を実行
         self.ai_manager.process_monster_ai(monster, self.context)
 
         # 特殊攻撃が使用されたことを確認
-        self.ai_manager._use_special_attack.assert_called_once()
+        self.ai_manager._combat_manager.use_special_attack.assert_called_once()
 
     def test_edge_cases_and_error_handling(self):
         """エッジケースとエラーハンドリングのテスト。"""
@@ -455,7 +465,7 @@ class TestDiverseMonsterAI:
         )
 
         # アイテムなしでアイテム盗取を試行
-        self.ai_manager._steal_item(leprechaun, self.player, self.context)
+        self.ai_manager._combat_manager._steal_item(leprechaun, self.player, self.context)
         self.context.add_message.assert_called_with("Leprechaun tries to steal from you, but you have nothing!")
 
         # ゴールドがない場合の盗取
@@ -476,7 +486,7 @@ class TestDiverseMonsterAI:
         )
 
         self.player.gold = 0
-        self.ai_manager._steal_gold(nymph, self.player, self.context)
+        self.ai_manager._combat_manager._steal_gold(nymph, self.player, self.context)
         self.context.add_message.assert_called_with("Nymph searches for gold, but you have none!")
 
         # レベル1プレイヤーへのレベル下げ攻撃
@@ -497,7 +507,7 @@ class TestDiverseMonsterAI:
         )
 
         self.player.level = 1
-        self.ai_manager._drain_level(wraith, self.player, self.context)
+        self.ai_manager._combat_manager._drain_level(wraith, self.player, self.context)
         # レベルが1の場合は通常ダメージに切り替わることを確認
         assert self.player.level == 1  # レベルは変わらない
 

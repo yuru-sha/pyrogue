@@ -173,5 +173,5 @@ class DungeonProfiler:
             game_logger.warning("Performance bottlenecks detected:")
             for bottleneck in report["analysis"]["bottlenecks"]:
                 game_logger.warning(
-                    f"  {bottleneck['section']}: {bottleneck['time']:.4f}s " f"({bottleneck['percentage']:.1f}%)"
+                    f"  {bottleneck['section']}: {bottleneck['time']:.4f}s ({bottleneck['percentage']:.1f}%)"
                 )

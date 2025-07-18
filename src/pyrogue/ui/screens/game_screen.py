@@ -256,12 +256,6 @@ class GameScreen:
         """敵のターンを処理。"""
         self.game_logic.process_enemy_turns()
 
-    def update_console(self, console) -> None:
-        """コンソールの更新（リサイズ対応）。"""
-        # 必要に応じてコンポーネントにコンソール情報を伝達
-        if hasattr(self.renderer, "update_console"):
-            self.renderer.update_console(console)
-
     # ユーティリティメソッド
     def start_targeting(self, start_x: int | None = None, start_y: int | None = None) -> None:
         """ターゲット選択モードを開始。"""

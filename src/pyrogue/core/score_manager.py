@@ -184,7 +184,8 @@ class ScoreManager:
         lines = ["Top Scores:"]
         lines.append("-" * 80)
         lines.append(
-            f"{'Rank':<4} {'Name':<12} {'Score':<8} {'Lv':<3} {'Floor':<5} {'Gold':<6} {'Kills':<5} {'Result':<8} {'Date':<16}"
+            f"{'Rank':<4} {'Name':<12} {'Score':<8} {'Lv':<3} "
+            f"{'Floor':<5} {'Gold':<6} {'Kills':<5} {'Result':<8} {'Date':<16}"
         )
         lines.append("-" * 80)
 

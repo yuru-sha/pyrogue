@@ -552,7 +552,6 @@ class DrainTrap(Trap):
         self.color = (64, 0, 64)  # 暗紫色
 
     def activate(self, context) -> None:
-        player = context.player
         # 経験値やステータスをドレイン
         context.add_message("You feel your life force being drained!")
         self.reveal()

@@ -119,7 +119,6 @@ class AutoExploreHandler:
         from pyrogue.map.tile import Door, Floor
 
         tiles = current_floor.tiles
-        player_pos = (player.x, player.y)
         target_x, target_y = target_pos
 
         # 目標への大まかな方向を計算

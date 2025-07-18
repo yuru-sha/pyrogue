@@ -142,8 +142,6 @@ class ItemManager:
             使用が成功した場合True
 
         """
-        inventory = self.context.inventory
-
         # インベントリからアイテムを検索
         item = self._get_item_by_name(item_name)
 

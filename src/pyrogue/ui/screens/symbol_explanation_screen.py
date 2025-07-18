@@ -135,10 +135,7 @@ class SymbolExplanationScreen:
         elif key.sym == tcod.event.KeySym.PAGEDOWN:
             self.scroll_y = min(self.max_scroll, self.scroll_y + 10)
         # ESCキーでゲームに戻る
-        elif key.sym == tcod.event.KeySym.ESCAPE:
-            return GameStates.PLAYERS_TURN
-        # /キーでもゲームに戻る（JIS配列対応）
-        elif key.sym == tcod.event.KeySym.SLASH or key.unicode == "/":
+        elif key.sym == tcod.event.KeySym.ESCAPE or key.sym == tcod.event.KeySym.SLASH or key.unicode == "/":
             return GameStates.PLAYERS_TURN
 
         return None

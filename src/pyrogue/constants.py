@@ -30,6 +30,9 @@ class GameConstants:
     DEFAULT_FOV_RADIUS: int = 8
     MAX_FOV_RADIUS: int = 20
 
+    # AI最適化関連
+    AI_ACTIVE_AREA_RADIUS: int = 12  # アクティブエリアの半径
+
     # UI関連
     STATUS_PANEL_HEIGHT: int = 7
     MESSAGE_LOG_SIZE: int = 3

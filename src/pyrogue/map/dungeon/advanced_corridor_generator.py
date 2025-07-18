@@ -535,7 +535,7 @@ class AdvancedCorridorGenerator:
 
         # 中間点を計算
         mid_x = (start_x + end_x) // 2
-        mid_y = (start_y + end_y) // 2
+        (start_y + end_y) // 2
 
         # 迂回ポイントを作成
         offset_x = random.randint(-5, 5)

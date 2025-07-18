@@ -207,7 +207,6 @@ class MovementManager:
 
     def _handle_post_move_events(self) -> None:
         """移動後に発生するイベントを処理。"""
-        player = self.context.player
         floor_data = self.context.dungeon_manager.get_current_floor_data()
 
         if not floor_data:

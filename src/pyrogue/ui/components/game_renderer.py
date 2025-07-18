@@ -439,26 +439,5 @@ class GameRenderer:
         # オリジナルRogue準拠のため、ヒント表示は無効化
         return
 
-        # インベントリが満杯でない場合の基本ヒント
-        if len(hints) == 0:
-            if player.level == 1:
-                hints = ["hjkl/arrows: move  ?: help  i: inventory  o/c: doors"]
-            elif player.level == 2:
-                hints = ["s: search  ,: pick up  Ctrl+S: save  ?: detailed help"]
-            else:  # level 3
-                hints = ["Goal: Find Amulet of Yendor on B26F  ?: help anytime"]
-
-        if hints:
-            hint_text = hints[0]
-            # 画面幅に収まるように調整
-            if len(hint_text) > console.width - 2:
-                hint_text = hint_text[: console.width - 5] + "..."
-
-            # 中央に表示
-            x = (console.width - len(hint_text)) // 2
-            console.print(
-                x,
-                hint_y,
-                hint_text,
-                fg=(100, 150, 100),  # 薄緑色
-            )
+        # この部分は削除されました（デッドコード）
+        # オリジナルRogueには現代的なヒント表示はありませんでした

@@ -210,7 +210,7 @@ class SaveManager:
         try:
             # プレイヤーオブジェクトからMP関連属性を削除
             if "player" in game_data:
-                player = game_data["player"]
+                game_data["player"]
                 # if hasattr(player, "mp"):
                 #     delattr(player, "mp")
                 #     game_logger.debug("Removed legacy 'mp' attribute from player")
