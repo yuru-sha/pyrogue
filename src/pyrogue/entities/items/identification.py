@@ -18,11 +18,13 @@ class ItemIdentification:
         self.identified_potions: set[str] = set()
         self.identified_scrolls: set[str] = set()
         self.identified_rings: set[str] = set()
+        self.identified_wands: set[str] = set()
 
         # 未識別名マッピング（プレイ毎にランダム化）
         self.potion_appearances: dict[str, str] = {}
         self.scroll_appearances: dict[str, str] = {}
         self.ring_appearances: dict[str, str] = {}
+        self.wand_appearances: dict[str, str] = {}
 
         # 未識別名のプール
         self.potion_colors = [
@@ -90,6 +92,29 @@ class ItemIdentification:
             "bronze",
         ]
 
+        self.wand_materials = [
+            "glass",
+            "iron",
+            "silver",
+            "copper",
+            "brass",
+            "platinum",
+            "steel",
+            "tin",
+            "zinc",
+            "aluminum",
+            "nickel",
+            "lead",
+            "bamboo",
+            "oak",
+            "pine",
+            "walnut",
+            "ebony",
+            "crystal",
+            "bone",
+            "ivory",
+        ]
+
         self._initialize_appearances()
 
     def _initialize_appearances(self) -> None:
@@ -139,6 +164,20 @@ class ItemIdentification:
             if i < len(available_materials):
                 self.ring_appearances[ring_name] = available_materials[i]
 
+        # ワンド名のシャッフル
+        wand_names = [
+            "Wand of Magic Missile",
+            "Wand of Lightning",
+            "Wand of Light",
+            "Wand of Nothing",
+        ]
+        available_wand_materials = self.wand_materials.copy()
+        random.shuffle(available_wand_materials)
+
+        for i, wand_name in enumerate(wand_names):
+            if i < len(available_wand_materials):
+                self.wand_appearances[wand_name] = available_wand_materials[i]
+
     def get_display_name(self, item_name: str, item_type: str) -> str:
         """アイテムの表示名を取得（識別状態に応じて）"""
         if item_type == "POTION":
@@ -162,6 +201,13 @@ class ItemIdentification:
                 material = self.ring_appearances[item_name]
                 return f"{material} ring"
 
+        elif item_type == "WAND":
+            if item_name in self.identified_wands:
+                return item_name
+            if item_name in self.wand_appearances:
+                material = self.wand_appearances[item_name]
+                return f"{material} wand"
+
         # 未対応のアイテムタイプや武器・防具は常に識別済み
         return item_name
 
@@ -176,6 +222,9 @@ class ItemIdentification:
         if item_type == "RING" and item_name not in self.identified_rings:
             self.identified_rings.add(item_name)
             return True
+        if item_type == "WAND" and item_name not in self.identified_wands:
+            self.identified_wands.add(item_name)
+            return True
 
         return False  # 既に識別済み
 
@@ -187,6 +236,8 @@ class ItemIdentification:
             return item_name in self.identified_scrolls
         if item_type == "RING":
             return item_name in self.identified_rings
+        if item_type == "WAND":
+            return item_name in self.identified_wands
 
         # 武器・防具・食料・金貨は常に識別済み
         return True
@@ -205,7 +256,7 @@ class ItemIdentification:
         """識別時のメッセージを取得"""
         display_name = self.get_display_name(item_name, item_type)
 
-        if item_type == "POTION" or item_type == "SCROLL" or item_type == "RING":
+        if item_type in ["POTION", "SCROLL", "RING", "WAND"]:
             return f"This {display_name} is a {item_name}!"
 
         return f"You have identified the {item_name}."

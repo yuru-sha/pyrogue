@@ -99,7 +99,7 @@ class TestPermadeathSystem:
             # 直接メタデータを作成（死亡状態を記録）
             metadata = {
                 "save_time": 1234567890,
-                "save_version": "1.0",
+                "save_version": "0.2.0",
                 "player_level": 5,
                 "current_floor": 3,
                 "player_hp": 0,

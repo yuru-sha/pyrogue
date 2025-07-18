@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from pyrogue.config.env import get_debug_mode, get_log_level
+from pyrogue.config.env import get_debug_mode, get_log_directory, get_log_level
 
 
 def setup_game_logger() -> logging.Logger:
@@ -55,8 +55,8 @@ def setup_game_logger() -> logging.Logger:
     else:
         logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
-    # Create logs directory
-    log_dir = Path("logs")
+    # Create logs directory from environment variable
+    log_dir = Path(get_log_directory())
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Simple file handler

@@ -68,16 +68,31 @@ class StateManager:
                 return False, None
             return True, new_state
 
+        if current_state == GameStates.HELP_MENU:
+            new_state = context.handle_input(event)
+            if new_state:
+                return True, new_state
+            return True, None
+
         if current_state == GameStates.PLAYERS_TURN:
-            context.handle_key(event)
+            new_state = context.handle_key(event)
+            if new_state:
+                return True, new_state
             return True, None
 
         if current_state == GameStates.SHOW_INVENTORY:
             context.handle_input(event)
+            # インベントリ画面は自身で状態管理するため、戻り値は無視
             return True, None
 
         if current_state == GameStates.TARGETING:
             context.handle_targeting(event)
+            return True, None
+
+        if current_state == GameStates.SYMBOL_EXPLANATION:
+            new_state = context.handle_input(event)
+            if new_state:
+                return True, new_state
             return True, None
 
         if current_state == GameStates.GAME_OVER or current_state == GameStates.VICTORY:
@@ -107,9 +122,13 @@ class StateManager:
             return GameStates.EXIT
         if current_state in (
             GameStates.SHOW_INVENTORY,
+            GameStates.SYMBOL_EXPLANATION,
             GameStates.TARGETING,
         ):
             return GameStates.PLAYERS_TURN
+        if current_state == GameStates.HELP_MENU:
+            # ヘルプ画面では前の状態に戻る（HelpMenuScreenが決定）
+            return GameStates.MENU
         return None
 
     def try_handle_with_command_handler(self, event: tcod.event.KeyDown) -> bool:

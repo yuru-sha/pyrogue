@@ -300,7 +300,7 @@ class CombatManager:
             player.max_hp += hp_gain
             player.hp += hp_gain  # HPも回復
 
-            context.add_message(f"Level up! You are now level {player.level}! " f"(+{hp_gain} HP)")
+            context.add_message(f"Level up! You are now level {player.level}! (+{hp_gain} HP)")
 
             game_logger.info(f"Player leveled up: {old_level} -> {player.level}")
 

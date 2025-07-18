@@ -9,6 +9,8 @@ PyRogueは、モダンなソフトウェアアーキテクチャの原則に基�
 
 **v0.1.0（2025年7月17日）**では、Handler Patternの導入により、さらなるモジュラー設計と拡張性を実現しました。
 
+**v0.2.0（2025年7月18日）**では、モンスターAIの大幅な改善とコードベースの最適化により、品質と性能が向上しました。大規模なリファクタリングにより、モンスターAIシステムが3つの専門マネージャー（経路探索、戦闘、行動）に分離され、保守性と拡張性が大幅に向上しました。
+
 ## アーキテクチャの基本原則
 
 ### 1. 責務分離 (Separation of Concerns)
@@ -89,7 +91,10 @@ core/
     ├── game_context.py    # 共有コンテキスト
     ├── turn_manager.py    # ターン管理
     ├── combat_manager.py  # 戦闘管理
-    └── monster_ai_manager.py # モンスターAI管理
+    ├── monster_ai_manager.py # モンスターAI統合管理（v0.2.0）
+    ├── pathfinding_manager.py # A*経路探索専門（v0.2.0）
+    ├── monster_combat_manager.py # モンスター戦闘専門（v0.2.0）
+    └── monster_behavior_manager.py # AI行動状態専門（v0.2.0）
 ```
 
 #### 2. Entities (エンティティ)
@@ -328,6 +333,128 @@ class CommandContext(Protocol):
 - **コマンド実行環境の抽象化**
 
 ## 新実装システムアーキテクチャ
+
+### 0. モンスターAI統合システム (v0.2.0)
+
+**概要**: 大規模リファクタリングにより実現された次世代モンスターAIアーキテクチャ
+
+v0.2.0では、従来の1,230行のモノリシックな`MonsterAIManager`を、責務分離の原則に基づいて3つの専門マネージャーに分割しました。
+
+```python
+class MonsterAIManager:
+    """モンスターAI統合管理システム"""
+
+    def __init__(self) -> None:
+        self._behavior_manager = MonsterBehaviorManager()
+        self._combat_manager = MonsterCombatManager()
+        self._pathfinding_manager = PathfindingManager()
+
+    def process_monster_turn(self, monster: Monster, context: GameContext) -> None:
+        # 各専門マネージャーが連携してAI処理を実行
+        current_state = self._behavior_manager.get_ai_state(monster)
+
+        if current_state in [MonsterAIState.ATTACKING, MonsterAIState.HUNTING]:
+            # 戦闘処理
+            self._combat_manager.process_combat_action(monster, context)
+
+        # 経路探索と移動
+        path = self._pathfinding_manager.find_path(
+            monster.x, monster.y, target_x, target_y, context
+        )
+        if path:
+            self._execute_movement(monster, path[0], context)
+```
+
+#### 専門マネージャー構成
+
+**1. PathfindingManager（経路探索専門）**
+- **責務**: A*アルゴリズムによる最適経路計算
+- **主要機能**:
+  - TCOD統合A*実装
+  - 経路キャッシュシステム
+  - 距離制限による性能最適化
+  - 壁・ドア・エンティティの障害物判定
+
+```python
+class PathfindingManager:
+    def find_path(self, start_x: int, start_y: int, end_x: int, end_y: int,
+                  context: GameContext, max_distance: int = 15) -> list[tuple[int, int]] | None:
+        # A*アルゴリズムによる最適経路計算
+        # キャッシュ確認 → 経路計算 → 結果キャッシュ
+```
+
+**2. MonsterCombatManager（戦闘専門）**
+- **責務**: モンスター戦闘行動とスペシャルアタック
+- **主要機能**:
+  - 遠距離攻撃判定
+  - 盗取アイテムシステム
+  - レベルドレイン効果
+  - 戦闘ダメージ計算
+
+```python
+class MonsterCombatManager:
+    def can_use_ranged_attack(self, monster: Monster, target_x: int, target_y: int) -> bool:
+        # 遠距離攻撃の可能性を判定
+
+    def _steal_item(self, monster: Monster, player: Player, context: GameContext) -> bool:
+        # アイテム盗取の特殊攻撃処理
+```
+
+**3. MonsterBehaviorManager（行動状態専門）**
+- **責務**: AI状態管理と行動決定
+- **主要機能**:
+  - 6つのAI状態管理（WANDERING, ALERTED, HUNTING, ATTACKING, FLEEING, RETURNING）
+  - 状態遷移制御
+  - 行動パターン決定
+  - 環境応答システム
+
+```python
+class MonsterBehaviorManager:
+    def get_ai_state(self, monster: Monster) -> MonsterAIState:
+        # モンスターの現在のAI状態を取得
+
+    def update_ai_state(self, monster: Monster, new_state: MonsterAIState) -> None:
+        # AI状態の更新と遷移処理
+```
+
+#### 統合されたAI特徴
+
+**アクティブエリア最適化**
+- 12タイル半径内のモンスターのみがアクティブ
+- プレイヤーから離れたモンスターは休眠状態
+- 大規模マップでのパフォーマンス向上
+
+**視界キャッシュシステム**
+- モンスターの視界計算結果をキャッシュ
+- 重複計算を避けることで処理速度向上
+- メモリ効率的な実装
+
+**モンスター連携システム**
+- 「雄叫び」による仲間への警告
+- 複数モンスターの協調攻撃
+- 集団戦術の実現
+
+#### 技術的利点
+
+**保守性の向上**
+- 各マネージャーが独立した責務を持つ
+- 機能追加・修正の影響範囲が限定的
+- デバッグ・テストが容易
+
+**拡張性の確保**
+- 新しいAI行動パターンの追加が容易
+- 特殊攻撃の追加が既存コードに影響しない
+- 新しい経路探索アルゴリズムの導入が可能
+
+**性能の最適化**
+- 専門化による処理効率向上
+- 不要な計算の削減
+- メモリ使用量の最適化
+
+**テスト可能性**
+- 各マネージャーを独立してテスト可能
+- モック化が容易
+- 単体テストのカバレッジ向上
 
 ### 1. BSPダンジョン生成システム
 
@@ -691,7 +818,7 @@ class CommonCommandHandler:
 | カテゴリ | コマンド | エイリアス | 説明 |
 |----------|----------|------------|------|
 | **移動** | move \<direction\> | north/n, south/s, east/e, west/w | 方向移動 |
-| **アクション** | get | g | アイテム取得 |
+| **アクション** | get | , | アイテム取得 |
 | | use \<item\> | u | アイテム使用 |
 | | attack | a | 攻撃 |
 | | open | o | 扉を開く |

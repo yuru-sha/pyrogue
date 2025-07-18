@@ -430,65 +430,6 @@ class StairsManager:
         """マネージャーの状態をリセット。"""
         self.stairs_placed = []
 
-    def place_stairs_for_maze(self, floor: int, tiles: np.ndarray) -> tuple[tuple[int, int], tuple[int, int]]:
-        """
-        迷路階層用の階段を配置。
-
-        Args:
-        ----
-            floor: 階層番号
-            tiles: ダンジョンのタイル配列
-
-        Returns:
-        -------
-            (上り階段位置, 下り階段位置) のタプル
-
-        """
-        # 床タイルの位置を収集
-        floor_positions = []
-        height, width = tiles.shape
-        for y in range(height):
-            for x in range(width):
-                if isinstance(tiles[y, x], Floor):
-                    floor_positions.append((x, y))
-
-        if not floor_positions:
-            game_logger.warning("No floor tiles found for maze stairs placement")
-            # 強制的に2つの位置に床を作成して階段を配置
-            height, width = tiles.shape
-            pos1 = (min(1, width - 1), min(1, height - 1))
-            pos2 = (min(2, width - 1), min(1, height - 1))
-            tiles[pos1[1], pos1[0]] = Floor()
-            tiles[pos2[1], pos2[0]] = Floor()
-            floor_positions = [pos1, pos2]
-
-        # 上り階段の配置
-        up_stairs_pos = None
-        if floor > 1:
-            up_stairs_pos = self._place_maze_stairs(floor_positions, tiles, "up")
-
-        # 下り階段の配置
-        down_stairs_pos = None
-        if floor < GameConstants.MAX_FLOORS:
-            down_stairs_pos = self._place_maze_stairs(floor_positions, tiles, "down", up_stairs_pos)
-
-        # デフォルト位置を設定
-        if not up_stairs_pos:
-            up_stairs_pos = (1, 1)
-            # デフォルト位置に床と階段を強制配置
-            if floor > 1:
-                tiles[up_stairs_pos[1], up_stairs_pos[0]] = StairsUp()
-                self.stairs_placed.append(("up", up_stairs_pos, "maze"))
-
-        if not down_stairs_pos and floor < GameConstants.MAX_FLOORS:
-            down_stairs_pos = (1, 2)
-            # デフォルト位置に床と階段を強制配置
-            tiles[down_stairs_pos[1], down_stairs_pos[0]] = StairsDown()
-            self.stairs_placed.append(("down", down_stairs_pos, "maze"))
-
-        game_logger.debug(f"Placed maze stairs: up={up_stairs_pos}, down={down_stairs_pos}")
-        return up_stairs_pos, down_stairs_pos
-
     def _place_maze_stairs(
         self,
         floor_positions: list[tuple[int, int]],

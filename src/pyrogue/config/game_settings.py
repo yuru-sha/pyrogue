@@ -42,8 +42,8 @@ class PlayerConfig:
     EXPERIENCE_MULTIPLIER: int = CombatConstants.EXP_PER_LEVEL_BASE
     MAX_HUNGER: int = HungerConstants.MAX_HUNGER
     LEVEL_UP_HP_BONUS: int = CombatConstants.HP_GAIN_PER_LEVEL
-    LEVEL_UP_ATTACK_BONUS: int = 2
-    LEVEL_UP_DEFENSE_BONUS: int = 1
+    LEVEL_UP_ATTACK_BONUS: int = 3  # 2→3: モンスター強化に対応した攻撃力成長
+    LEVEL_UP_DEFENSE_BONUS: int = 2  # 1→2: モンスター攻撃力増加に対応した防御力成長
 
 
 @dataclass

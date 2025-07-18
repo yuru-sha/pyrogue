@@ -47,4 +47,7 @@ class GameStates(Enum):
     TARGETING = auto()  # ターゲット選択モード
     LEVEL_UP = auto()  # レベルアップ時の選択
     CHARACTER_SCREEN = auto()  # キャラクター情報表示
+    HELP_MENU = auto()  # ヘルプメニュー表示
+    SYMBOL_EXPLANATION = auto()  # シンボル説明表示
+    QUICK_GUIDE = auto()  # クイックガイド表示
     EXIT = auto()  # ゲーム終了シグナル

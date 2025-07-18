@@ -49,7 +49,7 @@ class SpecialRoomBuilder:
             rooms: 部屋のリスト
 
         """
-        self.special_rooms_created: list[Room] = []
+        self.special_rooms_created = []
 
         for room in rooms:
             if self._should_create_special_room(room):

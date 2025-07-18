@@ -1,6 +1,5 @@
 """アイテムID→オブジェクト生成ファクトリーシステム"""
 
-
 from pyrogue.entities.items.amulet import AmuletOfYendor
 from pyrogue.entities.items.effects import (
     ConfusionPotionEffect,

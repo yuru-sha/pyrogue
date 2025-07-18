@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import tcod
 
 from pyrogue.core.game_logic import GameLogic
+from pyrogue.core.game_states import GameStates
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
 from pyrogue.ui.components.input_handler import InputHandler
@@ -101,7 +102,7 @@ class GameScreen:
         # 描画処理を委譲
         self.renderer.render(console)
 
-    def handle_key(self, event: tcod.event.KeyDown) -> None:
+    def handle_key(self, event: tcod.event.KeyDown) -> GameStates | None:
         """
         キー入力の処理（入力ハンドラーに委譲）。
 
@@ -109,8 +110,12 @@ class GameScreen:
         ----
             event: TCODキーイベント
 
+        Returns:
+        -------
+            新しいゲーム状態、またはNone
+
         """
-        self.input_handler.handle_key(event)
+        return self.input_handler.handle_key(event)
 
     def handle_targeting(self, event: tcod.event.KeyDown) -> None:
         """
@@ -250,12 +255,6 @@ class GameScreen:
     def process_enemy_turns(self) -> None:
         """敵のターンを処理。"""
         self.game_logic.process_enemy_turns()
-
-    def update_console(self, console) -> None:
-        """コンソールの更新（リサイズ対応）。"""
-        # 必要に応じてコンポーネントにコンソール情報を伝達
-        if hasattr(self.renderer, "update_console"):
-            self.renderer.update_console(console)
 
     # ユーティリティメソッド
     def start_targeting(self, start_x: int | None = None, start_y: int | None = None) -> None:

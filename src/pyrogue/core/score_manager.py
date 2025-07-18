@@ -92,7 +92,11 @@ class ScoreEntry:
 class ScoreManager:
     """スコアランキング管理クラス"""
 
-    def __init__(self, score_file: str = "scores.json") -> None:
+    def __init__(self, score_file: str | None = None) -> None:
+        if score_file is None:
+            from pyrogue.config.env import get_score_file_path
+
+            score_file = get_score_file_path()
         self.score_file = score_file
         self.scores: list[ScoreEntry] = []
         self.load_scores()
@@ -180,7 +184,8 @@ class ScoreManager:
         lines = ["Top Scores:"]
         lines.append("-" * 80)
         lines.append(
-            f"{'Rank':<4} {'Name':<12} {'Score':<8} {'Lv':<3} {'Floor':<5} {'Gold':<6} {'Kills':<5} {'Result':<8} {'Date':<16}"
+            f"{'Rank':<4} {'Name':<12} {'Score':<8} {'Lv':<3} "
+            f"{'Floor':<5} {'Gold':<6} {'Kills':<5} {'Result':<8} {'Date':<16}"
         )
         lines.append("-" * 80)
 

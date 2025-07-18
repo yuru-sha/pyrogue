@@ -1,150 +1,154 @@
 # PyRogue
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
 
-Python 3.12とTCODライブラリを使用した**本格的なローグライクゲーム**です。オリジナルRogueの26階層構造を忠実に再現し、手続き生成ダンジョン、ターンベース戦闘、パーマデス、探索重視のゲームプレイを提供します。
+A **full-featured roguelike game** built with Python 3.12 and TCOD library. PyRogue faithfully recreates the 26-level structure of the original Rogue, featuring procedural dungeon generation, turn-based combat, permadeath, and exploration-focused gameplay.
 
-## 完成状態
+## Completion Status
 
-PyRogueは現在、**完全に機能する本格的なローグライクゲーム**として完成しています：
+PyRogue is now complete as a **fully functional, authentic roguelike game**:
 
-- ✅ **BSPダンジョン生成システム**（RogueBasin準拠・迷路階層システム含む）
-- ✅ **高度なドア配置システム**（連続ドア防止・ランダム状態・戦術的配置）
-- ✅ **トラップ探索・解除システム**（安全な発見・解除・レベル依存成功率）
-- ✅ ターンベース戦闘・魔法・アイテムシステム
-- ✅ 状態異常・トラップシステム（幻覚システム含む）
-- ✅ 包括的なUI/UXとセーブ・ロード機能
-- ✅ **ウィザードモード**（全マップ表示・無敵・デバッグ機能）
-- ✅ 高品質なアーキテクチャ（責務分離、テスト可能性、拡張性）
-- ✅ **NPCシステム**（実装済み・現在無効化中）
-- ✅ **完全なPermadeathシステム**（真の一回限りのゲーム体験）
-- ✅ **スコアランキングシステム**（成績記録・比較）
-- ✅ **完全なアイテム識別システム**（オリジナルRogue風）
-- ✅ **多様なモンスターAI**（逃走、特殊攻撃、分裂等）
-- ✅ **強化された飢餓システム**（戦闘能力に影響するペナルティ）
+- ✅ **BSP Dungeon Generation System** (RogueBasin compliant, includes maze levels)
+- ✅ **Advanced Door Placement System** (prevents consecutive doors, random states, tactical placement)
+- ✅ **Trap Search & Disarm System** (safe discovery and disarming, level-dependent success rates)
+- ✅ Turn-based combat, magic, and item systems
+- ✅ Status effects and trap systems (including hallucination system)
+- ✅ Comprehensive UI/UX and save/load functionality
+- ✅ **Wizard Mode** (full map display, invincibility, debug features)
+- ✅ High-quality architecture (separation of concerns, testability, extensibility)
+- ✅ **NPC System** (implemented, currently disabled)
+- ✅ **Complete Permadeath System** (true one-time gaming experience)
+- ✅ **Score Ranking System** (performance recording and comparison)
+- ✅ **Complete Item Identification System** (original Rogue-style)
+- ✅ **Diverse Monster AI** (fleeing, special attacks, splitting, etc.)
+- ✅ **Enhanced Hunger System** (penalties affecting combat abilities)
+- ✅ **Optimized Monster AI** (AI state machine, A* pathfinding, cooperation system)
+- ✅ **Codebase Optimization** (type safety, quality improvement, modular structure optimization)
 
-## 特徴
+## Features
 
-### 🎯 **コアゲームプレイ**
-- **BSPダンジョン生成**: RogueBasin準拠のBinary Space Partitioning
-- **高度なドア配置**: 部屋境界突破判定・連続ドア防止・ランダム状態
-- **トラップ探索・解除**: 安全な発見・解除システム（踏まずに処理）
-- **ターンベース戦闘**: 戦略性の高い戦闘システム
-- **パーマデス**: 永続的な死による真のローグライク体験
-- **探索重視**: 隠し扉、トラップ、秘密の部屋
-- **完全なアイテム識別**: オリジナルRogue風の未識別システム
+### 🎯 **Core Gameplay**
+- **BSP Dungeon Generation**: RogueBasin-compliant Binary Space Partitioning
+- **Advanced Door Placement**: Room boundary breach detection, consecutive door prevention, random states
+- **Trap Search & Disarm**: Safe discovery and disarming system (process without stepping on traps)
+- **Turn-based Combat**: Strategic combat system
+- **Permadeath**: True roguelike experience with permanent death
+- **Exploration Focus**: Hidden doors, traps, secret rooms
+- **Complete Item Identification**: Original Rogue-style unidentified system
 
-### 🏗️ **高度なゲームシステム**
-- **⭐NPCシステム**: 実装済み（現在無効化中・将来の拡張用）
-- **⭐多様なモンスターAI**: 逃走、特殊攻撃、分裂、盗取等
-- **⭐強化された飢餓システム**: 戦闘能力に影響するペナルティ
-- **⭐幻覚システム**: 視覚混乱による表示変化
-- **⭐スコアランキング**: 成績記録・比較システム
-- **⭐完全なPermadeath**: 真の一回限りのゲーム体験
+### 🏗️ **Advanced Game Systems**
+- **⭐NPC System**: Implemented (currently disabled for future expansion)
+- **⭐Diverse Monster AI**: Fleeing, special attacks, splitting, theft, etc.
+- **⭐Enhanced Hunger System**: Penalties affecting combat abilities
+- **⭐Hallucination System**: Visual confusion with display changes
+- **⭐Score Ranking**: Performance recording and comparison system
+- **⭐Complete Permadeath**: True one-time gaming experience
 
-### 🔧 **技術的特徴**
-- **CLI/GUIデュアルモード**: 開発効率とユーザビリティを両立
-- **ウィザードモード**: 完全なデバッグ環境（可視化・無敵・操作機能）
-- **包括的テスト**: 26個のテストファイル
-- **高品質アーキテクチャ**: Builder Pattern、責務分離
-- **完全な型ヒント**: 高い保守性と開発効率
+### 🔧 **Technical Features**
+- **CLI/GUI Dual Mode**: Balances development efficiency and usability
+- **Wizard Mode**: Complete debug environment (visualization, invincibility, operation features)
+- **Comprehensive Testing**: 285 unit tests + 25 CLI integration tests (100% success)
+- **High-quality Architecture**: Handler Pattern, separation of concerns, single responsibility principle
+- **Complete Type Hints**: High maintainability and development efficiency, mypy compliant
+- **Optimized AI**: State machine, A* pathfinding, cooperation system
+- **Codebase Optimization**: 32,360 lines, 185 classes, 1,351 methods
 
-## 技術スタック
+## Technology Stack
 
-- **Python 3.12**: 最新のPython機能を活用
-- **TCOD >=19.0.0**: 描画、入力処理、視界計算
-- **NumPy >=1.26.3**: 数値計算・配列操作
-- **UV**: 高速パッケージ管理
+- **Python 3.12**: Leverages latest Python features
+- **TCOD >=19.0.0**: Rendering, input processing, field of view calculations
+- **NumPy >=1.26.3**: Numerical computation and array operations
+- **UV**: Fast package management
 
-## 必要条件
+## Requirements
 
 - Python 3.12
-- uv (パッケージマネージャー)
+- uv (package manager)
 
-## インストール
+## Installation
 
-### 環境構築
+### Environment Setup
 ```bash
-# 初回セットアップ（仮想環境の作成と依存関係のインストール）
+# Initial setup (create virtual environment and install dependencies)
 make setup
 
-# 開発依存関係のインストール
+# Install development dependencies
 make setup-dev
 ```
 
-### ゲーム実行
+### Running the Game
 ```bash
-# ゲーム実行（リリースモード）
+# Run game (release mode)
 make run
 
-# デバッグモードでの実行
+# Run in debug mode
 DEBUG=1 make run
 ```
 
-## 開発者向け
+## For Developers
 
-### 開発ワークフロー
+### Development Workflow
 ```bash
-# テスト実行
+# Run tests
 make test
 
-# CI検証（リント・型チェック・テスト）
+# CI validation (lint, type check, test)
 make ci-checks
 ```
 
-### 開発ツール
-開発環境には以下のツールが含まれています：
+### Development Tools
+The development environment includes the following tools:
 
-- **ruff**: コードフォーマッター・リンター
-- **mypy**: 型チェック
-- **pytest**: テスト実行・カバレッジ計測
+- **ruff**: Code formatter and linter
+- **mypy**: Type checking
+- **pytest**: Test execution and coverage measurement
 
-詳細な開発者向けガイドは[docs/development.md](docs/development.md)を参照してください。
+For detailed developer guide, see [docs/development.md](docs/development.md).
 
-## 操作方法
+## Controls
 
-### 基本移動
-- **Vi-keys**: hjkl + 対角線移動 (yubn)
-- **矢印キー**: 標準的な方向移動
-- **テンキー**: 1-9による移動（対角線含む）
+### Basic Movement
+- **Vi-keys**: hjkl + diagonal movement (yubn)
+- **Arrow keys**: Standard directional movement
+- **Numpad**: 1-9 for movement (including diagonals)
 
-### アクション
-- **g**: アイテム取得
-- **i**: インベントリ画面
-- **w**: 装備画面
-- **q**: アイテム使用
-- **o**: 扉を開く
-- **c**: 扉を閉じる
-- **s**: 隠し扉の探索
-- **d**: トラップ解除
-- **z**: 魔法書（spellbook）
-- **t**: NPCとの対話（現在無効化中）
-- **Tab**: FOV表示切り替え
-- **?**: ヘルプ
+### Actions
+- **,**: Pick up items
+- **i**: Inventory screen
+- **w**: Equipment screen
+- **q**: Use item
+- **o**: Open door
+- **c**: Close door
+- **s**: Search for hidden doors
+- **d**: Disarm trap
+- **z**: Spellbook
+- **t**: Talk to NPC (currently disabled)
+- **Tab**: Toggle FOV display
+- **?**: Help
 
-### セーブ・ロード
-- **Ctrl+S**: ゲームセーブ
-- **Ctrl+L**: ゲームロード
+### Save/Load
+- **Ctrl+S**: Save game
+- **Ctrl+L**: Load game
 
-## アーキテクチャ概要
+## Architecture Overview
 
-PyRogueは高品質なアーキテクチャを採用しています：
+PyRogue employs a high-quality architecture:
 
-### 設計原則
-- **責務分離**: 各クラスが単一責任を持つ
-- **テスト可能性**: 依存関係注入、モックしやすい設計
-- **拡張性**: 新機能の追加が容易
-- **保守性**: 明確な型ヒント、包括的なドキュメント
+### Design Principles
+- **Separation of Concerns**: Each class has a single responsibility
+- **Testability**: Dependency injection, easily mockable design
+- **Extensibility**: Easy addition of new features
+- **Maintainability**: Clear type hints, comprehensive documentation
 
-### 主要コンポーネント
-- **Core**: ゲームエンジン、状態管理、入力処理
-- **Entities**: プレイヤー、モンスター、アイテム、魔法、トラップ
-- **Map**: ダンジョン生成、タイル定義、階層管理
-- **UI**: スクリーンシステム、描画処理、ユーザーインターフェース
+### Major Components
+- **Core**: Game engine, state management, input processing
+- **Entities**: Player, monsters, items, magic, traps
+- **Map**: Dungeon generation, tile definitions, floor management
+- **UI**: Screen system, rendering, user interface
 
-### 設計パターン
-- **Builder Pattern**: ダンジョン生成の段階的構築
-- **Manager Pattern**: 機能を管理クラスに分割
-- **State Pattern**: ゲーム状態の明確な管理
-- **Command Pattern**: 状態異常・魔法効果の実行
+### Design Patterns
+- **Builder Pattern**: Stepwise dungeon generation construction
+- **Manager Pattern**: Dividing functionality into manager classes
+- **State Pattern**: Clear game state management
+- **Command Pattern**: Status effects and magic effect execution
 
-詳細なアーキテクチャ情報は[docs/architecture.md](docs/architecture.md)を参照してください。
+For detailed architecture information, see [docs/architecture.md](docs/architecture.md).

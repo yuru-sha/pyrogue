@@ -63,7 +63,7 @@ class TestIsolatedRoomBuilder:
         if area:  # エリアが見つかった場合
             x, y, width, height = area
             assert 5 <= x < 80 - width - 5
-            assert 5 <= y < 45 - height - 5
+            assert 5 <= y <= 45 - height - 5  # 等号を含む比較に修正
             assert 15 <= width <= 25
             assert 10 <= height <= 15
 

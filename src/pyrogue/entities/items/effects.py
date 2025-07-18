@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from pyrogue.entities.actors.player import Player
-    from pyrogue.map.dungeon import Dungeon
+    from pyrogue.map.dungeon_manager import DungeonManager
     from pyrogue.ui.screens.game_screen import GameScreen
 
 from pyrogue.entities.actors.status_effects import (
@@ -44,7 +44,7 @@ class EffectContext(Protocol):
         ...
 
     @property
-    def dungeon(self) -> "Dungeon":
+    def dungeon(self) -> "DungeonManager":
         """Access to the current dungeon."""
         ...
 

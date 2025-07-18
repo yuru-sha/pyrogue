@@ -125,6 +125,9 @@ class CommonCommandHandler:
             return self._handle_wear(args)
         if command in ["zap", "z"]:
             return self._handle_zap(args)
+
+        if command in ["quaff", "q"]:
+            return self._handle_quaff(args)
         if command in ["auto_explore", "O"]:
             return self._get_auto_explore_handler().handle_auto_explore()
 
@@ -152,7 +155,7 @@ class CommonCommandHandler:
             return self._get_debug_handler().handle_debug_command(args)
 
         # システムコマンド
-        if command in ["quit", "exit", "q"]:
+        if command in ["quit", "exit"]:
             return CommandResult(True, "Goodbye!", should_quit=True)
         if command == "help":
             return self._handle_help()
@@ -275,7 +278,7 @@ Available Commands:
     move <direction> - Move in specified direction
 
   Actions:
-    get/g - Pick up item
+    get/, - Pick up item
     use <item> - Use item from inventory
     attack/a - Attack nearby enemy
     stairs <up/down> - Use stairs
@@ -289,6 +292,7 @@ Available Commands:
     throw/t <item> - Throw item
     wear/w <item> - Wear/equip item
     zap/z <wand> <direction> - Zap wand in direction
+    quaff/q <potion> - Drink potion
     auto_explore/O - Auto-explore unexplored areas
 
   Information:
@@ -300,11 +304,15 @@ Available Commands:
     character_details/@ - Show detailed character info
     last_message/ctrl_m - Show recent messages
 
+  Special Monsters:
+    Dream Eater (@) - Causes hallucinations, psychic attacks
+    Phantom Fungus (f) - Spore attacks, causes confusion
+
   System:
     help - Show this help
     save/s - Save game
     load - Load game
-    quit/exit/q - Quit game
+    quit/exit - Quit game
 
   Debug:
     debug yendor - Get Amulet of Yendor
@@ -492,6 +500,48 @@ Available Commands:
             self.context.add_message(f"You zap the {wand_to_use.name} {direction}.")
             return CommandResult(True, should_end_turn=True)
         return CommandResult(False, f"The {wand_to_use.name} fizzles.")
+
+    def _handle_quaff(self, args: list[str]) -> CommandResult:
+        """ポーションを飲む（quaff）コマンドの処理。"""
+        inventory = self.context.game_logic.inventory
+
+        # 引数が指定されている場合、その名前のポーションを検索
+        if args:
+            potion_name = " ".join(args)
+            potion_to_use = None
+            for item in inventory.items:
+                if (
+                    item.name.lower() == potion_name.lower()
+                    and hasattr(item, "item_type")
+                    and item.item_type == "POTION"
+                ):
+                    potion_to_use = item
+                    break
+
+            if not potion_to_use:
+                return CommandResult(False, f"You don't have a potion called {potion_name}")
+        else:
+            # 引数が指定されていない場合、最初のポーションを使用
+            potion_items = [
+                item for item in inventory.items if hasattr(item, "item_type") and item.item_type == "POTION"
+            ]
+
+            if not potion_items:
+                return CommandResult(False, "You have no potions to quaff.")
+
+            potion_to_use = potion_items[0]
+
+        # ポーションを使用
+        message = potion_to_use.use()
+        self.context.add_message(message)
+
+        # ポーションの効果を適用
+        potion_to_use.apply_effect(self.context)
+
+        # インベントリからポーションを削除
+        inventory.remove_item(potion_to_use)
+
+        return CommandResult(True, should_end_turn=True)
 
     def _get_direction_name(self, dx: int, dy: int) -> str:
         """方向名を取得。"""

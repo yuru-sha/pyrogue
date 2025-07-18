@@ -30,6 +30,9 @@ class GameConstants:
     DEFAULT_FOV_RADIUS: int = 8
     MAX_FOV_RADIUS: int = 20
 
+    # AI最適化関連
+    AI_ACTIVE_AREA_RADIUS: int = 12  # アクティブエリアの半径
+
     # UI関連
     STATUS_PANEL_HEIGHT: int = 7
     MESSAGE_LOG_SIZE: int = 3
@@ -86,10 +89,10 @@ class CombatConstants:
     HALLUCINATION_EFFECT_CHANCE: float = 0.3  # 幻覚効果発動確率
     GOLD_DROP_CHANCE: float = 0.3  # 金貨ドロップ確率
 
-    # レベルアップ
+    # レベルアップ（モンスター強化に対応した成長バランス調整）
     EXP_PER_LEVEL_BASE: int = 100
     EXP_LEVEL_MULTIPLIER: float = 1.5
-    HP_GAIN_PER_LEVEL: int = 5
+    HP_GAIN_PER_LEVEL: int = 8  # 5→8: モンスターのダメージ増加に対応
 
     # 攻撃・防御
     MIN_DAMAGE: int = 1
@@ -131,7 +134,7 @@ class HungerConstants:
 
     # 満腹度減少
     HUNGER_DECREASE_RATE: int = 1  # ターンあたりの減少量
-    HUNGER_DECREASE_INTERVAL: int = 12  # 減少間隔（ターン）- バランス調整で緩和
+    HUNGER_DECREASE_INTERVAL: int = 14  # 減少間隔（ターン）- バランス調整で緩和
 
     # 餓死ダメージ
     STARVING_DAMAGE: int = 1

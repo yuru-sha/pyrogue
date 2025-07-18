@@ -104,8 +104,8 @@ class MonsterSpawner:
             monster_table = self._get_return_journey_monsters()
         else:
             # 階層に応じたモンスター出現テーブルを取得
-            level = min(self.dungeon_level, 15)  # 15階以降は15階の設定を使用
-            monster_table = FLOOR_MONSTERS.get(level, FLOOR_MONSTERS[15])
+            level = min(self.dungeon_level, 26)  # 26階以降は26階の設定を使用
+            monster_table = FLOOR_MONSTERS.get(level, FLOOR_MONSTERS[26])
 
         # 出現確率に基づいてモンスターを選択
         total = sum(prob for _, prob in monster_table)
@@ -156,44 +156,42 @@ class MonsterSpawner:
         if self.dungeon_level <= 5:
             # B1F-B5F: AMULET奪還のための最強クラスの総攻撃！地上に近いほど最凶
             return [
-                ("dragon", 50),  # ドラゴン（大幅増加）
-                ("phantom", 50),  # ファントム（大幅増加）
-                ("medusa", 45),  # メデューサ（大幅増加）
-                ("wraith", 45),  # レイス（大幅増加）
-                ("vampire", 50),  # ヴァンパイア（大幅増加）
-                ("troll", 40),  # トロル（大幅増加）
-                ("lich", 35),  # リッチ（大幅増加）
-                ("demon", 35),  # デーモン（大幅増加）
-                ("griffin", 30),  # グリフィン（上位追加）
-                ("manticore", 25),  # マンティコア（追加）
+                ("JABBERWOCK", 60),  # 最強モンスター（大幅増加）
+                ("DRAGON", 55),  # ドラゴン（大幅増加）
+                ("GRIFFIN", 50),  # グリフィン（上位モンスター）
+                ("PHANTOM", 45),  # ファントム（大幅増加）
+                ("VAMPIRE", 45),  # ヴァンパイア（大幅増加）
+                ("UR_VILE", 40),  # ウル・ヴィル（魔法使い）
+                ("MEDUSA", 35),  # メデューサ（石化攻撃）
+                ("TROLL", 30),  # トロル（大幅増加）
+                ("WRAITH", 25),  # レイス（レベル下げ）
             ]
         if self.dungeon_level <= 10:
             # B6F-B10F: AMULET奪還のための第二波総攻撃！最強クラス中心
             return [
-                ("dragon", 45),  # ドラゴン（最強クラス中心）
-                ("phantom", 45),  # ファントム（最強クラス中心）
-                ("medusa", 40),  # メデューサ（大幅増加）
-                ("wraith", 40),  # レイス（大幅増加）
-                ("vampire", 45),  # ヴァンパイア（大幅増加）
-                ("troll", 35),  # トロル（大幅増加）
-                ("lich", 30),  # リッチ（上位から追加）
-                ("demon", 30),  # デーモン（上位から追加）
-                ("griffin", 35),  # グリフィン（大幅増加）
-                ("manticore", 20),  # マンティコア（上位から追加）
+                ("JABBERWOCK", 50),  # 最強モンスター（中心）
+                ("DRAGON", 50),  # ドラゴン（最強クラス中心）
+                ("GRIFFIN", 45),  # グリフィン（大幅増加）
+                ("PHANTOM", 40),  # ファントム（大幅増加）
+                ("VAMPIRE", 40),  # ヴァンパイア（大幅増加）
+                ("UR_VILE", 35),  # ウル・ヴィル（魔法使い）
+                ("MEDUSA", 30),  # メデューサ（大幅増加）
+                ("TROLL", 25),  # トロル（大幅増加）
+                ("WRAITH", 20),  # レイス（大幅増加）
+                ("XEROC", 15),  # ゼロック（分裂型）
             ]
         # B11F-B15F: AMULET奪還のための深層からの追撃！最強クラス混合
         return [
-            ("dragon", 35),  # ドラゴン（深層でも最強維持）
-            ("phantom", 35),  # ファントム（深層でも最強維持）
-            ("medusa", 30),  # メデューサ（強化）
-            ("wraith", 30),  # レイス（強化）
-            ("vampire", 35),  # ヴァンパイア（強化）
-            ("troll", 25),  # トロル（強化）
-            ("lich", 25),  # リッチ（強化）
-            ("demon", 25),  # デーモン（強化）
-            ("griffin", 30),  # グリフィン（強化）
-            ("ogre", 20),  # オーガ（従来の強敵）
-            ("centaur", 15),  # ケンタウロス（従来の強敵）
+            ("JABBERWOCK", 40),  # 最強モンスター（深層維持）
+            ("DRAGON", 35),  # ドラゴン（深層でも最強維持）
+            ("GRIFFIN", 35),  # グリフィン（強化）
+            ("PHANTOM", 30),  # ファントム（強化）
+            ("VAMPIRE", 30),  # ヴァンパイア（強化）
+            ("UR_VILE", 25),  # ウル・ヴィル（強化）
+            ("MEDUSA", 25),  # メデューサ（強化）
+            ("TROLL", 20),  # トロル（強化）
+            ("WRAITH", 15),  # レイス（強化）
+            ("CENTAUR", 10),  # ケンタウロス（従来の強敵）
         ]
 
     def _count_floor_tiles(self, dungeon_tiles: np.ndarray) -> int:

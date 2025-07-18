@@ -684,7 +684,7 @@ class CLIEngine:
         """利用可能なコマンドを表示。"""
         print("\nAvailable Commands:")
         print("  move <direction>  - Move player (north/south/east/west/n/s/e/w)")
-        print("  get               - Pick up item at current position")
+        print("  get               - Pick up item at current position (, key)")
         print("  stairs <up/down>  - Use stairs (up/down)")
         print("  inventory         - Show inventory")
         print("  status            - Show player status")

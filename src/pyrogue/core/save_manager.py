@@ -25,6 +25,10 @@ from typing import Any
 from pyrogue.utils.logger import game_logger
 
 
+class SaveError(Exception):
+    """セーブ・ロード処理で発生するエラー。"""
+
+
 class SaveManager:
     """
     セーブ/ロード機能を管理するクラス。
@@ -85,7 +89,7 @@ class SaveManager:
             # メタデータを作成
             metadata = {
                 "save_time": time.time(),
-                "save_version": "1.0",
+                "save_version": "0.2.0",
                 "player_level": game_data.get("player_stats", {}).get("level", 1),
                 "current_floor": game_data.get("current_floor", 1),
                 "player_hp": game_data.get("player_stats", {}).get("hp", 20),
@@ -111,7 +115,7 @@ class SaveManager:
             try:
                 with open(self.metadata_file, "w") as f:
                     json.dump(metadata, f, indent=2)
-            except (OSError, PermissionError, json.JSONEncodeError) as e:
+            except (OSError, PermissionError, json.JSONDecodeError) as e:
                 raise SaveError(f"Failed to save metadata: {e}") from e
 
             # セーブファイルのチェックサムを計算・保存
@@ -206,7 +210,7 @@ class SaveManager:
         try:
             # プレイヤーオブジェクトからMP関連属性を削除
             if "player" in game_data:
-                player = game_data["player"]
+                game_data["player"]
                 # if hasattr(player, "mp"):
                 #     delattr(player, "mp")
                 #     game_logger.debug("Removed legacy 'mp' attribute from player")

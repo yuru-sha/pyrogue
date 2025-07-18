@@ -1,8 +1,8 @@
 """
-モンスターAI管理コンポーネント。
+リファクタリング済みモンスターAI管理コンポーネント。
 
-このモジュールは、GameLogicから分離されたモンスターAIシステムを担当します。
-モンスターの行動決定、プレイヤー追跡、ランダム移動、視界判定を管理します。
+このモジュールは、分離されたマネージャーを統合してモンスターAIシステムを提供します。
+責務分離により、保守性と拡張性が向上しています。
 """
 
 from __future__ import annotations
@@ -10,8 +10,12 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from pyrogue.constants import CombatConstants, ProbabilityConstants
+from pyrogue.constants import CombatConstants, GameConstants
+from pyrogue.core.managers.monster_behavior_manager import MonsterAIState, MonsterBehaviorManager
+from pyrogue.core.managers.monster_combat_manager import MonsterCombatManager
+from pyrogue.core.managers.pathfinding_manager import PathfindingManager
 from pyrogue.utils import game_logger
+from pyrogue.utils.coordinate_utils import calculate_distance, get_direction_to_target, has_line_of_sight
 
 if TYPE_CHECKING:
     from pyrogue.core.managers.game_context import GameContext
@@ -20,14 +24,22 @@ if TYPE_CHECKING:
 
 class MonsterAIManager:
     """
-    モンスターAIシステムの管理クラス。
+    リファクタリング済みモンスターAIシステムの管理クラス。
 
-    モンスターの行動決定、プレイヤー追跡、
-    ランダム移動、視界判定を担当します。
+    分離されたマネージャーを統合し、モンスターの行動決定、
+    プレイヤー追跡、戦闘、経路探索を管理します。
     """
 
     def __init__(self) -> None:
         """モンスターAIマネージャーを初期化。"""
+        # 専門マネージャーの初期化
+        self._behavior_manager = MonsterBehaviorManager()
+        self._combat_manager = MonsterCombatManager()
+        self._pathfinding_manager = PathfindingManager()
+
+        # パフォーマンス最適化用の視界キャッシュ
+        self._vision_cache: dict[tuple[int, int], bool] = {}
+        self._last_player_position: tuple[int, int] = (-1, -1)
 
     def process_monster_ai(self, monster: Monster, context: GameContext) -> None:
         """
@@ -39,8 +51,6 @@ class MonsterAIManager:
             context: ゲームコンテキスト
 
         """
-        player = context.player
-
         # モンスターが行動可能かチェック
         if not self._can_monster_act(monster):
             return
@@ -49,36 +59,158 @@ class MonsterAIManager:
         if hasattr(monster, "special_ability_cooldown") and monster.special_ability_cooldown > 0:
             monster.special_ability_cooldown -= 1
 
-        # 逃走判定
+        # モンスターIDを取得（状態管理用）
+        monster_id = id(monster)
+
+        # 現在の状態を取得（初回はWANDERING）
+        current_state = self._behavior_manager.get_monster_state(monster_id)
+
+        # 状態に基づいたAI処理
+        self._process_monster_ai_by_state(monster, current_state, context)
+
+    def _process_monster_ai_by_state(self, monster: Monster, state: MonsterAIState, context: GameContext) -> None:
+        """
+        状態に基づいたモンスターAI処理。
+
+        Args:
+        ----
+            monster: 処理するモンスター
+            state: 現在のAI状態
+            context: ゲームコンテキスト
+
+        """
+        player = context.player
+        monster_id = id(monster)
+
+        # 逃走判定（全状態で優先）
         if self._should_flee(monster):
-            self._flee_from_player(monster, player, context)
+            self._behavior_manager.set_monster_state(monster_id, MonsterAIState.FLEEING)
+            self._behavior_manager.process_fleeing_state(monster, context)
             return
 
-        # プレイヤーが見えるかチェック
-        can_see_player = self._can_monster_see_player(monster, player, context)
+        # プレイヤーが見えるかチェック（キャッシュ付き）
+        can_see_player = self._can_monster_see_player_cached(monster, player, context)
+        distance = calculate_distance(monster.x, monster.y, player.x, player.y)
 
+        if state == MonsterAIState.WANDERING:
+            self._behavior_manager.process_wandering_state(monster, can_see_player, distance, context)
+        elif state == MonsterAIState.ALERTED:
+            self._behavior_manager.process_alerted_state(monster, can_see_player, distance, context)
+        elif state == MonsterAIState.HUNTING:
+            self._process_hunting_state(monster, can_see_player, distance, context)
+        elif state == MonsterAIState.ATTACKING:
+            self._process_attacking_state(monster, can_see_player, distance, context)
+        elif state == MonsterAIState.FLEEING:
+            self._behavior_manager.process_fleeing_state(monster, context)
+        elif state == MonsterAIState.RETURNING:
+            self._behavior_manager.process_returning_state(monster, can_see_player, context)
+
+    def _process_hunting_state(
+        self, monster: Monster, can_see_player: bool, distance: float, context: GameContext
+    ) -> None:
+        """追跡状態の処理。"""
+        # 行動管理処理
+        self._behavior_manager.process_hunting_state(monster, can_see_player, distance, context)
+
+        # 攻撃状態に遷移した場合は攻撃処理
+        monster_id = id(monster)
+        if self._behavior_manager.get_monster_state(monster_id) == MonsterAIState.ATTACKING:
+            self._process_attacking_state(monster, can_see_player, distance, context)
+            return
+
+        # 追跡継続
         if can_see_player:
             # 遠距離攻撃可能かチェック
-            if self._can_use_ranged_attack(monster, player):
-                self._use_ranged_attack(monster, player, context)
-                return
+            if self._combat_manager.can_use_ranged_attack(monster, context.player):
+                self._combat_manager.use_ranged_attack(monster, context.player, context)
+            else:
+                # プレイヤーを追跡
+                self._chase_player(monster, context.player, context)
 
-            # 隣接している場合は特殊攻撃またはメレー攻撃
-            if (
-                self._calculate_distance(monster.x, monster.y, player.x, player.y)
-                <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD
-            ):
-                if self._can_use_special_attack(monster):
-                    self._use_special_attack(monster, player, context)
-                else:
-                    self._monster_attack_player(monster, context)
-                return
+    def _process_attacking_state(
+        self, monster: Monster, can_see_player: bool, distance: float, context: GameContext
+    ) -> None:
+        """攻撃状態の処理。"""
+        # 行動管理処理
+        self._behavior_manager.process_attacking_state(monster, can_see_player, distance, context)
 
-            # プレイヤーを追跡
-            self._chase_player(monster, player, context)
-        # ランダム移動
-        elif random.random() < ProbabilityConstants.MONSTER_MOVE_CHANCE:
-            self._random_move(monster, context)
+        # 攻撃実行
+        if can_see_player and distance <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD:
+            if self._combat_manager.can_use_special_attack(monster):
+                self._combat_manager.use_special_attack(monster, context.player, context)
+            else:
+                self._monster_attack_player(monster, context)
+
+    def _chase_player(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        モンスターがプレイヤーを追跡。
+
+        Args:
+        ----
+            monster: 追跡するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        # プレイヤーとの距離が1の場合は攻撃
+        if calculate_distance(monster.x, monster.y, player.x, player.y) <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD:
+            self._monster_attack_player(monster, context)
+            return
+
+        # 混乱状態の場合はランダム方向
+        if self._is_confused(monster):
+            dx = random.randint(-1, 1)
+            dy = random.randint(-1, 1)
+            self._behavior_manager.try_move_monster(monster, dx, dy, context)
+            return
+
+        # 高度な経路探索を試行
+        if self._use_pathfinding(monster, player, context):
+            return
+
+        # フォールバック: 単純な直線移動
+        self._move_towards_player_simple(monster, player, context)
+
+    def _use_pathfinding(self, monster: Monster, player, context: GameContext) -> bool:
+        """
+        経路探索を使用してプレイヤーを追跡。
+
+        Args:
+        ----
+            monster: 追跡するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        Returns:
+        -------
+            経路探索に成功した場合True
+
+        """
+        # 経路を探索
+        path = self._pathfinding_manager.find_path(monster.x, monster.y, player.x, player.y, context)
+
+        if path and len(path) > 1:
+            # 次の位置に移動
+            next_pos = path[1]
+            dx = next_pos[0] - monster.x
+            dy = next_pos[1] - monster.y
+            return self._behavior_manager.try_move_monster(monster, dx, dy, context)
+
+        return False
+
+    def _move_towards_player_simple(self, monster: Monster, player, context: GameContext) -> None:
+        """
+        単純な直線移動でプレイヤーに向かう。
+
+        Args:
+        ----
+            monster: 移動するモンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        """
+        dx, dy = get_direction_to_target(monster.x, monster.y, player.x, player.y)
+        self._behavior_manager.try_move_monster(monster, dx, dy, context)
 
     def _can_monster_act(self, monster: Monster) -> bool:
         """
@@ -106,6 +238,33 @@ class MonsterAIManager:
 
         return True
 
+    def _can_monster_see_player_cached(self, monster: Monster, player, context: GameContext) -> bool:
+        """
+        モンスターがプレイヤーを見ることができるかキャッシュ付きでチェック。
+
+        Args:
+        ----
+            monster: モンスター
+            player: プレイヤー
+            context: ゲームコンテキスト
+
+        Returns:
+        -------
+            プレイヤーが見える場合True
+
+        """
+        monster_pos = (monster.x, monster.y)
+
+        # キャッシュから結果を取得
+        if monster_pos in self._vision_cache:
+            return self._vision_cache[monster_pos]
+
+        # キャッシュにない場合は計算
+        can_see = self._can_monster_see_player(monster, player, context)
+        self._vision_cache[monster_pos] = can_see
+
+        return can_see
+
     def _can_monster_see_player(self, monster: Monster, player, context: GameContext) -> bool:
         """
         モンスターがプレイヤーを見ることができるかチェック。
@@ -122,236 +281,44 @@ class MonsterAIManager:
 
         """
         # 距離チェック（視界範囲内か）
-        distance = self._calculate_distance(monster.x, monster.y, player.x, player.y)
+        distance = calculate_distance(monster.x, monster.y, player.x, player.y)
         sight_range = getattr(monster, "sight_range", 8)  # デフォルト視界範囲
 
         if distance > sight_range:
             return False
 
         # 障害物チェック（壁越しには見えない）
-        return self._has_line_of_sight(monster.x, monster.y, player.x, player.y, context)
+        return has_line_of_sight(monster.x, monster.y, player.x, player.y, context)
 
-    def _calculate_distance(self, x1: int, y1: int, x2: int, y2: int) -> float:
+    def _should_flee(self, monster: Monster) -> bool:
         """
-        2点間の距離を計算。
+        モンスターが逃走すべきかチェック。
 
         Args:
         ----
-            x1, y1: 点1の座標
-            x2, y2: 点2の座標
+            monster: チェック対象のモンスター
 
         Returns:
         -------
-            ユークリッド距離
+            逃走すべき場合True
 
         """
-        return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
+        return self._behavior_manager._should_flee(monster)
 
-    def _has_line_of_sight(self, x1: int, y1: int, x2: int, y2: int, context: GameContext) -> bool:
+    def _is_confused(self, monster: Monster) -> bool:
         """
-        2点間に視界があるかチェック。
+        モンスターが混乱状態かチェック。
 
         Args:
         ----
-            x1, y1: 開始点の座標
-            x2, y2: 終了点の座標
-            context: ゲームコンテキスト
+            monster: チェック対象のモンスター
 
         Returns:
         -------
-            視界がある場合True
+            混乱状態の場合True
 
         """
-        floor_data = context.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # ブレゼンハム線分アルゴリズムで視界チェック
-        points = self._get_line_points(x1, y1, x2, y2)
-
-        for x, y in points[1:-1]:  # 開始点と終了点は除外
-            if 0 <= y < floor_data.tiles.shape[0] and 0 <= x < floor_data.tiles.shape[1]:
-                tile = floor_data.tiles[y, x]
-                if not getattr(tile, "transparent", True):
-                    return False
-
-        return True
-
-    def _get_line_points(self, x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]:
-        """
-        ブレゼンハム線分アルゴリズムで線上の点を取得。
-
-        Args:
-        ----
-            x1, y1: 開始点の座標
-            x2, y2: 終了点の座標
-
-        Returns:
-        -------
-            線上の点のリスト
-
-        """
-        points = []
-        dx = abs(x2 - x1)
-        dy = abs(y2 - y1)
-        x, y = x1, y1
-        x_inc = 1 if x1 < x2 else -1
-        y_inc = 1 if y1 < y2 else -1
-        error = dx - dy
-
-        while True:
-            points.append((x, y))
-            if x == x2 and y == y2:
-                break
-
-            e2 = 2 * error
-            if e2 > -dy:
-                error -= dy
-                x += x_inc
-            if e2 < dx:
-                error += dx
-                y += y_inc
-
-        return points
-
-    def _chase_player(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        モンスターがプレイヤーを追跡。
-
-        Args:
-        ----
-            monster: 追跡するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        # プレイヤーとの距離が1の場合は攻撃
-        if (
-            self._calculate_distance(monster.x, monster.y, player.x, player.y)
-            <= CombatConstants.ADJACENT_DISTANCE_THRESHOLD
-        ):
-            self._monster_attack_player(monster, context)
-            return
-
-        # プレイヤーに向かって移動
-        dx = 0
-        dy = 0
-
-        if monster.x < player.x:
-            dx = 1
-        elif monster.x > player.x:
-            dx = -1
-
-        if monster.y < player.y:
-            dy = 1
-        elif monster.y > player.y:
-            dy = -1
-
-        # 混乱状態の場合はランダム方向
-        if self._is_confused(monster):
-            dx = random.randint(-1, 1)
-            dy = random.randint(-1, 1)
-
-        # 移動実行
-        self._try_move_monster(monster, dx, dy, context)
-
-    def _random_move(self, monster: Monster, context: GameContext) -> None:
-        """
-        モンスターがランダムに移動。
-
-        Args:
-        ----
-            monster: 移動するモンスター
-            context: ゲームコンテキスト
-
-        """
-        # ランダムな方向を選択
-        dx = random.randint(-1, 1)
-        dy = random.randint(-1, 1)
-
-        # 移動実行
-        self._try_move_monster(monster, dx, dy, context)
-
-    def _try_move_monster(self, monster: Monster, dx: int, dy: int, context: GameContext) -> bool:
-        """
-        モンスターの移動を試行。
-
-        Args:
-        ----
-            monster: 移動するモンスター
-            dx: X方向の移動量
-            dy: Y方向の移動量
-            context: ゲームコンテキスト
-
-        Returns:
-        -------
-            移動が成功した場合True
-
-        """
-        new_x = monster.x + dx
-        new_y = monster.y + dy
-
-        # 移動可能かチェック
-        if self._can_monster_move_to(new_x, new_y, context):
-            # MonsterSpawnerの占有位置も更新
-            floor_data = context.get_current_floor_data()
-            if hasattr(floor_data, "monster_spawner"):
-                spawner = floor_data.monster_spawner
-                # 古い位置を削除
-                old_pos = (monster.x, monster.y)
-                if old_pos in spawner.occupied_positions:
-                    spawner.occupied_positions.remove(old_pos)
-
-                # 新しい位置を追加
-                spawner.occupied_positions.add((new_x, new_y))
-
-            # モンスターの位置を更新
-            monster.x = new_x
-            monster.y = new_y
-            return True
-
-        return False
-
-    def _can_monster_move_to(self, x: int, y: int, context: GameContext) -> bool:
-        """
-        モンスターが指定座標に移動可能かチェック。
-
-        Args:
-        ----
-            x: 目標X座標
-            y: 目標Y座標
-            context: ゲームコンテキスト
-
-        Returns:
-        -------
-            移動可能な場合True
-
-        """
-        floor_data = context.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 境界チェック
-        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
-            return False
-
-        # タイルチェック
-        tile = floor_data.tiles[y, x]
-        if not getattr(tile, "walkable", False):
-            return False
-
-        # プレイヤーの位置チェック
-        player = context.player
-        if player.x == x and player.y == y:
-            return False
-
-        # 他のモンスターとの重複チェック
-        if hasattr(floor_data, "monster_spawner"):
-            for other_monster in floor_data.monster_spawner.monsters:
-                if other_monster.x == x and other_monster.y == y:
-                    return False
-
-        return True
+        return self._behavior_manager._is_confused(monster)
 
     def _monster_attack_player(self, monster: Monster, context: GameContext) -> None:
         """
@@ -367,28 +334,64 @@ class MonsterAIManager:
         # ここではAIの観点での攻撃決定のみ
         game_logger.debug(f"{monster.name} attacks player")
 
-    def _is_confused(self, monster: Monster) -> bool:
+    def process_all_monsters(self, context: GameContext) -> None:
         """
-        モンスターが混乱状態かチェック。
+        全モンスターのAI処理を実行。
 
         Args:
         ----
-            monster: チェック対象のモンスター
+            context: ゲームコンテキスト
+
+        """
+        floor_data = context.get_current_floor_data()
+        if not floor_data or not hasattr(floor_data, "monster_spawner"):
+            return
+
+        # プレイヤーの位置が変わった場合、キャッシュをクリア
+        player_pos = (context.player.x, context.player.y)
+        if player_pos != self._last_player_position:
+            self._vision_cache.clear()
+            self._pathfinding_manager.clear_cache()
+            self._last_player_position = player_pos
+
+        # モンスターリストをコピー（処理中の変更に対応）
+        monsters = floor_data.monster_spawner.monsters.copy()
+
+        # アクティブエリア内のモンスターのみ処理
+        active_monsters = self._get_active_monsters(monsters, context)
+
+        for monster in active_monsters:
+            if monster.hp > 0:  # 生きているモンスターのみ処理
+                self.process_monster_ai(monster, context)
+
+    def _get_active_monsters(self, monsters: list[Monster], context: GameContext) -> list[Monster]:
+        """
+        アクティブエリア内のモンスターを取得。
+
+        Args:
+        ----
+            monsters: 全モンスターのリスト
+            context: ゲームコンテキスト
 
         Returns:
         -------
-            混乱状態の場合True
+            アクティブエリア内のモンスターのリスト
 
         """
-        if not hasattr(monster, "status_effect_manager"):
-            return False
+        active_monsters = []
+        player = context.player
+        active_radius = GameConstants.AI_ACTIVE_AREA_RADIUS
 
-        active_effects = monster.status_effect_manager.get_active_effects()
-        for effect in active_effects:
-            if effect.name == "Confusion":
-                return True
+        for monster in monsters:
+            # プレイヤーとの距離を計算
+            distance = calculate_distance(monster.x, monster.y, player.x, player.y)
 
-        return False
+            # アクティブエリア内のモンスターのみ処理
+            if distance <= active_radius:
+                active_monsters.append(monster)
+
+        game_logger.debug(f"Active monsters: {len(active_monsters)}/{len(monsters)}")
+        return active_monsters
 
     def get_monster_behavior_info(self, monster: Monster, context: GameContext) -> dict:
         """
@@ -405,13 +408,15 @@ class MonsterAIManager:
 
         """
         player = context.player
+        behavior_info = self._behavior_manager.get_monster_behavior_info(monster)
 
         return {
             "can_act": self._can_monster_act(monster),
             "can_see_player": self._can_monster_see_player(monster, player, context),
-            "distance_to_player": self._calculate_distance(monster.x, monster.y, player.x, player.y),
+            "distance_to_player": calculate_distance(monster.x, monster.y, player.x, player.y),
             "is_confused": self._is_confused(monster),
             "sight_range": getattr(monster, "sight_range", 8),
+            **behavior_info,
         }
 
     def set_monster_aggressive(self, monster: Monster, aggressive: bool = True) -> None:
@@ -424,272 +429,13 @@ class MonsterAIManager:
             aggressive: 攻撃的にするかどうか
 
         """
-        monster.aggressive = aggressive
-        if aggressive:
-            monster.sight_range = getattr(monster, "sight_range", 8) * 2
-        else:
-            monster.sight_range = getattr(monster, "sight_range", 8) // 2
-
-    def process_all_monsters(self, context: GameContext) -> None:
-        """
-        全モンスターのAI処理を実行。
-
-        Args:
-        ----
-            context: ゲームコンテキスト
-
-        """
-        floor_data = context.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, "monster_spawner"):
-            return
-
-        # モンスターリストをコピー（処理中の変更に対応）
-        monsters = floor_data.monster_spawner.monsters.copy()
-
-        for monster in monsters:
-            if monster.hp > 0:  # 生きているモンスターのみ処理
-                self.process_monster_ai(monster, context)
-
-    # ========== 特殊AI行動パターンのメソッド ==========
-
-    def _should_flee(self, monster: Monster) -> bool:
-        """
-        モンスターが逃走すべきかチェック。
-
-        Args:
-        ----
-            monster: チェック対象のモンスター
-
-        Returns:
-        -------
-            逃走すべき場合True
-
-        """
-        if not hasattr(monster, "can_flee") or not monster.can_flee:
-            return False
-
-        # HP比率による逃走判定
-        hp_ratio = monster.hp / monster.max_hp
-        flee_threshold = getattr(monster, "flee_threshold", ProbabilityConstants.MONSTER_FLEE_THRESHOLD)
-
-        if hp_ratio <= flee_threshold:
-            monster.is_fleeing = True
-            return True
-
-        return getattr(monster, "is_fleeing", False)
-
-    def _flee_from_player(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        プレイヤーから逃走する。
-
-        Args:
-        ----
-            monster: 逃走するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        # プレイヤーから遠ざかる方向を計算
-        dx = monster.x - player.x
-        dy = monster.y - player.y
-
-        # 正規化（-1, 0, 1のいずれか）
-        if dx != 0:
-            dx = dx // abs(dx)
-        if dy != 0:
-            dy = dy // abs(dy)
-
-        # 逃走方向に移動を試行
-        if not self._try_move_monster(monster, dx, dy, context):
-            # 直線的に逃げられない場合はランダム移動
-            self._random_move(monster, context)
-
-    def _can_use_ranged_attack(self, monster: Monster, player) -> bool:
-        """
-        遠距離攻撃が使用可能かチェック。
-
-        Args:
-        ----
-            monster: チェック対象のモンスター
-            player: プレイヤー
-
-        Returns:
-        -------
-            遠距離攻撃可能な場合True
-
-        """
-        if not hasattr(monster, "can_ranged_attack") or not monster.can_ranged_attack:
-            return False
-
-        if hasattr(monster, "special_ability_cooldown") and monster.special_ability_cooldown > 0:
-            return False
-
-        distance = self._calculate_distance(monster.x, monster.y, player.x, player.y)
-        ranged_range = getattr(monster, "ranged_attack_range", 5)
-
-        # 射程内かつ隣接していない場合
-        return CombatConstants.ADJACENT_DISTANCE_THRESHOLD < distance <= ranged_range
-
-    def _use_ranged_attack(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        遠距離攻撃を実行。
-
-        Args:
-        ----
-            monster: 攻撃するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        damage = getattr(monster, "ranged_attack_damage", monster.attack // 2)
-
-        # 攻撃命中判定
-        if random.random() < ProbabilityConstants.MONSTER_RANGED_ATTACK_HIT_RATE:  # 80%の命中率
-            actual_damage = max(1, damage - player.get_defense())
-            player.take_damage(actual_damage, context)
-            context.add_message(f"{monster.name} shoots you for {actual_damage} damage!")
-        else:
-            context.add_message(f"{monster.name}'s ranged attack misses!")
-
-        # クールダウン設定
-        monster.special_ability_cooldown = 3
-
-        game_logger.debug(f"{monster.name} used ranged attack on player")
-
-    def _can_use_special_attack(self, monster: Monster) -> bool:
-        """
-        特殊攻撃が使用可能かチェック。
-
-        Args:
-        ----
-            monster: チェック対象のモンスター
-
-        Returns:
-        -------
-            特殊攻撃可能な場合True
-
-        """
-        if hasattr(monster, "special_ability_cooldown") and monster.special_ability_cooldown > 0:
-            return False
-
-        # 30%の確率で特殊攻撃を使用
-        return random.random() < ProbabilityConstants.MONSTER_SPECIAL_ATTACK_CHANCE and (
-            getattr(monster, "can_steal_items", False)
-            or getattr(monster, "can_steal_gold", False)
-            or getattr(monster, "can_drain_level", False)
-        )
-
-    def _use_special_attack(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        特殊攻撃を実行。
-
-        Args:
-        ----
-            monster: 攻撃するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        # アイテム盗取
-        if getattr(monster, "can_steal_items", False):
-            self._steal_item(monster, player, context)
-        # ゴールド盗取
-        elif getattr(monster, "can_steal_gold", False):
-            self._steal_gold(monster, player, context)
-        # レベル下げ攻撃
-        elif getattr(monster, "can_drain_level", False):
-            self._drain_level(monster, player, context)
-        else:
-            # 通常攻撃にフォールバック
-            self._monster_attack_player(monster, context)
-
-        # クールダウン設定
-        monster.special_ability_cooldown = 5
-
-    def _steal_item(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        アイテム盗取攻撃。
-
-        Args:
-        ----
-            monster: 攻撃するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        # インベントリからランダムなアイテムを盗む
-        items = player.inventory.items
-        if items:
-            stolen_item = random.choice(items)
-
-            # スタック可能アイテムの場合は1個だけ盗む
-            if stolen_item.stackable and stolen_item.stack_count > 1:
-                player.inventory.remove_item(stolen_item, 1)
-                context.add_message(f"{monster.name} steals one {stolen_item.name}!")
-                game_logger.debug(f"{monster.name} stole 1 {stolen_item.name} from player")
+        if hasattr(monster, "aggressive"):
+            monster.aggressive = aggressive  # type: ignore
+        if hasattr(monster, "sight_range"):
+            if aggressive:
+                monster.sight_range = getattr(monster, "sight_range", 8) * 2  # type: ignore
             else:
-                player.inventory.remove_item(stolen_item)
-                context.add_message(f"{monster.name} steals your {stolen_item.name}!")
-                game_logger.debug(f"{monster.name} stole {stolen_item.name} from player")
-
-            # モンスターが逃走を開始
-            monster.is_fleeing = True
-        else:
-            context.add_message(f"{monster.name} tries to steal from you, but you have nothing!")
-
-    def _steal_gold(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        ゴールド盗取攻撃。
-
-        Args:
-        ----
-            monster: 攻撃するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        if player.gold > 0:
-            stolen_amount = min(player.gold, random.randint(10, 50))
-            player.gold -= stolen_amount
-            context.add_message(f"{monster.name} steals {stolen_amount} gold from you!")
-
-            # モンスターが逃走を開始
-            monster.is_fleeing = True
-
-            game_logger.debug(f"{monster.name} stole {stolen_amount} gold from player")
-        else:
-            context.add_message(f"{monster.name} searches for gold, but you have none!")
-
-    def _drain_level(self, monster: Monster, player, context: GameContext) -> None:
-        """
-        レベル下げ攻撃。
-
-        Args:
-        ----
-            monster: 攻撃するモンスター
-            player: プレイヤー
-            context: ゲームコンテキスト
-
-        """
-        if player.level > 1:
-            # レベルを1下げる
-            player.level -= 1
-
-            # ステータスも減少
-            player.max_hp = max(10, player.max_hp - 5)
-            player.hp = min(player.hp, player.max_hp)
-            # player.max_mp = max(5, player.max_mp - 3)
-            # player.mp = min(player.mp, player.max_mp)
-            player.attack = max(1, player.attack - 2)
-            player.defense = max(0, player.defense - 1)
-
-            context.add_message(f"{monster.name} drains your life force! You feel weaker!")
-            game_logger.debug(f"{monster.name} drained player level from {player.level + 1} to {player.level}")
-        else:
-            # 通常ダメージを与える
-            damage = max(1, monster.attack - player.get_defense())
-            player.take_damage(damage, context)
-            context.add_message(f"{monster.name} attacks you for {damage} damage!")
+                monster.sight_range = getattr(monster, "sight_range", 8) // 2  # type: ignore
 
     def split_monster_on_damage(self, monster: Monster, context: GameContext) -> None:
         """
@@ -701,68 +447,4 @@ class MonsterAIManager:
             context: ゲームコンテキスト
 
         """
-        if not getattr(monster, "can_split", False):
-            return
-
-        # 既に分裂している場合はスキップ
-        if getattr(monster, "parent_monster", None) is not None:
-            return
-
-        # 分裂判定（30%の確率）
-        if random.random() > ProbabilityConstants.MONSTER_SPLIT_CHANCE:
-            return
-
-        floor_data = context.get_current_floor_data()
-        if not floor_data or not hasattr(floor_data, "monster_spawner"):
-            return
-
-        # 分裂先の座標を探す
-        spawn_positions = []
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-
-                new_x = monster.x + dx
-                new_y = monster.y + dy
-
-                if self._can_monster_move_to(new_x, new_y, context):
-                    spawn_positions.append((new_x, new_y))
-
-        if spawn_positions:
-            # 分裂モンスターを作成
-            spawn_x, spawn_y = random.choice(spawn_positions)
-
-            # 元のモンスターの属性をコピーして分裂体を作成
-            from pyrogue.entities.actors.monster import Monster as MonsterClass
-
-            split_monster = MonsterClass(
-                char=monster.char,
-                x=spawn_x,
-                y=spawn_y,
-                name=f"{monster.name} (split)",
-                level=monster.level,
-                hp=monster.hp // 2,  # HPは半分
-                max_hp=monster.max_hp // 2,
-                attack=monster.attack,
-                defense=monster.defense,
-                exp_value=monster.exp_value // 2,  # 経験値も半分
-                view_range=monster.view_range,
-                color=monster.color,
-                ai_pattern=monster.ai_pattern,
-            )
-
-            # 親子関係を設定
-            split_monster.parent_monster = monster
-            monster.split_children.append(split_monster)
-
-            # 元のモンスターのHPも半分に
-            monster.hp = monster.hp // 2
-            monster.max_hp = monster.max_hp // 2
-
-            # スポナーに追加
-            floor_data.monster_spawner.monsters.append(split_monster)
-            floor_data.monster_spawner.occupied_positions.add((spawn_x, spawn_y))
-
-            context.add_message(f"{monster.name} splits into two!")
-            game_logger.debug(f"{monster.name} split into two monsters")
+        self._combat_manager.split_monster_on_damage(monster, context)
