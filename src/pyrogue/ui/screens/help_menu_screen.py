@@ -84,7 +84,7 @@ class HelpMenuScreen:
         content_start_y = 5
         if self.help_sections:
             section = self.help_sections[self.menu_selection]
-            
+
             # セクションタイトル
             self.console.print(
                 content_start_x,
@@ -162,7 +162,7 @@ class HelpMenuScreen:
                     "• Procedurally generated dungeons",
                     "• Item identification system",
                     "• Classic ASCII graphics",
-                ]
+                ],
             },
             {
                 "title": "Basic Controls",
@@ -184,7 +184,7 @@ class HelpMenuScreen:
                     "  Ctrl+S     - Save game",
                     "  Ctrl+L     - Load game",
                     "  ESC        - Return to main menu",
-                ]
+                ],
             },
             {
                 "title": "Combat System",
@@ -207,7 +207,7 @@ class HelpMenuScreen:
                     "  • Better equipment = better combat performance",
                     "  • Stay fed to avoid combat penalties",
                     "  • Some monsters have special abilities",
-                ]
+                ],
             },
             {
                 "title": "Items & Equipment",
@@ -231,7 +231,7 @@ class HelpMenuScreen:
                     "  • Potions: Drink for various effects",
                     "  • Scrolls: Read for magical effects",
                     "  • Food: Eat to satisfy hunger",
-                ]
+                ],
             },
             {
                 "title": "Survival Tips",
@@ -256,7 +256,7 @@ class HelpMenuScreen:
                     "  • Explore thoroughly before descending",
                     "  • Identify items when possible",
                     "  • Manage resources carefully",
-                ]
+                ],
             },
             {
                 "title": "Amulet Quest",
@@ -277,7 +277,7 @@ class HelpMenuScreen:
                     "  • Reach B1F with the Amulet of Yendor",
                     "  • Use the up staircase to escape",
                     "  • You win the game!",
-                ]
+                ],
             },
             {
                 "title": "Status Effects & Stats",
@@ -312,6 +312,6 @@ class HelpMenuScreen:
                     "  • Defense = Base + Level Bonus + Equipment",
                     "  • Damage reduced by hunger penalties",
                     "  • Ring effects stack with other equipment",
-                ]
-            }
+                ],
+            },
         ]

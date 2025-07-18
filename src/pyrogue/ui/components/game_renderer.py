@@ -315,7 +315,7 @@ class GameRenderer:
         """
         player = self.game_screen.player
         current_floor = self.game_screen.game_logic.dungeon_manager.current_floor
-        
+
         if not player:
             return
 
@@ -338,7 +338,7 @@ class GameRenderer:
 
         # 画面幅に収まるように調整
         if len(progress_text) > console.width - 2:
-            progress_text = progress_text[:console.width - 5] + "..."
+            progress_text = progress_text[: console.width - 5] + "..."
 
         console.print(
             x=1,
@@ -424,7 +424,7 @@ class GameRenderer:
         """
         game_screen = self.game_screen
         player = game_screen.game_logic.get_player()
-        
+
         if not player:
             return
 
@@ -434,41 +434,32 @@ class GameRenderer:
 
         # 画面下部にヒント表示
         hint_y = console.height - 1
-        
+
         # 基本的なヒント（状況に応じて動的に変更）
         hints = []
-        
+
         # アイテムが足元にある場合
         floor_data = game_screen.game_logic.get_current_floor_data()
         if floor_data and floor_data.items:
-            items_at_player = [
-                item for item in floor_data.items 
-                if item.x == player.x and item.y == player.y
-            ]
+            items_at_player = [item for item in floor_data.items if item.x == player.x and item.y == player.y]
             if items_at_player:
                 hints.append("Press ',' to pick up items")
-            
+
         # インベントリが満杯でない場合の基本ヒント
         if len(hints) == 0:
             if player.level == 1:
-                hints = [
-                    "hjkl/arrows: move  ?: help  i: inventory  o/c: doors"
-                ]
+                hints = ["hjkl/arrows: move  ?: help  i: inventory  o/c: doors"]
             elif player.level == 2:
-                hints = [
-                    "s: search  ,: pick up  Ctrl+S: save  ?: detailed help"
-                ]
+                hints = ["s: search  ,: pick up  Ctrl+S: save  ?: detailed help"]
             else:  # level 3
-                hints = [
-                    "Goal: Find Amulet of Yendor on B26F  ?: help anytime"
-                ]
+                hints = ["Goal: Find Amulet of Yendor on B26F  ?: help anytime"]
 
         if hints:
             hint_text = hints[0]
             # 画面幅に収まるように調整
             if len(hint_text) > console.width - 2:
-                hint_text = hint_text[:console.width - 5] + "..."
-                
+                hint_text = hint_text[: console.width - 5] + "..."
+
             # 中央に表示
             x = (console.width - len(hint_text)) // 2
             console.print(
