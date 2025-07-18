@@ -111,6 +111,7 @@ class SaveLoadHandler:
             "floor_data": self._serialize_all_floors(dungeon_manager.floors),
             "message_log": self.context.game_logic.message_log,
             "has_amulet": getattr(player, "has_amulet", False),
+            "identification": self._serialize_identification(player.identification),
             "version": "1.0",
         }
 
@@ -162,6 +163,11 @@ class SaveLoadHandler:
             # アミュレット状態の復元
             if "has_amulet" in save_data:
                 self.context.player.has_amulet = save_data["has_amulet"]
+
+            # 識別状態の復元
+            identification_data = save_data.get("identification", {})
+            if identification_data:
+                self._deserialize_identification(identification_data)
 
             # 現在のフロアを読み込み
             self._load_current_floor()
@@ -762,3 +768,61 @@ class SaveLoadHandler:
         except Exception as e:
             self.context.add_message(f"Error deserializing trap: {e}")
             return None
+
+    def _serialize_identification(self, identification) -> dict[str, Any]:
+        """
+        識別システムの状態をシリアライズ。
+
+        Args:
+        ----
+            identification: ItemIdentificationインスタンス
+
+        Returns:
+        -------
+            dict: 識別状態データ
+
+        """
+        if identification is None:
+            return {}
+
+        return {
+            "identified_potions": list(identification.identified_potions),
+            "identified_scrolls": list(identification.identified_scrolls),
+            "identified_rings": list(identification.identified_rings),
+            "identified_wands": list(getattr(identification, "identified_wands", set())),
+            "potion_appearances": dict(identification.potion_appearances),
+            "scroll_appearances": dict(identification.scroll_appearances),
+            "ring_appearances": dict(identification.ring_appearances),
+            "wand_appearances": dict(getattr(identification, "wand_appearances", {})),
+        }
+
+    def _deserialize_identification(self, identification_data: dict[str, Any]) -> None:
+        """
+        識別システムの状態をデシリアライズ。
+
+        Args:
+        ----
+            identification_data: 識別状態データ
+
+        """
+        identification = self.context.player.identification
+        if identification is None:
+            return
+
+        # 識別済みアイテムセットの復元
+        identification.identified_potions = set(identification_data.get("identified_potions", []))
+        identification.identified_scrolls = set(identification_data.get("identified_scrolls", []))
+        identification.identified_rings = set(identification_data.get("identified_rings", []))
+
+        # ワンドの識別状態（後方互換性のため属性チェック）
+        if hasattr(identification, "identified_wands"):
+            identification.identified_wands = set(identification_data.get("identified_wands", []))
+
+        # 外観マッピングの復元
+        identification.potion_appearances = identification_data.get("potion_appearances", {})
+        identification.scroll_appearances = identification_data.get("scroll_appearances", {})
+        identification.ring_appearances = identification_data.get("ring_appearances", {})
+
+        # ワンドの外観マッピング（後方互換性のため属性チェック）
+        if hasattr(identification, "wand_appearances"):
+            identification.wand_appearances = identification_data.get("wand_appearances", {})

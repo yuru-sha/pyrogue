@@ -304,6 +304,10 @@ Available Commands:
     character_details/@ - Show detailed character info
     last_message/ctrl_m - Show recent messages
 
+  Special Monsters:
+    Dream Eater (@) - Causes hallucinations, psychic attacks
+    Phantom Fungus (f) - Spore attacks, causes confusion
+
   System:
     help - Show this help
     save/s - Save game

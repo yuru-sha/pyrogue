@@ -50,8 +50,21 @@ Symbol Explanation:
         player = self.context.player
         identification = player.identification
 
+        # 識別済みアイテム数を計算
+        identified_count = 0
+        identified_count += len(identification.identified_potions)
+        identified_count += len(identification.identified_scrolls)
+        identified_count += len(identification.identified_rings)
+        if hasattr(identification, "identified_wands"):
+            identified_count += len(identification.identified_wands)
+
         self.context.add_message("Identification Status:")
-        self.context.add_message(f"Identified items: {len(identification.identified_items)}")
+        self.context.add_message(f"Identified items: {identified_count}")
+        self.context.add_message(f"  Potions: {len(identification.identified_potions)}")
+        self.context.add_message(f"  Scrolls: {len(identification.identified_scrolls)}")
+        self.context.add_message(f"  Rings: {len(identification.identified_rings)}")
+        if hasattr(identification, "identified_wands"):
+            self.context.add_message(f"  Wands: {len(identification.identified_wands)}")
 
         return CommandResult(True)
 
