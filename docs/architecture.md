@@ -343,20 +343,20 @@ v0.2.0では、従来の1,230行のモノリシックな`MonsterAIManager`を、
 ```python
 class MonsterAIManager:
     """モンスターAI統合管理システム"""
-    
+
     def __init__(self) -> None:
         self._behavior_manager = MonsterBehaviorManager()
         self._combat_manager = MonsterCombatManager()
         self._pathfinding_manager = PathfindingManager()
-    
+
     def process_monster_turn(self, monster: Monster, context: GameContext) -> None:
         # 各専門マネージャーが連携してAI処理を実行
         current_state = self._behavior_manager.get_ai_state(monster)
-        
+
         if current_state in [MonsterAIState.ATTACKING, MonsterAIState.HUNTING]:
             # 戦闘処理
             self._combat_manager.process_combat_action(monster, context)
-        
+
         # 経路探索と移動
         path = self._pathfinding_manager.find_path(
             monster.x, monster.y, target_x, target_y, context
@@ -377,7 +377,7 @@ class MonsterAIManager:
 
 ```python
 class PathfindingManager:
-    def find_path(self, start_x: int, start_y: int, end_x: int, end_y: int, 
+    def find_path(self, start_x: int, start_y: int, end_x: int, end_y: int,
                   context: GameContext, max_distance: int = 15) -> list[tuple[int, int]] | None:
         # A*アルゴリズムによる最適経路計算
         # キャッシュ確認 → 経路計算 → 結果キャッシュ
@@ -395,7 +395,7 @@ class PathfindingManager:
 class MonsterCombatManager:
     def can_use_ranged_attack(self, monster: Monster, target_x: int, target_y: int) -> bool:
         # 遠距離攻撃の可能性を判定
-        
+
     def _steal_item(self, monster: Monster, player: Player, context: GameContext) -> bool:
         # アイテム盗取の特殊攻撃処理
 ```
@@ -412,7 +412,7 @@ class MonsterCombatManager:
 class MonsterBehaviorManager:
     def get_ai_state(self, monster: Monster) -> MonsterAIState:
         # モンスターの現在のAI状態を取得
-        
+
     def update_ai_state(self, monster: Monster, new_state: MonsterAIState) -> None:
         # AI状態の更新と遷移処理
 ```
