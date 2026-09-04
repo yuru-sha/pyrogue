@@ -38,6 +38,15 @@ def test_vi_commands_do_not_collide_with_search() -> None:
     assert game.player.position == position
 
 
+def test_command_aliases_share_dispatch() -> None:
+    rest = GameState(1234)
+    wait = GameState(1234)
+
+    assert rest.execute("rest") == wait.execute("wait")
+    assert rest.to_dict() == wait.to_dict()
+    assert rest.player.equipped_item_ids == {rest.player.equipped_weapon, rest.player.equipped_armor}
+
+
 def test_json_round_trip_preserves_future_state() -> None:
     game = GameState(1234)
     game.execute(".")

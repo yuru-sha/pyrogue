@@ -7,11 +7,13 @@ turning display cells into coloured characters.
 
 from __future__ import annotations
 
+import random
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
-import random
-from typing import Any, Iterable
+from itertools import pairwise
+from typing import Any
 
 Position = tuple[int, int]
 
@@ -413,8 +415,21 @@ class PlayerState:
     def equipped(self, kind: ItemKind) -> ItemState | None:
         item_id = self.equipped_weapon if kind == ItemKind.WEAPON else self.equipped_armor
         if kind == ItemKind.RING:
-            return next((self.item(ring_id) for ring_id in self.equipped_rings if self.item(ring_id)), None)
+            for ring_id in self.equipped_rings:
+                item = self.item(ring_id)
+                if item:
+                    return item
+            return None
         return self.item(item_id) if item_id is not None else None
+
+    @property
+    def equipped_item_ids(self) -> set[int]:
+        """Return the IDs of all currently equipped items."""
+        return {
+            item_id
+            for item_id in (self.equipped_weapon, self.equipped_armor, *self.equipped_rings)
+            if item_id is not None
+        }
 
     def effective_armor_class(self) -> int:
         armor = self.equipped(ItemKind.ARMOR)
@@ -553,7 +568,7 @@ class DungeonGenerator:
                 rooms.append(room)
                 self._carve_room(tiles, room)
 
-        for first, second in zip(rooms, rooms[1:]):
+        for first, second in pairwise(rooms):
             self._carve_corridor(tiles, first.center, second.center)
 
         start = rooms[0].center
@@ -571,7 +586,7 @@ class DungeonGenerator:
             if tiles[door[1]][door[0]] == Terrain.FLOOR:
                 tiles[door[1]][door[0]] = Terrain.DOOR_CLOSED
 
-        return FloorState(self._floor_number(floor_number), self.width, self.height, tiles, rooms, up_stairs, down_stairs)
+        return FloorState(floor_number, self.width, self.height, tiles, rooms, up_stairs, down_stairs)
 
     def _generate_maze(self, floor_number: int) -> FloorState:
         tiles = self._blank()
@@ -602,9 +617,6 @@ class DungeonGenerator:
         else:
             down_stairs = None
         return FloorState(floor_number, self.width, self.height, tiles, [], start, down_stairs)
-
-    def _floor_number(self, floor_number: int) -> int:
-        return floor_number
 
     def _reachable_positions(self, tiles: list[list[Terrain]], start: Position) -> set[Position]:
         seen = {start}
@@ -651,6 +663,45 @@ POTION_EFFECTS = {"healing potion": "healing", "extra healing potion": "extra_he
 SCROLL_EFFECTS = {"identify scroll": "identify", "light scroll": "light", "remove curse scroll": "remove_curse", "enchant weapon scroll": "enchant_weapon", "enchant armor scroll": "enchant_armor", "teleportation scroll": "teleport", "magic mapping scroll": "magic_mapping"}
 RING_EFFECTS = {"ring of protection": "protection", "ring of add strength": "strength", "ring of sustain strength": "sustain", "ring of searching": "search", "ring of regeneration": "regeneration"}
 WAND_EFFECTS = {"wand of magic missile": "magic_missile", "wand of light": "light", "wand of lightning": "lightning", "wand of fire": "fire", "wand of cold": "cold", "wand of teleport monster": "teleport_monster"}
+
+DIRECTIONS: dict[str, Position] = {
+    "north": (0, -1),
+    "n": (0, -1),
+    "south": (0, 1),
+    "s": (0, 1),
+    "east": (1, 0),
+    "e": (1, 0),
+    "west": (-1, 0),
+    "w": (-1, 0),
+}
+COMMAND_ALIASES = {
+    "fight": "attack",
+    "get": "pickup",
+    "rest": "wait",
+    "equip_weapon": "wield",
+    "equip_armor": "wear",
+    "take_off": "unequip_armor",
+    "equip_ring": "put_on_ring",
+    "unequip_ring": "remove_ring",
+}
+EQUIPMENT_KINDS = {
+    "wield": ItemKind.WEAPON,
+    "wear": ItemKind.ARMOR,
+    "put_on_ring": ItemKind.RING,
+}
+UNEQUIPMENT_KINDS = {
+    "unequip_armor": ItemKind.ARMOR,
+    "remove_ring": ItemKind.RING,
+}
+USE_ACTIONS = {
+    ItemKind.FOOD: "eat",
+    ItemKind.POTION: "quaff",
+    ItemKind.SCROLL: "read",
+    ItemKind.WEAPON: "wield",
+    ItemKind.ARMOR: "wear",
+    ItemKind.RING: "put_on_ring",
+    ItemKind.WAND: "zap",
+}
 
 
 class GameState:
@@ -710,7 +761,7 @@ class GameState:
         self._ensure_floor(1)
         self._setup_initial_inventory(self.floor)
         self.player.position = self.floor.up_stairs or self._first_floor_position(self.floor)
-        self._update_visibility()
+        self.visible_positions()
         self._message("You enter the Dungeons of Doom.")
 
     @property
@@ -925,9 +976,6 @@ class GameState:
         self.floor.explored.update(visible)
         return visible
 
-    def _update_visibility(self) -> None:
-        self.visible_positions()
-
     def display_cells(self) -> dict[Position, DisplayCell]:
         """Return the current map as renderer-neutral display cells."""
         visible = self.visible_positions()
@@ -991,7 +1039,7 @@ class GameState:
         self._consume_food()
         if self.status == GameStatus.PLAYING:
             self._process_monsters()
-        self._update_visibility()
+        self.visible_positions()
 
     def _die(self, cause: str) -> None:
         self.player.hp = 0
@@ -1172,7 +1220,7 @@ class GameState:
         item = self._find_item(value)
         if not item:
             return self._result(False, "Usage: drop <item>")
-        if item.cursed and item.id in {self.player.equipped_weapon, self.player.equipped_armor, *self.player.equipped_rings}:
+        if item.cursed and item.id in self.player.equipped_item_ids:
             return self._result(False, "You cannot drop a cursed equipped item.")
         self._remove_inventory_item(item)
         item.position = self.player.position
@@ -1255,7 +1303,7 @@ class GameState:
         item = next((item for item in self.player.inventory if item.kind == kind), None) if value is None else self._find_item(value)
         if not item or item.kind != kind:
             return self._result(False, f"You have no {kind.value} to equip.")
-        if item.cursed and item.id in {self.player.equipped_weapon, self.player.equipped_armor, *self.player.equipped_rings}:
+        if item.cursed and item.id in self.player.equipped_item_ids:
             return self._result(False, "That item is already cursed on you.")
         if kind == ItemKind.WEAPON:
             self.player.equipped_weapon = item.id
@@ -1287,16 +1335,9 @@ class GameState:
         self._finish_turn()
         return self._result(True, f"You remove the {item.display_name}.", True)
 
-    def throw(self, value: Any, direction: Position = (1, 0)) -> CommandResult:
-        """Throw a pack item in a direction."""
-        item = self._find_item(value)
-        if not item:
-            return self._result(False, "Usage: throw <item> <direction>")
-        if item.id in {self.player.equipped_weapon, self.player.equipped_armor, *self.player.equipped_rings} and item.cursed:
-            return self._result(False, "You cannot throw a cursed equipped item.")
-        self._remove_inventory_item(item)
+    def _trace_projectile(self, direction: Position) -> tuple[Position, MonsterState | None]:
+        """Return the last open position and the first monster in a direction."""
         x, y = self.player.position
-        hit_monster: MonsterState | None = None
         landing = self.player.position
         for _ in range(8):
             x += direction[0]
@@ -1304,13 +1345,25 @@ class GameState:
             if not self.floor.is_walkable((x, y)):
                 break
             landing = (x, y)
-            hit_monster = next((monster for monster in self.floor.monsters if (monster.x, monster.y) == (x, y)), None)
-            if hit_monster:
-                hit_monster.hp = max(0, hit_monster.hp - max(1, _roll(self.rng, item.damage_dice)))
-                if hit_monster.hp == 0:
-                    self.floor.monsters.remove(hit_monster)
-                    self.player.monsters_killed += 1
-                break
+            monster = next((monster for monster in self.floor.monsters if (monster.x, monster.y) == landing), None)
+            if monster:
+                return landing, monster
+        return landing, None
+
+    def throw(self, value: Any, direction: Position = (1, 0)) -> CommandResult:
+        """Throw a pack item in a direction."""
+        item = self._find_item(value)
+        if not item:
+            return self._result(False, "Usage: throw <item> <direction>")
+        if item.id in self.player.equipped_item_ids and item.cursed:
+            return self._result(False, "You cannot throw a cursed equipped item.")
+        self._remove_inventory_item(item)
+        landing, hit_monster = self._trace_projectile(direction)
+        if hit_monster:
+            hit_monster.hp = max(0, hit_monster.hp - max(1, _roll(self.rng, item.damage_dice)))
+            if hit_monster.hp == 0:
+                self.floor.monsters.remove(hit_monster)
+                self.player.monsters_killed += 1
         if hit_monster is None:
             item.position = landing
             self.floor.items.append(item)
@@ -1325,16 +1378,7 @@ class GameState:
         if item.charges <= 0:
             return self._result(False, "The wand has no charges left.")
         item.charges -= 1
-        x, y = self.player.position
-        target = None
-        for _ in range(8):
-            x += direction[0]
-            y += direction[1]
-            if not self.floor.is_walkable((x, y)):
-                break
-            target = next((monster for monster in self.floor.monsters if (monster.x, monster.y) == (x, y)), None)
-            if target:
-                break
+        _, target = self._trace_projectile(direction)
         if target and item.effect in {"magic_missile", "lightning", "fire", "cold"}:
             damage = _roll(self.rng, (2, 6))
             target.hp = max(0, target.hp - damage)
@@ -1451,41 +1495,34 @@ class GameState:
         """Return the values shown on the terminal death screen."""
         return {"score": self.score, "deepest_floor": self.player.deepest_floor, "cause": self.player.death_cause}
 
+    def _normalize_command(self, command: str) -> tuple[str, Any]:
+        if command in self.COMMAND_KEYS:
+            return self.COMMAND_KEYS[command]
+        normalized = command.strip().lower()
+        return self.COMMAND_KEYS.get(normalized, (normalized, None))
+
     def execute(self, command: str, args: Iterable[Any] = ()) -> CommandResult:  # noqa: PLR0911
         """Execute one canonical command and return its state transition."""
         args = list(args)
         if self.status != GameStatus.PLAYING:
             return self._result(False, "The game is over.")
-        command = command if command in self.COMMAND_KEYS else command.strip().lower()
-        if command in self.COMMAND_KEYS:
-            action, value = self.COMMAND_KEYS[command]
-            if action == "move":
-                return self.move(*value)
-            command = action
-        aliases = {
-            "north": (0, -1),
-            "n": (0, -1),
-            "south": (0, 1),
-            "s": (0, 1),
-            "east": (1, 0),
-            "e": (1, 0),
-            "west": (-1, 0),
-            "w": (-1, 0),
-            "wait": None,
-            "rest": None,
-        }
-        if command in aliases and aliases[command] is not None:
-            return self.move(*aliases[command])
+        command, key_value = self._normalize_command(command)
+        if command == "move" and key_value is not None:
+            return self.move(*key_value)
+        command = COMMAND_ALIASES.get(command, command)
+        direction = DIRECTIONS.get(command)
+        if direction is not None:
+            return self.move(*direction)
         if command == "move":
             if not args:
                 return self._result(False, "Usage: move <north|south|east|west>")
-            direction = aliases.get(str(args[0]).lower())
-            return self.move(*direction) if direction else self._result(False, "Invalid direction.")
-        if command in {"wait", "rest"}:
+            direction = DIRECTIONS.get(str(args[0]).lower())
+            return self.move(*direction) if direction is not None else self._result(False, "Invalid direction.")
+        if command == "wait":
             return self.wait()
-        if command in {"attack", "fight"}:
+        if command == "attack":
             return self.attack(self._direction(args[0]) if args else None)
-        if command in {"pickup", "get"}:
+        if command == "pickup":
             return self.pickup()
         if command == "drop":
             return self.drop(args[0] if args else None)
@@ -1495,16 +1532,12 @@ class GameState:
             return self.quaff(args[0] if args else None)
         if command == "read":
             return self.read(args[0] if args else None)
-        if command in {"wield", "equip_weapon"}:
-            return self.equip(args[0] if args else None, ItemKind.WEAPON)
-        if command in {"wear", "equip_armor"}:
-            return self.equip(args[0] if args else None, ItemKind.ARMOR)
-        if command in {"take_off", "unequip_armor"}:
-            return self.unequip(args[0] if args else None, ItemKind.ARMOR)
-        if command in {"put_on_ring", "equip_ring"}:
-            return self.equip(args[0] if args else None, ItemKind.RING)
-        if command in {"remove_ring", "unequip_ring"}:
-            return self.unequip(args[0] if args else None, ItemKind.RING)
+        equipment_kind = EQUIPMENT_KINDS.get(command)
+        if equipment_kind is not None:
+            return self.equip(args[0] if args else None, equipment_kind)
+        unequipment_kind = UNEQUIPMENT_KINDS.get(command)
+        if unequipment_kind is not None:
+            return self.unequip(args[0] if args else None, unequipment_kind)
         if command == "throw":
             return self.throw(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else (1, 0))
         if command == "zap":
@@ -1525,15 +1558,7 @@ class GameState:
             item = self._find_item(args[0] if args else None)
             if not item:
                 return self._result(False, "Usage: use <item>")
-            action = {
-                ItemKind.FOOD: "eat",
-                ItemKind.POTION: "quaff",
-                ItemKind.SCROLL: "read",
-                ItemKind.WEAPON: "wield",
-                ItemKind.ARMOR: "wear",
-                ItemKind.RING: "put_on_ring",
-                ItemKind.WAND: "zap",
-            }.get(item.kind)
+            action = USE_ACTIONS.get(item.kind)
             if action is None:
                 return self._result(False, "That item cannot be used.")
             return self.execute(action, [item.id, *args[1:]])
@@ -1554,11 +1579,7 @@ class GameState:
 
     @staticmethod
     def _direction(value: Any) -> Position:
-        directions = {
-            "north": (0, -1), "n": (0, -1), "south": (0, 1), "s": (0, 1),
-            "east": (1, 0), "e": (1, 0), "west": (-1, 0), "w": (-1, 0),
-        }
-        return directions.get(str(value).lower(), (1, 0))
+        return DIRECTIONS.get(str(value).lower(), (1, 0))
 
     def render_ascii(self) -> str:
         """Render the explored map as plain text for CLI and tests."""
