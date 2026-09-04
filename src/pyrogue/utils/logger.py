@@ -87,22 +87,22 @@ class GameLogger:
     def debug(self, message: str, extra: dict | None = None) -> None:
         """DEBUGレベルのメッセージをログ出力。"""
         extra_str = f" - {extra}" if extra else ""
-        self.logger.debug(f"{message}{extra_str}")
+        self.logger.debug("%s%s", message, extra_str)
 
     def info(self, message: str, extra: dict | None = None) -> None:
         """INFOレベルのメッセージをログ出力。"""
         extra_str = f" - {extra}" if extra else ""
-        self.logger.info(f"{message}{extra_str}")
+        self.logger.info("%s%s", message, extra_str)
 
     def warning(self, message: str, extra: dict | None = None) -> None:
         """WARNINGレベルのメッセージをログ出力。"""
         extra_str = f" - {extra}" if extra else ""
-        self.logger.warning(f"{message}{extra_str}")
+        self.logger.warning("%s%s", message, extra_str)
 
     def error(self, message: str, extra: dict | None = None) -> None:
         """ERRORレベルのメッセージをログ出力。"""
         extra_str = f" - {extra}" if extra else ""
-        self.logger.error(f"{message}{extra_str}")
+        self.logger.error("%s%s", message, extra_str)
 
 
 # Create a singleton instance

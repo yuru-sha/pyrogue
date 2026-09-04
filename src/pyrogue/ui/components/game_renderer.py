@@ -14,10 +14,10 @@ import tcod
 import tcod.console
 
 from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
+from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
-
 
 class GameRenderer:
     """
@@ -431,9 +431,8 @@ class GameRenderer:
             try:
                 message_y = self.game_screen.dungeon_height + 2
                 console.print(0, message_y, f"Message system error: {e}", fg=(255, 0, 0))
-            except Exception:
-                # 最後の手段：何もしない（クラッシュを避ける）
-                pass
+            except Exception as fallback_error:
+                game_logger.debug("Message system fallback failed", {"error": str(fallback_error)})
 
     def _get_hallucination_char(self) -> str:
         """

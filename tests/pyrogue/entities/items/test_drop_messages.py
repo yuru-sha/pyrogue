@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-アイテムドロップメッセージのテスト
-"""
+# ruff: noqa: T201
+"""アイテムドロップメッセージのテスト"""
 
 from pyrogue.entities.items.item import Armor, Food, Gold, Scroll, Weapon
 

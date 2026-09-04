@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-改善されたアイテムピックアップメッセージのテスト
-"""
+# ruff: noqa: T201
+"""改善されたアイテムピックアップメッセージのテスト"""
 
 from pyrogue.entities.items.item import Armor, Food, Gold, Scroll, Weapon
 

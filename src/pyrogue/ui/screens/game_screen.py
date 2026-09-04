@@ -9,17 +9,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import tcod
-
 from pyrogue.core.game_logic import GameLogic
-from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GameState
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
 from pyrogue.ui.components.input_handler import InputHandler
 
 if TYPE_CHECKING:
+    import tcod
+
     from pyrogue.core.engine import Engine
+    from pyrogue.core.game_states import GameStates
     from pyrogue.entities.actors.player import Player
 
 
@@ -49,6 +49,7 @@ class GameScreen:
         Args:
         ----
             engine: メインゲームエンジンのインスタンス（CLIモードの場合はNone）
+            seed: 決定論的なゲーム生成に使う乱数シード
 
         """
         self.engine = engine
@@ -76,15 +77,11 @@ class GameScreen:
         self.game_logic.set_game_screen_reference(self)
 
     def setup_new_game(self) -> None:
-        """
-        新しいゲームをセットアップ。
-        """
+        """新しいゲームをセットアップ。"""
         self.rogue_game = GameState(self.seed)
 
     def update_console(self) -> None:
-        """
-        コンソールの更新（エンジンから呼ばれる）。
-        """
+        """コンソールを更新する（エンジンから呼ばれる）。"""
         if self.engine:
             self.engine.update_console()
 
@@ -181,7 +178,6 @@ class GameScreen:
 
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
-
         if self.rogue_game is not None:
             game = self.rogue_game
 
@@ -200,7 +196,7 @@ class GameScreen:
             return SpecDungeonProxy()
 
         class DungeonProxy:
-            def __init__(self, game_screen):
+            def __init__(self, game_screen) -> None:
                 self.game_screen = game_screen
 
             @property
@@ -258,7 +254,7 @@ class GameScreen:
                 None,
             )
             if monster:
-                return self.rogue_game._player_attack(monster).success
+                return self.rogue_game._player_attack(monster).success  # noqa: SLF001
         return False
 
     def try_use_item(self, item) -> bool:
@@ -275,7 +271,7 @@ class GameScreen:
 
     def process_enemy_turns(self) -> None:
         """敵のターンを処理。"""
-        self.rogue_game._process_monsters()
+        self.rogue_game._process_monsters()  # noqa: SLF001
 
     # ユーティリティメソッド
     def start_targeting(self, start_x: int | None = None, start_y: int | None = None) -> None:

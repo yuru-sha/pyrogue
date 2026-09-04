@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-BSPダンジョン生成の部屋アスペクト比テスト
-"""
+# ruff: noqa: T201
+"""BSPダンジョン生成の部屋アスペクト比テスト"""
 
 import numpy as np
 

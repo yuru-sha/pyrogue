@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-識別システムのテスト用スクリプト
-"""
+# ruff: noqa: T201
+"""識別システムのテスト用スクリプト"""
 
 from pyrogue.entities.actors.player import Player
 from pyrogue.entities.items.effects import HEAL_LIGHT, IDENTIFY

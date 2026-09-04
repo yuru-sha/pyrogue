@@ -1,4 +1,5 @@
-"""Rogue 5.4-style game state and rules.
+"""
+Rogue 5.4-style game state and rules.
 
 The module deliberately has no TCOD dependency.  GUI and CLI callers execute
 the same :class:`GameState` commands and only the GUI is responsible for
@@ -9,11 +10,13 @@ from __future__ import annotations
 
 import random
 from collections import deque
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
 from itertools import pairwise
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 Position = tuple[int, int]
 
@@ -27,6 +30,9 @@ HUNGERTIME = 1300
 STOMACHSIZE = 2000
 MORETIME = 150
 STARVETIME = 850
+CURSE_CHANCE = 0.5
+BEAR_TRAP_DAMAGE = 2
+MAX_EQUIPPED_RINGS = 2
 
 
 class Terrain(str, Enum):
@@ -44,6 +50,8 @@ TileKind = Terrain
 
 
 class EntityKind(str, Enum):
+    """Logical entity categories rendered on a dungeon cell."""
+
     PLAYER = "player"
     MONSTER = "monster"
     ITEM = "item"
@@ -51,6 +59,8 @@ class EntityKind(str, Enum):
 
 
 class ItemKind(str, Enum):
+    """Item categories supported by the game rules."""
+
     WEAPON = "weapon"
     ARMOR = "armor"
     FOOD = "food"
@@ -66,6 +76,8 @@ ItemType = ItemKind
 
 
 class TrapKind(str, Enum):
+    """Trap categories that can appear on a floor."""
+
     TRAP_DOOR = "trap_door"
     BEAR = "bear_trap"
     TELEPORT = "teleport"
@@ -77,6 +89,8 @@ class TrapKind(str, Enum):
 
 
 class GameStatus(str, Enum):
+    """Terminal and active states of a game."""
+
     PLAYING = "playing"
     DEAD = "dead"
     VICTORY = "victory"
@@ -89,6 +103,8 @@ class SaveCompatibilityError(ValueError):
 
 @dataclass(frozen=True)
 class Room:
+    """Rectangular room bounds in dungeon coordinates."""
+
     x: int
     y: int
     width: int
@@ -96,14 +112,18 @@ class Room:
 
     @property
     def center(self) -> Position:
+        """Return the room center position."""
         return self.x + self.width // 2, self.y + self.height // 2
 
     def contains(self, x: int, y: int) -> bool:
+        """Return whether a position lies inside the room."""
         return self.x <= x < self.x + self.width and self.y <= y < self.y + self.height
 
 
 @dataclass
 class ItemState:
+    """Serializable item state held by a floor or the player."""
+
     id: int = 0
     kind: ItemKind = ItemKind.FOOD
     name: str = "food ration"
@@ -123,6 +143,7 @@ class ItemState:
 
     @property
     def char(self) -> str:
+        """Return the traditional Rogue glyph for this item."""
         return {
             ItemKind.WEAPON: ")",
             ItemKind.ARMOR: "]",
@@ -137,11 +158,13 @@ class ItemState:
 
     @property
     def display_name(self) -> str:
+        """Return the name visible with the current identification state."""
         if self.identified or self.kind in {ItemKind.WEAPON, ItemKind.ARMOR, ItemKind.FOOD, ItemKind.GOLD, ItemKind.AMULET}:
             return self.name
         return self.appearance or f"unknown {self.kind.value}"
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the item to JSON-compatible values."""
         data = self.__dict__.copy()
         data["kind"] = self.kind.value
         data["position"] = list(self.position) if self.position else None
@@ -150,6 +173,7 @@ class ItemState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ItemState:
+        """Restore an item from serialized data."""
         data = dict(data)
         data["kind"] = ItemKind(data.get("kind", ItemKind.FOOD))
         if data.get("position") is not None:
@@ -160,6 +184,8 @@ class ItemState:
 
 @dataclass(frozen=True)
 class MonsterDefinition:
+    """Static combat and spawning data for one monster type."""
+
     id: str
     char: str
     name: str
@@ -209,6 +235,8 @@ MONSTER_BY_ID = {monster.id: monster for monster in MONSTER_TYPES}
 
 @dataclass
 class MonsterState:
+    """Mutable monster instance on a dungeon floor."""
+
     id: int
     type_id: str
     x: int
@@ -218,37 +246,46 @@ class MonsterState:
 
     @property
     def definition(self) -> MonsterDefinition:
+        """Return the static definition for this monster."""
         return MONSTER_BY_ID[self.type_id]
 
     @property
     def char(self) -> str:
+        """Return the monster glyph."""
         return self.definition.char
 
     @property
     def name(self) -> str:
+        """Return the monster display name."""
         return self.definition.name
 
     @property
     def level(self) -> int:
+        """Return the monster level."""
         return self.definition.level
 
     @property
     def max_hp(self) -> int:
+        """Return the monster's maximum hit points."""
         return self.definition.hp
 
     @property
     def attack(self) -> int:
+        """Return the monster's attack bonus."""
         return self.definition.hit_bonus
 
     @property
     def defense(self) -> int:
+        """Return the monster's armor class."""
         return self.definition.armor_class
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the monster to JSON-compatible values."""
         return {"id": self.id, "type_id": self.type_id, "x": self.x, "y": self.y, "hp": self.hp, "asleep": self.asleep}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> MonsterState:
+        """Restore a monster from serialized data."""
         return cls(
             id=int(data["id"]),
             type_id=data["type_id"],
@@ -261,6 +298,8 @@ class MonsterState:
 
 @dataclass
 class TrapState:
+    """Mutable trap instance on a dungeon floor."""
+
     id: int
     kind: TrapKind
     x: int
@@ -269,6 +308,7 @@ class TrapState:
 
     @property
     def char(self) -> str:
+        """Return the trap glyph."""
         return "^"
 
     def to_dict(self) -> dict[str, Any]:
@@ -283,6 +323,7 @@ class TrapState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TrapState:
+        """Restore a trap from serialized data."""
         return cls(
             id=int(data["id"]),
             kind=TrapKind(data["kind"]),
@@ -294,6 +335,8 @@ class TrapState:
 
 @dataclass
 class FloorState:
+    """Serializable map and entity state for one dungeon floor."""
+
     number: int
     width: int
     height: int
@@ -308,23 +351,27 @@ class FloorState:
     player_position: Position | None = None
 
     def tile_at(self, position: Position) -> Terrain:
+        """Return a floor tile, treating out-of-bounds as a wall."""
         x, y = position
         if not (0 <= x < self.width and 0 <= y < self.height):
             return Terrain.WALL
         return self.tiles[y][x]
 
     def set_tile(self, position: Position, terrain: Terrain) -> None:
+        """Set a tile when its position lies inside the floor."""
         x, y = position
         if 0 <= x < self.width and 0 <= y < self.height:
             self.tiles[y][x] = terrain
 
     def is_walkable(self, position: Position, doors_open: bool = False) -> bool:
+        """Return whether the player can enter a position."""
         terrain = self.tile_at(position)
         return terrain in {Terrain.FLOOR, Terrain.DOOR_OPEN, Terrain.STAIRS_UP, Terrain.STAIRS_DOWN} or (
             doors_open and terrain == Terrain.DOOR_CLOSED
         )
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the floor to JSON-compatible values."""
         return {
             "number": self.number,
             "width": self.width,
@@ -342,6 +389,7 @@ class FloorState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FloorState:
+        """Restore a floor from serialized data."""
         return cls(
             number=int(data["number"]),
             width=int(data["width"]),
@@ -480,6 +528,8 @@ class DisplayCell:
 
 @dataclass(frozen=True)
 class CombatResult:
+    """Outcome of one combat exchange."""
+
     hit: bool
     damage: int
     target_defeated: bool
@@ -489,6 +539,8 @@ class CombatResult:
 
 @dataclass(frozen=True)
 class CommandResult:
+    """Result returned by every canonical game command."""
+
     success: bool
     message: str = ""
     turn_consumed: bool = False
@@ -507,17 +559,21 @@ class DungeonGenerator:
     def __init__(self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, rng: random.Random | None = None) -> None:
         self.width = width
         self.height = height
-        self.rng = rng or random.Random()
+        self.rng = rng or random.Random()  # noqa: S311 - game randomness is not cryptographic
 
     def generate(self, floor_number: int) -> FloorState:
         """Generate one deterministic floor."""
-        if floor_number in MAZE_FLOORS:
-            floor = self._generate_maze(floor_number)
-        else:
-            floor = self._generate_rooms(floor_number)
-        if floor.up_stairs and floor.down_stairs:
-            if not self._path_exists(floor, floor.up_stairs, floor.down_stairs):
-                raise RuntimeError
+        floor = (
+            self._generate_maze(floor_number)
+            if floor_number in MAZE_FLOORS
+            else self._generate_rooms(floor_number)
+        )
+        if (
+            floor.up_stairs
+            and floor.down_stairs
+            and not self._path_exists(floor, floor.up_stairs, floor.down_stairs)
+        ):
+            raise RuntimeError
         return floor
 
     def _blank(self) -> list[list[Terrain]]:
@@ -707,7 +763,7 @@ USE_ACTIONS = {
 class GameState:
     """Complete deterministic game state and the shared command API."""
 
-    COMMAND_KEYS: dict[str, tuple[str, Any]] = {
+    COMMAND_KEYS: ClassVar[dict[str, tuple[str, Any]]] = {
         "h": ("move", (-1, 0)),
         "j": ("move", (0, 1)),
         "k": ("move", (0, -1)),
@@ -747,7 +803,7 @@ class GameState:
         self.seed = seed if seed is not None else random.SystemRandom().randrange(0, 2**63)
         self.width = width
         self.height = height
-        self.rng = random.Random(self.seed)
+        self.rng = random.Random(self.seed)  # noqa: S311 - seeded game randomness is not cryptographic
         self.generator = DungeonGenerator(width, height, self.rng)
         self.status = GameStatus.PLAYING
         self.current_floor = 1
@@ -855,11 +911,11 @@ class GameState:
         if kind == ItemKind.WEAPON:
             item.damage_dice, item.hit_bonus, item.damage_bonus = WEAPON_DATA.get(name, ((1, 4), 0, 0))
             item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
-            item.cursed = item.enchantment < 0 and self.rng.random() < 0.5
+            item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
         elif kind == ItemKind.ARMOR:
             item.armor_bonus = ARMOR_DATA.get(name, 2)
             item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
-            item.cursed = item.enchantment < 0 and self.rng.random() < 0.5
+            item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
         elif kind == ItemKind.FOOD:
             item.nutrition = MORETIME
         elif kind == ItemKind.POTION:
@@ -872,7 +928,7 @@ class GameState:
         elif kind == ItemKind.RING:
             item.effect = RING_EFFECTS.get(name, "protection")
             item.enchantment = self.rng.choice((-1, 0, 0, 1))
-            item.cursed = item.enchantment < 0 and self.rng.random() < 0.5
+            item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
         elif kind == ItemKind.GOLD:
             item.quantity = self.rng.randint(2, 5 + floor.number * 2)
         return item
@@ -1309,11 +1365,10 @@ class GameState:
             self.player.equipped_weapon = item.id
         elif kind == ItemKind.ARMOR:
             self.player.equipped_armor = item.id
-        else:
-            if item.id not in self.player.equipped_rings:
-                if len(self.player.equipped_rings) >= 2:
-                    self.player.equipped_rings.pop(0)
-                self.player.equipped_rings.append(item.id)
+        elif item.id not in self.player.equipped_rings:
+            if len(self.player.equipped_rings) >= MAX_EQUIPPED_RINGS:
+                self.player.equipped_rings.pop(0)
+            self.player.equipped_rings.append(item.id)
         self._finish_turn()
         return self._result(True, f"You equip the {item.display_name}.", True)
 
@@ -1401,7 +1456,7 @@ class GameState:
             self.player.hp = max(0, self.player.hp - 4)
             message = "You fall through a trap door."
         elif trap.kind == TrapKind.BEAR:
-            self.player.hp = max(0, self.player.hp - 2)
+            self.player.hp = max(0, self.player.hp - BEAR_TRAP_DAMAGE)
             message = "You are caught in a bear trap."
         elif trap.kind == TrapKind.POISON_DART:
             self.player.hp = max(0, self.player.hp - 3)

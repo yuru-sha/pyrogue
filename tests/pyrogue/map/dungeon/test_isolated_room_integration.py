@@ -159,7 +159,7 @@ class TestIsolatedRoomIntegration:
                 if floor < 26:
                     assert end_pos is not None
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - preserve the floor number in integration-test diagnostics
                 pytest.fail(f"階層{floor}でダンジョン生成に失敗: {e}")
 
     def test_isolated_room_builder_reset(self):
