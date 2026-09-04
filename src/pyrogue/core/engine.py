@@ -68,7 +68,7 @@ class Engine:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, seed: int | None = None) -> None:
         """
         ゲームエンジンを初期化。
 
@@ -80,6 +80,7 @@ class Engine:
         self.map_width = CONFIG.display.MAP_WIDTH
         self.map_height = CONFIG.display.MAP_HEIGHT
         self.title = "PyRogue"
+        self.seed = seed
         self.console = tcod.console.Console(self.screen_width, self.screen_height)
         self.state = GameStates.MENU
         self.running = False
@@ -94,7 +95,7 @@ class Engine:
         self.help_menu_screen = HelpMenuScreen(self.console, self)
         self.symbol_explanation_screen = SymbolExplanationScreen(self.console, self)
         self.quick_guide_screen = QuickGuideScreen(self.console, self)
-        self.game_screen = GameScreen(self)
+        self.game_screen = GameScreen(self, seed=seed)
         self.inventory_screen = InventoryScreen(self.game_screen)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
@@ -231,6 +232,36 @@ class Engine:
                             self.running = False
                             break
                         if new_state:
+                            if new_state == GameStates.GAME_OVER:
+                                game = self.game_screen.rogue_game
+                                stats = {
+                                    "level": game.player.level,
+                                    "exp": game.player.exp,
+                                    "gold": game.player.gold,
+                                    "hp": game.player.hp,
+                                    "max_hp": game.player.max_hp,
+                                    "monsters_killed": game.player.monsters_killed,
+                                    "turns_played": game.player.turns_played,
+                                    "score": game.score,
+                                }
+                                self.save_manager.trigger_permadeath_on_death({"player_stats": stats})
+                                self.game_over_screen.set_game_over_data(
+                                    stats,
+                                    game.player.deepest_floor,
+                                    game.player.death_cause or "Unknown",
+                                )
+                            elif new_state == GameStates.VICTORY:
+                                game = self.game_screen.rogue_game
+                                stats = {
+                                    "level": game.player.level,
+                                    "exp": game.player.exp,
+                                    "gold": game.player.gold,
+                                    "hp": game.player.hp,
+                                    "max_hp": game.player.max_hp,
+                                    "monsters_killed": game.player.monsters_killed,
+                                    "turns_played": game.player.turns_played,
+                                }
+                                self.victory_screen.set_victory_data(stats, game.current_floor, game.score)
                             # 状態遷移時に前の状態を記録
                             self.previous_state = self.state
                             self.state = new_state

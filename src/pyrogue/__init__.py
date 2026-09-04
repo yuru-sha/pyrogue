@@ -1,3 +1,3 @@
-"""PyRogue - A full-featured roguelike game built with Python and TCOD."""
+"""PyRogue - a Rogue 5.4-style roguelike game."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

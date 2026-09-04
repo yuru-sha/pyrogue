@@ -36,14 +36,15 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="PyRogue - A Python Roguelike Game")
     parser.add_argument("--cli", action="store_true", help="Run in CLI mode for automated testing")
+    parser.add_argument("--seed", type=int, help="Seed the game for reproducible runs")
     args = parser.parse_args()
 
     try:
         if args.cli:
-            engine = CLIEngine()
+            engine = CLIEngine(seed=args.seed, spec_mode=True)
             engine.run()
         else:
-            engine = Engine()
+            engine = Engine(seed=args.seed)
             engine.initialize()
             engine.run()
     except Exception as e:

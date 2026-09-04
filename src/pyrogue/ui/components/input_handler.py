@@ -88,6 +88,9 @@ class InputHandler:
         # TCOD 19.0.0+ では unicode の代わりに text 属性を使用
         unicode_char = getattr(event, "text", getattr(event, "unicode", ""))
 
+        if getattr(self.game_screen, "rogue_game", None) is not None:
+            return self._handle_spec_key(key, unicode_char, mod)
+
         # JIS配列キー入力デバッグ用ログ（開発時のみ、環境変数で制御）
         from pyrogue.config.env import is_debug_mode
 
@@ -352,6 +355,52 @@ class InputHandler:
                 return GameStates.MENU
             return None
 
+        return None
+
+    def _handle_spec_key(self, key, unicode_char: str, mod) -> GameStates | None:
+        """Execute the shared specification command map for GUI input."""
+        game = self.game_screen.rogue_game
+        key_commands = {
+            tcod.event.KeySym.LEFT: "h",
+            tcod.event.KeySym.RIGHT: "l",
+            tcod.event.KeySym.UP: "k",
+            tcod.event.KeySym.DOWN: "j",
+            tcod.event.KeySym.KP_4: "h",
+            tcod.event.KeySym.KP_6: "l",
+            tcod.event.KeySym.KP_8: "k",
+            tcod.event.KeySym.KP_2: "j",
+            tcod.event.KeySym.KP_7: "y",
+            tcod.event.KeySym.KP_9: "u",
+            tcod.event.KeySym.KP_1: "b",
+            tcod.event.KeySym.KP_3: "n",
+        }
+        if key == tcod.event.KeySym.ESCAPE:
+            return GameStates.MENU if self.game_screen.engine else None
+        if key in key_commands:
+            command = key_commands[key]
+        elif mod & tcod.event.Modifier.CTRL and key in {ord("s"), ord("S")}:
+            command = "S"
+        elif mod & tcod.event.Modifier.CTRL and key in {ord("l"), ord("L")}:
+            self.game_screen.load_game()
+            return None
+        elif unicode_char and unicode_char.isprintable():
+            command = unicode_char
+        elif isinstance(key, int) and 32 <= key <= 126:
+            command = chr(key)
+        else:
+            command = ""
+        if not command:
+            return None
+        if command == "S":
+            self.game_screen.save_game()
+            return None
+        result = game.execute(command)
+        if result.state.value == "quit":
+            return GameStates.EXIT
+        if result.state.value == "dead":
+            return GameStates.GAME_OVER
+        if result.state.value == "victory":
+            return GameStates.VICTORY
         return None
 
     def _handle_targeting_key(self, event: tcod.event.KeyDown) -> None:

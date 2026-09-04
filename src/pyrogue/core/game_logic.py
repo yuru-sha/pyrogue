@@ -894,6 +894,10 @@ class GameLogic:
 
             save_manager = SaveManager()
 
+            if self.game_screen and getattr(self.game_screen, "rogue_game", None) is not None:
+                save_manager.save_game_state(self.game_screen.rogue_game.to_dict())
+                return
+
             # 現在のゲーム状態を収集
             save_data = self._create_auto_save_data()
 
