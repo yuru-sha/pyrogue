@@ -67,7 +67,7 @@ class SaveManager:
         self.last_error: SaveError | None = None
 
         # セーブディレクトリを作成
-        self.save_dir.mkdir(exist_ok=True)
+        self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def save_game_state(self, game_data: dict[str, Any]) -> bool:
         """
