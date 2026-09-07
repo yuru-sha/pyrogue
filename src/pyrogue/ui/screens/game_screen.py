@@ -9,16 +9,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import tcod
-
 from pyrogue.core.game_logic import GameLogic
-from pyrogue.core.game_states import GameStates
+from pyrogue.core.rogue_game import GameState
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
 from pyrogue.ui.components.input_handler import InputHandler
 
 if TYPE_CHECKING:
+    import tcod
+
     from pyrogue.core.engine import Engine
+    from pyrogue.core.game_states import GameStates
     from pyrogue.entities.actors.player import Player
 
 
@@ -41,16 +42,18 @@ class GameScreen:
 
     """
 
-    def __init__(self, engine: Engine | None) -> None:
+    def __init__(self, engine: Engine | None, seed: int | None = None) -> None:
         """
         ゲームスクリーンを初期化。
 
         Args:
         ----
             engine: メインゲームエンジンのインスタンス（CLIモードの場合はNone）
+            seed: 決定論的なゲーム生成に使う乱数シード
 
         """
         self.engine = engine
+        self.seed = seed
 
         # ダンジョンサイズの設定
         if engine:
@@ -63,6 +66,7 @@ class GameScreen:
 
         # ゲームロジックを初期化
         self.game_logic = GameLogic(engine, self.dungeon_width, self.dungeon_height)
+        self.rogue_game = GameState(seed)
 
         # 各コンポーネントを初期化
         self.renderer = GameRenderer(self)
@@ -73,17 +77,11 @@ class GameScreen:
         self.game_logic.set_game_screen_reference(self)
 
     def setup_new_game(self) -> None:
-        """
-        新しいゲームをセットアップ。
-        """
-        self.game_logic.reset_game()
-        self.game_logic.setup_new_game()
-        self.fov_manager.update_fov()
+        """新しいゲームをセットアップ。"""
+        self.rogue_game = GameState(self.seed)
 
     def update_console(self) -> None:
-        """
-        コンソールの更新（エンジンから呼ばれる）。
-        """
+        """コンソールを更新する（エンジンから呼ばれる）。"""
         if self.engine:
             self.engine.update_console()
 
@@ -96,9 +94,6 @@ class GameScreen:
             console: TCODコンソール
 
         """
-        # FOVを更新
-        self.fov_manager.update_fov()
-
         # 描画処理を委譲
         self.renderer.render(console)
 
@@ -137,13 +132,9 @@ class GameScreen:
             保存に成功した場合True
 
         """
-        from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+        from pyrogue.core.save_manager import SaveManager
 
-        context = GUICommandContext(self)
-        command_handler = CommonCommandHandler(context)
-        result = command_handler.handle_command("save")
-
-        return result.success
+        return SaveManager().save_game_state(self.rogue_game.to_dict())
 
     def load_game(self) -> bool:
         """
@@ -154,23 +145,22 @@ class GameScreen:
             読み込みに成功した場合True
 
         """
-        from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
+        from pyrogue.core.save_manager import SaveManager
 
-        context = GUICommandContext(self)
-        command_handler = CommonCommandHandler(context)
-        result = command_handler.handle_command("load")
-
-        # ロード成功時にFOVを更新
-        if result.success:
-            self.fov_manager.update_fov()
-
-        return result.success
+        data = SaveManager().load_game_state()
+        if data is None:
+            return False
+        try:
+            self.rogue_game = GameState.from_dict(data)
+        except (TypeError, ValueError):
+            return False
+        return True
 
     # GameLogic連携プロパティ
     @property
     def player(self) -> Player:
         """プレイヤーオブジェクトへのアクセス。"""
-        return self.game_logic.player
+        return self.rogue_game.player
 
     @property
     def dungeon(self):
@@ -184,13 +174,29 @@ class GameScreen:
 
     def add_message(self, message: str, color: tuple[int, int, int] = (255, 255, 255)) -> None:
         """メッセージをゲームログに追加。"""
-        self.game_logic.add_message(message)
+        self.rogue_game.messages.append(message)
 
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
+        if self.rogue_game is not None:
+            game = self.rogue_game
+
+            class SpecDungeonProxy:
+                current_floor = property(lambda _: game.current_floor)
+                tiles = property(lambda _: game.floor.tiles)
+                width = game.width
+                height = game.height
+                explored = property(lambda _: game.floor.explored)
+                monsters = property(lambda _: game.floor.monsters)
+                items = property(lambda _: game.floor.items)
+
+                def get_blocking_entity_at(self, x, y):
+                    return next((monster for monster in game.floor.monsters if (monster.x, monster.y) == (x, y)), None)
+
+            return SpecDungeonProxy()
 
         class DungeonProxy:
-            def __init__(self, game_screen):
+            def __init__(self, game_screen) -> None:
                 self.game_screen = game_screen
 
             @property
@@ -225,36 +231,51 @@ class GameScreen:
     # 状態チェック用メソッド（GameLogicから取得）
     def check_player_death(self) -> bool:
         """プレイヤーの死亡をチェック。"""
-        return self.game_logic.check_player_death()
+        return self.rogue_game.is_dead
 
     def check_game_over(self) -> bool:
         """ゲームオーバー状態をチェック。"""
-        return self.game_logic.check_game_over()
+        return self.rogue_game.is_dead
 
     def check_victory(self) -> bool:
         """勝利条件をチェック。"""
-        return self.game_logic.check_victory()
+        return self.rogue_game.is_victory
 
     # CLIモード互換メソッド
     def try_move_player(self, dx: int, dy: int) -> bool:
         """プレイヤーの移動を試行。"""
-        return self.game_logic.handle_player_move(dx, dy)
+        return self.rogue_game.move(dx, dy).success
 
     def try_attack_adjacent_enemy(self) -> bool:
         """隣接する敵を攻撃。"""
-        return self.game_logic.try_attack_adjacent_enemy()
+        for dx, dy in ((-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)):
+            monster = next(
+                (
+                    monster
+                    for monster in self.rogue_game.floor.monsters
+                    if (monster.x, monster.y) == (self.player.x + dx, self.player.y + dy)
+                ),
+                None,
+            )
+            if monster:
+                return self.rogue_game._player_attack(monster).success  # noqa: SLF001
+        return False
 
     def try_use_item(self, item) -> bool:
         """アイテムを使用。"""
-        return self.game_logic.try_use_item(item)
+        return self.rogue_game.execute("quaff", [item.id]).success
 
     def get_nearby_enemies(self) -> list:
         """周囲の敵を取得。"""
-        return self.game_logic.get_nearby_enemies()
+        return [
+            monster
+            for monster in self.rogue_game.floor.monsters
+            if max(abs(monster.x - self.player.x), abs(monster.y - self.player.y)) <= 1
+        ]
 
     def process_enemy_turns(self) -> None:
         """敵のターンを処理。"""
-        self.game_logic.process_enemy_turns()
+        self.rogue_game._process_monsters()  # noqa: SLF001
 
     # ユーティリティメソッド
     def start_targeting(self, start_x: int | None = None, start_y: int | None = None) -> None:

@@ -76,6 +76,8 @@ class StateManager:
 
         if current_state == GameStates.PLAYERS_TURN:
             new_state = context.handle_key(event)
+            if new_state == GameStates.EXIT:
+                return False, None
             if new_state:
                 return True, new_state
             return True, None

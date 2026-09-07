@@ -123,7 +123,7 @@ class TestDarkRoomIntegration:
             light_tile = tiles[light_y, light_x]
             from pyrogue.map.tile import StairsDown, StairsUp
 
-            assert isinstance(light_tile, (Floor, StairsUp, StairsDown))
+            assert isinstance(light_tile, Floor | StairsUp | StairsDown)
             # 床タイルの場合のみ光源属性をチェック
             if isinstance(light_tile, Floor):
                 assert hasattr(light_tile, "has_light_source")
@@ -203,7 +203,7 @@ class TestDarkRoomIntegration:
                 # 暗い部屋ビルダーが初期化されていることを確認
                 assert director.dark_room_builder is not None
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - preserve the floor number in integration-test diagnostics
                 pytest.fail(f"階層{floor}でダンジョン生成に失敗: {e}")
 
     def test_dark_room_builder_reset(self):

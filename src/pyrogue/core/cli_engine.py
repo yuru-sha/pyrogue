@@ -26,6 +26,8 @@ import sys
 from pyrogue.core.command_handler import CommandContext, CommonCommandHandler
 from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.game_states import GameStates
+from pyrogue.core.rogue_game import GameState, GameStatus, ItemKind
+from pyrogue.core.save_manager import SaveManager
 from pyrogue.utils import game_logger
 
 
@@ -94,10 +96,16 @@ class CLIEngine:
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, seed: int | None = None, spec_mode: bool = False) -> None:
         """CLIエンジンを初期化。"""
         self.state = GameStates.PLAYERS_TURN
         self.running = False
+        self.spec_game = GameState(seed) if (spec_mode or seed is not None) else None
+        if self.spec_game is not None:
+            self.game_logic = None
+            self.command_context = None
+            self.command_handler = None
+            return
         self.game_logic = GameLogic(None)  # CLIモードではエンジンはNone
 
         # 共通コマンドハンドラーを初期化
@@ -112,6 +120,10 @@ class CLIEngine:
 
         標準入力からコマンドを読み取り、処理し、結果を表示します。
         """
+        if self.spec_game is not None:
+            self._run_spec()
+            return
+
         self.running = True
         print("PyRogue CLI Mode - Type 'help' for commands")
 
@@ -161,6 +173,9 @@ class CLIEngine:
             False if game should quit, True if game should continue, None for invalid commands
 
         """
+        if self.spec_game is not None:
+            return self._process_spec_command(command)
+
         parts = command.lower().split()
         if not parts:
             return None
@@ -195,6 +210,57 @@ class CLIEngine:
         if result.should_quit or not result.success:
             return False
 
+        return True
+
+    def _run_spec(self) -> None:
+        """Run the specification-driven CLI loop."""
+        self.running = True
+        print("PyRogue CLI Mode - Type '?' for help")
+        self.display_game_state()
+        while self.running:
+            try:
+                command = input("> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                self.running = False
+                break
+            if command:
+                self.process_command(command)
+
+    def _process_spec_command(self, command: str) -> bool:
+        """Execute the same command map used by the GUI."""
+        parts = command.split()
+        if not parts:
+            return True
+        raw_command = parts[0]
+        game_command = raw_command if len(raw_command) == 1 else raw_command.lower()
+        args = parts[1:]
+        if game_command.lower() == "load":
+            data = SaveManager().load_game_state()
+            if data is None:
+                print("No compatible save file found.")
+                return True
+            try:
+                self.spec_game = GameState.from_dict(data)
+                print("Game loaded successfully.")
+            except (TypeError, ValueError):
+                print("Save file is not compatible with PyRogue 0.3.0.")
+                return True
+            self.display_game_state()
+            return True
+        if game_command in {"S", "save"}:
+            result = self.spec_game.execute("save")
+            if result.success and SaveManager().save_game_state(self.spec_game.to_dict()):
+                print("Game saved successfully.")
+            else:
+                print("Failed to save game.")
+            return True
+        result = self.spec_game.execute(game_command, args)
+        if result.message:
+            print(result.message)
+        if result.success:
+            self.display_game_state()
+        if result.state in {GameStatus.QUIT, GameStatus.DEAD, GameStatus.VICTORY}:
+            self.running = False
         return True
 
     def handle_debug_command(self, args: list[str]) -> bool:
@@ -297,6 +363,12 @@ class CLIEngine:
             コマンドが成功したかどうか
 
         """
+        if self.spec_game is not None:
+            result = self.spec_game.execute("move", [direction])
+            if result.message:
+                print(result.message)
+            return result.success
+
         direction_map = {
             "north": (0, -1),
             "south": (0, 1),
@@ -342,6 +414,11 @@ class CLIEngine:
             コマンドが成功したかどうか
 
         """
+        if self.spec_game is not None:
+            result = self.spec_game.execute("attack", [_target] if _target else [])
+            if result.message:
+                print(result.message)
+            return result.success
         try:
             # 隣接する敵を攻撃
             player = self.game_logic.player
@@ -382,6 +459,18 @@ class CLIEngine:
             コマンドが成功したかどうか
 
         """
+        if self.spec_game is not None:
+            item = self.spec_game._find_item(item_name)
+            actions = {
+                ItemKind.FOOD: "eat",
+                ItemKind.POTION: "quaff",
+                ItemKind.SCROLL: "read",
+            }
+            action = actions.get(item.kind) if item else None
+            result = self.spec_game.execute(action, [item_name]) if action else None
+            if result and result.message:
+                print(result.message)
+            return bool(result and result.success)
         try:
             # アイテム使用処理
             inventory = self.game_logic.inventory
@@ -423,6 +512,11 @@ class CLIEngine:
             コマンドが成功したかどうか
 
         """
+        if self.spec_game is not None:
+            result = self.spec_game.execute("pickup")
+            if result.message:
+                print(result.message)
+            return result.success
         try:
             message = self.game_logic.handle_get_item()
             if message:
@@ -448,6 +542,12 @@ class CLIEngine:
             コマンドが成功したかどうか
 
         """
+        if self.spec_game is not None:
+            action = "ascend" if direction.lower() in {"up", "u"} else "descend"
+            result = self.spec_game.execute(action)
+            if result.message:
+                print(result.message)
+            return result.success
         try:
             if direction.lower() in ["up", "u"]:
                 success = self.game_logic.ascend_stairs()
@@ -483,6 +583,10 @@ class CLIEngine:
 
     def display_recent_messages(self) -> None:
         """最近のメッセージを表示。"""
+        if self.spec_game is not None:
+            for message in self.spec_game.messages[-3:]:
+                print(f"  {message}")
+            return
         try:
             if self.game_logic.message_log:
                 recent_messages = self.game_logic.message_log[-3:]  # 最新の3つ
@@ -495,6 +599,10 @@ class CLIEngine:
 
     def display_game_state(self) -> None:
         """現在のゲーム状態を表示。"""
+        if self.spec_game is not None:
+            print(self.spec_game.render_ascii())
+            print(self.spec_game.status_text())
+            return
         try:
             if not self.game_logic.player:
                 print("Game not initialized")
@@ -592,6 +700,9 @@ class CLIEngine:
 
     def display_player_status(self) -> None:
         """プレイヤーの詳細ステータスを表示。"""
+        if self.spec_game is not None:
+            print(self.spec_game.status_text())
+            return
         try:
             if not self.game_logic.player:
                 print("Game not initialized")
@@ -629,6 +740,9 @@ class CLIEngine:
 
     def display_inventory(self) -> None:
         """インベントリを表示。"""
+        if self.spec_game is not None:
+            print(self.spec_game.execute("inventory").message)
+            return
         try:
             if not self.game_logic.player:
                 print("Game not initialized")
@@ -669,6 +783,9 @@ class CLIEngine:
 
     def update_game_state(self) -> None:
         """ゲーム状態を更新。"""
+        if self.spec_game is not None:
+            self.running = self.spec_game.status == GameStatus.PLAYING
+            return
         try:
             # ゲームオーバー条件のみをチェック
             # 勝利条件は ascend_stairs メソッド内でのみチェックする
@@ -682,6 +799,9 @@ class CLIEngine:
 
     def show_help(self) -> None:
         """利用可能なコマンドを表示。"""
+        if self.spec_game is not None:
+            print(self.spec_game.execute("help").message)
+            return
         print("\nAvailable Commands:")
         print("  move <direction>  - Move player (north/south/east/west/n/s/e/w)")
         print("  get               - Pick up item at current position (, key)")

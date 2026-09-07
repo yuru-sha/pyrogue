@@ -1,3 +1,4 @@
+# ruff: noqa: T201
 """ターン数カウントのテストスクリプト"""
 
 from pyrogue.core.game_logic import GameLogic

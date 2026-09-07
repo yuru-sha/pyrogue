@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-セーブ/ロード機能のテスト
-"""
+# ruff: noqa: T201
+"""セーブ/ロード機能のテスト"""
 
 import os
 import sys

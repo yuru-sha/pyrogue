@@ -20,8 +20,10 @@ def calculate_distance(x1: int, y1: int, x2: int, y2: int) -> float:
 
     Args:
     ----
-        x1, y1: 点1の座標
-        x2, y2: 点2の座標
+        x1: 点1のX座標
+        y1: 点1のY座標
+        x2: 点2のX座標
+        y2: 点2のY座標
 
     Returns:
     -------
@@ -37,8 +39,10 @@ def calculate_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
 
     Args:
     ----
-        x1, y1: 点1の座標
-        x2, y2: 点2の座標
+        x1: 点1のX座標
+        y1: 点1のY座標
+        x2: 点2のX座標
+        y2: 点2のY座標
 
     Returns:
     -------
@@ -79,8 +83,10 @@ def get_line_points(x1: int, y1: int, x2: int, y2: int) -> list[tuple[int, int]]
 
     Args:
     ----
-        x1, y1: 開始点の座標
-        x2, y2: 終了点の座標
+        x1: 開始点のX座標
+        y1: 開始点のY座標
+        x2: 終了点のX座標
+        y2: 終了点のY座標
 
     Returns:
     -------
@@ -117,8 +123,10 @@ def is_adjacent(x1: int, y1: int, x2: int, y2: int, threshold: float = 1.5) -> b
 
     Args:
     ----
-        x1, y1: 点1の座標
-        x2, y2: 点2の座標
+        x1: 点1のX座標
+        y1: 点1のY座標
+        x2: 点2のX座標
+        y2: 点2のY座標
         threshold: 隣接とみなす距離の閾値
 
     Returns:
@@ -184,8 +192,10 @@ def get_direction_to_target(start_x: int, start_y: int, target_x: int, target_y:
 
     Args:
     ----
-        start_x, start_y: 開始座標
-        target_x, target_y: 目標座標
+        start_x: 開始点のX座標
+        start_y: 開始点のY座標
+        target_x: 目標点のX座標
+        target_y: 目標点のY座標
 
     Returns:
     -------
@@ -203,8 +213,10 @@ def has_line_of_sight(x1: int, y1: int, x2: int, y2: int, context: GameContext) 
 
     Args:
     ----
-        x1, y1: 開始点の座標
-        x2, y2: 終了点の座標
+        x1: 開始点のX座標
+        y1: 開始点のY座標
+        x2: 終了点のX座標
+        y2: 終了点のY座標
         context: ゲームコンテキスト
 
     Returns:

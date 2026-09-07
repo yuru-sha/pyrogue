@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-アイテム拾い機能のテストスクリプト
-"""
+# ruff: noqa: T201
+"""アイテム拾い機能のテストスクリプト"""
 
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.items.item import Gold, Weapon

@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-GameScreenのセーブ/ロード機能のテスト
-"""
+# ruff: noqa: T201
+"""GameScreenのセーブ/ロード機能のテスト"""
 
 import os
 import sys
@@ -87,7 +85,7 @@ def test_game_screen_save_load():
 
         print("\n=== テスト完了 ===")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - keep standalone test output readable
         print(f"テスト中にエラーが発生: {e}")
         import traceback
 

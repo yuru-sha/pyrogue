@@ -6,12 +6,13 @@ from typing import TYPE_CHECKING
 
 import tcod
 import tcod.event
-from tcod.console import Console
 
-from pyrogue.entities.items.wand import Wand
 from pyrogue.ui.screens.screen import Screen
 
 if TYPE_CHECKING:
+    from tcod.console import Console
+
+    from pyrogue.entities.items.wand import Wand
     from pyrogue.ui.screens.game_screen import GameScreen
 
 
@@ -96,37 +97,37 @@ class WandSelectionScreen(Screen):
             bool: イベントが処理された場合True
 
         """
-        if isinstance(event, tcod.event.KeyDown):
-            if not self.wands:
-                # ワンドがない場合はESCで終了
-                if event.sym == tcod.event.KeySym.ESCAPE:
-                    self.game_screen.engine.state = self.game_screen.engine.last_state
-                    return True
-                return False
+        if not isinstance(event, tcod.event.KeyDown):
+            return False
 
-            # ↑/↓キーでワンド選択
-            if event.sym == tcod.event.KeySym.UP:
-                self.selected_index = (self.selected_index - 1) % len(self.wands)
-                return True
-            if event.sym == tcod.event.KeySym.DOWN:
-                self.selected_index = (self.selected_index + 1) % len(self.wands)
-                return True
-
-            # Enterキーで確定
-            if event.sym == tcod.event.KeySym.RETURN:
-                if 0 <= self.selected_index < len(self.wands):
-                    self.selected_wand = self.wands[self.selected_index]
-                    # 方向選択モードに移行
-                    self.game_screen.input_handler.wand_direction_mode = True
-                    self.game_screen.input_handler.selected_wand = self.selected_wand
-                    self.game_screen.game_logic.add_message(f"Zap {self.selected_wand.name} in which direction?")
-                    self.game_screen.engine.state = self.game_screen.engine.last_state
-                return True
-
-            # ESCキーでキャンセル
+        if not self.wands:
             if event.sym == tcod.event.KeySym.ESCAPE:
-                self.game_screen.game_logic.add_message("Cancelled.")
                 self.game_screen.engine.state = self.game_screen.engine.last_state
                 return True
+            return False
 
-        return False
+        handled = False
+        # ↑/↓キーでワンド選択
+        if event.sym == tcod.event.KeySym.UP:
+            self.selected_index = (self.selected_index - 1) % len(self.wands)
+            handled = True
+        elif event.sym == tcod.event.KeySym.DOWN:
+            self.selected_index = (self.selected_index + 1) % len(self.wands)
+            handled = True
+        # Enterキーで確定
+        elif event.sym == tcod.event.KeySym.RETURN:
+            if 0 <= self.selected_index < len(self.wands):
+                self.selected_wand = self.wands[self.selected_index]
+                # 方向選択モードに移行
+                self.game_screen.input_handler.wand_direction_mode = True
+                self.game_screen.input_handler.selected_wand = self.selected_wand
+                self.game_screen.game_logic.add_message(f"Zap {self.selected_wand.name} in which direction?")
+                self.game_screen.engine.state = self.game_screen.engine.last_state
+            handled = True
+        # ESCキーでキャンセル
+        elif event.sym == tcod.event.KeySym.ESCAPE:
+            self.game_screen.game_logic.add_message("Cancelled.")
+            self.game_screen.engine.state = self.game_screen.engine.last_state
+            handled = True
+
+        return handled

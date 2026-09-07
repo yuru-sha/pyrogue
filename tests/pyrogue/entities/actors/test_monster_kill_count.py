@@ -1,3 +1,4 @@
+# ruff: noqa: T201
 """モンスター討伐数のテストスクリプト"""
 
 from pyrogue.core.game_logic import GameLogic

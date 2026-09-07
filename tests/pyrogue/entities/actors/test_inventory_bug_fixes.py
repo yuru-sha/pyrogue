@@ -4,7 +4,6 @@
 このモジュールは、報告されたバグが修正されていることを確認するためのテストを含みます。
 """
 
-
 from pyrogue.entities.actors.inventory import Inventory
 from pyrogue.entities.items.item import Armor, Ring, Weapon
 

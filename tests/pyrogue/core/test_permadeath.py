@@ -17,6 +17,15 @@ from pyrogue.core.save_manager import SaveManager
 class TestPermadeathSystem:
     """Permadeath機能のテスト。"""
 
+    def test_creates_missing_save_directory_parents(self, tmp_path):
+        """存在しない親ディレクトリを含むセーブ先を作成する。"""
+        save_dir = tmp_path / "missing" / "saves"
+
+        save_manager = SaveManager(save_dir)
+
+        assert save_manager.save_dir == save_dir
+        assert save_dir.is_dir()
+
     def test_normal_save_and_load(self):
         """正常なセーブ・ロード機能のテスト。"""
         with tempfile.TemporaryDirectory() as temp_dir:

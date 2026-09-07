@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""
-BSPダンジョン生成の部屋アスペクト比テスト
-"""
+# ruff: noqa: T201
+"""BSPダンジョン生成の部屋アスペクト比テスト"""
 
 import numpy as np
 
@@ -39,7 +37,7 @@ def test_room_aspect_ratios():
     print("\n=== 部屋アスペクト比統計 ===")
     print(f"総部屋数: {total_rooms}")
     print(f"細い部屋数 (2:1以上): {thin_rooms}")
-    print(f"細い部屋の割合: {thin_rooms/total_rooms*100:.1f}%")
+    print(f"細い部屋の割合: {thin_rooms / total_rooms * 100:.1f}%")
     print(f"平均アスペクト比: {np.mean(aspect_ratios):.2f}")
     print(f"最大アスペクト比: {max(aspect_ratios):.2f}")
     print(f"最小アスペクト比: {min(aspect_ratios):.2f}")

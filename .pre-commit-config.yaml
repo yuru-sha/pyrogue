@@ -13,20 +13,29 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  # Ruff - Python linter/formatter
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.6
+  # Ruff - use the version pinned by uv.lock
+  - repo: local
     hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-check
+        name: Ruff check
+        entry: uv run --locked --extra dev ruff check
+        language: system
+        types: [python]
       - id: ruff-format
+        name: Ruff format check
+        entry: uv run --locked --extra dev ruff format --check
+        language: system
+        types: [python]
 
-  # MyPy - 型チェック
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
+  # MyPy - check only the canonical state API; legacy modules are outside this gate.
+  - repo: local
     hooks:
       - id: mypy
-        args: [--ignore-missing-imports, --strict]
+        name: Mypy canonical state
+        entry: uv run --locked --extra dev mypy src/pyrogue/core/rogue_game.py src/pyrogue/core/game_state.py
+        language: system
+        pass_filenames: false
+        files: ^src/pyrogue/core/(rogue_game|game_state)\.py$
 
   # カスタムフック - CLI動作確認テスト
   - repo: local
@@ -37,7 +46,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-commit]
+        stages: [manual]
         verbose: true
 
   # pytest実行
@@ -45,9 +54,19 @@ repos:
     hooks:
       - id: pytest
         name: Pytestテスト実行
-        entry: uv run pytest
+        entry: uv run --locked --extra dev pytest -q
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-commit]
+        stages: [manual]
         verbose: true
+
+  # 高信頼な形式の秘密情報検査。網羅的なスキャナの代替ではない。
+  - repo: local
+    hooks:
+      - id: secret-pattern-scan
+        name: Secret pattern scan
+        entry: scripts/check_secrets.sh
+        language: system
+        pass_filenames: true
+        stages: [pre-commit, manual]

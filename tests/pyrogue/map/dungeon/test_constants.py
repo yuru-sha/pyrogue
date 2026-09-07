@@ -5,7 +5,6 @@
 値が適切に定義されていることを検証します。
 """
 
-
 from pyrogue.map.dungeon.constants import (
     BSPConstants,
     CorridorConstants,
@@ -130,7 +129,7 @@ class TestMazeConstants:
         assert MazeConstants.CELLULAR_AUTOMATA_ITERATIONS == 5
         assert MazeConstants.BIRTH_LIMIT == 4
         assert MazeConstants.DEATH_LIMIT == 3
-        assert [7, 13, 19] == MazeConstants.MAZE_FLOORS
+        assert MazeConstants.MAZE_FLOORS == [7, 13, 19]
 
     def test_maze_density_relationships(self):
         """迷路密度の関係が妥当であることを確認。"""

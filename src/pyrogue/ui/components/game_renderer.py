@@ -14,6 +14,7 @@ import tcod
 import tcod.console
 
 from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
+from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
@@ -54,12 +55,53 @@ class GameRenderer:
         """
         console.clear()
 
+        if getattr(self.game_screen, "rogue_game", None) is not None:
+            self._render_spec(console)
+            return
+
         # 各要素を描画
         self._render_map(console)
         self._render_status(console)
         self._render_messages(console)
         # コマンドヒントはデフォルトで無効化（メッセージエリアと干渉を避けるため）
         # self._render_command_hints(console)
+
+    def _render_spec(self, console: tcod.Console) -> None:
+        """Render the renderer-neutral game state as characters."""
+        game = self.game_screen.rogue_game
+        terrain_glyphs = {
+            "wall": "#",
+            "floor": ".",
+            "door_closed": "+",
+            "door_open": "/",
+            "stairs_up": "<",
+            "stairs_down": ">",
+        }
+        entity_glyphs = {"player": "@", "monster": "?", "item": "*", "trap": "^"}
+        monsters = {(monster.x, monster.y): monster.char for monster in game.floor.monsters}
+        items = {item.position: item.char for item in game.floor.items if item.position is not None}
+        for cell in game.display_cells().values():
+            if not cell.explored or cell.terrain is None:
+                continue
+            char = entity_glyphs.get(cell.entity.value, "") if cell.visible and cell.entity else ""
+            if cell.entity and cell.entity.value == "monster":
+                char = monsters.get(cell.position, char)
+            elif cell.entity and cell.entity.value == "item":
+                char = items.get(cell.position, char)
+            if not char:
+                char = terrain_glyphs[cell.terrain.value]
+            color = (255, 255, 255) if cell.visible else (80, 80, 80)
+            x, y = cell.position
+            if x < console.width and y + 2 < console.height:
+                console.print(x, y + 2, char, fg=color)
+
+        if console.width > 0:
+            console.print(1, 0, game.status_text()[: max(0, console.width - 2)], fg=(255, 255, 255))
+            console.print(1, 1, f"B{game.current_floor}F", fg=(255, 255, 255))
+            message_y = game.height + 2
+            for offset, message in enumerate(game.messages[-7:]):
+                if message_y + offset < console.height:
+                    console.print(0, message_y + offset, str(message)[: console.width], fg=(255, 255, 255))
 
     def _render_map(self, console: tcod.Console) -> None:
         """
@@ -390,9 +432,8 @@ class GameRenderer:
             try:
                 message_y = self.game_screen.dungeon_height + 2
                 console.print(0, message_y, f"Message system error: {e}", fg=(255, 0, 0))
-            except Exception:
-                # 最後の手段：何もしない（クラッシュを避ける）
-                pass
+            except Exception as fallback_error:
+                game_logger.debug("Message system fallback failed", {"error": str(fallback_error)})
 
     def _get_hallucination_char(self) -> str:
         """

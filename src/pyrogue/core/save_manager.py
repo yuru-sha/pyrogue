@@ -17,11 +17,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import pickle
 import time
 from pathlib import Path
 from typing import Any
 
+from pyrogue.core.rogue_game import GAME_VERSION
 from pyrogue.utils.logger import game_logger
 
 
@@ -59,14 +59,15 @@ class SaveManager:
 
             save_dir = get_save_directory()
         self.save_dir = Path(save_dir)
-        self.save_file = self.save_dir / "game_save.pkl"
-        self.backup_file = self.save_dir / "game_save_backup.pkl"
+        self.save_file = self.save_dir / "game_save.json"
+        self.backup_file = self.save_dir / "game_save_backup.json"
         self.metadata_file = self.save_dir / "save_metadata.json"
         self.checksum_file = self.save_dir / "save_checksum.txt"
         self.is_permadeath_triggered = False
+        self.last_error: SaveError | None = None
 
         # セーブディレクトリを作成
-        self.save_dir.mkdir(exist_ok=True)
+        self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def save_game_state(self, game_data: dict[str, Any]) -> bool:
         """
@@ -86,15 +87,19 @@ class SaveManager:
             return False
 
         try:
+            self.last_error = None
+            player_data = game_data.get("player_stats", game_data.get("player", {}))
+            player_hp = player_data.get("hp", 20)
             # メタデータを作成
             metadata = {
                 "save_time": time.time(),
-                "save_version": "0.2.0",
-                "player_level": game_data.get("player_stats", {}).get("level", 1),
+                "save_version": GAME_VERSION,
+                "spec_version": GAME_VERSION,
+                "player_level": player_data.get("level", 1),
                 "current_floor": game_data.get("current_floor", 1),
-                "player_hp": game_data.get("player_stats", {}).get("hp", 20),
-                "player_max_hp": game_data.get("player_stats", {}).get("hp_max", 20),
-                "is_alive": game_data.get("player_stats", {}).get("hp", 20) > 0,
+                "player_hp": player_hp,
+                "player_max_hp": player_data.get("hp_max", player_data.get("max_hp", 20)),
+                "is_alive": game_data.get("status") != "dead" and player_hp > 0,
             }
 
             # 既存のファイルをバックアップ
@@ -106,9 +111,9 @@ class SaveManager:
 
             # メインセーブファイルを保存
             try:
-                with open(self.save_file, "wb") as f:
-                    pickle.dump(game_data, f)
-            except (OSError, PermissionError, pickle.PickleError) as e:
+                with open(self.save_file, "w", encoding="utf-8") as f:
+                    json.dump(game_data, f, ensure_ascii=False, indent=2)
+            except (OSError, PermissionError, TypeError, ValueError) as e:
                 raise SaveError(f"Failed to save game data: {e}") from e
 
             # メタデータを保存
@@ -140,6 +145,7 @@ class SaveManager:
             Optional[Dict[str, Any]]: 読み込んだゲームデータ。失敗時はNone
 
         """
+        self.last_error = None
         if not self.save_file.exists():
             game_logger.info("No save file found")
             return None
@@ -151,8 +157,10 @@ class SaveManager:
                 # チェックサム検証失敗時もバックアップを試行
                 if self.backup_file.exists():
                     try:
-                        with open(self.backup_file, "rb") as f:
-                            game_data = pickle.load(f)
+                        with open(self.backup_file, encoding="utf-8") as f:
+                            game_data = json.load(f)
+                        if not self._check_save_version(game_data):
+                            return None
                         # 後方互換性: 古いセーブファイルからMP関連属性を削除
                         self._remove_legacy_mp_attributes(game_data)
                         game_logger.info("Game loaded from backup file after checksum failure")
@@ -173,8 +181,11 @@ class SaveManager:
                     return None
 
             # セーブデータを読み込み
-            with open(self.save_file, "rb") as f:
-                game_data = pickle.load(f)
+            with open(self.save_file, encoding="utf-8") as f:
+                game_data = json.load(f)
+
+            if not self._check_save_version(game_data):
+                return None
 
             # 後方互換性: 古いセーブファイルからMP関連属性を削除
             self._remove_legacy_mp_attributes(game_data)
@@ -183,12 +194,15 @@ class SaveManager:
             return game_data
 
         except Exception as e:
+            self.last_error = e if isinstance(e, SaveError) else SaveError(str(e))
             game_logger.error(f"Failed to load game: {e}")
             # メインファイルが破損している場合、バックアップを試行
             if self.backup_file.exists():
                 try:
-                    with open(self.backup_file, "rb") as f:
-                        game_data = pickle.load(f)
+                    with open(self.backup_file, encoding="utf-8") as f:
+                        game_data = json.load(f)
+                    if not self._check_save_version(game_data):
+                        return None
                     # 後方互換性: 古いセーブファイルからMP関連属性を削除
                     self._remove_legacy_mp_attributes(game_data)
                     game_logger.info("Game loaded from backup file")
@@ -197,6 +211,17 @@ class SaveManager:
                     game_logger.error(f"Backup file also corrupted: {backup_error}")
 
             return None
+
+    def _check_save_version(self, game_data: dict[str, Any]) -> bool:
+        """Reject explicitly versioned saves from another format."""
+        save_version = game_data.get("spec_version", game_data.get("version"))
+        if save_version is None and "player" in game_data:
+            self.last_error = SaveError("Save is missing the PyRogue specification version")
+            return False
+        if save_version is not None and save_version != GAME_VERSION:
+            self.last_error = SaveError(f"Unsupported save version: {save_version}")
+            return False
+        return True
 
     def _remove_legacy_mp_attributes(self, game_data: dict[str, Any]) -> None:
         """
