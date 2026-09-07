@@ -5,7 +5,6 @@
 値が適切に定義されていることを検証します。
 """
 
-
 from pyrogue.map.dungeon.constants import (
     BSPConstants,
     CorridorConstants,

@@ -159,7 +159,13 @@ class ItemState:
     @property
     def display_name(self) -> str:
         """Return the name visible with the current identification state."""
-        if self.identified or self.kind in {ItemKind.WEAPON, ItemKind.ARMOR, ItemKind.FOOD, ItemKind.GOLD, ItemKind.AMULET}:
+        if self.identified or self.kind in {
+            ItemKind.WEAPON,
+            ItemKind.ARMOR,
+            ItemKind.FOOD,
+            ItemKind.GOLD,
+            ItemKind.AMULET,
+        }:
             return self.name
         return self.appearance or f"unknown {self.kind.value}"
 
@@ -556,23 +562,17 @@ class CommandResult:
 class DungeonGenerator:
     """Deterministic room/maze generator with guaranteed stair paths."""
 
-    def __init__(self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, rng: random.Random | None = None) -> None:
+    def __init__(
+        self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, rng: random.Random | None = None
+    ) -> None:
         self.width = width
         self.height = height
         self.rng = rng or random.Random()  # noqa: S311 - game randomness is not cryptographic
 
     def generate(self, floor_number: int) -> FloorState:
         """Generate one deterministic floor."""
-        floor = (
-            self._generate_maze(floor_number)
-            if floor_number in MAZE_FLOORS
-            else self._generate_rooms(floor_number)
-        )
-        if (
-            floor.up_stairs
-            and floor.down_stairs
-            and not self._path_exists(floor, floor.up_stairs, floor.down_stairs)
-        ):
+        floor = self._generate_maze(floor_number) if floor_number in MAZE_FLOORS else self._generate_rooms(floor_number)
+        if floor.up_stairs and floor.down_stairs and not self._path_exists(floor, floor.up_stairs, floor.down_stairs):
             raise RuntimeError
         return floor
 
@@ -714,11 +714,46 @@ WEAPON_DATA: dict[str, tuple[tuple[int, int], int, int]] = {
     "two handed sword": ((4, 4), 4, 0),
     "spear": ((2, 3), 2, 0),
 }
-ARMOR_DATA = {"leather armor": 2, "ring mail": 3, "studded leather armor": 3, "scale mail": 4, "chain mail": 5, "splint mail": 6, "banded mail": 6, "plate mail": 7}
-POTION_EFFECTS = {"healing potion": "healing", "extra healing potion": "extra_healing", "strength potion": "strength", "restore strength potion": "restore_strength"}
-SCROLL_EFFECTS = {"identify scroll": "identify", "light scroll": "light", "remove curse scroll": "remove_curse", "enchant weapon scroll": "enchant_weapon", "enchant armor scroll": "enchant_armor", "teleportation scroll": "teleport", "magic mapping scroll": "magic_mapping"}
-RING_EFFECTS = {"ring of protection": "protection", "ring of add strength": "strength", "ring of sustain strength": "sustain", "ring of searching": "search", "ring of regeneration": "regeneration"}
-WAND_EFFECTS = {"wand of magic missile": "magic_missile", "wand of light": "light", "wand of lightning": "lightning", "wand of fire": "fire", "wand of cold": "cold", "wand of teleport monster": "teleport_monster"}
+ARMOR_DATA = {
+    "leather armor": 2,
+    "ring mail": 3,
+    "studded leather armor": 3,
+    "scale mail": 4,
+    "chain mail": 5,
+    "splint mail": 6,
+    "banded mail": 6,
+    "plate mail": 7,
+}
+POTION_EFFECTS = {
+    "healing potion": "healing",
+    "extra healing potion": "extra_healing",
+    "strength potion": "strength",
+    "restore strength potion": "restore_strength",
+}
+SCROLL_EFFECTS = {
+    "identify scroll": "identify",
+    "light scroll": "light",
+    "remove curse scroll": "remove_curse",
+    "enchant weapon scroll": "enchant_weapon",
+    "enchant armor scroll": "enchant_armor",
+    "teleportation scroll": "teleport",
+    "magic mapping scroll": "magic_mapping",
+}
+RING_EFFECTS = {
+    "ring of protection": "protection",
+    "ring of add strength": "strength",
+    "ring of sustain strength": "sustain",
+    "ring of searching": "search",
+    "ring of regeneration": "regeneration",
+}
+WAND_EFFECTS = {
+    "wand of magic missile": "magic_missile",
+    "wand of light": "light",
+    "wand of lightning": "lightning",
+    "wand of fire": "fire",
+    "wand of cold": "cold",
+    "wand of teleport monster": "teleport_monster",
+}
 
 DIRECTIONS: dict[str, Position] = {
     "north": (0, -1),
@@ -977,9 +1012,10 @@ class GameState:
         if not available:
             available = [MONSTER_BY_ID["dragon"]]
         count = min(12, 3 + (floor.number - 1) // 3)
+        stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         for _ in range(count):
             definition = self.rng.choices(available, weights=[monster.spawn_weight for monster in available], k=1)[0]
-            position = self._free_position(floor, (floor.up_stairs, floor.down_stairs))
+            position = self._free_position(floor, stairs)
             monster = MonsterState(self._next_monster_id, definition.id, *position, definition.hp)
             self._next_monster_id += 1
             floor.monsters.append(monster)
@@ -987,8 +1023,9 @@ class GameState:
     def _spawn_traps(self, floor: FloorState) -> None:
         count = 1 + min(2, floor.number // 9)
         kinds = list(TrapKind)
+        stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         for _ in range(count):
-            position = self._free_position(floor, (floor.up_stairs, floor.down_stairs))
+            position = self._free_position(floor, stairs)
             floor.traps.append(TrapState(self._next_trap_id, self.rng.choice(kinds), *position))
             self._next_trap_id += 1
 
@@ -1104,13 +1141,17 @@ class GameState:
         self.status = GameStatus.DEAD
         self._message(f"You died ({cause}).")
 
-    def _resolve_attack(self, attacker: PlayerState | MonsterState, defender: PlayerState | MonsterState) -> CombatResult:
+    def _resolve_attack(
+        self, attacker: PlayerState | MonsterState, defender: PlayerState | MonsterState
+    ) -> CombatResult:
         if isinstance(attacker, PlayerState):
             weapon = attacker.item(attacker.equipped_weapon) if attacker.equipped_weapon else None
             level = attacker.level
             hit_bonus = weapon.hit_bonus + (weapon.enchantment if weapon else 0) if weapon else 0
             damage_dice = weapon.damage_dice if weapon else (1, 2)
-            damage_bonus = (weapon.damage_bonus if weapon else 0) + _strength_adjustment(STR_TO_DAMAGE, attacker.strength)
+            damage_bonus = (weapon.damage_bonus if weapon else 0) + _strength_adjustment(
+                STR_TO_DAMAGE, attacker.strength
+            )
             attacker_name = "you"
         else:
             definition = attacker.definition
@@ -1119,7 +1160,9 @@ class GameState:
             damage_dice = definition.damage_dice
             damage_bonus = definition.damage_bonus
             attacker_name = definition.name
-        defender_ac = defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
+        defender_ac = (
+            defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
+        )
         # This is the shape of Rogue's swing(): d20 + level + hit modifiers vs AC.
         strength_bonus = _strength_adjustment(STR_TO_HIT, attacker.strength) if isinstance(attacker, PlayerState) else 0
         hit = self.rng.randint(1, 20) + level + hit_bonus + strength_bonus > defender_ac
@@ -1153,9 +1196,9 @@ class GameState:
 
     def attack(self, direction: Position | None = None) -> CommandResult:
         """Attack an adjacent monster, optionally in a named direction."""
-        candidates = [direction] if direction else [
-            (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)
-        ]
+        candidates = (
+            [direction] if direction else [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
+        )
         for dx, dy in candidates:
             target = (self.player.x + dx, self.player.y + dy)
             monster = next((item for item in self.floor.monsters if (item.x, item.y) == target), None)
@@ -1188,7 +1231,9 @@ class GameState:
             if target == self.player.position:
                 self._monster_attack(monster)
                 continue
-            if self.floor.is_walkable(target) and not any(other.x == target[0] and other.y == target[1] for other in self.floor.monsters if other is not monster):
+            if self.floor.is_walkable(target) and not any(
+                other.x == target[0] and other.y == target[1] for other in self.floor.monsters if other is not monster
+            ):
                 monster.x, monster.y = target
 
     def move(self, dx: int, dy: int) -> CommandResult:
@@ -1261,7 +1306,10 @@ class GameState:
             index = item_id
             if 0 <= index < len(self.player.inventory):
                 return self.player.inventory[index]
-        return next((item for item in self.player.inventory if item.name.lower() == text or item.display_name.lower() == text), None)
+        return next(
+            (item for item in self.player.inventory if item.name.lower() == text or item.display_name.lower() == text),
+            None,
+        )
 
     def _remove_inventory_item(self, item: ItemState) -> None:
         if self.player.equipped_weapon == item.id:
@@ -1356,7 +1404,11 @@ class GameState:
 
     def equip(self, value: Any, kind: ItemKind) -> CommandResult:
         """Equip a weapon, armor item, or ring from the pack."""
-        item = next((item for item in self.player.inventory if item.kind == kind), None) if value is None else self._find_item(value)
+        item = (
+            next((item for item in self.player.inventory if item.kind == kind), None)
+            if value is None
+            else self._find_item(value)
+        )
         if not item or item.kind != kind:
             return self._result(False, f"You have no {kind.value} to equip.")
         if item.cursed and item.id in self.player.equipped_item_ids:
@@ -1495,7 +1547,11 @@ class GameState:
 
     def identify_item(self, value: Any = None) -> CommandResult:
         """Identify one unknown item in the pack."""
-        item = next((item for item in self.player.inventory if not item.identified), None) if value is None else self._find_item(value)
+        item = (
+            next((item for item in self.player.inventory if not item.identified), None)
+            if value is None
+            else self._find_item(value)
+        )
         if not item:
             return self._result(False, "You have nothing new to identify.")
         item.identified = True
@@ -1620,11 +1676,16 @@ class GameState:
         if command in {"inventory", "info", "character"}:
             if command != "inventory":
                 return self._result(True, self.status_text())
-            return self._result(True, ", ".join(item.display_name for item in self.player.inventory) or "Your pack is empty.")
+            return self._result(
+                True, ", ".join(item.display_name for item in self.player.inventory) or "Your pack is empty."
+            )
         if command == "status":
             return self._result(True, self.status_text())
         if command == "help":
-            return self._result(True, "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read, w/W equip, t throw, z zap, s search, </> stairs, ? help")
+            return self._result(
+                True,
+                "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read, w/W equip, t throw, z zap, s search, </> stairs, ? help",
+            )
         if command == "save":
             return self._result(True, "Game state ready to save.", False, self.to_dict())
         if command == "quit":
@@ -1639,8 +1700,12 @@ class GameState:
     def render_ascii(self) -> str:
         """Render the explored map as plain text for CLI and tests."""
         glyphs = {
-            Terrain.WALL: "#", Terrain.FLOOR: ".", Terrain.DOOR_CLOSED: "+", Terrain.DOOR_OPEN: "/",
-            Terrain.STAIRS_UP: "<", Terrain.STAIRS_DOWN: ">",
+            Terrain.WALL: "#",
+            Terrain.FLOOR: ".",
+            Terrain.DOOR_CLOSED: "+",
+            Terrain.DOOR_OPEN: "/",
+            Terrain.STAIRS_UP: "<",
+            Terrain.STAIRS_DOWN: ">",
         }
         cells = self.display_cells()
         monsters = {(monster.x, monster.y): monster.char for monster in self.floor.monsters}
@@ -1656,8 +1721,10 @@ class GameState:
                     line.append(monsters[(x, y)])
                 elif cell.entity == EntityKind.ITEM:
                     line.append(items[(x, y)])
-                else:
+                elif cell.terrain is not None:
                     line.append(glyphs.get(cell.terrain, " "))
+                else:
+                    line.append(" ")
             lines.append("".join(line))
         return "\n".join(lines)
 

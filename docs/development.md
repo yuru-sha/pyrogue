@@ -9,14 +9,14 @@
 依存関係を同期します。
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 ```
 
 ## 実行
 
 ```bash
-uv run game --cli --seed 1234
-uv run game --seed 1234
+uv run --locked game --cli --seed 1234
+uv run --locked game --seed 1234
 ```
 
 ゲームルールを直接扱う場合は次のAPIを使います。
@@ -32,13 +32,23 @@ print(result.message)
 ## テストと検証
 
 ```bash
-uv run --extra dev pytest -q
-uv run --extra dev ruff check src tests
-uv run --extra dev python -m compileall -q src tests
+make verify
+```
+
+個別に実行する場合も lockfile を固定します。
+
+```bash
+uv run --locked --extra dev pytest -q
+uv run --locked --extra dev ruff check src tests
+uv run --locked --extra dev ruff format --check src tests
+uv run --locked --extra dev mypy src/pyrogue/core/rogue_game.py src/pyrogue/core/game_state.py
+uv run --locked --extra dev python -m compileall -q src tests
 ```
 
 変更後は、少なくとも変更箇所のテストと全体テストを実行します。生成ロジックを変更した
 場合は、複数seedで全階の階段到達性も確認します。
+
+CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します。再現確認のseedを変える場合は、例えば `CLI_TEST_SEED=20260908 make test-cli` とします。
 
 ## 実装ルール
 

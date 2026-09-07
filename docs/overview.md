@@ -2,6 +2,8 @@
 
 **現在の仕様: 0.3.0**
 
+文書の入口は [docs/README.md](README.md) です。このページは概要だけを扱います。
+
 PyRogueは、Rogue 5.4を参考にしたPython 3.12製のテキストローグライクです。目的は、
 古典的な探索、資源管理、ターン制戦闘、パーマデスを、テスト可能な小さなゲーム状態として
 実装することです。
@@ -14,8 +16,8 @@ PyRogueは、Rogue 5.4を参考にしたPython 3.12製のテキストローグ�
 ## 起動方法
 
 ```bash
-uv run game --cli --seed 1234
-uv run game --seed 1234
+uv run --locked game --cli --seed 1234
+uv run --locked game --seed 1234
 ```
 
 CLIとGUIは同じ `GameState` コマンドを使います。seedを指定しない場合は自動生成seedを使います。

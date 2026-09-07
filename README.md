@@ -7,9 +7,9 @@ and TCOD GUI play.
 ## Run
 
 ```bash
-uv sync --extra dev
-uv run game --cli --seed 1234
-uv run game --seed 1234
+uv sync --locked --extra dev
+uv run --locked game --cli --seed 1234
+uv run --locked game --seed 1234
 ```
 
 Omit `--seed` for an automatically generated seed. The same game version,
@@ -45,10 +45,8 @@ rejected explicitly.
 ## Development
 
 ```bash
-uv run --extra dev pytest -q
-uv run --extra dev ruff check src tests
-uv run --extra dev python -m compileall -q src tests
+make verify
 ```
 
-See [SPEC.md](SPEC.md) for the authoritative 0.3.0 behavior and the `docs/`
-directory for design, architecture, feature, overview, and development notes.
+See [SPEC.md](SPEC.md) for the authoritative 0.3.0 behavior and [docs/README.md](docs/README.md)
+for the current documentation map.

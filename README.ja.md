@@ -7,9 +7,9 @@ PyRogueは、Rogue 5.4を参考にしたPython 3.12製の小さなローグラ�
 ## 起動
 
 ```bash
-uv sync --extra dev
-uv run game --cli --seed 1234
-uv run game --seed 1234
+uv sync --locked --extra dev
+uv run --locked game --cli --seed 1234
+uv run --locked game --seed 1234
 ```
 
 `--seed`を省略すると自動でseedを生成します。同じバージョン、seed、コマンド列
@@ -43,10 +43,8 @@ GameState -> DisplayCell -> GameRenderer
 ## 開発
 
 ```bash
-uv run --extra dev pytest -q
-uv run --extra dev ruff check src tests
-uv run --extra dev python -m compileall -q src tests
+make verify
 ```
 
-仕様の正本は[SPEC.md](SPEC.md)（0.3.0）です。設計・アーキテクチャ・機能・概要・開発情報は
-`docs/`を参照してください。
+仕様の正本は[SPEC.md](SPEC.md)（0.3.0）です。現在の文書一覧は[docs/README.md](docs/README.md)を
+参照してください。

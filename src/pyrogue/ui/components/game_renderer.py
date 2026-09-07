@@ -19,6 +19,7 @@ from pyrogue.utils import game_logger
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
 
+
 class GameRenderer:
     """
     ゲーム画面の描画処理を担当するクラス。

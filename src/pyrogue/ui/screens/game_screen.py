@@ -250,7 +250,11 @@ class GameScreen:
         """隣接する敵を攻撃。"""
         for dx, dy in ((-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)):
             monster = next(
-                (monster for monster in self.rogue_game.floor.monsters if (monster.x, monster.y) == (self.player.x + dx, self.player.y + dy)),
+                (
+                    monster
+                    for monster in self.rogue_game.floor.monsters
+                    if (monster.x, monster.y) == (self.player.x + dx, self.player.y + dy)
+                ),
                 None,
             )
             if monster:

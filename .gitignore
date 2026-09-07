@@ -1,4 +1,4 @@
-# Claude Code キャッシュファイル
+# Agent cache files
 .ccache/
 *.cache
 
@@ -184,5 +184,12 @@ saves/
 # macOS
 .DS_Store
 
-# Claude Code settings
+# Local agent settings
 .claude/settings.local.json
+
+# Machine-local agent links; keep only project-owned skills versioned.
+.agents/agent-capabilities/
+.codex/agents/
+.agents/skills/*
+!.agents/skills/pyrogue-verify/
+!.agents/skills/pyrogue-verify/**
