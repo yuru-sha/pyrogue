@@ -244,12 +244,7 @@ class Engine:
                                     "turns_played": game.player.turns_played,
                                     "score": game.score,
                                 }
-                                self.save_manager.trigger_permadeath_on_death({"player_stats": stats})
-                                self.game_over_screen.set_game_over_data(
-                                    stats,
-                                    game.player.deepest_floor,
-                                    game.player.death_cause or "Unknown",
-                                )
+                                self.game_over(stats, game.player.deepest_floor, game.player.death_cause or "Unknown")
                             elif new_state == GameStates.VICTORY:
                                 game = self.game_screen.rogue_game
                                 stats = {
