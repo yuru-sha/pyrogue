@@ -1783,6 +1783,8 @@ class GameState:
             return self.search()
         if command == "identify_trap":
             return self.identify_trap(self._direction(args[0]) if args else (0, -1))
+        if command == "identify_item":
+            return self.identify_item(args[0] if args else None)
         if command == "ascend":
             return self.ascend()
         if command == "descend":
@@ -1810,7 +1812,7 @@ class GameState:
         if command == "help":
             return self._result(
                 True,
-                "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read, w/W equip, t throw, z zap, s search, </> stairs, ? help",
+                "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read, w/W equip, t throw, z zap, s search, ^ trap, / identify, </> stairs, ? help",
             )
         if command == "save":
             return self._result(True, "Game state ready to save.", False, self.to_dict())

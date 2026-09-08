@@ -26,6 +26,7 @@ seed, and command sequence produces the same game state.
 - CLI and GUI use the same death cleanup; the active save is removed on death, but not on victory.
 
 Movement uses vi keys (`h`, `j`, `k`, `l`, `y`, `u`, `b`, `n`) and `.` waits.
+Press `/` to identify one unknown item in the pack without consuming a turn.
 Use `?` in-game for the complete command list.
 
 ## Architecture

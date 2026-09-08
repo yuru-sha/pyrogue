@@ -18,6 +18,37 @@ def test_gui_read_key_uses_the_canonical_scroll_command() -> None:
     assert game.player.turns_played == 1
 
 
+def test_gui_slash_key_uses_canonical_item_identification(monkeypatch) -> None:
+    screen = GameScreen(None, seed=22)
+    game = screen.rogue_game
+    item = ItemState(
+        id=932,
+        kind=ItemKind.POTION,
+        name="healing potion",
+        appearance="red",
+        identified=False,
+        effect="healing",
+    )
+    game.player.inventory.append(item)
+    results = []
+    execute = game.execute
+
+    def record_execute(command, args=()):
+        result = execute(command, args)
+        results.append(result)
+        return result
+
+    monkeypatch.setattr(game, "execute", record_execute)
+
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=ord("/"), mod=0, text="/")) is None
+
+    result = results[-1]
+    assert result.success
+    assert result.message == "You identify the healing potion."
+    assert not result.turn_consumed
+    assert item.identified
+
+
 def test_gui_zap_direction_uses_the_canonical_wand_command() -> None:
     screen = GameScreen(None, seed=21)
     game: GameState = screen.rogue_game

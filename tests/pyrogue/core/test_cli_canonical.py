@@ -1,5 +1,5 @@
 from pyrogue.core.cli_engine import CLIEngine
-from pyrogue.core.rogue_game import TrapKind, TrapState
+from pyrogue.core.rogue_game import ItemKind, ItemState, TrapKind, TrapState
 from pyrogue.core.save_manager import SaveManager
 
 
@@ -74,3 +74,34 @@ def test_cli_save_load_restores_canonical_state(tmp_path, monkeypatch, capsys) -
     assert cli.process_command("load") is True
 
     assert cli.spec_game.to_dict() == expected
+
+
+def test_cli_slash_identifies_one_unknown_item(capsys, monkeypatch) -> None:
+    cli = CLIEngine(seed=1234, spec_mode=True)
+    item = ItemState(
+        1000,
+        ItemKind.POTION,
+        "healing potion",
+        appearance="red",
+        identified=False,
+        effect="healing",
+    )
+    cli.spec_game.player.inventory.append(item)
+    results = []
+    execute = cli.spec_game.execute
+
+    def record_execute(command, args=()):
+        result = execute(command, args)
+        results.append(result)
+        return result
+
+    monkeypatch.setattr(cli.spec_game, "execute", record_execute)
+
+    assert cli.process_command("/") is True
+
+    result = results[-1]
+    assert result.success
+    assert result.message == "You identify the healing potion."
+    assert not result.turn_consumed
+    assert item.identified
+    assert "You identify the healing potion." in capsys.readouterr().out

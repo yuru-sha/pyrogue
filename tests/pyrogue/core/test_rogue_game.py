@@ -122,6 +122,26 @@ def test_command_aliases_share_dispatch() -> None:
     assert rest.player.equipped_item_ids == {rest.player.equipped_weapon, rest.player.equipped_armor}
 
 
+def test_slash_identifies_one_unknown_item() -> None:
+    game = GameState(1234)
+    item = ItemState(
+        1000,
+        ItemKind.POTION,
+        "healing potion",
+        appearance="red",
+        identified=False,
+        effect="healing",
+    )
+    game.player.inventory.append(item)
+
+    result = game.execute("/")
+
+    assert result.success
+    assert result.message == "You identify the healing potion."
+    assert not result.turn_consumed
+    assert item.identified
+
+
 def test_json_round_trip_preserves_future_state() -> None:
     game = GameState(1234)
     game.execute(".")
