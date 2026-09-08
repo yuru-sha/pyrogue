@@ -54,6 +54,7 @@ CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します�
 
 - `GameState`のRNG以外でゲーム中の乱数を生成しない。
 - CLIとGUIで個別のルールを実装せず、`GameState.execute`を共有する。
+- 死亡後は `SaveManager.finalize_death` を共有し、canonical状態のサマリーを表示して死亡セーブを削除する。勝利時は削除しない。
 - UIへTCODのConsole、色、画像、タイル型をゲーム状態から持ち込まない。
 - 保存形式を変更するときは `GAME_VERSION` と互換性検査を同時に更新する。
 - 勝利・死亡サマリーには `player.deepest_floor` を使い、`current_floor` と混同しない。

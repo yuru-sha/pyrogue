@@ -21,7 +21,7 @@ uv run --locked game --cli --seed 1234
 uv run --locked game --seed 1234
 ```
 
-CLIとGUIは同じ `GameState` コマンドを使います。seedを指定しない場合は自動生成seedを使います。
+CLIとGUIは同じ `GameState` コマンドを使い、死亡時のセーブ後処理も共有します。seedを指定しない場合は自動生成seedを使います。
 
 ## 実装の見方
 

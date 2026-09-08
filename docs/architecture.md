@@ -38,7 +38,7 @@ CLI文字レンダラー / TCOD GameRenderer (文字・色)
 - `pyrogue.ui.screens.game_screen`: GUIライフサイクルとcanonical状態の保持。
 - `pyrogue.ui.components.input_handler`: TCODイベントを同じコマンドへ変換。
 - `pyrogue.ui.components.game_renderer`: `DisplayCell` を画面へ描画。
-- `pyrogue.core.save_manager`: JSONセーブ、チェックサム、バージョン拒否、パーマデス検査。
+- `pyrogue.core.save_manager`: JSONセーブ、チェックサム、バージョン拒否、パーマデス検査。死亡時は `finalize_death` をCLI/GUIで共有する。
 
 旧来のTCODゲームモジュールは既存利用者との互換性のため残していますが、新しいCLI起動、
 seed指定、GUIの描画・入力・保存はcanonical経路を使用します。
