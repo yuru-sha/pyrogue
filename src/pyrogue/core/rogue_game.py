@@ -1127,8 +1127,8 @@ class GameState:
                 if self.floor.tile_at((x, y)) != Terrain.WALL:
                     self.floor.explored.add((x, y))
 
-    def display_cells(self) -> dict[Position, DisplayCell]:
-        """Return the current map as renderer-neutral display cells."""
+    def display_cells(self, show_all: bool = False) -> dict[Position, DisplayCell]:
+        """Return renderer-neutral display cells, optionally bypassing FOV for display only."""
         visible = self.visible_positions()
         cells: dict[Position, DisplayCell] = {}
         monster_positions = {
@@ -1139,7 +1139,7 @@ class GameState:
         for y in range(self.height):
             for x in range(self.width):
                 position = (x, y)
-                is_visible = position in visible
+                is_visible = show_all or position in visible
                 is_explored = position in self.floor.explored
                 terrain = self.floor.tile_at(position) if is_visible or is_explored else None
                 entity: EntityKind | None = None

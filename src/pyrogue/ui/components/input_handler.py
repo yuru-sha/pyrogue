@@ -383,6 +383,9 @@ class InputHandler:
         }
         if key == tcod.event.KeySym.ESCAPE:
             return GameStates.MENU if self.game_screen.engine else None
+        if key == tcod.event.KeySym.TAB:
+            self.game_screen.add_message(self.game_screen.fov_manager.toggle_fov())
+            return None
         if key == ord("i"):
             game.execute("inventory")
             return GameStates.SHOW_INVENTORY

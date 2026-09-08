@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import tcod.event
+
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GameState, ItemKind, ItemState
 from pyrogue.ui.screens.game_screen import GameScreen
@@ -33,3 +35,13 @@ def test_gui_zap_direction_uses_the_canonical_wand_command() -> None:
     assert not screen.input_handler.direction_selection_mode
     assert wand.charges == 0
     assert game.player.turns_played == 1
+
+
+def test_gui_tab_toggles_canonical_fov_and_records_message() -> None:
+    screen = GameScreen(None, seed=22)
+
+    assert screen.fov_manager.fov_enabled
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")) is None
+
+    assert not screen.fov_manager.fov_enabled
+    assert screen.rogue_game.messages[-1] == "FOV disabled"

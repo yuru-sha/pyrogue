@@ -4,7 +4,7 @@ import tcod.event
 
 from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState
+from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState, Terrain
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 
@@ -15,13 +15,19 @@ class RecordingConsole:
 
     def __init__(self) -> None:
         self.lines: list[str] = []
+        self.cells: dict[tuple[int, int], str] = {}
 
     def clear(self) -> None:
         self.lines.clear()
+        self.cells.clear()
 
     def print(self, *args, **kwargs) -> None:
+        x = kwargs.get("x", args[0] if args else 0)
+        y = kwargs.get("y", args[1] if len(args) > 1 else 0)
         value = kwargs.get("string", args[2] if len(args) > 2 else "")
-        self.lines.append(str(value))
+        value = str(value)
+        self.cells[(x, y)] = value
+        self.lines.append(value)
 
 
 def key_event(key: str) -> SimpleNamespace:
@@ -101,6 +107,38 @@ def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None
     gui_state.pop("messages")
     cli_state.pop("messages")
     assert gui_state == cli_state
+
+
+def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    console = RecordingConsole()
+    hidden_position = next(
+        position
+        for position, cell in game_screen.rogue_game.display_cells().items()
+        if not cell.visible and not cell.explored
+    )
+    terrain = game_screen.rogue_game.floor.tile_at(hidden_position)
+    expected_glyph = {
+        Terrain.WALL: "#",
+        Terrain.FLOOR: ".",
+        Terrain.DOOR_CLOSED: "+",
+        Terrain.DOOR_OPEN: "/",
+        Terrain.STAIRS_UP: "<",
+        Terrain.STAIRS_DOWN: ">",
+    }[terrain]
+    map_position = (hidden_position[0], hidden_position[1] + 2)
+
+    game_screen.render(console)
+    assert map_position not in console.cells
+
+    tab = SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")
+    game_screen.handle_key(tab)
+    game_screen.render(console)
+    assert console.cells[map_position] == expected_glyph
+
+    game_screen.handle_key(tab)
+    game_screen.render(console)
+    assert map_position not in console.cells
 
 
 def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:
