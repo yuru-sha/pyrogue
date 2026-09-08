@@ -16,6 +16,7 @@ from pyrogue.core.managers.item_manager import ItemManager
 from pyrogue.core.managers.monster_ai_manager import MonsterAIManager
 from pyrogue.core.managers.movement_manager import MovementManager
 from pyrogue.core.managers.turn_manager import TurnManager
+from pyrogue.core.rogue_game import GAME_VERSION
 from pyrogue.core.score_manager import ScoreManager
 from pyrogue.entities.actors.player import Player
 from pyrogue.map.dungeon_manager import DungeonManager
@@ -518,7 +519,7 @@ class GameLogic:
                 # 勝利処理をエンジンに通知
                 if self.engine and hasattr(self.engine, "victory"):
                     player_stats = self.player.get_stats_dict()
-                    final_floor = self.dungeon_manager.current_floor
+                    final_floor = self.player.deepest_floor
                     self.engine.victory(player_stats, final_floor)
 
                 return True
@@ -937,7 +938,7 @@ class GameLogic:
             "has_amulet": getattr(self.player, "has_amulet", False),
             "turn_count": self.turn_manager.turn_count,
             "auto_save": True,  # オートセーブフラグ
-            "version": "1.0",
+            "spec_version": GAME_VERSION,
         }
 
     def _serialize_player(self, player) -> dict:

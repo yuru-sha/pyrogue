@@ -11,7 +11,8 @@ PyRogueは、Rogue 5.4を参考にしたPython 3.12製のテキストローグ�
 ## プレイヤーの目標
 
 ダンジョンを26階まで下り、Amulet of Yendorを回収し、階段を使って地上へ戻ります。
-途中でHP、食料、装備、インベントリ容量を管理します。死亡したゲームは再開できません。
+途中でHP、食料、装備、インベントリ容量を管理します。勝利・死亡サマリーの階層は最深到達階を
+示し、`current_floor` の現在位置とは分けて扱います。死亡したゲームは再開できません。
 
 ## 起動方法
 
@@ -25,10 +26,10 @@ CLIとGUIは同じ `GameState` コマンドを使い、死亡時のセーブ後�
 ## 実装の見方
 
 ```text
-GameState -> DisplayCell -> GameRenderer
+GameState -> DisplayCell -> CLI / GameRenderer
 ```
 
-ゲームルールは `src/pyrogue/core/rogue_game.py` に集約し、表示層は表示セルを文字へ変換します。
+ゲームルールは `src/pyrogue/core/rogue_game.py` に集約し、CLIとGUIの表示層は同じ表示セルを文字へ変換します。
 この境界により、TCOD画面を起動せずに階層生成、戦闘、保存、勝敗をテストできます。
 
 ## 仕様と記録

@@ -22,6 +22,7 @@ uv run --locked game --seed 1234
 - Rogue風のA-Zモンスター、原作系トラップ、飢え、食料、装備、ポーション、巻物、杖、指輪、ゴールド、Amulet。
 - Amuletを持って地上へ戻ると勝利。26階に着くだけでは勝利になりません。
 - 死亡したゲームは再開できません。最終画面にはスコア、最深階、死因を表示します。
+- `current_floor`はプレイヤーの現在位置、`player.deepest_floor`は到達記録です。勝利・死亡サマリーには後者を表示します。
 - CLIとGUIは同じ死亡後処理を使い、死亡時だけ現在のセーブを削除します。勝利時は削除しません。
 
 移動はviキー（`h`、`j`、`k`、`l`、`y`、`u`、`b`、`n`）で、`.`は待機です。
@@ -32,13 +33,13 @@ uv run --locked game --seed 1234
 canonical経路は次の小さな流れです。
 
 ```text
-GameState -> DisplayCell -> GameRenderer
+GameState -> DisplayCell -> CLI / GameRenderer
        ^          ^
        +-- コマンド / JSONセーブ
 ```
 
 `GameState`が乱数、階層、エンティティ、インベントリ、戦闘、飢え、視界、終了状態を
-所有します。UIは`DisplayCell`を文字と色へ変換するだけです。JSONセーブにはバージョン、
+所有します。CLIとTCOD rendererは同じ`DisplayCell`を文字と色へ変換します。JSONセーブにはバージョン、
 全状態、乱数状態、死亡・勝利状態、パーマデス情報を含め、非互換バージョンは明示的に拒否します。
 
 ## 開発

@@ -77,7 +77,7 @@ def test_legacy_gui_game_over_arguments_keep_compatibility(tmp_path) -> None:
     with patch("pyrogue.core.engine.SaveManager", return_value=save_manager):
         engine = Engine(seed=1234)
 
-    assert save_manager.save_game_state({"player_stats": {"hp": 5}})
+    assert save_manager.save_game_state(engine.game_screen.rogue_game.to_dict())
     legacy_stats = {
         "level": 2,
         "exp": 4,

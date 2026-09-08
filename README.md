@@ -22,6 +22,7 @@ seed, and command sequence produces the same game state.
 - Rogue-style A-Z monsters, original traps, hunger, food, equipment, potions, scrolls, wands, rings, gold, and the Amulet.
 - The Amulet is carried back to the surface; merely reaching floor 26 does not win.
 - A dead game cannot be resumed. The final screen records score, deepest floor, and death cause.
+- `current_floor` is the player's current position; victory and death summaries use the separately saved `player.deepest_floor` progress value.
 - CLI and GUI use the same death cleanup; the active save is removed on death, but not on victory.
 
 Movement uses vi keys (`h`, `j`, `k`, `l`, `y`, `u`, `b`, `n`) and `.` waits.
@@ -32,14 +33,14 @@ Use `?` in-game for the complete command list.
 The canonical path is deliberately small:
 
 ```text
-GameState -> DisplayCell -> GameRenderer
+GameState -> DisplayCell -> CLI / GameRenderer
        ^          ^
        +-- commands / JSON save
 ```
 
 `GameState` owns the RNG, floor state, entities, inventory, combat, hunger,
-visibility, and terminal status. UI code only turns `DisplayCell` values into
-characters and colors. JSON saves include the version, complete state, RNG
+visibility, and terminal status. The CLI and TCOD renderer share the same
+`DisplayCell` input and turn it into characters and colors. JSON saves include the version, complete state, RNG
 state, death/win status, and permadeath metadata; incompatible versions are
 rejected explicitly.
 

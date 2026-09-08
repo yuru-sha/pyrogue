@@ -28,6 +28,7 @@ from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GameState, GameStatus, ItemKind
 from pyrogue.core.save_manager import SaveManager
+from pyrogue.presentation.display_renderer import render_ascii
 from pyrogue.utils import game_logger
 
 
@@ -199,6 +200,7 @@ class CLIEngine:
         ):
             print("\n🎉 VICTORY! 🎉")
             print("You have escaped with the Amulet of Yendor!")
+            print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
             print("You win the game!")
             self.running = False
             return True
@@ -267,6 +269,18 @@ class CLIEngine:
             print(f"Cause of Death: {summary['cause'] or 'Unknown'}")
         elif result.success:
             self.display_game_state()
+        if result.state == GameStatus.DEAD:
+            summary = self.spec_game.death_summary
+            SaveManager().trigger_permadeath_on_death(self.spec_game.to_dict())
+            print("GAME OVER")
+            print(f"Score: {summary['score']}")
+            print(f"Deepest floor: B{summary['deepest_floor']}F")
+            print(f"Cause: {summary['cause']}")
+        elif result.state == GameStatus.VICTORY:
+            summary = result.data or self.spec_game.victory_summary
+            print("VICTORY!")
+            print(f"Score: {summary['score']}")
+            print(f"Deepest floor: B{summary['deepest_floor']}F")
         if result.state in {GameStatus.QUIT, GameStatus.DEAD, GameStatus.VICTORY}:
             self.running = False
         return True
@@ -576,6 +590,7 @@ class CLIEngine:
                 ):
                     print("\n🎉 VICTORY! 🎉")
                     print("You have escaped with the Amulet of Yendor!")
+                    print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
                     print("You win the game!")
                     self.running = False
                     return success
@@ -608,7 +623,7 @@ class CLIEngine:
     def display_game_state(self) -> None:
         """現在のゲーム状態を表示。"""
         if self.spec_game is not None:
-            print(self.spec_game.render_ascii())
+            print(render_ascii(self.spec_game.display_cells(), self.spec_game.width, self.spec_game.height))
             print(self.spec_game.status_text())
             return
         try:
