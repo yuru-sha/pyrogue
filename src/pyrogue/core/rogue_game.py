@@ -760,6 +760,7 @@ APPEARANCE_EFFECTS = {
     ItemKind.RING: tuple(RING_EFFECTS.values()),
     ItemKind.WAND: tuple(WAND_EFFECTS.values()),
 }
+LEGACY_APPEARANCE_POOL_SIZE = 6
 
 DIRECTIONS: dict[str, Position] = {
     "north": (0, -1),
@@ -957,6 +958,9 @@ class GameState:
         name = self.rng.choice(names[kind]) if name is None else name
         item = ItemState(id=self._next_item_id, kind=kind, name=name, position=self._free_position(floor))
         self._next_item_id += 1
+        appearance_kind = kind in APPEARANCE_EFFECTS
+        if appearance_kind:
+            self.rng.randrange(LEGACY_APPEARANCE_POOL_SIZE)
         if kind == ItemKind.WEAPON:
             item.damage_dice, item.hit_bonus, item.damage_bonus = WEAPON_DATA.get(name, ((1, 4), 0, 0))
             item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
@@ -980,9 +984,8 @@ class GameState:
             item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
         elif kind == ItemKind.GOLD:
             item.quantity = self.rng.randint(2, 5 + floor.number * 2)
-        if kind in APPEARANCE_EFFECTS:
+        if appearance_kind:
             item.identified = False
-            self.rng.randrange(6)  # Preserve the pre-mapping RNG draw for seeded world generation.
             item.appearance = self._appearance_names[kind][item.effect]
         return item
 
