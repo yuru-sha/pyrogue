@@ -33,6 +33,20 @@ STARVETIME = 850
 CURSE_CHANCE = 0.5
 BEAR_TRAP_DAMAGE = 2
 MAX_EQUIPPED_RINGS = 2
+SLEEP_TURNS = 5
+MYSTERIOUS_TRAP_MESSAGES = (
+    "You are suddenly in a parallel dimension.",
+    "The light in here suddenly seems different.",
+    "You feel a sting in the side of your neck.",
+    "Multicolored lines swirl around you, then fade.",
+    "A strange light flashes in your eyes.",
+    "A spike shoots past your ear!",
+    "Sparks dance across your armor.",
+    "You suddenly feel very thirsty.",
+    "You feel time speed up suddenly.",
+    "Time now seems to be going slower.",
+    "Your pack turns inside out!",
+)
 
 
 class Terrain(str, Enum):
@@ -431,6 +445,7 @@ class PlayerState:
     equipped_rings: list[int] = field(default_factory=list)
     has_amulet: bool = False
     turns_played: int = 0
+    sleep_turns: int = 0
     deepest_floor: int = 1
     monsters_killed: int = 0
     dead: bool = False
@@ -451,7 +466,7 @@ class PlayerState:
     @property
     def attack(self) -> int:
         weapon = self.equipped(ItemKind.WEAPON)
-        return self.level + (weapon.hit_bonus + weapon.enchantment if weapon else 0)
+        return self.level + (weapon.hit_bonus + weapon.enchantment if weapon else 0) + self.ring_bonus("strength")
 
     @property
     def defense(self) -> int:
@@ -465,6 +480,24 @@ class PlayerState:
 
     def item(self, item_id: int) -> ItemState | None:
         return next((item for item in self.inventory if item.id == item_id), None)
+
+    def ring_bonus(self, effect: str) -> int:
+        """Return the combined enchantment of equipped rings with an effect."""
+        return sum(
+            item.enchantment
+            for ring_id in self.equipped_rings
+            if (item := self.item(ring_id)) is not None and item.effect == effect
+        )
+
+    def has_ring_effect(self, effect: str) -> bool:
+        """Return whether an equipped ring provides the requested effect."""
+        return any(
+            (item := self.item(ring_id)) is not None and item.effect == effect for ring_id in self.equipped_rings
+        )
+
+    def effective_strength(self) -> int:
+        """Return strength after equipped ring effects."""
+        return self.strength + self.ring_bonus("strength")
 
     def equipped(self, kind: ItemKind) -> ItemState | None:
         item_id = self.equipped_weapon if kind == ItemKind.WEAPON else self.equipped_armor
@@ -487,12 +520,9 @@ class PlayerState:
 
     def effective_armor_class(self) -> int:
         armor = self.equipped(ItemKind.ARMOR)
-        ring_bonus = sum(
-            item.enchantment
-            for item in (self.item(ring_id) for ring_id in self.equipped_rings)
-            if item and item.effect == "protection"
+        return (
+            self.armor_class - (armor.armor_bonus + armor.enchantment if armor else 0) - self.ring_bonus("protection")
         )
-        return self.armor_class - (armor.armor_bonus + armor.enchantment if armor else 0) - ring_bonus
 
     def score(self) -> int:
         return self.gold + self.monsters_killed * 10 + (1000 if self.has_amulet else 0)
@@ -764,6 +794,10 @@ DIRECTIONS: dict[str, Position] = {
     "e": (1, 0),
     "west": (-1, 0),
     "w": (-1, 0),
+    "northwest": (-1, -1),
+    "northeast": (1, -1),
+    "southwest": (-1, 1),
+    "southeast": (1, 1),
 }
 COMMAND_ALIASES = {
     "fight": "attack",
@@ -925,6 +959,20 @@ class GameState:
             return floor.up_stairs or (1, 1)
         return self.rng.choice(candidates)
 
+    def _teleport_player(self) -> tuple[Position, Position]:
+        """Move the player to a random unoccupied walkable cell."""
+        old_position = self.player.position
+        self.player.position = self._free_position(self.floor, (old_position,))
+        return old_position, self.player.position
+
+    def _descend_to_next_floor(self) -> None:
+        """Move the player to the matching up stairs on the next floor."""
+        self.floor.player_position = self.player.position
+        self.current_floor += 1
+        target = self._ensure_floor(self.current_floor)
+        self.player.position = target.up_stairs or self._first_floor_position(target)
+        self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
+
     def _new_item(self, floor: FloorState, kind: ItemKind, name: str | None = None) -> ItemState:
         names = {
             ItemKind.WEAPON: tuple(WEAPON_DATA),
@@ -1069,6 +1117,17 @@ class GameState:
         self.floor.explored.update(visible)
         return visible
 
+    def _illuminate_current_area(self) -> None:
+        """Reveal the room containing the player, or the visible corridor area."""
+        room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
+        if room is None:
+            self.visible_positions()
+            return
+        for y in range(room.y, room.y + room.height):
+            for x in range(room.x, room.x + room.width):
+                if self.floor.tile_at((x, y)) != Terrain.WALL:
+                    self.floor.explored.add((x, y))
+
     def display_cells(self) -> dict[Position, DisplayCell]:
         """Return the current map as renderer-neutral display cells."""
         visible = self.visible_positions()
@@ -1131,6 +1190,14 @@ class GameState:
         self.player.turns_played += 1
         self._consume_food()
         if self.status == GameStatus.PLAYING:
+            if self.player.has_ring_effect("search"):
+                self._reveal_nearby_traps()
+            regeneration = sum(
+                1
+                for ring_id in self.player.equipped_rings
+                if (ring := self.player.item(ring_id)) is not None and ring.effect == "regeneration"
+            )
+            self.player.hp = min(self.player.max_hp, self.player.hp + regeneration)
             self._process_monsters()
         self.visible_positions()
 
@@ -1149,9 +1216,7 @@ class GameState:
             level = attacker.level
             hit_bonus = weapon.hit_bonus + (weapon.enchantment if weapon else 0) if weapon else 0
             damage_dice = weapon.damage_dice if weapon else (1, 2)
-            damage_bonus = (weapon.damage_bonus if weapon else 0) + _strength_adjustment(
-                STR_TO_DAMAGE, attacker.strength
-            )
+            damage_bonus = weapon.damage_bonus if weapon else 0
             attacker_name = "you"
         else:
             definition = attacker.definition
@@ -1160,11 +1225,14 @@ class GameState:
             damage_dice = definition.damage_dice
             damage_bonus = definition.damage_bonus
             attacker_name = definition.name
+        strength = attacker.effective_strength() if isinstance(attacker, PlayerState) else 0
+        if isinstance(attacker, PlayerState):
+            damage_bonus += _strength_adjustment(STR_TO_DAMAGE, strength)
         defender_ac = (
             defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
         )
         # This is the shape of Rogue's swing(): d20 + level + hit modifiers vs AC.
-        strength_bonus = _strength_adjustment(STR_TO_HIT, attacker.strength) if isinstance(attacker, PlayerState) else 0
+        strength_bonus = _strength_adjustment(STR_TO_HIT, strength) if isinstance(attacker, PlayerState) else 0
         hit = self.rng.randint(1, 20) + level + hit_bonus + strength_bonus > defender_ac
         damage = _roll(self.rng, damage_dice) + damage_bonus if hit else 0
         damage = max(0, damage)
@@ -1210,6 +1278,9 @@ class GameState:
         result = self._resolve_attack(monster, self.player)
         if result.hit:
             self._message(f"The {monster.name} hits you for {result.damage} damage.")
+            if monster.type_id == "rattlesnake" and not self.player.has_ring_effect("sustain"):
+                self.player.strength = max(1, self.player.strength - 1)
+                self._message("The rattlesnake's bite weakens you.")
         else:
             self._message(f"The {monster.name} misses you.")
         if result.target_defeated:
@@ -1256,10 +1327,9 @@ class GameState:
             return self._result(False, "You cannot move there.")
         self.player.position = target
         trap = next((trap for trap in self.floor.traps if (trap.x, trap.y) == target), None)
-        if trap:
-            self._trigger_trap(trap)
+        trap_message = self._trigger_trap(trap) if trap else ""
         self._finish_turn()
-        return self._result(True, "", True)
+        return self._result(True, trap_message, True)
 
     def wait(self) -> CommandResult:
         """Consume one turn without moving."""
@@ -1370,6 +1440,8 @@ class GameState:
     def read(self, value: Any = None) -> CommandResult:
         """Read a scroll and apply its effect."""
         item = self._find_item(value)
+        if value is None:
+            item = next((item for item in self.player.inventory if item.kind == ItemKind.SCROLL), None)
         if not item or item.kind != ItemKind.SCROLL:
             return self._result(False, "You have no scroll to read.")
         item.identified = True
@@ -1393,6 +1465,12 @@ class GameState:
             if armor:
                 armor.enchantment += 1
             message = "Your armor glows blue for a moment."
+        elif effect == "light":
+            self._illuminate_current_area()
+            message = "The room is lit."
+        elif effect == "teleport":
+            old_position, new_position = self._teleport_player()
+            message = f"You teleport from {old_position} to {new_position}."
         elif effect == "magic_mapping":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "You feel more familiar with the dungeon."
@@ -1477,24 +1555,34 @@ class GameState:
         self._finish_turn()
         return self._result(True, f"You throw the {item.display_name}.", True)
 
-    def zap(self, value: Any, direction: Position = (1, 0)) -> CommandResult:
+    def zap(self, value: Any, direction: Position | None = None) -> CommandResult:
         """Use one charge from a wand in the given direction."""
         item = self._find_item(value)
+        if value is None:
+            item = next((item for item in self.player.inventory if item.kind == ItemKind.WAND), None)
         if not item or item.kind != ItemKind.WAND:
             return self._result(False, "Usage: zap <wand> <direction>")
         if item.charges <= 0:
             return self._result(False, "The wand has no charges left.")
+        if item.effect == "light":
+            target = None
+        else:
+            if direction is None or direction not in DIRECTIONS.values():
+                return self._result(False, "You need to choose a direction.")
+            _, target = self._trace_projectile(direction)
         item.charges -= 1
-        _, target = self._trace_projectile(direction)
         if target and item.effect in {"magic_missile", "lightning", "fire", "cold"}:
-            damage = _roll(self.rng, (2, 6))
+            damage = _roll(self.rng, (1, 4) if item.effect == "magic_missile" else (6, 6))
             target.hp = max(0, target.hp - damage)
             message = f"The {item.display_name} hits the {target.name}."
             if target.hp == 0:
                 self.floor.monsters.remove(target)
                 self.player.monsters_killed += 1
+        elif target and item.effect == "teleport_monster":
+            target.x, target.y = self._free_position(self.floor, (self.player.position,))
+            message = f"The {target.name} is teleported away."
         elif item.effect == "light":
-            self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
+            self._illuminate_current_area()
             message = "The room is lit."
         else:
             message = "The wand has no visible effect."
@@ -1502,16 +1590,21 @@ class GameState:
         self._finish_turn()
         return self._result(True, message, True)
 
-    def _trigger_trap(self, trap: TrapState) -> None:
+    def _trigger_trap(self, trap: TrapState) -> str:
         trap.discovered = True
         if trap.kind == TrapKind.TRAP_DOOR:
-            self.player.hp = max(0, self.player.hp - 4)
-            message = "You fall through a trap door."
+            if self.current_floor < MAX_FLOOR:
+                self._descend_to_next_floor()
+                message = "You fall through a trap door."
+            else:
+                message = "The trap door has nowhere to go."
         elif trap.kind == TrapKind.BEAR:
             self.player.hp = max(0, self.player.hp - BEAR_TRAP_DAMAGE)
             message = "You are caught in a bear trap."
         elif trap.kind == TrapKind.POISON_DART:
-            self.player.hp = max(0, self.player.hp - 3)
+            self.player.hp = max(0, self.player.hp - _roll(self.rng, (1, 4)))
+            if not self.player.has_ring_effect("sustain"):
+                self.player.strength = max(1, self.player.strength - 1)
             message = "A poisoned dart hits you."
         elif trap.kind == TrapKind.ARROW:
             self.player.hp = max(0, self.player.hp - 3)
@@ -1520,22 +1613,34 @@ class GameState:
             self.player.position = self._free_position(self.floor, (self.player.position,))
             message = "You are suddenly teleported."
         elif trap.kind == TrapKind.SLEEPING_GAS:
-            message = "A strange gas surrounds you."
+            self.player.sleep_turns = max(self.player.sleep_turns, SLEEP_TURNS)
+            message = "A strange gas surrounds you and you fall asleep."
         elif trap.kind == TrapKind.MYSTERIOUS:
-            message = "A mysterious trap is triggered."
+            message = self.rng.choice(MYSTERIOUS_TRAP_MESSAGES)
+        elif trap.kind == TrapKind.RUST:
+            armor = self.player.equipped(ItemKind.ARMOR)
+            if armor and armor.name.lower() != "leather armor":
+                armor.enchantment -= 1
+                message = "Your armor is weakened by rust."
+            else:
+                message = "The rust vanishes from your armor."
         else:
             message = "Your armor is covered with rust."
-        self._message(message)
         if self.player.hp == 0:
             self._die(trap.kind.value)
+        return message
 
-    def search(self) -> CommandResult:
-        """Search adjacent cells for undiscovered traps."""
+    def _reveal_nearby_traps(self) -> bool:
         found = False
         for trap in self.floor.traps:
             if max(abs(trap.x - self.player.x), abs(trap.y - self.player.y)) <= 1:
                 trap.discovered = True
                 found = True
+        return found
+
+    def search(self) -> CommandResult:
+        """Search adjacent cells for undiscovered traps."""
+        found = self._reveal_nearby_traps()
         self._finish_turn()
         return self._result(True, "You found a trap." if found else "You find nothing.", True)
 
@@ -1583,11 +1688,7 @@ class GameState:
             return self._result(False, "There are no stairs down here.")
         if self.current_floor >= MAX_FLOOR:
             return self._result(False, "You cannot go any deeper.")
-        self.floor.player_position = self.player.position
-        self.current_floor += 1
-        target = self._ensure_floor(self.current_floor)
-        self.player.position = target.up_stairs or self._first_floor_position(target)
-        self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
+        self._descend_to_next_floor()
         self._message(f"You descend to level {self.current_floor}.")
         self._finish_turn()
         return self._result(True, "", True)
@@ -1617,6 +1718,10 @@ class GameState:
         args = list(args)
         if self.status != GameStatus.PLAYING:
             return self._result(False, "The game is over.")
+        if self.player.sleep_turns > 0:
+            self.player.sleep_turns -= 1
+            self._finish_turn()
+            return self._result(True, "You are still asleep.", True)
         command, key_value = self._normalize_command(command)
         if command == "move" and key_value is not None:
             return self.move(*key_value)
@@ -1652,7 +1757,7 @@ class GameState:
         if command == "throw":
             return self.throw(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else (1, 0))
         if command == "zap":
-            return self.zap(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else (1, 0))
+            return self.zap(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else (0, 0))
         if command == "search":
             return self.search()
         if command == "identify_trap":
@@ -1695,7 +1800,7 @@ class GameState:
 
     @staticmethod
     def _direction(value: Any) -> Position:
-        return DIRECTIONS.get(str(value).lower(), (1, 0))
+        return DIRECTIONS.get(str(value).lower(), (0, 0))
 
     def render_ascii(self) -> str:
         """Render the explored map as plain text for CLI and tests."""
