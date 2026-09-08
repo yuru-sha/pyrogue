@@ -182,6 +182,28 @@ def test_zap_selects_wand_then_direction_in_canonical_game_state() -> None:
     assert not game_screen.input_handler.direction_selection_mode
 
 
+def test_throw_and_zap_item_selection_share_vi_arrow_and_letter_targets() -> None:
+    def selected_item_id(action: str, kind: ItemKind, events: list[SimpleNamespace]) -> int | None:
+        game_screen = GameScreen(None, seed=1234)
+        items = [ItemState(1100 + index, kind, f"test item {index}", identified=True) for index in range(3)]
+        game_screen.player.inventory = items
+        inventory_screen = InventoryScreen(game_screen)
+
+        assert game_screen.handle_key(key_event(action)) == GameStates.SHOW_INVENTORY
+        for event in events:
+            inventory_screen.handle_input(event)
+        if game_screen.input_handler.item_selection_action:
+            inventory_screen.handle_input(SimpleNamespace(sym=tcod.event.KeySym.RETURN, mod=0, text=""))
+        return game_screen.input_handler.selected_item_id
+
+    down = SimpleNamespace(sym=tcod.event.KeySym.DOWN, mod=0, text="")
+    expected_item_id = 1102
+    for action, kind in (("t", ItemKind.FOOD), ("z", ItemKind.WAND)):
+        assert selected_item_id(action, kind, [key_event("j"), key_event("j")]) == expected_item_id
+        assert selected_item_id(action, kind, [down, down]) == expected_item_id
+        assert selected_item_id(action, kind, [key_event("c")]) == expected_item_id
+
+
 def test_load_restores_canonical_inventory_and_clears_stale_selection(monkeypatch) -> None:
     from pyrogue.core import save_manager
 
