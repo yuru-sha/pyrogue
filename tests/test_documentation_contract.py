@@ -9,6 +9,7 @@ def test_current_docs_separate_monster_data_from_renderer_glyphs() -> None:
 
         assert "論理ID" in document
         assert "`pyrogue.presentation.display_renderer`" in document
+        assert "文字、名前、出現階、レベル、HP、攻撃、AC" not in document
 
 
 def test_game_design_document_is_supplementary_to_spec() -> None:
