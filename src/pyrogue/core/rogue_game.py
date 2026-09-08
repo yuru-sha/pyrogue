@@ -1129,13 +1129,13 @@ class GameState:
 
     def display_cells(self, show_all: bool = False) -> dict[Position, DisplayCell]:
         """Return renderer-neutral display cells, optionally bypassing FOV for display only."""
-        visible = self.visible_positions()
+        visible = set() if show_all else self.visible_positions()
         cells: dict[Position, DisplayCell] = {}
         monster_positions = {
             (monster.x, monster.y): monster.type_id for monster in self.floor.monsters if monster.hp > 0
         }
         item_positions = {item.position: item.kind.value for item in self.floor.items if item.position is not None}
-        trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if trap.discovered}
+        trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if show_all or trap.discovered}
         for y in range(self.height):
             for x in range(self.width):
                 position = (x, y)

@@ -4,7 +4,16 @@ import tcod.event
 
 from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState, Terrain
+from pyrogue.core.rogue_game import (
+    EntityKind,
+    GameState,
+    ItemKind,
+    ItemState,
+    MonsterState,
+    Terrain,
+    TrapKind,
+    TrapState,
+)
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 
@@ -111,13 +120,13 @@ def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None
 
 def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
     game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
     console = RecordingConsole()
-    hidden_position = next(
-        position
-        for position, cell in game_screen.rogue_game.display_cells().items()
-        if not cell.visible and not cell.explored
-    )
-    terrain = game_screen.rogue_game.floor.tile_at(hidden_position)
+    hidden_positions = [
+        position for position, cell in game.display_cells().items() if not cell.visible and not cell.explored
+    ]
+    terrain_position, monster_position, item_position, trap_position = hidden_positions[:4]
+    terrain = game.floor.tile_at(terrain_position)
     expected_glyph = {
         Terrain.WALL: "#",
         Terrain.FLOOR: ".",
@@ -126,19 +135,40 @@ def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
         Terrain.STAIRS_UP: "<",
         Terrain.STAIRS_DOWN: ">",
     }[terrain]
-    map_position = (hidden_position[0], hidden_position[1] + 2)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.traps.clear()
+    game.floor.monsters.append(MonsterState(5000, "bat", *monster_position, 5))
+    game.floor.items.append(ItemState(5001, ItemKind.GOLD, "gold", position=item_position))
+    game.floor.traps.append(TrapState(5002, TrapKind.TRAP_DOOR, *trap_position))
+    explored_before = set(game.floor.explored)
+    map_positions = {
+        "terrain": (terrain_position[0], terrain_position[1] + 2),
+        "monster": (monster_position[0], monster_position[1] + 2),
+        "item": (item_position[0], item_position[1] + 2),
+        "trap": (trap_position[0], trap_position[1] + 2),
+    }
 
     game_screen.render(console)
-    assert map_position not in console.cells
+    assert all(position not in console.cells for position in map_positions.values())
 
     tab = SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")
     game_screen.handle_key(tab)
     game_screen.render(console)
-    assert console.cells[map_position] == expected_glyph
+    cells = game_screen.display_cells()
+    assert cells[terrain_position].visible
+    assert cells[monster_position].entity == EntityKind.MONSTER
+    assert cells[item_position].entity == EntityKind.ITEM
+    assert cells[trap_position].entity == EntityKind.TRAP
+    assert console.cells[map_positions["terrain"]] == expected_glyph
+    assert console.cells[map_positions["monster"]] == "B"
+    assert console.cells[map_positions["item"]] == "*"
+    assert console.cells[map_positions["trap"]] == "^"
+    assert game.floor.explored == explored_before
 
     game_screen.handle_key(tab)
     game_screen.render(console)
-    assert map_position not in console.cells
+    assert all(position not in console.cells for position in map_positions.values())
 
 
 def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:

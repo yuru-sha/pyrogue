@@ -276,10 +276,7 @@ class InputHandler:
             return None
 
         if key == tcod.event.KeySym.TAB:
-            # FOV切り替え
-            message = self.game_screen.fov_manager.toggle_fov()
-            self.game_screen.game_logic.add_message(message)
-            return None
+            return self._handle_fov_toggle()
 
         if (
             (key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT)
@@ -384,8 +381,7 @@ class InputHandler:
         if key == tcod.event.KeySym.ESCAPE:
             return GameStates.MENU if self.game_screen.engine else None
         if key == tcod.event.KeySym.TAB:
-            self.game_screen.add_message(self.game_screen.fov_manager.toggle_fov())
-            return None
+            return self._handle_fov_toggle()
         if key == ord("i"):
             game.execute("inventory")
             return GameStates.SHOW_INVENTORY
@@ -425,6 +421,15 @@ class InputHandler:
             return GameStates.GAME_OVER
         if result.state.value == "victory":
             return GameStates.VICTORY
+        return None
+
+    def _handle_fov_toggle(self) -> GameStates | None:
+        """Toggle the FOV view and add its status message to the active game."""
+        message = self.game_screen.fov_manager.toggle_fov()
+        if getattr(self.game_screen, "rogue_game", None) is not None:
+            self.game_screen.add_message(message)
+        else:
+            self.game_screen.game_logic.add_message(message)
         return None
 
     def _start_item_selection(self, action: str) -> GameStates | None:

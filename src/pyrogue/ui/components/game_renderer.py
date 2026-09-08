@@ -70,8 +70,7 @@ class GameRenderer:
     def _render_spec(self, console: tcod.Console) -> None:
         """Render the renderer-neutral game state as characters."""
         game = self.game_screen.rogue_game
-        show_all = not self.game_screen.fov_manager.fov_enabled
-        for cell in game.display_cells(show_all=show_all).values():
+        for cell in self.game_screen.display_cells().values():
             if cell.terrain is None:
                 continue
             char = cell_glyph(cell)
