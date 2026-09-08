@@ -212,7 +212,7 @@ class InventoryScreen(Screen):
         self.unequip_mode = True
         self.game_screen.add_message("Select item to unequip:")
         for index, (command, item) in enumerate(equipped):
-            label = "Armor" if command == "unequip_armor" else "Ring"
+            label = {"unequip_weapon": "Weapon", "unequip_armor": "Armor"}.get(command, "Ring")
             self.game_screen.add_message(f"{chr(ord('a') + index)}) {label}: {item.display_name}")
 
     def _handle_unequip_selection(self, event: tcod.event.KeyDown) -> None:

@@ -66,6 +66,7 @@ def test_inventory_unequips_weapon_through_canonical_game_state() -> None:
     inventory_screen.handle_input(key_event("r"))
 
     assert any(item.id == weapon.id for _, item in inventory_screen.equipped_items)
+    assert any(f"Weapon: {weapon.display_name}" in message for message in game_screen.rogue_game.messages)
     inventory_screen.handle_input(key_event("a"))
 
     assert game_screen.player.equipped_weapon is None
