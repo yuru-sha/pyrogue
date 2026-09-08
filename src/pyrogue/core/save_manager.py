@@ -86,8 +86,12 @@ class SaveManager:
             game_logger.warning("Cannot save game: permadeath is active")
             return False
 
+        self.last_error = None
+        if not self._check_save_version(game_data):
+            game_logger.warning("Cannot save game: invalid save payload")
+            return False
+
         try:
-            self.last_error = None
             player_data = game_data.get("player_stats", game_data.get("player", {}))
             player_hp = player_data.get("hp", 20)
             # メタデータを作成
@@ -212,13 +216,19 @@ class SaveManager:
 
             return None
 
-    def _check_save_version(self, game_data: dict[str, Any]) -> bool:
-        """Reject explicitly versioned saves from another format."""
-        save_version = game_data.get("spec_version", game_data.get("version"))
-        if save_version is None and "player" in game_data:
+    def _check_save_version(self, game_data: Any) -> bool:
+        """Validate the JSON save envelope and its exact specification version."""
+        if not isinstance(game_data, dict):
+            self.last_error = SaveError("Save data must be a JSON object")
+            return False
+        if "spec_version" not in game_data:
             self.last_error = SaveError("Save is missing the PyRogue specification version")
             return False
-        if save_version is not None and save_version != GAME_VERSION:
+        save_version = game_data["spec_version"]
+        if not isinstance(save_version, str):
+            self.last_error = SaveError("Save specification version must be a string")
+            return False
+        if save_version != GAME_VERSION:
             self.last_error = SaveError(f"Unsupported save version: {save_version}")
             return False
         return True

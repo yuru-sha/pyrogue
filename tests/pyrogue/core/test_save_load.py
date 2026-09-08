@@ -1,11 +1,15 @@
 # ruff: noqa: T201
 """セーブ/ロード機能のテスト"""
 
+import json
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+from pyrogue.core.rogue_game import GAME_VERSION
 from pyrogue.core.save_manager import SaveManager
 
 
@@ -18,6 +22,7 @@ def test_save_load():
 
     # テスト用のゲームデータ
     test_data = {
+        "spec_version": GAME_VERSION,
         "player_x": 10,
         "player_y": 5,
         "current_floor": 2,
@@ -72,3 +77,58 @@ def test_save_load():
 
 if __name__ == "__main__":
     test_save_load()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"player": {}},
+        {"spec_version": None},
+        {"spec_version": 0.3},
+        {"spec_version": "0.2.0"},
+        {"version": GAME_VERSION},
+    ],
+)
+def test_save_rejects_invalid_spec_version_without_touching_existing_save(tmp_path, payload):
+    """不正な仕様バージョンのセーブは既存ファイルを変更しない。"""
+    manager = SaveManager(tmp_path)
+    valid_payload = {"spec_version": GAME_VERSION, "player": {"hp": 10}}
+    assert manager.save_game_state(valid_payload)
+    before = manager.save_file.read_bytes()
+
+    assert not manager.save_game_state(payload)
+    assert manager.save_file.read_bytes() == before
+    assert manager.last_error is not None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"player": {}},
+        {"spec_version": None},
+        {"spec_version": 0.3},
+        {"spec_version": "0.2.0"},
+        {"version": GAME_VERSION},
+    ],
+)
+def test_load_rejects_invalid_spec_version_without_touching_save_file(tmp_path, payload):
+    """不正な仕様バージョンのロードはセーブファイルを変更しない。"""
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
+    before = manager.save_file.read_bytes()
+
+    assert manager.load_game_state() is None
+    assert manager.save_file.read_bytes() == before
+    assert manager.last_error is not None
+
+
+def test_save_writes_exact_spec_version(tmp_path):
+    """正常なセーブには現在の仕様バージョンをそのまま書き込む。"""
+    manager = SaveManager(tmp_path)
+
+    assert manager.save_game_state({"spec_version": GAME_VERSION, "player": {"hp": 10}})
+    saved = json.loads(manager.save_file.read_text(encoding="utf-8"))
+
+    assert saved["spec_version"] == GAME_VERSION

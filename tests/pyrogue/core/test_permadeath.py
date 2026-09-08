@@ -11,6 +11,7 @@ import pickle
 import tempfile
 from unittest.mock import patch
 
+from pyrogue.core.rogue_game import GAME_VERSION
 from pyrogue.core.save_manager import SaveManager
 
 
@@ -33,6 +34,7 @@ class TestPermadeathSystem:
 
             # テストデータを作成
             game_data = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 50,
                     "hp_max": 100,
@@ -61,6 +63,7 @@ class TestPermadeathSystem:
 
             # セーブファイルを作成
             game_data = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 50,
                     "hp_max": 100,
@@ -139,6 +142,7 @@ class TestPermadeathSystem:
 
             # セーブデータを作成
             game_data = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 50,
                     "hp_max": 100,
@@ -205,6 +209,7 @@ class TestPermadeathSystem:
 
             # セーブデータを作成
             game_data = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 75,
                     "hp_max": 100,
@@ -232,6 +237,7 @@ class TestPermadeathSystem:
 
             # セーブデータを作成
             game_data = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 50,
                     "hp_max": 100,
@@ -259,6 +265,7 @@ class TestPermadeathSystem:
 
             # 最初のセーブ
             game_data1 = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 50,
                     "hp_max": 100,
@@ -270,6 +277,7 @@ class TestPermadeathSystem:
 
             # 2回目のセーブ（バックアップが作成される）
             game_data2 = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 75,
                     "hp_max": 100,

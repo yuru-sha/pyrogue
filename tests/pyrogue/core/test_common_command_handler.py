@@ -676,7 +676,7 @@ class TestCommonCommandHandler:
         assert "current_floor" in save_data
         assert "message_log" in save_data
         assert "has_amulet" in save_data
-        assert "version" in save_data
+        assert "spec_version" in save_data
 
     def test_load_data_restoration(self):
         """ロード時のデータ復元の詳細テスト。"""
@@ -762,7 +762,7 @@ class TestCommonCommandHandler:
             },
             "message_log": ["Welcome to PyRogue!", "You descend the stairs."],
             "has_amulet": True,
-            "version": "1.0",
+            "spec_version": "0.3.0",
         }
 
         # ロード処理をモック
