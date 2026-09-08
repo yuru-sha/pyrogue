@@ -194,6 +194,9 @@ class InventoryScreen(Screen):
         """Show the currently equipped canonical armor and rings."""
         player = self.game_screen.player
         equipped: list[tuple[str, ItemState]] = []
+        weapon = player.equipped(ItemKind.WEAPON)
+        if weapon:
+            equipped.append(("unequip_weapon", weapon))
         armor = player.equipped(ItemKind.ARMOR)
         if armor:
             equipped.append(("unequip_armor", armor))

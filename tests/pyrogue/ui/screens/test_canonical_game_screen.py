@@ -36,6 +36,7 @@ def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:
 
     assert game_screen.handle_key(key_event("i")) == GameStates.SHOW_INVENTORY
     assert not hasattr(game_screen, "game_logic")
+    assert not any("Unknown command" in message for message in game_screen.rogue_game.messages)
 
     console = RecordingConsole()
     inventory_screen.render(console)
@@ -54,6 +55,20 @@ def test_inventory_equips_item_through_canonical_game_state() -> None:
     inventory_screen.handle_input(key_event("e"))
 
     assert game_screen.player.equipped_weapon == weapon.id
+
+
+def test_inventory_unequips_weapon_through_canonical_game_state() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    weapon = game_screen.player.equipped(ItemKind.WEAPON)
+    assert weapon is not None
+
+    game_screen.handle_key(key_event("i"))
+    inventory_screen.handle_input(key_event("r"))
+
+    assert any(item.id == weapon.id for _, item in inventory_screen.equipped_items)
+    inventory_screen.handle_input(key_event("a"))
+
+    assert game_screen.player.equipped_weapon is None
 
 
 def test_throw_selects_item_then_direction_in_canonical_game_state() -> None:

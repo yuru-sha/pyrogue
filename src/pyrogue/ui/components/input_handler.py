@@ -384,7 +384,7 @@ class InputHandler:
         if key == tcod.event.KeySym.ESCAPE:
             return GameStates.MENU if self.game_screen.engine else None
         if key == ord("i"):
-            game.execute("i")
+            game.execute("inventory")
             return GameStates.SHOW_INVENTORY
         if key == ord("t"):
             return self._start_item_selection("throw")

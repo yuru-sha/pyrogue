@@ -787,6 +787,7 @@ EQUIPMENT_KINDS = {
     "put_on_ring": ItemKind.RING,
 }
 UNEQUIPMENT_KINDS = {
+    "unequip_weapon": ItemKind.WEAPON,
     "unequip_armor": ItemKind.ARMOR,
     "remove_ring": ItemKind.RING,
 }
