@@ -1225,14 +1225,17 @@ class GameState:
             damage_dice = definition.damage_dice
             damage_bonus = definition.damage_bonus
             attacker_name = definition.name
-        strength = attacker.effective_strength() if isinstance(attacker, PlayerState) else 0
+        strength = attacker.strength if isinstance(attacker, PlayerState) else 0
+        strength_ring_bonus = attacker.ring_bonus("strength") if isinstance(attacker, PlayerState) else 0
         if isinstance(attacker, PlayerState):
-            damage_bonus += _strength_adjustment(STR_TO_DAMAGE, strength)
+            damage_bonus += _strength_adjustment(STR_TO_DAMAGE, strength) + strength_ring_bonus
         defender_ac = (
             defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
         )
         # This is the shape of Rogue's swing(): d20 + level + hit modifiers vs AC.
-        strength_bonus = _strength_adjustment(STR_TO_HIT, strength) if isinstance(attacker, PlayerState) else 0
+        strength_bonus = (
+            _strength_adjustment(STR_TO_HIT, strength) + strength_ring_bonus if isinstance(attacker, PlayerState) else 0
+        )
         hit = self.rng.randint(1, 20) + level + hit_bonus + strength_bonus > defender_ac
         damage = _roll(self.rng, damage_dice) + damage_bonus if hit else 0
         damage = max(0, damage)

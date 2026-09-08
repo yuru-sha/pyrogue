@@ -1,4 +1,6 @@
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState, TrapKind, TrapState
+from unittest.mock import Mock
+
+from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState, PlayerState, TrapKind, TrapState
 from pyrogue.core.save_manager import SaveManager
 
 
@@ -67,6 +69,28 @@ def test_equipped_strength_and_protection_rings_change_combat_stats() -> None:
 
     assert game.player.attack == base_attack + 2
     assert game.player.defense == base_defense - 2
+
+
+def test_strength_ring_modifier_is_applied_directly_to_combat_rolls() -> None:
+    game = GameState(seed=18)
+    weapon = ItemState(id=904, kind=ItemKind.WEAPON, name="test weapon", damage_dice=(1, 2))
+    ring = ItemState(
+        id=905,
+        kind=ItemKind.RING,
+        name="ring of add strength",
+        effect="strength",
+        enchantment=2,
+    )
+    game.player.inventory.extend((weapon, ring))
+    game.player.equipped_weapon = weapon.id
+    assert game.equip(ring.id, ItemKind.RING).success
+
+    game.rng = Mock()
+    game.rng.randint.side_effect = [8, 2]
+    result = game._resolve_attack(game.player, PlayerState(armor_class=10))
+
+    assert result.hit
+    assert result.damage == 5
 
 
 def test_searching_ring_reveals_adjacent_traps_after_a_turn() -> None:
