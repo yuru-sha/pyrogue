@@ -95,6 +95,8 @@ class InputHandler:
         # TCOD 19.0.0+ では unicode の代わりに text 属性を使用
         unicode_char = getattr(event, "text", getattr(event, "unicode", ""))
 
+        if key == tcod.event.KeySym.TAB:
+            return self._handle_fov_toggle()
         if getattr(self.game_screen, "rogue_game", None) is not None:
             return self._handle_spec_key(key, unicode_char, mod)
 
@@ -275,9 +277,6 @@ class InputHandler:
             self._handle_wear_action()
             return None
 
-        if key == tcod.event.KeySym.TAB:
-            return self._handle_fov_toggle()
-
         if (
             (key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT)
             or unicode_char == ">"
@@ -380,8 +379,6 @@ class InputHandler:
         }
         if key == tcod.event.KeySym.ESCAPE:
             return GameStates.MENU if self.game_screen.engine else None
-        if key == tcod.event.KeySym.TAB:
-            return self._handle_fov_toggle()
         if key == ord("i"):
             game.execute("inventory")
             return GameStates.SHOW_INVENTORY
@@ -425,7 +422,7 @@ class InputHandler:
 
     def _handle_fov_toggle(self) -> GameStates | None:
         """Toggle the FOV view and add its status message to the active game."""
-        message = self.game_screen.fov_manager.toggle_fov()
+        message = self.game_screen.toggle_fov()
         if getattr(self.game_screen, "rogue_game", None) is not None:
             self.game_screen.add_message(message)
         else:
