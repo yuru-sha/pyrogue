@@ -86,8 +86,12 @@ class SaveManager:
             game_logger.warning("Cannot save game: permadeath is active")
             return False
 
+        self.last_error = None
+        if not self._check_save_version(game_data):
+            game_logger.warning("Cannot save game: invalid save payload")
+            return False
+
         try:
-            self.last_error = None
             player_data = game_data.get("player_stats", game_data.get("player", {}))
             player_hp = player_data.get("hp", 20)
             # メタデータを作成
@@ -154,6 +158,13 @@ class SaveManager:
             # セーブファイルの整合性チェック
             if not self._verify_checksum():
                 game_logger.warning("Save file integrity check failed - potential tampering detected")
+                self.last_error = SaveError("Save file integrity check failed")
+                try:
+                    with open(self.save_file, encoding="utf-8") as f:
+                        main_data = json.load(f)
+                    self._check_save_version(main_data)
+                except Exception as main_error:
+                    self.last_error = main_error if isinstance(main_error, SaveError) else SaveError(str(main_error))
                 # チェックサム検証失敗時もバックアップを試行
                 if self.backup_file.exists():
                     try:
@@ -169,6 +180,13 @@ class SaveManager:
                         game_logger.error(f"Backup file also corrupted: {backup_error}")
                 return None
 
+            # セーブデータを読み込み
+            with open(self.save_file, encoding="utf-8") as f:
+                game_data = json.load(f)
+
+            if not self._check_save_version(game_data):
+                return None
+
             # メタデータを確認
             if self.metadata_file.exists():
                 with open(self.metadata_file) as f:
@@ -179,13 +197,6 @@ class SaveManager:
                     game_logger.warning("Cannot load game: player is dead (permadeath)")
                     self._trigger_permadeath()
                     return None
-
-            # セーブデータを読み込み
-            with open(self.save_file, encoding="utf-8") as f:
-                game_data = json.load(f)
-
-            if not self._check_save_version(game_data):
-                return None
 
             # 後方互換性: 古いセーブファイルからMP関連属性を削除
             self._remove_legacy_mp_attributes(game_data)
@@ -212,15 +223,40 @@ class SaveManager:
 
             return None
 
-    def _check_save_version(self, game_data: dict[str, Any]) -> bool:
-        """Reject explicitly versioned saves from another format."""
-        save_version = game_data.get("spec_version", game_data.get("version"))
-        if save_version is None and "player" in game_data:
+    def _check_save_version(self, game_data: Any) -> bool:
+        """Validate the JSON save envelope and its exact specification version."""
+        if not isinstance(game_data, dict):
+            self.last_error = SaveError("Save data must be a JSON object")
+            return False
+        if "spec_version" not in game_data:
             self.last_error = SaveError("Save is missing the PyRogue specification version")
             return False
-        if save_version is not None and save_version != GAME_VERSION:
+        save_version = game_data["spec_version"]
+        if not isinstance(save_version, str):
+            self.last_error = SaveError("Save specification version must be a string")
+            return False
+        if save_version != GAME_VERSION:
             self.last_error = SaveError(f"Unsupported save version: {save_version}")
             return False
+
+        if "seed" in game_data or "floors" in game_data or "rng_state" in game_data:
+            required_keys = ("seed", "player", "floors", "rng_state")
+            object_fields = ("player", "floors")
+        elif "player" in game_data:
+            required_keys = ("player", "inventory", "current_floor", "floor_data")
+            object_fields = ("player", "inventory", "floor_data")
+        else:
+            required_keys = ("player_stats", "current_floor")
+            object_fields = ("player_stats",)
+
+        missing_keys = [key for key in required_keys if key not in game_data]
+        if missing_keys:
+            self.last_error = SaveError(f"Save data is missing required fields: {', '.join(missing_keys)}")
+            return False
+        for field in object_fields:
+            if not isinstance(game_data[field], dict):
+                self.last_error = SaveError(f"Save field must be a JSON object: {field}")
+                return False
         return True
 
     def _remove_legacy_mp_attributes(self, game_data: dict[str, Any]) -> None:
