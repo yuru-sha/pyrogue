@@ -72,6 +72,30 @@ def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
     assert SaveManager(tmp_path).load_game_state() is None
 
 
+def test_legacy_gui_game_over_arguments_keep_compatibility(tmp_path) -> None:
+    save_manager = SaveManager(tmp_path)
+    with patch("pyrogue.core.engine.SaveManager", return_value=save_manager):
+        engine = Engine(seed=1234)
+
+    assert save_manager.save_game_state({"player_stats": {"hp": 5}})
+    legacy_stats = {
+        "level": 2,
+        "exp": 4,
+        "gold": 6,
+        "hp": 0,
+        "max_hp": 20,
+        "monsters_killed": 3,
+        "turns_played": 9,
+    }
+
+    engine.game_over(legacy_stats, 3, "legacy")
+
+    assert engine.game_over_screen.player_stats == legacy_stats
+    assert engine.game_over_screen.final_floor == 3
+    assert engine.game_over_screen.cause_of_death == "legacy"
+    assert SaveManager(tmp_path).load_game_state() is None
+
+
 def test_victory_screen_and_save_are_unchanged(tmp_path) -> None:
     save_manager = SaveManager(tmp_path)
     with patch("pyrogue.core.engine.SaveManager", return_value=save_manager):

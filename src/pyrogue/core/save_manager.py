@@ -291,7 +291,10 @@ class SaveManager:
 
     def trigger_permadeath_on_death(self, game_data: dict[str, Any]) -> None:
         """
-        プレイヤー死亡時にパーマデスを発動。
+        旧シリアライズ済みゲームデータに対してパーマデスを発動。
+
+        正規のGameStateを扱う呼び出し元は、共有後処理の ``finalize_death``
+        を使用します。
 
         Args:
         ----

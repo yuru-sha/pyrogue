@@ -349,21 +349,29 @@ class Engine:
         ゲームオーバー画面に遷移します。
         Permadeath機能により、セーブデータを自動削除します。
 
-        旧呼び出し元との互換性のため引数は受け取りますが、
-        表示内容は常に正規のGameStateから取得します。
+        正規のGameStateが死亡済みなら、そのサマリーを表示します。
+        旧呼び出し元から引数を受け取った場合は、互換アダプターとして
+        従来の表示値とパーマデス判定を使用します。
 
         Args:
         ----
-            player_stats: 旧呼び出し元から渡される最終ステータス（未使用）
-            final_floor: 旧呼び出し元から渡される最終階層（未使用）
-            cause_of_death: 旧呼び出し元から渡される死因（未使用）
+            player_stats: 旧呼び出し元から渡される最終ステータス
+            final_floor: 旧呼び出し元から渡される最終階層
+            cause_of_death: 旧呼び出し元から渡される死因
 
         """
         game = self.game_screen.rogue_game
-        summary = self.save_manager.finalize_death(game)
-        player_stats = self._canonical_player_stats(game)
-        final_floor = summary["deepest_floor"] if summary is not None else game.current_floor
-        cause_of_death = (summary["cause"] if summary is not None else game.player.death_cause) or "Unknown"
+        if game.is_dead:
+            summary = self.save_manager.finalize_death(game)
+            player_stats = self._canonical_player_stats(game)
+            final_floor = summary["deepest_floor"] if summary is not None else game.current_floor
+            cause_of_death = (summary["cause"] if summary is not None else game.player.death_cause) or "Unknown"
+        else:
+            if player_stats is not None:
+                self.save_manager.trigger_permadeath_on_death({"player_stats": player_stats})
+            player_stats = player_stats or self._canonical_player_stats(game)
+            final_floor = final_floor if final_floor is not None else game.current_floor
+            cause_of_death = cause_of_death or game.player.death_cause or "Unknown"
 
         self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER
