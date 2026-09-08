@@ -47,6 +47,13 @@ def test_permadeath_only_deletes_dead_canonical_state(tmp_path) -> None:
 
     assert dead_manager.load_game_state() is None
 
+    blocked_manager = SaveManager(tmp_path / "blocked")
+    blocked_game = GameState(1234)
+    blocked_game._die("test")
+    assert blocked_manager.save_game_state(blocked_game.to_dict())
+
+    assert SaveManager(tmp_path / "blocked").load_game_state() is None
+
 
 def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
     save_manager = SaveManager(tmp_path)
@@ -78,4 +85,5 @@ def test_victory_screen_and_save_are_unchanged(tmp_path) -> None:
     engine.victory({"level": 1, "gold": 0, "hp": 12, "max_hp": 12, "exp": 0}, game.current_floor)
 
     assert engine.state == GameStates.VICTORY
+    assert engine.victory_screen.final_score == 270
     assert save_manager.load_game_state() is not None

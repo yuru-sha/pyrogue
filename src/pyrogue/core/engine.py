@@ -236,15 +236,7 @@ class Engine:
                                 self.game_over()
                             elif new_state == GameStates.VICTORY:
                                 game = self.game_screen.rogue_game
-                                stats = {
-                                    "level": game.player.level,
-                                    "exp": game.player.exp,
-                                    "gold": game.player.gold,
-                                    "hp": game.player.hp,
-                                    "max_hp": game.player.max_hp,
-                                    "monsters_killed": game.player.monsters_killed,
-                                    "turns_played": game.player.turns_played,
-                                }
+                                stats = self._canonical_player_stats(game)
                                 self.victory_screen.set_victory_data(stats, game.current_floor, game.score)
                             # 状態遷移時に前の状態を記録
                             self.previous_state = self.state
@@ -330,6 +322,20 @@ class Engine:
         self.game_screen.setup_new_game()
         self.state = GameStates.QUICK_GUIDE
 
+    @staticmethod
+    def _canonical_player_stats(game) -> dict:
+        """Return the player values used by terminal result screens."""
+        return {
+            "level": game.player.level,
+            "exp": game.player.exp,
+            "gold": game.player.gold,
+            "hp": game.player.hp,
+            "max_hp": game.player.max_hp,
+            "monsters_killed": game.player.monsters_killed,
+            "turns_played": game.player.turns_played,
+            "score": game.score,
+        }
+
     def game_over(
         self,
         player_stats: dict | None = None,
@@ -343,32 +349,21 @@ class Engine:
         ゲームオーバー画面に遷移します。
         Permadeath機能により、セーブデータを自動削除します。
 
+        旧呼び出し元との互換性のため引数は受け取りますが、
+        表示内容は常に正規のGameStateから取得します。
+
         Args:
         ----
-            player_stats: プレイヤーの最終ステータス
-            final_floor: 到達した最終階層
-            cause_of_death: 死因の説明文
+            player_stats: 旧呼び出し元から渡される最終ステータス（未使用）
+            final_floor: 旧呼び出し元から渡される最終階層（未使用）
+            cause_of_death: 旧呼び出し元から渡される死因（未使用）
 
         """
         game = self.game_screen.rogue_game
         summary = self.save_manager.finalize_death(game)
-        if summary is not None:
-            player_stats = {
-                "level": game.player.level,
-                "exp": game.player.exp,
-                "gold": game.player.gold,
-                "hp": game.player.hp,
-                "max_hp": game.player.max_hp,
-                "monsters_killed": game.player.monsters_killed,
-                "turns_played": game.player.turns_played,
-                "score": summary["score"],
-            }
-            final_floor = summary["deepest_floor"]
-            cause_of_death = summary["cause"] or "Unknown"
-
-        player_stats = player_stats or {}
-        final_floor = final_floor if final_floor is not None else game.current_floor
-        cause_of_death = cause_of_death or "Unknown"
+        player_stats = self._canonical_player_stats(game)
+        final_floor = summary["deepest_floor"] if summary is not None else game.current_floor
+        cause_of_death = (summary["cause"] if summary is not None else game.player.death_cause) or "Unknown"
 
         self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER
