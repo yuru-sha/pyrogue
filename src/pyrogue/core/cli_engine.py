@@ -260,6 +260,16 @@ class CLIEngine:
             print(result.message)
         if result.success:
             self.display_game_state()
+        if result.state == GameStatus.DEAD:
+            summary = self.spec_game.death_summary
+            SaveManager().trigger_permadeath_on_death(self.spec_game.to_dict())
+            print("GAME OVER")
+            print(f"Score: {summary['score']}")
+            print(f"Deepest floor: B{summary['deepest_floor']}F")
+            print(f"Cause: {summary['cause']}")
+        elif result.state == GameStatus.VICTORY:
+            print("VICTORY!")
+            print(f"Deepest floor: B{self.spec_game.player.deepest_floor}F")
         if result.state in {GameStatus.QUIT, GameStatus.DEAD, GameStatus.VICTORY}:
             self.running = False
         return True

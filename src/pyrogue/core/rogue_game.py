@@ -1407,6 +1407,9 @@ class GameState:
         elif effect == "magic_mapping":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "You feel more familiar with the dungeon."
+        elif effect == "teleport":
+            self.player.position = self._free_position(self.floor, (self.player.position,))
+            message = "You are suddenly teleported."
         else:
             message = "The scroll disappears in a flash of light."
         self._remove_inventory_item(item)
@@ -1504,6 +1507,9 @@ class GameState:
             if target.hp == 0:
                 self.floor.monsters.remove(target)
                 self.player.monsters_killed += 1
+        elif target and item.effect == "teleport_monster":
+            target.x, target.y = self._free_position(self.floor, (self.player.position,))
+            message = f"The {target.name} vanishes."
         elif item.effect == "light":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "The room is lit."
@@ -1518,6 +1524,13 @@ class GameState:
         if trap.kind == TrapKind.TRAP_DOOR:
             self.player.hp = max(0, self.player.hp - 4)
             message = "You fall through a trap door."
+            if self.player.hp > 0 and self.current_floor < MAX_FLOOR:
+                self.floor.player_position = self.player.position
+                self.current_floor += 1
+                target = self._ensure_floor(self.current_floor)
+                self.player.position = target.up_stairs or self._first_floor_position(target)
+                self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
+                self._message(f"You fall to level {self.current_floor}.")
         elif trap.kind == TrapKind.BEAR:
             self.player.hp = max(0, self.player.hp - BEAR_TRAP_DAMAGE)
             message = "You are caught in a bear trap."

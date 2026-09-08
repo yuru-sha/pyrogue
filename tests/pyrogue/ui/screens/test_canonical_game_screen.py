@@ -1,7 +1,10 @@
 from types import SimpleNamespace
 
+import tcod.event
+
+from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState
+from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 
@@ -25,10 +28,79 @@ def key_event(key: str) -> SimpleNamespace:
     return SimpleNamespace(sym=ord(key), mod=0, text=key)
 
 
+def _key(character: str) -> tcod.event.KeyDown:
+    return tcod.event.KeyDown(0, ord(character), 0)
+
+
 def game_and_inventory() -> tuple[GameScreen, InventoryScreen]:
     engine = SimpleNamespace(map_width=80, map_height=45, state=GameStates.PLAYERS_TURN)
     game_screen = GameScreen(engine, seed=1234)
     return game_screen, InventoryScreen(game_screen)
+
+
+def _walkable_direction(game: GameState) -> tuple[str, tuple[int, int]]:
+    directions = {"east": (1, 0), "west": (-1, 0), "south": (0, 1), "north": (0, -1)}
+    for name, (dx, dy) in directions.items():
+        position = (game.player.x + dx, game.player.y + dy)
+        if game.floor.is_walkable(position):
+            return name, position
+    raise AssertionError
+
+
+def test_headless_gui_key_execution_matches_cli() -> None:
+    cli = CLIEngine(seed=1234, spec_mode=True)
+    game_screen = GameScreen(None, seed=1234)
+
+    assert game_screen.handle_key(_key(".")) is None
+    assert cli.process_command(".") is True
+
+    assert game_screen.rogue_game.to_dict() == cli.spec_game.to_dict()
+
+
+def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> None:
+    cli = CLIEngine(seed=1234, spec_mode=True)
+    gui = GameScreen(None, seed=1234)
+
+    for game in (cli.spec_game, gui.rogue_game):
+        game.floor.monsters.clear()
+        direction, position = _walkable_direction(game)
+        wand = ItemState(1000, ItemKind.WAND, "test wand", effect="magic_missile", charges=2)
+        game.floor.monsters.append(MonsterState(2000, "bat", *position, 20))
+        game.player.inventory.append(wand)
+
+    direction, _ = _walkable_direction(gui.rogue_game)
+    gui_result = gui.rogue_game.execute("zap", [1000, direction])
+    cli_result = cli.spec_game.execute("zap", [1000, direction])
+
+    assert gui_result == cli_result
+    assert gui.rogue_game.to_dict() == cli.spec_game.to_dict()
+
+
+def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None:
+    cli = CLIEngine(seed=1234, spec_mode=True)
+    gui = GameScreen(None, seed=1234)
+    inventory = InventoryScreen(gui)
+
+    for game in (cli.spec_game, gui.rogue_game):
+        game.floor.monsters.clear()
+        position = (game.player.x + 1, game.player.y)
+        assert game.floor.is_walkable(position)
+        game.player.inventory = []
+        game.player.equipped_weapon = None
+        game.player.equipped_armor = None
+        game.floor.monsters.append(MonsterState(2000, "bat", *position, 20))
+        game.player.inventory.append(ItemState(1000, ItemKind.WAND, "test wand", effect="magic_missile", charges=2))
+
+    assert gui.handle_key(_key("z")) == GameStates.SHOW_INVENTORY
+    inventory.handle_input(key_event("a"))
+    assert gui.handle_key(_key("l")) is None
+    assert cli.process_command("zap 1000 east") is True
+
+    gui_state = gui.rogue_game.to_dict()
+    cli_state = cli.spec_game.to_dict()
+    gui_state.pop("messages")
+    cli_state.pop("messages")
+    assert gui_state == cli_state
 
 
 def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:

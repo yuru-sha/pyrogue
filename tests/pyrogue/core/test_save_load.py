@@ -1,82 +1,38 @@
-# ruff: noqa: T201
-"""セーブ/ロード機能のテスト"""
-
 import json
-import os
-import sys
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
-from pyrogue.core.rogue_game import GAME_VERSION
+from pyrogue.core.rogue_game import GAME_VERSION, GameState, SaveCompatibilityError
 from pyrogue.core.save_manager import SaveError, SaveManager
 
 
-def test_save_load():
-    """セーブ/ロード機能をテスト"""
-    print("=== セーブ/ロード機能テスト ===")
+def test_save_load_preserves_canonical_state(tmp_path) -> None:
+    game = GameState(1234)
+    game.player.gold = 42
+    manager = SaveManager(tmp_path)
+    expected = game.to_dict()
 
-    # SaveManagerをテスト
-    save_manager = SaveManager()
+    assert manager.save_game_state(expected)
+    assert manager.save_file.suffix == ".json"
+    loaded = manager.load_game_state()
 
-    # テスト用のゲームデータ
-    test_data = {
-        "spec_version": GAME_VERSION,
-        "player_x": 10,
-        "player_y": 5,
-        "current_floor": 2,
-        "player_stats": {
-            "level": 3,
-            "hp": 15,
-            "hp_max": 20,
-            "attack": 8,
-            "defense": 5,
-            "gold": 150,
-        },
-        "inventory_items": [],
-        "floor_data": {},
-    }
-
-    # セーブテスト
-    print("1. セーブ機能をテスト...")
-    success = save_manager.save_game_state(test_data)
-    print(f"   セーブ結果: {'成功' if success else '失敗'}")
-
-    # セーブファイルの存在チェック
-    has_save = save_manager.has_save_file()
-    print(f"   セーブファイル存在: {'はい' if has_save else 'いいえ'}")
-
-    # ロードテスト
-    print("2. ロード機能をテスト...")
-    loaded_data = save_manager.load_game_state()
-    if loaded_data:
-        print("   ロード成功")
-        print(f"   プレイヤー位置: ({loaded_data['player_x']}, {loaded_data['player_y']})")
-        print(f"   現在階層: {loaded_data['current_floor']}")
-        print(f"   プレイヤーHP: {loaded_data['player_stats']['hp']}/{loaded_data['player_stats']['hp_max']}")
-    else:
-        print("   ロード失敗")
-
-    # パーマデステスト
-    print("3. パーマデス機能をテスト...")
-    # プレイヤーを死亡状態にする
-    test_data["player_stats"]["hp"] = 0
-    save_manager.trigger_permadeath_on_death(test_data)
-
-    # セーブファイルが削除されているかチェック
-    has_save_after_death = save_manager.has_save_file()
-    print(f"   死亡後のセーブファイル存在: {'はい' if has_save_after_death else 'いいえ'}")
-
-    # 死亡後のロード試行
-    loaded_after_death = save_manager.load_game_state()
-    print(f"   死亡後のロード結果: {'成功' if loaded_after_death else '失敗（正常）'}")
-
-    print("\n=== テスト完了 ===")
+    assert loaded == expected
+    assert GameState.from_dict(loaded).to_dict() == expected
 
 
-if __name__ == "__main__":
-    test_save_load()
+def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
+    manager = SaveManager(tmp_path)
+    assert manager.save_game_state(GameState(1234).to_dict())
+    manager.checksum_file.unlink()
+    payload = json.loads(manager.save_file.read_text(encoding="utf-8"))
+    payload["spec_version"] = "0.2.0"
+    manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert manager.load_game_state() is None
+    assert manager.last_error is not None
+    assert "Unsupported save version" in str(manager.last_error)
+    with pytest.raises(SaveCompatibilityError):
+        GameState.from_dict(payload)
 
 
 @pytest.mark.parametrize(
