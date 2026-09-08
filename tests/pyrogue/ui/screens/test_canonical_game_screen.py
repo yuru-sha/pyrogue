@@ -156,7 +156,7 @@ def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
     game_screen.handle_key(tab)
     game_screen.render(console)
     cells = game_screen.display_cells()
-    assert cells[terrain_position].visible
+    assert not cells[terrain_position].visible
     assert cells[monster_position].entity == EntityKind.MONSTER
     assert cells[item_position].entity == EntityKind.ITEM
     assert cells[trap_position].entity == EntityKind.TRAP
