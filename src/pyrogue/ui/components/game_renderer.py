@@ -14,6 +14,7 @@ import tcod
 import tcod.console
 
 from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
+from pyrogue.ui.display_renderer import cell_glyph
 from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:
@@ -69,27 +70,12 @@ class GameRenderer:
     def _render_spec(self, console: tcod.Console) -> None:
         """Render the renderer-neutral game state as characters."""
         game = self.game_screen.rogue_game
-        terrain_glyphs = {
-            "wall": "#",
-            "floor": ".",
-            "door_closed": "+",
-            "door_open": "/",
-            "stairs_up": "<",
-            "stairs_down": ">",
-        }
-        entity_glyphs = {"player": "@", "monster": "?", "item": "*", "trap": "^"}
         monsters = {(monster.x, monster.y): monster.char for monster in game.floor.monsters}
         items = {item.position: item.char for item in game.floor.items if item.position is not None}
         for cell in game.display_cells().values():
             if not cell.explored or cell.terrain is None:
                 continue
-            char = entity_glyphs.get(cell.entity.value, "") if cell.visible and cell.entity else ""
-            if cell.entity and cell.entity.value == "monster":
-                char = monsters.get(cell.position, char)
-            elif cell.entity and cell.entity.value == "item":
-                char = items.get(cell.position, char)
-            if not char:
-                char = terrain_glyphs[cell.terrain.value]
+            char = cell_glyph(cell, monsters, items)
             color = (255, 255, 255) if cell.visible else (80, 80, 80)
             x, y = cell.position
             if x < console.width and y + 2 < console.height:

@@ -28,6 +28,7 @@ from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GameState, GameStatus, ItemKind
 from pyrogue.core.save_manager import SaveManager
+from pyrogue.ui.display_renderer import render_ascii
 from pyrogue.utils import game_logger
 
 
@@ -600,7 +601,7 @@ class CLIEngine:
     def display_game_state(self) -> None:
         """現在のゲーム状態を表示。"""
         if self.spec_game is not None:
-            print(self.spec_game.render_ascii())
+            print(render_ascii(self.spec_game))
             print(self.spec_game.status_text())
             return
         try:

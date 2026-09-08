@@ -1697,37 +1697,6 @@ class GameState:
     def _direction(value: Any) -> Position:
         return DIRECTIONS.get(str(value).lower(), (1, 0))
 
-    def render_ascii(self) -> str:
-        """Render the explored map as plain text for CLI and tests."""
-        glyphs = {
-            Terrain.WALL: "#",
-            Terrain.FLOOR: ".",
-            Terrain.DOOR_CLOSED: "+",
-            Terrain.DOOR_OPEN: "/",
-            Terrain.STAIRS_UP: "<",
-            Terrain.STAIRS_DOWN: ">",
-        }
-        cells = self.display_cells()
-        monsters = {(monster.x, monster.y): monster.char for monster in self.floor.monsters}
-        items = {item.position: item.char for item in self.floor.items if item.position is not None}
-        lines = []
-        for y in range(self.height):
-            line = []
-            for x in range(self.width):
-                cell = cells[(x, y)]
-                if cell.entity == EntityKind.PLAYER:
-                    line.append("@")
-                elif cell.entity == EntityKind.MONSTER:
-                    line.append(monsters[(x, y)])
-                elif cell.entity == EntityKind.ITEM:
-                    line.append(items[(x, y)])
-                elif cell.terrain is not None:
-                    line.append(glyphs.get(cell.terrain, " "))
-                else:
-                    line.append(" ")
-            lines.append("".join(line))
-        return "\n".join(lines)
-
     def to_dict(self) -> dict[str, Any]:
         """Serialize the complete game state to JSON-compatible values."""
         return {
