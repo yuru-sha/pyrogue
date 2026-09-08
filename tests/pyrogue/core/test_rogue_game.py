@@ -16,9 +16,79 @@ from pyrogue.core.rogue_game import (
 )
 from pyrogue.core.save_manager import SaveManager
 
+UNIDENTIFIED_ITEM_NAMES = {
+    ItemKind.POTION: (
+        "healing potion",
+        "extra healing potion",
+        "strength potion",
+        "restore strength potion",
+    ),
+    ItemKind.SCROLL: (
+        "identify scroll",
+        "light scroll",
+        "remove curse scroll",
+        "enchant weapon scroll",
+        "enchant armor scroll",
+        "teleportation scroll",
+        "magic mapping scroll",
+    ),
+    ItemKind.RING: (
+        "ring of protection",
+        "ring of add strength",
+        "ring of sustain strength",
+        "ring of searching",
+        "ring of regeneration",
+    ),
+    ItemKind.WAND: (
+        "wand of magic missile",
+        "wand of light",
+        "wand of lightning",
+        "wand of fire",
+        "wand of cold",
+        "wand of teleport monster",
+    ),
+}
+
 
 def test_seed_reproduces_initial_state() -> None:
     assert GameState(1234).to_dict() == GameState(1234).to_dict()
+
+
+def test_unidentified_items_share_appearance_by_effect() -> None:
+    game = GameState(1234)
+
+    first = game._new_item(game.floor, ItemKind.POTION, "healing potion")
+    second = game._new_item(game.floor, ItemKind.POTION, "healing potion")
+
+    assert not first.identified
+    assert first.appearance == second.appearance
+    assert first.display_name == first.appearance
+
+    first.identified = True
+    assert first.display_name == first.name
+
+
+@pytest.mark.parametrize(("kind", "names"), tuple(UNIDENTIFIED_ITEM_NAMES.items()))
+def test_different_unidentified_effects_have_unique_appearances(kind: ItemKind, names: tuple[str, ...]) -> None:
+    game = GameState(1234)
+    items = [game._new_item(game.floor, kind, name) for name in names]
+
+    assert len({item.appearance for item in items}) == len(names)
+
+
+def test_appearance_mapping_survives_json_round_trip() -> None:
+    game = GameState(1234)
+    saved = game.to_dict()
+
+    assert all(isinstance(values, list) for values in saved["appearances"].values())
+
+    restored = GameState.from_dict(json.loads(json.dumps(saved)))
+
+    assert restored._appearance_names == game._appearance_names
+    for kind, names in UNIDENTIFIED_ITEM_NAMES.items():
+        original = game._new_item(game.floor, kind, names[0])
+        loaded = restored._new_item(restored.floor, kind, names[0])
+        assert loaded.appearance == original.appearance
 
 
 def test_every_floor_has_reachable_stairs() -> None:
