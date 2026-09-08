@@ -1,4 +1,5 @@
 from pyrogue.core.rogue_game import (
+    DisplayCell,
     EntityKind,
     GameState,
     ItemKind,
@@ -48,3 +49,41 @@ def test_ascii_renderer_uses_display_cells_and_keeps_entity_priority() -> None:
     assert not hasattr(ItemState, "char")
     assert not hasattr(MonsterState, "char")
     assert not hasattr(TrapState, "char")
+
+
+def test_ascii_renderer_preserves_unexplored_and_explored_terrain() -> None:
+    game = GameState(1234)
+    initial_cells = game.display_cells()
+    hidden_position = next(
+        position for position, cell in initial_cells.items() if not cell.visible and not cell.explored
+    )
+    game.floor.set_tile(hidden_position, Terrain.WALL)
+
+    assert (
+        render_ascii(initial_cells, game.width, game.height).splitlines()[hidden_position[1]][hidden_position[0]] == " "
+    )
+
+    game.floor.explored.add(hidden_position)
+    explored_cells = game.display_cells()
+
+    assert not explored_cells[hidden_position].visible
+    assert explored_cells[hidden_position].explored
+    assert explored_cells[hidden_position].terrain == Terrain.WALL
+    assert (
+        render_ascii(explored_cells, game.width, game.height).splitlines()[hidden_position[1]][hidden_position[0]]
+        == "#"
+    )
+
+
+def test_ascii_renderer_maps_all_terrain_kinds() -> None:
+    terrain_kinds = (
+        Terrain.WALL,
+        Terrain.FLOOR,
+        Terrain.DOOR_CLOSED,
+        Terrain.DOOR_OPEN,
+        Terrain.STAIRS_UP,
+        Terrain.STAIRS_DOWN,
+    )
+    cells = {(index, 0): DisplayCell((index, 0), terrain, True, True) for index, terrain in enumerate(terrain_kinds)}
+
+    assert render_ascii(cells, len(terrain_kinds), 1) == "#.+/<>"
