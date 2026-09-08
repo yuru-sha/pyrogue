@@ -22,6 +22,7 @@ seed, and command sequence produces the same game state.
 - Rogue-style A-Z monsters, original traps, hunger, food, equipment, potions, scrolls, wands, rings, gold, and the Amulet.
 - The Amulet is carried back to the surface; merely reaching floor 26 does not win.
 - A dead game cannot be resumed. The final screen records score, deepest floor, and death cause.
+- `current_floor` is the player's current position; victory and death summaries use the separately saved `player.deepest_floor` progress value.
 
 Movement uses vi keys (`h`, `j`, `k`, `l`, `y`, `u`, `b`, `n`) and `.` waits.
 Use `?` in-game for the complete command list.

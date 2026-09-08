@@ -199,6 +199,7 @@ class CLIEngine:
         ):
             print("\n🎉 VICTORY! 🎉")
             print("You have escaped with the Amulet of Yendor!")
+            print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
             print("You win the game!")
             self.running = False
             return True
@@ -259,6 +260,9 @@ class CLIEngine:
             print(result.message)
         if result.success:
             self.display_game_state()
+        if result.state == GameStatus.VICTORY:
+            summary = result.data or self.spec_game.victory_summary
+            print(f"Deepest Floor: B{summary['deepest_floor']}F")
         if result.state in {GameStatus.QUIT, GameStatus.DEAD, GameStatus.VICTORY}:
             self.running = False
         return True
@@ -568,6 +572,7 @@ class CLIEngine:
                 ):
                     print("\n🎉 VICTORY! 🎉")
                     print("You have escaped with the Amulet of Yendor!")
+                    print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
                     print("You win the game!")
                     self.running = False
                     return success

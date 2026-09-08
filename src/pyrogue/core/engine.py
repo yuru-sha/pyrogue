@@ -261,7 +261,12 @@ class Engine:
                                     "monsters_killed": game.player.monsters_killed,
                                     "turns_played": game.player.turns_played,
                                 }
-                                self.victory_screen.set_victory_data(stats, game.current_floor, game.score)
+                                summary = game.victory_summary
+                                self.victory_screen.set_victory_data(
+                                    stats,
+                                    summary["deepest_floor"],
+                                    summary["score"],
+                                )
                             # 状態遷移時に前の状態を記録
                             self.previous_state = self.state
                             self.state = new_state

@@ -25,7 +25,7 @@ class VictoryScreen:
 
         # プレイヤーの統計情報（勝利時に設定される）
         self.player_stats: dict[str, int] = {}
-        self.final_floor = 26
+        self.deepest_floor = 26
         self.final_score = 0
 
     def update_console(self, console: tcod.console.Console) -> None:
@@ -35,8 +35,17 @@ class VictoryScreen:
     def set_victory_data(self, player_stats: dict, final_floor: int, final_score: int) -> None:
         """勝利時のデータを設定"""
         self.player_stats = player_stats.copy()
-        self.final_floor = final_floor
+        self.deepest_floor = final_floor
         self.final_score = final_score
+
+    @property
+    def final_floor(self) -> int:
+        """Return the historical alias for the deepest floor."""
+        return self.deepest_floor
+
+    @final_floor.setter
+    def final_floor(self, value: int) -> None:
+        self.deepest_floor = value
 
     def calculate_score(self) -> int:
         """最終スコアを計算"""
@@ -46,7 +55,7 @@ class VictoryScreen:
         # スコア計算式
         level_bonus = self.player_stats.get("level", 1) * 100
         gold_bonus = self.player_stats.get("gold", 0) * 2
-        floor_bonus = self.final_floor * 50
+        floor_bonus = self.deepest_floor * 50
         hp_bonus = self.player_stats.get("hp", 0) * 10
 
         self.final_score = level_bonus + gold_bonus + floor_bonus + hp_bonus
@@ -80,7 +89,7 @@ class VictoryScreen:
         final_score = self.calculate_score()
         stats_info = [
             f"Final Level: {self.player_stats.get('level', 1)}",
-            f"Final Floor: B{self.final_floor}F",
+            f"Deepest Floor: B{self.deepest_floor}F",
             f"Final HP: {self.player_stats.get('hp', 0)}/{self.player_stats.get('max_hp', 0)}",
             f"Experience: {self.player_stats.get('exp', 0)}",
             f"Gold Collected: {self.player_stats.get('gold', 0)}",

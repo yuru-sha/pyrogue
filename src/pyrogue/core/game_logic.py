@@ -518,7 +518,7 @@ class GameLogic:
                 # 勝利処理をエンジンに通知
                 if self.engine and hasattr(self.engine, "victory"):
                     player_stats = self.player.get_stats_dict()
-                    final_floor = self.dungeon_manager.current_floor
+                    final_floor = self.player.deepest_floor
                     self.engine.victory(player_stats, final_floor)
 
                 return True

@@ -1565,7 +1565,12 @@ class GameState:
             if not self.player.has_amulet:
                 return self._result(False, "You need the Amulet of Yendor to escape.")
             self.status = GameStatus.VICTORY
-            return self._result(True, "You return to the surface with the Amulet of Yendor.", True)
+            return self._result(
+                True,
+                "You return to the surface with the Amulet of Yendor.",
+                True,
+                self.victory_summary,
+            )
         self.floor.player_position = self.player.position
         old_floor = self.current_floor
         self.current_floor -= 1
@@ -1605,6 +1610,11 @@ class GameState:
     def death_summary(self) -> dict[str, Any]:
         """Return the values shown on the terminal death screen."""
         return {"score": self.score, "deepest_floor": self.player.deepest_floor, "cause": self.player.death_cause}
+
+    @property
+    def victory_summary(self) -> dict[str, int]:
+        """Return the values shown on the terminal victory screen."""
+        return {"score": self.score, "deepest_floor": self.player.deepest_floor}
 
     def _normalize_command(self, command: str) -> tuple[str, Any]:
         if command in self.COMMAND_KEYS:
