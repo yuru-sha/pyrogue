@@ -173,6 +173,13 @@ class SaveManager:
                         game_logger.error(f"Backup file also corrupted: {backup_error}")
                 return None
 
+            # セーブデータを読み込み
+            with open(self.save_file, encoding="utf-8") as f:
+                game_data = json.load(f)
+
+            if not self._check_save_version(game_data):
+                return None
+
             # メタデータを確認
             if self.metadata_file.exists():
                 with open(self.metadata_file) as f:
@@ -183,13 +190,6 @@ class SaveManager:
                     game_logger.warning("Cannot load game: player is dead (permadeath)")
                     self._trigger_permadeath()
                     return None
-
-            # セーブデータを読み込み
-            with open(self.save_file, encoding="utf-8") as f:
-                game_data = json.load(f)
-
-            if not self._check_save_version(game_data):
-                return None
 
             # 後方互換性: 古いセーブファイルからMP関連属性を削除
             self._remove_legacy_mp_attributes(game_data)

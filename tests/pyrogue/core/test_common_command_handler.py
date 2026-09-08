@@ -836,11 +836,21 @@ class TestCommonCommandHandler:
         # ロード失敗のテスト（セーブファイルなし）
         with patch("pyrogue.core.save_manager.SaveManager") as mock_save_manager:
             mock_save_manager.return_value.load_game_state.return_value = None
+            mock_save_manager.return_value.last_error = None
 
             result = self.handler.handle_command("load")
             assert result.success is False
             if not result.message:
                 assert any("No save file found" in msg for msg in self.context.messages)
+
+        # 不正なセーブはファイルなしと区別して扱う
+        with patch("pyrogue.core.save_manager.SaveManager") as mock_save_manager:
+            mock_save_manager.return_value.load_game_state.return_value = None
+            mock_save_manager.return_value.last_error = Exception("unsupported save version")
+
+            result = self.handler.handle_command("load")
+            assert result.success is False
+            assert any("Failed to load save data" in msg for msg in self.context.messages)
 
         # ロード時のエラー処理
         with patch("pyrogue.core.save_manager.SaveManager") as mock_save_manager:

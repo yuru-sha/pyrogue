@@ -132,3 +132,16 @@ def test_save_writes_exact_spec_version(tmp_path):
     saved = json.loads(manager.save_file.read_text(encoding="utf-8"))
 
     assert saved["spec_version"] == GAME_VERSION
+
+
+def test_load_invalid_save_does_not_delete_files_when_metadata_marks_dead(tmp_path):
+    """不正なセーブは死亡メタデータがあってもファイルを削除しない。"""
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(json.dumps({"spec_version": "0.2.0"}), encoding="utf-8")
+    manager.metadata_file.write_text(json.dumps({"is_alive": False}), encoding="utf-8")
+    before_save = manager.save_file.read_bytes()
+    before_metadata = manager.metadata_file.read_bytes()
+
+    assert manager.load_game_state() is None
+    assert manager.save_file.read_bytes() == before_save
+    assert manager.metadata_file.read_bytes() == before_metadata

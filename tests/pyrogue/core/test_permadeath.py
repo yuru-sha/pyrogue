@@ -100,6 +100,7 @@ class TestPermadeathSystem:
 
             # 死亡したプレイヤーのデータを作成
             game_data = {
+                "spec_version": GAME_VERSION,
                 "player_stats": {
                     "hp": 0,  # 死亡状態
                     "hp_max": 100,
@@ -120,8 +121,8 @@ class TestPermadeathSystem:
             }
 
             # ファイルを直接作成
-            with open(save_manager.save_file, "wb") as f:
-                pickle.dump(game_data, f)
+            with open(save_manager.save_file, "w", encoding="utf-8") as f:
+                json.dump(game_data, f)
 
             with open(save_manager.metadata_file, "w") as f:
                 json.dump(metadata, f)

@@ -76,7 +76,8 @@ class SaveLoadHandler:
             save_data = save_manager.load_game_state()
 
             if save_data is None:
-                self.context.add_message("No save file found.")
+                message = "No save file found." if save_manager.last_error is None else "Failed to load save data."
+                self.context.add_message(message)
                 return CommandResult(False)
 
             # セーブデータの復元
