@@ -1763,7 +1763,10 @@ class GameState:
             "messages": self.messages[-100:],
             "rng_state": _jsonable(self.rng.getstate()),
             "next_ids": {"item": self._next_item_id, "monster": self._next_monster_id, "trap": self._next_trap_id},
-            "appearances": {kind.value: values for kind, values in self._appearance_names.items()},
+            "appearances": {
+                kind.value: [values[effect] for effect in APPEARANCE_EFFECTS[kind]]
+                for kind, values in self._appearance_names.items()
+            },
         }
 
     @classmethod
@@ -1789,12 +1792,9 @@ class GameState:
         game._appearance_names = game._make_appearances()  # noqa: SLF001
         for raw_kind, values in data.get("appearances", {}).items():
             kind = ItemKind(raw_kind)
-            if isinstance(values, dict):
-                game._appearance_names[kind] = {str(effect): str(appearance) for effect, appearance in values.items()}  # noqa: SLF001
-            else:
-                game._appearance_names[kind].update(  # noqa: SLF001
-                    dict(zip(APPEARANCE_EFFECTS[kind], values, strict=False))
-                )
+            game._appearance_names[kind].update(  # noqa: SLF001
+                dict(zip(APPEARANCE_EFFECTS[kind], values, strict=False))
+            )
         game.rng.setstate(_tupleize(data["rng_state"]))
         if game.current_floor not in game.floors:
             raise SaveCompatibilityError

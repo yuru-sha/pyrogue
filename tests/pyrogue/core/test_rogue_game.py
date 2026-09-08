@@ -74,7 +74,11 @@ def test_different_unidentified_effects_have_unique_appearances(kind: ItemKind, 
 
 def test_appearance_mapping_survives_json_round_trip() -> None:
     game = GameState(1234)
-    restored = GameState.from_dict(json.loads(json.dumps(game.to_dict())))
+    saved = game.to_dict()
+
+    assert all(isinstance(values, list) for values in saved["appearances"].values())
+
+    restored = GameState.from_dict(json.loads(json.dumps(saved)))
 
     assert restored._appearance_names == game._appearance_names
     for kind, names in UNIDENTIFIED_ITEM_NAMES.items():
