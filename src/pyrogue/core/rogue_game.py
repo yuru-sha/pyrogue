@@ -754,6 +754,13 @@ WAND_EFFECTS = {
     "wand of cold": "cold",
     "wand of teleport monster": "teleport_monster",
 }
+APPEARANCE_EFFECTS = {
+    ItemKind.POTION: tuple(POTION_EFFECTS.values()),
+    ItemKind.SCROLL: tuple(SCROLL_EFFECTS.values()),
+    ItemKind.RING: tuple(RING_EFFECTS.values()),
+    ItemKind.WAND: tuple(WAND_EFFECTS.values()),
+}
+LEGACY_APPEARANCE_POOL_SIZE = 6
 
 DIRECTIONS: dict[str, Position] = {
     "north": (0, -1),
@@ -878,16 +885,27 @@ class GameState:
     def _message(self, message: str) -> None:
         self.messages.append(message)
 
-    def _make_appearances(self) -> dict[ItemKind, list[str]]:
+    def _make_appearances(self) -> dict[ItemKind, dict[str, str]]:
         pools = {
             ItemKind.POTION: ["red", "blue", "green", "yellow", "purple", "orange"],
-            ItemKind.SCROLL: ["ZELGO MER", "JUYED AWK YACC", "NR 9", "XIXAXA XOXAXA", "KIRJE", "FOOBIE BLETCH"],
+            ItemKind.SCROLL: [
+                "ZELGO MER",
+                "JUYED AWK YACC",
+                "NR 9",
+                "XIXAXA XOXAXA",
+                "KIRJE",
+                "FOOBIE BLETCH",
+            ],
             ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby"],
             ItemKind.WAND: ["glass", "iron", "silver", "copper", "brass", "crystal"],
         }
+        appearances = {}
         for values in pools.values():
             self.rng.shuffle(values)
-        return pools
+        for kind, values in pools.items():
+            appearance_values = [*values, "GARVEN DEH"] if kind == ItemKind.SCROLL else values
+            appearances[kind] = dict(zip(APPEARANCE_EFFECTS[kind], appearance_values, strict=False))
+        return appearances
 
     def _ensure_floor(self, number: int) -> FloorState:
         if number in self.floors:
@@ -940,9 +958,9 @@ class GameState:
         name = self.rng.choice(names[kind]) if name is None else name
         item = ItemState(id=self._next_item_id, kind=kind, name=name, position=self._free_position(floor))
         self._next_item_id += 1
-        if kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND}:
-            item.identified = False
-            item.appearance = self._appearance_names[kind][self.rng.randrange(len(self._appearance_names[kind]))]
+        appearance_kind = kind in APPEARANCE_EFFECTS
+        if appearance_kind:
+            self.rng.randrange(LEGACY_APPEARANCE_POOL_SIZE)
         if kind == ItemKind.WEAPON:
             item.damage_dice, item.hit_bonus, item.damage_bonus = WEAPON_DATA.get(name, ((1, 4), 0, 0))
             item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
@@ -966,6 +984,9 @@ class GameState:
             item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
         elif kind == ItemKind.GOLD:
             item.quantity = self.rng.randint(2, 5 + floor.number * 2)
+        if appearance_kind:
+            item.identified = False
+            item.appearance = self._appearance_names[kind][item.effect]
         return item
 
     def _setup_initial_inventory(self, floor: FloorState) -> None:
@@ -1742,7 +1763,10 @@ class GameState:
             "messages": self.messages[-100:],
             "rng_state": _jsonable(self.rng.getstate()),
             "next_ids": {"item": self._next_item_id, "monster": self._next_monster_id, "trap": self._next_trap_id},
-            "appearances": {kind.value: values for kind, values in self._appearance_names.items()},
+            "appearances": {
+                kind.value: [values[effect] for effect in APPEARANCE_EFFECTS[kind]]
+                for kind, values in self._appearance_names.items()
+            },
         }
 
     @classmethod
@@ -1765,9 +1789,12 @@ class GameState:
         game._next_item_id = int(data.get("next_ids", {}).get("item", 1))  # noqa: SLF001
         game._next_monster_id = int(data.get("next_ids", {}).get("monster", 1))  # noqa: SLF001
         game._next_trap_id = int(data.get("next_ids", {}).get("trap", 1))  # noqa: SLF001
-        game._appearance_names = {ItemKind(kind): list(values) for kind, values in data.get("appearances", {}).items()}  # noqa: SLF001
-        for kind in (ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND):
-            game._appearance_names.setdefault(kind, [])  # noqa: SLF001
+        game._appearance_names = game._make_appearances()  # noqa: SLF001
+        for raw_kind, values in data.get("appearances", {}).items():
+            kind = ItemKind(raw_kind)
+            game._appearance_names[kind].update(  # noqa: SLF001
+                dict(zip(APPEARANCE_EFFECTS[kind], values, strict=False))
+            )
         game.rng.setstate(_tupleize(data["rng_state"]))
         if game.current_floor not in game.floors:
             raise SaveCompatibilityError
