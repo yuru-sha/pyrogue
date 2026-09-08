@@ -238,6 +238,25 @@ class SaveManager:
         if save_version != GAME_VERSION:
             self.last_error = SaveError(f"Unsupported save version: {save_version}")
             return False
+
+        if "seed" in game_data or "floors" in game_data or "rng_state" in game_data:
+            required_keys = ("seed", "player", "floors", "rng_state")
+            object_fields = ("player", "floors")
+        elif "player" in game_data:
+            required_keys = ("player", "inventory", "current_floor", "floor_data")
+            object_fields = ("player", "inventory", "floor_data")
+        else:
+            required_keys = ("player_stats", "current_floor")
+            object_fields = ("player_stats",)
+
+        missing_keys = [key for key in required_keys if key not in game_data]
+        if missing_keys:
+            self.last_error = SaveError(f"Save data is missing required fields: {', '.join(missing_keys)}")
+            return False
+        for field in object_fields:
+            if not isinstance(game_data[field], dict):
+                self.last_error = SaveError(f"Save field must be a JSON object: {field}")
+                return False
         return True
 
     def _remove_legacy_mp_attributes(self, game_data: dict[str, Any]) -> None:

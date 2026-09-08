@@ -10,7 +10,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from pyrogue.core.rogue_game import GAME_VERSION
-from pyrogue.core.save_manager import SaveManager
+from pyrogue.core.save_manager import SaveError, SaveManager
 
 
 def test_save_load():
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 def test_save_rejects_invalid_spec_version_without_touching_existing_save(tmp_path, payload):
     """不正な仕様バージョンのセーブは既存ファイルを変更しない。"""
     manager = SaveManager(tmp_path)
-    valid_payload = {"spec_version": GAME_VERSION, "player": {"hp": 10}}
+    valid_payload = {"spec_version": GAME_VERSION, "player_stats": {"hp": 10}, "current_floor": 1}
     assert manager.save_game_state(valid_payload)
     before = manager.save_file.read_bytes()
 
@@ -128,10 +128,29 @@ def test_save_writes_exact_spec_version(tmp_path):
     """正常なセーブには現在の仕様バージョンをそのまま書き込む。"""
     manager = SaveManager(tmp_path)
 
-    assert manager.save_game_state({"spec_version": GAME_VERSION, "player": {"hp": 10}})
+    assert manager.save_game_state({"spec_version": GAME_VERSION, "player_stats": {"hp": 10}, "current_floor": 1})
     saved = json.loads(manager.save_file.read_text(encoding="utf-8"))
 
     assert saved["spec_version"] == GAME_VERSION
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"spec_version": GAME_VERSION},
+        {"spec_version": GAME_VERSION, "player": {}},
+    ],
+)
+def test_save_and_load_reject_current_version_without_required_shape(tmp_path, payload):
+    """現行バージョンでもcanonical/legacyの必須項目がなければ拒否する。"""
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert not manager.save_game_state(payload)
+    assert manager.last_error is not None
+
+    assert manager.load_game_state() is None
+    assert isinstance(manager.last_error, SaveError)
 
 
 def test_load_invalid_save_does_not_delete_files_when_metadata_marks_dead(tmp_path):
