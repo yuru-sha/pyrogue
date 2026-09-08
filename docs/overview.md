@@ -22,6 +22,7 @@ uv run --locked game --seed 1234
 ```
 
 CLIとGUIは同じ `GameState` コマンドを使い、死亡時のセーブ後処理も共有します。seedを指定しない場合は自動生成seedを使います。
+TCOD GUIのTabは表示専用のFOV切替で、OFF中は全体を描画しますが探索済み状態は更新しません。
 
 ## 実装の見方
 

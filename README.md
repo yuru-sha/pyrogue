@@ -28,6 +28,7 @@ seed, and command sequence produces the same game state.
 Movement uses vi keys (`h`, `j`, `k`, `l`, `y`, `u`, `b`, `n`) and `.` waits.
 Press `/` to identify one unknown item in the pack without consuming a turn.
 Use `?` in-game for the complete command list.
+In the TCOD GUI, Tab temporarily disables FOV masking to show the complete map; toggling it back restores normal FOV without changing explored-map memory.
 
 ## Architecture
 

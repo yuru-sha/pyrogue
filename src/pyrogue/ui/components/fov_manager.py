@@ -231,7 +231,7 @@ class FOVManager:
 
         return max_radius if max_radius > 0 else self.base_fov_radius
 
-    def toggle_fov(self) -> None:
+    def toggle_fov(self) -> str:
         """
         FOV表示の有効/無効を切り替え。
 

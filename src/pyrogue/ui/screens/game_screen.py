@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyrogue.core.rogue_game import GameState
+from pyrogue.core.rogue_game import DisplayCell, GameState
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
 from pyrogue.ui.components.input_handler import InputHandler
@@ -91,6 +91,10 @@ class GameScreen:
         """
         # 描画処理を委譲
         self.renderer.render(console)
+
+    def display_cells(self) -> dict[tuple[int, int], DisplayCell]:
+        """Return canonical display cells using the current GUI FOV setting."""
+        return self.rogue_game.display_cells(show_all=not self.fov_manager.fov_enabled)
 
     def handle_key(self, event: tcod.event.KeyDown) -> GameStates | None:
         """

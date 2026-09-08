@@ -1104,8 +1104,8 @@ class GameState:
         points = self._line(start, end)
         return all(self.floor.tile_at(point) not in {Terrain.WALL, Terrain.DOOR_CLOSED} for point in points[1:-1])
 
-    def visible_positions(self) -> set[Position]:
-        """Calculate and record the cells visible from the player."""
+    def _calculate_visible_positions(self) -> set[Position]:
+        """Calculate the cells visible from the player without changing state."""
         visible = set()
         origin = self.player.position
         radius = 8
@@ -1113,6 +1113,11 @@ class GameState:
             for x in range(max(0, origin[0] - radius), min(self.width, origin[0] + radius + 1)):
                 if max(abs(x - origin[0]), abs(y - origin[1])) <= radius and self._can_see(origin, (x, y), radius):
                     visible.add((x, y))
+        return visible
+
+    def visible_positions(self) -> set[Position]:
+        """Calculate and record the cells visible from the player."""
+        visible = self._calculate_visible_positions()
         self.floor.explored.update(visible)
         return visible
 
@@ -1127,25 +1132,26 @@ class GameState:
                 if self.floor.tile_at((x, y)) != Terrain.WALL:
                     self.floor.explored.add((x, y))
 
-    def display_cells(self) -> dict[Position, DisplayCell]:
-        """Return the current map as renderer-neutral display cells."""
-        visible = self.visible_positions()
+    def display_cells(self, show_all: bool = False) -> dict[Position, DisplayCell]:
+        """Return renderer-neutral display cells, optionally bypassing FOV for display only."""
+        visible = self._calculate_visible_positions() if show_all else self.visible_positions()
         cells: dict[Position, DisplayCell] = {}
         monster_positions = {
             (monster.x, monster.y): monster.type_id for monster in self.floor.monsters if monster.hp > 0
         }
         item_positions = {item.position: item.kind.value for item in self.floor.items if item.position is not None}
-        trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if trap.discovered}
+        trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if show_all or trap.discovered}
         for y in range(self.height):
             for x in range(self.width):
                 position = (x, y)
                 is_visible = position in visible
+                is_displayed = show_all or is_visible
                 is_explored = position in self.floor.explored
-                terrain = self.floor.tile_at(position) if is_visible or is_explored else None
+                terrain = self.floor.tile_at(position) if is_displayed or is_explored else None
                 entity: EntityKind | None = None
                 priority = 0
                 entity_variant: str | None = None
-                if is_visible:
+                if is_displayed:
                     if position == self.player.position:
                         entity, priority = EntityKind.PLAYER, 100
                     elif position in monster_positions:

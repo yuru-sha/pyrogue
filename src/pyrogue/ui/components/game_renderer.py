@@ -70,8 +70,8 @@ class GameRenderer:
     def _render_spec(self, console: tcod.Console) -> None:
         """Render the renderer-neutral game state as characters."""
         game = self.game_screen.rogue_game
-        for cell in game.display_cells().values():
-            if not cell.explored or cell.terrain is None:
+        for cell in self.game_screen.display_cells().values():
+            if cell.terrain is None:
                 continue
             char = cell_glyph(cell)
             color = (255, 255, 255) if cell.visible else (80, 80, 80)
