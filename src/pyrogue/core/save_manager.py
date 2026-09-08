@@ -288,7 +288,8 @@ class SaveManager:
             game_data: 現在のゲームデータ
 
         """
-        player_hp = game_data.get("player_stats", {}).get("hp", 0)
+        player_data = game_data.get("player_stats", game_data.get("player", {}))
+        player_hp = player_data.get("hp", 0)
 
         if player_hp <= 0:
             game_logger.warning("Player died - triggering permadeath")
