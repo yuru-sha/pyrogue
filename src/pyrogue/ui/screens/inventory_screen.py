@@ -127,11 +127,18 @@ class InventoryScreen(Screen):
         if action:
             if not items:
                 return
-            if event.sym == tcod.event.KeySym.UP:
-                self.selected_index = (self.selected_index - 1) % len(items)
-                return
-            if event.sym == tcod.event.KeySym.DOWN:
-                self.selected_index = (self.selected_index + 1) % len(items)
+            selection_delta = {
+                tcod.event.KeySym.LEFT: -1,
+                tcod.event.KeySym.RIGHT: 1,
+                tcod.event.KeySym.UP: -1,
+                tcod.event.KeySym.DOWN: 1,
+                ord("h"): -1,
+                ord("l"): 1,
+                ord("k"): -1,
+                ord("j"): 1,
+            }
+            if delta := selection_delta.get(event.sym):
+                self.selected_index = (self.selected_index + delta) % len(items)
                 return
             if event.sym == tcod.event.KeySym.RETURN:
                 if items:
