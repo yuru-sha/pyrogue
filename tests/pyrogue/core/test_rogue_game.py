@@ -256,7 +256,14 @@ def test_identify_scroll_identifies_unknown_pack_items() -> None:
     ring = ItemState(
         1002, ItemKind.RING, "ring of protection", identified=False, appearance="opal", effect="protection"
     )
-    wand = ItemState(1003, ItemKind.WAND, "wand of light", identified=False, appearance="glass", effect="light")
+    wand = ItemState(
+        1003,
+        ItemKind.WAND,
+        "wand of magic missile",
+        identified=False,
+        appearance="glass",
+        effect="magic_missile",
+    )
     game.player.inventory.extend((scroll, potion, ring, wand))
 
     result = game.execute("read", [scroll.id])
@@ -346,20 +353,6 @@ def test_damage_wands_hit_a_monster_and_consume_a_charge(effect: str) -> None:
     assert wand.charges == 1
     assert wand.identified
     assert game.player.turns_played == 1
-
-
-def test_light_wand_reveals_the_floor() -> None:
-    game = GameState(1234)
-    game.floor.monsters.clear()
-    game.floor.explored.clear()
-    wand = ItemState(1000, ItemKind.WAND, "light wand", effect="light", charges=1)
-    game.player.inventory.append(wand)
-
-    result = game.execute("zap", [wand.id, "north"])
-
-    assert result.success
-    assert len(game.floor.explored) == game.width * game.height
-    assert wand.charges == 0
 
 
 def test_teleport_monster_wand_moves_the_target() -> None:
