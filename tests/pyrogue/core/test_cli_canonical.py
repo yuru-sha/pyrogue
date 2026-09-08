@@ -76,7 +76,7 @@ def test_cli_save_load_restores_canonical_state(tmp_path, monkeypatch, capsys) -
     assert cli.spec_game.to_dict() == expected
 
 
-def test_cli_slash_identifies_one_unknown_item(capsys) -> None:
+def test_cli_slash_identifies_one_unknown_item(capsys, monkeypatch) -> None:
     cli = CLIEngine(seed=1234, spec_mode=True)
     item = ItemState(
         1000,
@@ -87,8 +87,21 @@ def test_cli_slash_identifies_one_unknown_item(capsys) -> None:
         effect="healing",
     )
     cli.spec_game.player.inventory.append(item)
+    results = []
+    execute = cli.spec_game.execute
+
+    def record_execute(command, args=()):
+        result = execute(command, args)
+        results.append(result)
+        return result
+
+    monkeypatch.setattr(cli.spec_game, "execute", record_execute)
 
     assert cli.process_command("/") is True
 
+    result = results[-1]
+    assert result.success
+    assert result.message == "You identify the healing potion."
+    assert not result.turn_consumed
     assert item.identified
     assert "You identify the healing potion." in capsys.readouterr().out
