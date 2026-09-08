@@ -158,6 +158,13 @@ class SaveManager:
             # セーブファイルの整合性チェック
             if not self._verify_checksum():
                 game_logger.warning("Save file integrity check failed - potential tampering detected")
+                self.last_error = SaveError("Save file integrity check failed")
+                try:
+                    with open(self.save_file, encoding="utf-8") as f:
+                        main_data = json.load(f)
+                    self._check_save_version(main_data)
+                except Exception as main_error:
+                    self.last_error = main_error if isinstance(main_error, SaveError) else SaveError(str(main_error))
                 # チェックサム検証失敗時もバックアップを試行
                 if self.backup_file.exists():
                     try:

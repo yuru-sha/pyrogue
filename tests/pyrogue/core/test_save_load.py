@@ -145,3 +145,15 @@ def test_load_invalid_save_does_not_delete_files_when_metadata_marks_dead(tmp_pa
     assert manager.load_game_state() is None
     assert manager.save_file.read_bytes() == before_save
     assert manager.metadata_file.read_bytes() == before_metadata
+
+
+def test_checksum_failure_sets_error_for_invalid_save(tmp_path):
+    """チェックサム不一致の不正セーブはファイルなしと区別できる。"""
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(json.dumps({"spec_version": "0.2.0"}), encoding="utf-8")
+    manager.checksum_file.write_text("invalid checksum", encoding="utf-8")
+    before = manager.save_file.read_bytes()
+
+    assert manager.load_game_state() is None
+    assert manager.last_error is not None
+    assert manager.save_file.read_bytes() == before
