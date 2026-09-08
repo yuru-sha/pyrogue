@@ -21,10 +21,10 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
         engine.process_command(".")
 
     output = capsys.readouterr().out
-    assert "GAME OVER!" in output
+    assert output.count("GAME OVER") == 1
     assert "Score: 27" in output
-    assert "Deepest Floor: 4" in output
-    assert "Cause of Death: starvation" in output
+    assert "Deepest floor: B4F" in output
+    assert "Cause: starvation" in output
     assert SaveManager(tmp_path).load_game_state() is None
 
 
