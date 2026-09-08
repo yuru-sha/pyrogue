@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 import tcod
 import tcod.event
 
+from pyrogue.core.rogue_game import ItemKind, ItemState
 from pyrogue.ui.screens.screen import Screen
 
 if TYPE_CHECKING:
     from tcod.console import Console
 
-    from pyrogue.entities.items.wand import Wand
     from pyrogue.ui.screens.game_screen import GameScreen
 
 
@@ -23,15 +23,15 @@ class WandSelectionScreen(Screen):
         super().__init__(game_screen.engine)
         self.game_screen = game_screen
         self.selected_index = 0
-        self.wands: list[Wand] = []
-        self.selected_wand: Wand | None = None
+        self.wands: list[ItemState] = []
+        self.selected_wand: ItemState | None = None
 
     def setup(self) -> None:
         """画面セットアップ - ワンド一覧を取得"""
         self.wands = self._get_available_wands()
         self.selected_index = 0
 
-    def _get_available_wands(self) -> list[Wand]:
+    def _get_available_wands(self) -> list[ItemState]:
         """
         プレイヤーが持っているワンドのリストを取得。
 
@@ -41,7 +41,7 @@ class WandSelectionScreen(Screen):
 
         """
         player = self.game_screen.player
-        return [item for item in player.inventory.items if hasattr(item, "item_type") and item.item_type == "WAND"]
+        return [item for item in player.inventory if item.kind == ItemKind.WAND]
 
     def render(self, console: Console) -> None:
         """
@@ -72,11 +72,10 @@ class WandSelectionScreen(Screen):
             bg = (0, 0, 0) if i != self.selected_index else (64, 64, 64)
 
             # ワンドの表示名を取得
-            player = self.game_screen.game_logic.player
-            display_name = wand.get_display_name(player.identification)
+            display_name = wand.display_name
 
             # チャージ情報を取得
-            charges_info = wand.get_charges_info() if hasattr(wand, "get_charges_info") else ""
+            charges_info = f"({wand.charges} charges)"
 
             wand_text = f"{index_char}) {display_name} {charges_info}"
             console.print(2, 3 + i, wand_text, fg, bg)
@@ -119,14 +118,12 @@ class WandSelectionScreen(Screen):
             if 0 <= self.selected_index < len(self.wands):
                 self.selected_wand = self.wands[self.selected_index]
                 # 方向選択モードに移行
-                self.game_screen.input_handler.wand_direction_mode = True
-                self.game_screen.input_handler.selected_wand = self.selected_wand
-                self.game_screen.game_logic.add_message(f"Zap {self.selected_wand.name} in which direction?")
+                self.game_screen.input_handler.begin_direction_selection("zap", self.selected_wand.id)
                 self.game_screen.engine.state = self.game_screen.engine.last_state
             handled = True
         # ESCキーでキャンセル
         elif event.sym == tcod.event.KeySym.ESCAPE:
-            self.game_screen.game_logic.add_message("Cancelled.")
+            self.game_screen.add_message("Cancelled.")
             self.game_screen.engine.state = self.game_screen.engine.last_state
             handled = True
 
