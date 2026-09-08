@@ -271,6 +271,7 @@ class CLIEngine:
         elif result.state == GameStatus.VICTORY:
             summary = result.data or self.spec_game.victory_summary
             print("VICTORY!")
+            print(f"Score: {summary['score']}")
             print(f"Deepest floor: B{summary['deepest_floor']}F")
         if result.state in {GameStatus.QUIT, GameStatus.DEAD, GameStatus.VICTORY}:
             self.running = False

@@ -54,6 +54,7 @@ def test_cli_victory_prints_deepest_floor(capsys) -> None:
     output = capsys.readouterr().out
     assert game.is_victory
     assert "VICTORY" in output
+    assert "Score:" in output
     assert "Deepest floor: B26F" in output
 
 
