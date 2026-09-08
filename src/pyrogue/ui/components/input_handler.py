@@ -492,7 +492,10 @@ class InputHandler:
         action = self.direction_selection_action
         item_id = self.selected_item_id
         self.reset_selection()
-        result = self.game_screen.rogue_game.execute(action or "", [item_id, direction])
+        if action is None or item_id is None:
+            self.game_screen.add_message("Cancelled.")
+            return None
+        result = self.game_screen.rogue_game.execute(action, [item_id, direction])
         if result.state.value == "dead":
             return GameStates.GAME_OVER
         if result.state.value == "victory":
