@@ -19,13 +19,10 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pyrogue.core.rogue_game import GAME_VERSION
 from pyrogue.utils.logger import game_logger
-
-if TYPE_CHECKING:
-    from pyrogue.core.rogue_game import GameState
 
 
 class SaveError(Exception):
@@ -282,12 +279,15 @@ class SaveManager:
         except Exception as e:
             game_logger.error(f"Error during permadeath cleanup: {e}")
 
-    def finalize_death(self, game: GameState) -> dict[str, Any] | None:
-        """Apply the shared death cleanup and return the canonical summary."""
-        if not game.is_dead:
-            return None
-        self.trigger_permadeath_on_death(game.to_dict())
-        return game.death_summary
+    def finalize_death(self, game_data: dict[str, Any]) -> bool:
+        """Apply shared permadeath cleanup only for a valid dead game state."""
+        player_data = game_data.get("player_stats", game_data.get("player", {}))
+        player_hp = player_data.get("hp", 1)
+        is_dead = game_data.get("status") == "dead" or player_data.get("dead", False) or player_hp <= 0
+        if not is_dead:
+            return False
+        self._trigger_permadeath()
+        return True
 
     def trigger_permadeath_on_death(self, game_data: dict[str, Any]) -> None:
         """
@@ -298,13 +298,8 @@ class SaveManager:
             game_data: 現在のゲームデータ
 
         """
-        player_data = game_data.get("player_stats", game_data.get("player", {}))
-        player_hp = player_data.get("hp", 1)
-        is_dead = game_data.get("status") == "dead" or player_data.get("dead", False) or player_hp <= 0
-
-        if is_dead:
+        if self.finalize_death(game_data):
             game_logger.warning("Player died - triggering permadeath")
-            self._trigger_permadeath()
 
     def has_save_file(self) -> bool:
         """

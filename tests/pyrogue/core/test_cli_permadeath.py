@@ -6,6 +6,16 @@ from pyrogue.core.rogue_game import STARVETIME, GameState, GameStatus
 from pyrogue.core.save_manager import SaveManager
 
 
+def _mock_finalizer(save_manager):
+    def finalize(_game_data):
+        save_manager._trigger_permadeath()
+        return True
+
+    finalizer = Mock(side_effect=finalize)
+    save_manager.finalize_death = finalizer
+    return finalizer
+
+
 def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
     engine = CLIEngine(seed=1234, spec_mode=True)
     game = engine.spec_game
@@ -15,12 +25,7 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
     game.player.food_units = -STARVETIME
     save_manager = SaveManager(tmp_path)
     assert save_manager.save_game_state(game.to_dict())
-    save_manager.finalize_death = Mock(
-        side_effect=lambda dead_game: (
-            save_manager.trigger_permadeath_on_death(dead_game.to_dict()),
-            dead_game.death_summary,
-        )[1]
-    )
+    finalizer = _mock_finalizer(save_manager)
 
     with patch("pyrogue.core.cli_engine.SaveManager", return_value=save_manager):
         engine.process_command(".")
@@ -30,7 +35,7 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
     assert "Score: 27" in output
     assert "Deepest Floor: 4" in output
     assert "Cause of Death: starvation" in output
-    save_manager.finalize_death.assert_called_once_with(game)
+    finalizer.assert_called_once_with(game.to_dict())
     assert SaveManager(tmp_path).load_game_state() is None
 
 
@@ -40,7 +45,7 @@ def test_permadeath_only_deletes_dead_canonical_state(tmp_path) -> None:
     victory_game.status = GameStatus.VICTORY
     assert victory_manager.save_game_state(victory_game.to_dict())
 
-    assert victory_manager.finalize_death(victory_game) is None
+    assert victory_manager.finalize_death(victory_game.to_dict()) is False
 
     assert victory_manager.load_game_state() is not None
 
@@ -49,7 +54,7 @@ def test_permadeath_only_deletes_dead_canonical_state(tmp_path) -> None:
     dead_game._die("test")
     assert dead_manager.save_game_state(dead_game.to_dict())
 
-    assert dead_manager.finalize_death(dead_game) == dead_game.death_summary
+    assert dead_manager.finalize_death(dead_game.to_dict()) is True
 
     assert dead_manager.load_game_state() is None
 
@@ -63,13 +68,8 @@ def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
     game._die("test")
     assert save_manager.save_game_state(game.to_dict())
 
-    save_manager.finalize_death = Mock(
-        side_effect=lambda dead_game: (
-            save_manager.trigger_permadeath_on_death(dead_game.to_dict()),
-            dead_game.death_summary,
-        )[1]
-    )
+    finalizer = _mock_finalizer(save_manager)
     engine.game_over({"hp": 0}, game.current_floor, "test")
 
-    save_manager.finalize_death.assert_called_once_with(game)
+    finalizer.assert_called_once_with({"player_stats": {"hp": 0}, "current_floor": game.current_floor})
     assert SaveManager(tmp_path).load_game_state() is None

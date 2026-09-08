@@ -258,9 +258,8 @@ class CLIEngine:
         if result.message:
             print(result.message)
         if result.state == GameStatus.DEAD:
-            summary = SaveManager().finalize_death(self.spec_game)
-            if summary is None:
-                return True
+            SaveManager().finalize_death(self.spec_game.to_dict())
+            summary = self.spec_game.death_summary
             print("\nGAME OVER!")
             print(f"Score: {summary['score']}")
             print(f"Deepest Floor: {summary['deepest_floor']}")
