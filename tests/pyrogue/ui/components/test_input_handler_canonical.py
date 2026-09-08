@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GameState, ItemKind, ItemState
 from pyrogue.ui.screens.game_screen import GameScreen
 
@@ -24,11 +25,11 @@ def test_gui_zap_direction_uses_the_canonical_wand_command() -> None:
     wand = ItemState(id=931, kind=ItemKind.WAND, name="wand of magic missile", effect="magic_missile", charges=1)
     game.player.inventory.append(wand)
 
-    screen.input_handler.handle_key(SimpleNamespace(sym=ord("z"), mod=0, text="z"))
-    assert screen.input_handler.wand_direction_mode
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=ord("z"), mod=0, text="z")) == GameStates.SHOW_INVENTORY
 
+    screen.input_handler.begin_direction_selection("zap", wand.id)
     screen.input_handler.handle_key(SimpleNamespace(sym=ord("l"), mod=0, text="l"))
 
-    assert not screen.input_handler.wand_direction_mode
+    assert not screen.input_handler.direction_selection_mode
     assert wand.charges == 0
     assert game.player.turns_played == 1

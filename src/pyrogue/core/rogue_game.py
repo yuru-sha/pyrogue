@@ -156,21 +156,6 @@ class ItemState:
     effect: str = ""
 
     @property
-    def char(self) -> str:
-        """Return the traditional Rogue glyph for this item."""
-        return {
-            ItemKind.WEAPON: ")",
-            ItemKind.ARMOR: "]",
-            ItemKind.FOOD: ":",
-            ItemKind.POTION: "!",
-            ItemKind.SCROLL: "?",
-            ItemKind.WAND: "/",
-            ItemKind.RING: "=",
-            ItemKind.GOLD: "*",
-            ItemKind.AMULET: ",",
-        }[self.kind]
-
-    @property
     def display_name(self) -> str:
         """Return the name visible with the current identification state."""
         if self.identified or self.kind in {
@@ -207,7 +192,6 @@ class MonsterDefinition:
     """Static combat and spawning data for one monster type."""
 
     id: str
-    char: str
     name: str
     min_floor: int
     max_floor: int
@@ -223,32 +207,32 @@ class MonsterDefinition:
 
 # The roster and the dice-shaped combat data follow Rogue's A-Z monster set.
 MONSTER_TYPES: tuple[MonsterDefinition, ...] = (
-    MonsterDefinition("aquator", "A", "aquator", 8, 18, 5, 18, 2, 5, (1, 8), 0, 20, 4),
-    MonsterDefinition("bat", "B", "bat", 1, 8, 1, 5, 8, 1, (1, 2), 0, 1, 8),
-    MonsterDefinition("centaur", "C", "centaur", 4, 12, 4, 15, 4, 4, (1, 6), 0, 15, 5),
-    MonsterDefinition("dragon", "D", "dragon", 17, 26, 10, 45, -3, 10, (4, 10), 0, 500, 2),
-    MonsterDefinition("emu", "E", "emu", 1, 7, 1, 6, 7, 1, (1, 2), 0, 2, 8),
-    MonsterDefinition("venus_flytrap", "F", "venus flytrap", 12, 26, 8, 25, 3, 6, (2, 5), 0, 30, 3),
-    MonsterDefinition("griffin", "G", "griffin", 15, 26, 13, 35, -2, 13, (3, 5), 0, 200, 2),
-    MonsterDefinition("hobgoblin", "H", "hobgoblin", 1, 10, 3, 10, 5, 3, (1, 8), 0, 5, 7),
-    MonsterDefinition("ice_monster", "I", "ice monster", 1, 12, 2, 8, 5, 2, (1, 3), 0, 5, 7),
-    MonsterDefinition("jabberwock", "J", "jabberwock", 21, 26, 15, 60, -2, 15, (2, 12), 0, 300, 1),
-    MonsterDefinition("kestrel", "K", "kestrel", 1, 4, 1, 5, 7, 1, (1, 2), 0, 1, 8),
-    MonsterDefinition("leprechaun", "L", "leprechaun", 5, 17, 7, 12, 8, 7, (1, 2), 0, 10, 5),
-    MonsterDefinition("medusa", "M", "medusa", 18, 26, 8, 25, 2, 8, (3, 6), 0, 50, 3),
-    MonsterDefinition("nymph", "N", "nymph", 3, 12, 3, 10, 9, 3, (1, 2), 0, 10, 5),
-    MonsterDefinition("orc", "O", "orc", 4, 15, 5, 14, 6, 5, (1, 8), 0, 15, 6),
-    MonsterDefinition("phantom", "P", "phantom", 10, 22, 8, 28, 3, 8, (2, 6), 0, 35, 4),
-    MonsterDefinition("quagga", "Q", "quagga", 1, 9, 3, 12, 4, 3, (1, 5), 0, 5, 7),
-    MonsterDefinition("rattlesnake", "R", "rattlesnake", 1, 12, 2, 7, 3, 2, (1, 6), 0, 5, 7),
-    MonsterDefinition("snake", "S", "snake", 1, 6, 2, 6, 3, 2, (1, 3), 0, 2, 8),
-    MonsterDefinition("troll", "T", "troll", 9, 20, 6, 22, 3, 6, (2, 6), 0, 25, 5),
-    MonsterDefinition("ur_vile", "U", "ur-vile", 15, 26, 7, 28, 3, 7, (4, 6), 0, 50, 3),
-    MonsterDefinition("vampire", "V", "vampire", 13, 26, 8, 30, 2, 8, (1, 10), 0, 50, 3),
-    MonsterDefinition("wraith", "W", "wraith", 7, 18, 5, 20, 4, 5, (1, 6), 0, 20, 5),
-    MonsterDefinition("xeroc", "X", "xeroc", 5, 20, 7, 25, 3, 7, (1, 8), 0, 30, 3),
-    MonsterDefinition("yeti", "Y", "yeti", 5, 15, 4, 18, 4, 4, (1, 6), 0, 20, 5),
-    MonsterDefinition("zombie", "Z", "zombie", 7, 20, 6, 18, 3, 6, (1, 8), 0, 10, 5),
+    MonsterDefinition("aquator", "aquator", 8, 18, 5, 18, 2, 5, (1, 8), 0, 20, 4),
+    MonsterDefinition("bat", "bat", 1, 8, 1, 5, 8, 1, (1, 2), 0, 1, 8),
+    MonsterDefinition("centaur", "centaur", 4, 12, 4, 15, 4, 4, (1, 6), 0, 15, 5),
+    MonsterDefinition("dragon", "dragon", 17, 26, 10, 45, -3, 10, (4, 10), 0, 500, 2),
+    MonsterDefinition("emu", "emu", 1, 7, 1, 6, 7, 1, (1, 2), 0, 2, 8),
+    MonsterDefinition("venus_flytrap", "venus flytrap", 12, 26, 8, 25, 3, 6, (2, 5), 0, 30, 3),
+    MonsterDefinition("griffin", "griffin", 15, 26, 13, 35, -2, 13, (3, 5), 0, 200, 2),
+    MonsterDefinition("hobgoblin", "hobgoblin", 1, 10, 3, 10, 5, 3, (1, 8), 0, 5, 7),
+    MonsterDefinition("ice_monster", "ice monster", 1, 12, 2, 8, 5, 2, (1, 3), 0, 5, 7),
+    MonsterDefinition("jabberwock", "jabberwock", 21, 26, 15, 60, -2, 15, (2, 12), 0, 300, 1),
+    MonsterDefinition("kestrel", "kestrel", 1, 4, 1, 5, 7, 1, (1, 2), 0, 1, 8),
+    MonsterDefinition("leprechaun", "leprechaun", 5, 17, 7, 12, 8, 7, (1, 2), 0, 10, 5),
+    MonsterDefinition("medusa", "medusa", 18, 26, 8, 25, 2, 8, (3, 6), 0, 50, 3),
+    MonsterDefinition("nymph", "nymph", 3, 12, 3, 10, 9, 3, (1, 2), 0, 10, 5),
+    MonsterDefinition("orc", "orc", 4, 15, 5, 14, 6, 5, (1, 8), 0, 15, 6),
+    MonsterDefinition("phantom", "phantom", 10, 22, 8, 28, 3, 8, (2, 6), 0, 35, 4),
+    MonsterDefinition("quagga", "quagga", 1, 9, 3, 12, 4, 3, (1, 5), 0, 5, 7),
+    MonsterDefinition("rattlesnake", "rattlesnake", 1, 12, 2, 7, 3, 2, (1, 6), 0, 5, 7),
+    MonsterDefinition("snake", "snake", 1, 6, 2, 6, 3, 2, (1, 3), 0, 2, 8),
+    MonsterDefinition("troll", "troll", 9, 20, 6, 22, 3, 6, (2, 6), 0, 25, 5),
+    MonsterDefinition("ur_vile", "ur-vile", 15, 26, 7, 28, 3, 7, (4, 6), 0, 50, 3),
+    MonsterDefinition("vampire", "vampire", 13, 26, 8, 30, 2, 8, (1, 10), 0, 50, 3),
+    MonsterDefinition("wraith", "wraith", 7, 18, 5, 20, 4, 5, (1, 6), 0, 20, 5),
+    MonsterDefinition("xeroc", "xeroc", 5, 20, 7, 25, 3, 7, (1, 8), 0, 30, 3),
+    MonsterDefinition("yeti", "yeti", 5, 15, 4, 18, 4, 4, (1, 6), 0, 20, 5),
+    MonsterDefinition("zombie", "zombie", 7, 20, 6, 18, 3, 6, (1, 8), 0, 10, 5),
 )
 MONSTER_BY_ID = {monster.id: monster for monster in MONSTER_TYPES}
 
@@ -268,11 +252,6 @@ class MonsterState:
     def definition(self) -> MonsterDefinition:
         """Return the static definition for this monster."""
         return MONSTER_BY_ID[self.type_id]
-
-    @property
-    def char(self) -> str:
-        """Return the monster glyph."""
-        return self.definition.char
 
     @property
     def name(self) -> str:
@@ -325,11 +304,6 @@ class TrapState:
     x: int
     y: int
     discovered: bool = False
-
-    @property
-    def char(self) -> str:
-        """Return the trap glyph."""
-        return "^"
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the complete game state to JSON-compatible values."""
@@ -550,6 +524,7 @@ class DisplayCell:
     explored: bool
     entity: EntityKind | None = None
     priority: int = 0
+    entity_variant: str | None = None
 
     @property
     def logical_terrain(self) -> Terrain | None:
@@ -784,6 +759,13 @@ WAND_EFFECTS = {
     "wand of cold": "cold",
     "wand of teleport monster": "teleport_monster",
 }
+APPEARANCE_EFFECTS = {
+    ItemKind.POTION: tuple(POTION_EFFECTS.values()),
+    ItemKind.SCROLL: tuple(SCROLL_EFFECTS.values()),
+    ItemKind.RING: tuple(RING_EFFECTS.values()),
+    ItemKind.WAND: tuple(WAND_EFFECTS.values()),
+}
+LEGACY_APPEARANCE_POOL_SIZE = 6
 
 DIRECTIONS: dict[str, Position] = {
     "north": (0, -1),
@@ -794,8 +776,10 @@ DIRECTIONS: dict[str, Position] = {
     "e": (1, 0),
     "west": (-1, 0),
     "w": (-1, 0),
-    "northwest": (-1, -1),
+    "nw": (-1, -1),
+    "ne": (1, -1),
     "northeast": (1, -1),
+    "northwest": (-1, -1),
     "southwest": (-1, 1),
     "southeast": (1, 1),
 }
@@ -815,6 +799,7 @@ EQUIPMENT_KINDS = {
     "put_on_ring": ItemKind.RING,
 }
 UNEQUIPMENT_KINDS = {
+    "unequip_weapon": ItemKind.WEAPON,
     "unequip_armor": ItemKind.ARMOR,
     "remove_ring": ItemKind.RING,
 }
@@ -912,16 +897,27 @@ class GameState:
     def _message(self, message: str) -> None:
         self.messages.append(message)
 
-    def _make_appearances(self) -> dict[ItemKind, list[str]]:
+    def _make_appearances(self) -> dict[ItemKind, dict[str, str]]:
         pools = {
             ItemKind.POTION: ["red", "blue", "green", "yellow", "purple", "orange"],
-            ItemKind.SCROLL: ["ZELGO MER", "JUYED AWK YACC", "NR 9", "XIXAXA XOXAXA", "KIRJE", "FOOBIE BLETCH"],
+            ItemKind.SCROLL: [
+                "ZELGO MER",
+                "JUYED AWK YACC",
+                "NR 9",
+                "XIXAXA XOXAXA",
+                "KIRJE",
+                "FOOBIE BLETCH",
+            ],
             ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby"],
             ItemKind.WAND: ["glass", "iron", "silver", "copper", "brass", "crystal"],
         }
+        appearances = {}
         for values in pools.values():
             self.rng.shuffle(values)
-        return pools
+        for kind, values in pools.items():
+            appearance_values = [*values, "GARVEN DEH"] if kind == ItemKind.SCROLL else values
+            appearances[kind] = dict(zip(APPEARANCE_EFFECTS[kind], appearance_values, strict=False))
+        return appearances
 
     def _ensure_floor(self, number: int) -> FloorState:
         if number in self.floors:
@@ -988,9 +984,9 @@ class GameState:
         name = self.rng.choice(names[kind]) if name is None else name
         item = ItemState(id=self._next_item_id, kind=kind, name=name, position=self._free_position(floor))
         self._next_item_id += 1
-        if kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND}:
-            item.identified = False
-            item.appearance = self._appearance_names[kind][self.rng.randrange(len(self._appearance_names[kind]))]
+        appearance_kind = kind in APPEARANCE_EFFECTS
+        if appearance_kind:
+            self.rng.randrange(LEGACY_APPEARANCE_POOL_SIZE)
         if kind == ItemKind.WEAPON:
             item.damage_dice, item.hit_bonus, item.damage_bonus = WEAPON_DATA.get(name, ((1, 4), 0, 0))
             item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
@@ -1014,6 +1010,9 @@ class GameState:
             item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
         elif kind == ItemKind.GOLD:
             item.quantity = self.rng.randint(2, 5 + floor.number * 2)
+        if appearance_kind:
+            item.identified = False
+            item.appearance = self._appearance_names[kind][item.effect]
         return item
 
     def _setup_initial_inventory(self, floor: FloorState) -> None:
@@ -1132,9 +1131,11 @@ class GameState:
         """Return the current map as renderer-neutral display cells."""
         visible = self.visible_positions()
         cells: dict[Position, DisplayCell] = {}
-        monster_positions = {(monster.x, monster.y) for monster in self.floor.monsters if monster.hp > 0}
-        item_positions = {item.position for item in self.floor.items if item.position is not None}
-        trap_positions = {(trap.x, trap.y) for trap in self.floor.traps if trap.discovered}
+        monster_positions = {
+            (monster.x, monster.y): monster.type_id for monster in self.floor.monsters if monster.hp > 0
+        }
+        item_positions = {item.position: item.kind.value for item in self.floor.items if item.position is not None}
+        trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if trap.discovered}
         for y in range(self.height):
             for x in range(self.width):
                 position = (x, y)
@@ -1143,16 +1144,22 @@ class GameState:
                 terrain = self.floor.tile_at(position) if is_visible or is_explored else None
                 entity: EntityKind | None = None
                 priority = 0
+                entity_variant: str | None = None
                 if is_visible:
                     if position == self.player.position:
                         entity, priority = EntityKind.PLAYER, 100
                     elif position in monster_positions:
                         entity, priority = EntityKind.MONSTER, 90
+                        entity_variant = monster_positions[position]
                     elif position in item_positions:
                         entity, priority = EntityKind.ITEM, 80
+                        entity_variant = item_positions[position]
                     elif position in trap_positions:
                         entity, priority = EntityKind.TRAP, 70
-                cells[position] = DisplayCell(position, terrain, is_visible, is_explored, entity, priority)
+                        entity_variant = trap_positions[position]
+                cells[position] = DisplayCell(
+                    position, terrain, is_visible, is_explored, entity, priority, entity_variant
+                )
         return cells
 
     get_display_cells = display_cells
@@ -1477,6 +1484,9 @@ class GameState:
         elif effect == "magic_mapping":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "You feel more familiar with the dungeon."
+        elif effect == "teleport":
+            self.player.position = self._free_position(self.floor, (self.player.position,))
+            message = "You are suddenly teleported."
         else:
             message = "The scroll disappears in a flash of light."
         self._remove_inventory_item(item)
@@ -1583,7 +1593,7 @@ class GameState:
                 self.player.monsters_killed += 1
         elif target and item.effect == "teleport_monster":
             target.x, target.y = self._free_position(self.floor, (self.player.position,))
-            message = f"The {target.name} is teleported away."
+            message = f"The {target.name} vanishes."
         elif item.effect == "light":
             self._illuminate_current_area()
             message = "The room is lit."
@@ -1596,11 +1606,10 @@ class GameState:
     def _trigger_trap(self, trap: TrapState) -> str:
         trap.discovered = True
         if trap.kind == TrapKind.TRAP_DOOR:
-            if self.current_floor < MAX_FLOOR:
+            self.player.hp = max(0, self.player.hp - 4)
+            message = "You fall through a trap door."
+            if self.player.hp > 0 and self.current_floor < MAX_FLOOR:
                 self._descend_to_next_floor()
-                message = "You fall through a trap door."
-            else:
-                message = "The trap door has nowhere to go."
         elif trap.kind == TrapKind.BEAR:
             self.player.hp = max(0, self.player.hp - BEAR_TRAP_DAMAGE)
             message = "You are caught in a bear trap."
@@ -1805,37 +1814,6 @@ class GameState:
     def _direction(value: Any) -> Position:
         return DIRECTIONS.get(str(value).lower(), (0, 0))
 
-    def render_ascii(self) -> str:
-        """Render the explored map as plain text for CLI and tests."""
-        glyphs = {
-            Terrain.WALL: "#",
-            Terrain.FLOOR: ".",
-            Terrain.DOOR_CLOSED: "+",
-            Terrain.DOOR_OPEN: "/",
-            Terrain.STAIRS_UP: "<",
-            Terrain.STAIRS_DOWN: ">",
-        }
-        cells = self.display_cells()
-        monsters = {(monster.x, monster.y): monster.char for monster in self.floor.monsters}
-        items = {item.position: item.char for item in self.floor.items if item.position is not None}
-        lines = []
-        for y in range(self.height):
-            line = []
-            for x in range(self.width):
-                cell = cells[(x, y)]
-                if cell.entity == EntityKind.PLAYER:
-                    line.append("@")
-                elif cell.entity == EntityKind.MONSTER:
-                    line.append(monsters[(x, y)])
-                elif cell.entity == EntityKind.ITEM:
-                    line.append(items[(x, y)])
-                elif cell.terrain is not None:
-                    line.append(glyphs.get(cell.terrain, " "))
-                else:
-                    line.append(" ")
-            lines.append("".join(line))
-        return "\n".join(lines)
-
     def to_dict(self) -> dict[str, Any]:
         """Serialize the complete game state to JSON-compatible values."""
         return {
@@ -1850,7 +1828,10 @@ class GameState:
             "messages": self.messages[-100:],
             "rng_state": _jsonable(self.rng.getstate()),
             "next_ids": {"item": self._next_item_id, "monster": self._next_monster_id, "trap": self._next_trap_id},
-            "appearances": {kind.value: values for kind, values in self._appearance_names.items()},
+            "appearances": {
+                kind.value: [values[effect] for effect in APPEARANCE_EFFECTS[kind]]
+                for kind, values in self._appearance_names.items()
+            },
         }
 
     @classmethod
@@ -1873,9 +1854,12 @@ class GameState:
         game._next_item_id = int(data.get("next_ids", {}).get("item", 1))  # noqa: SLF001
         game._next_monster_id = int(data.get("next_ids", {}).get("monster", 1))  # noqa: SLF001
         game._next_trap_id = int(data.get("next_ids", {}).get("trap", 1))  # noqa: SLF001
-        game._appearance_names = {ItemKind(kind): list(values) for kind, values in data.get("appearances", {}).items()}  # noqa: SLF001
-        for kind in (ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND):
-            game._appearance_names.setdefault(kind, [])  # noqa: SLF001
+        game._appearance_names = game._make_appearances()  # noqa: SLF001
+        for raw_kind, values in data.get("appearances", {}).items():
+            kind = ItemKind(raw_kind)
+            game._appearance_names[kind].update(  # noqa: SLF001
+                dict(zip(APPEARANCE_EFFECTS[kind], values, strict=False))
+            )
         game.rng.setstate(_tupleize(data["rng_state"]))
         if game.current_floor not in game.floors:
             raise SaveCompatibilityError

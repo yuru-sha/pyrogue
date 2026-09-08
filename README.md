@@ -31,14 +31,14 @@ Use `?` in-game for the complete command list.
 The canonical path is deliberately small:
 
 ```text
-GameState -> DisplayCell -> GameRenderer
+GameState -> DisplayCell -> CLI / GameRenderer
        ^          ^
        +-- commands / JSON save
 ```
 
 `GameState` owns the RNG, floor state, entities, inventory, combat, hunger,
-visibility, and terminal status. UI code only turns `DisplayCell` values into
-characters and colors. JSON saves include the version, complete state, RNG
+visibility, and terminal status. The CLI and TCOD renderer share the same
+`DisplayCell` input and turn it into characters and colors. JSON saves include the version, complete state, RNG
 state, death/win status, and permadeath metadata; incompatible versions are
 rejected explicitly.
 

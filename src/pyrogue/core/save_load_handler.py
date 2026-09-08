@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from pyrogue.core.command_handler import CommandResult
+from pyrogue.core.rogue_game import GAME_VERSION
 
 if TYPE_CHECKING:
     from pyrogue.core.command_handler import CommandContext
@@ -75,7 +76,8 @@ class SaveLoadHandler:
             save_data = save_manager.load_game_state()
 
             if save_data is None:
-                self.context.add_message("No save file found.")
+                message = "No save file found." if save_manager.last_error is None else "Failed to load save data."
+                self.context.add_message(message)
                 return CommandResult(False)
 
             # セーブデータの復元
@@ -112,7 +114,7 @@ class SaveLoadHandler:
             "message_log": self.context.game_logic.message_log,
             "has_amulet": getattr(player, "has_amulet", False),
             "identification": self._serialize_identification(player.identification),
-            "version": "1.0",
+            "spec_version": GAME_VERSION,
         }
 
         return save_data
