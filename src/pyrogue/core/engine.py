@@ -233,18 +233,7 @@ class Engine:
                             break
                         if new_state:
                             if new_state == GameStates.GAME_OVER:
-                                game = self.game_screen.rogue_game
-                                stats = {
-                                    "level": game.player.level,
-                                    "exp": game.player.exp,
-                                    "gold": game.player.gold,
-                                    "hp": game.player.hp,
-                                    "max_hp": game.player.max_hp,
-                                    "monsters_killed": game.player.monsters_killed,
-                                    "turns_played": game.player.turns_played,
-                                    "score": game.score,
-                                }
-                                self.game_over(stats, game.player.deepest_floor, game.player.death_cause or "Unknown")
+                                self.game_over()
                             elif new_state == GameStates.VICTORY:
                                 game = self.game_screen.rogue_game
                                 stats = {
@@ -341,7 +330,12 @@ class Engine:
         self.game_screen.setup_new_game()
         self.state = GameStates.QUICK_GUIDE
 
-    def game_over(self, player_stats: dict, final_floor: int, cause_of_death: str = "Unknown") -> None:
+    def game_over(
+        self,
+        player_stats: dict | None = None,
+        final_floor: int | None = None,
+        cause_of_death: str | None = None,
+    ) -> None:
         """
         ゲームオーバー処理。
 
@@ -356,8 +350,25 @@ class Engine:
             cause_of_death: 死因の説明文
 
         """
-        # Permadeath機能：セーブデータを自動削除
-        self.save_manager.finalize_death(self.game_screen.rogue_game)
+        game = self.game_screen.rogue_game
+        summary = self.save_manager.finalize_death(game)
+        if summary is not None:
+            player_stats = {
+                "level": game.player.level,
+                "exp": game.player.exp,
+                "gold": game.player.gold,
+                "hp": game.player.hp,
+                "max_hp": game.player.max_hp,
+                "monsters_killed": game.player.monsters_killed,
+                "turns_played": game.player.turns_played,
+                "score": summary["score"],
+            }
+            final_floor = summary["deepest_floor"]
+            cause_of_death = summary["cause"] or "Unknown"
+
+        player_stats = player_stats or {}
+        final_floor = final_floor if final_floor is not None else game.current_floor
+        cause_of_death = cause_of_death or "Unknown"
 
         self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER

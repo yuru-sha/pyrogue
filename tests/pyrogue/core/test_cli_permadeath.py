@@ -1,19 +1,10 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.core.engine import Engine
+from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import STARVETIME, GameState, GameStatus
 from pyrogue.core.save_manager import SaveManager
-
-
-def _mock_finalizer(save_manager):
-    def finalize(game):
-        save_manager._trigger_permadeath()
-        return game.death_summary
-
-    finalizer = Mock(side_effect=finalize)
-    save_manager.finalize_death = finalizer
-    return finalizer
 
 
 def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
@@ -25,7 +16,6 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
     game.player.food_units = -STARVETIME
     save_manager = SaveManager(tmp_path)
     assert save_manager.save_game_state(game.to_dict())
-    finalizer = _mock_finalizer(save_manager)
 
     with patch("pyrogue.core.cli_engine.SaveManager", return_value=save_manager):
         engine.process_command(".")
@@ -35,7 +25,6 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
     assert "Score: 27" in output
     assert "Deepest Floor: 4" in output
     assert "Cause of Death: starvation" in output
-    finalizer.assert_called_once_with(game)
     assert SaveManager(tmp_path).load_game_state() is None
 
 
@@ -68,8 +57,25 @@ def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
     game._die("test")
     assert save_manager.save_game_state(game.to_dict())
 
-    finalizer = _mock_finalizer(save_manager)
-    engine.game_over({"hp": 0}, game.current_floor, "test")
+    engine.game_over()
 
-    finalizer.assert_called_once_with(game)
+    assert engine.game_over_screen.player_stats["score"] == game.score
+    assert engine.game_over_screen.final_floor == game.player.deepest_floor
+    assert engine.game_over_screen.cause_of_death == "test"
     assert SaveManager(tmp_path).load_game_state() is None
+
+
+def test_victory_screen_and_save_are_unchanged(tmp_path) -> None:
+    save_manager = SaveManager(tmp_path)
+    with patch("pyrogue.core.engine.SaveManager", return_value=save_manager):
+        engine = Engine(seed=1234)
+
+    game = engine.game_screen.rogue_game
+    game.status = GameStatus.VICTORY
+    game.player.has_amulet = True
+    assert save_manager.save_game_state(game.to_dict())
+
+    engine.victory({"level": 1, "gold": 0, "hp": 12, "max_hp": 12, "exp": 0}, game.current_floor)
+
+    assert engine.state == GameStates.VICTORY
+    assert save_manager.load_game_state() is not None
