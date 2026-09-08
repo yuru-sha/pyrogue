@@ -185,6 +185,34 @@ def test_amulet_requires_returning_to_surface() -> None:
     assert game.status == GameStatus.VICTORY
 
 
+def test_victory_summary_preserves_deepest_floor_after_return() -> None:
+    game = GameState(1234)
+
+    for _ in range(1, MAX_FLOOR):
+        game.floor.monsters.clear()
+        game.player.position = game.floor.down_stairs
+        assert game.descend().success
+
+    assert game.player.deepest_floor == MAX_FLOOR
+    game.floor.monsters.clear()
+    amulet = next(item for item in game.floor.items if item.name == "amulet of yendor")
+    game.player.position = amulet.position
+    assert game.pickup().success
+
+    for _ in range(1, MAX_FLOOR):
+        game.floor.monsters.clear()
+        game.player.position = game.floor.up_stairs
+        assert game.ascend().success
+
+    game.player.position = game.floor.up_stairs
+    result = game.ascend()
+
+    assert result.data == {"deepest_floor": MAX_FLOOR, "score": game.score}
+    saved = game.to_dict()
+    assert saved["current_floor"] == 1
+    assert saved["player"]["deepest_floor"] == MAX_FLOOR
+
+
 def test_old_save_version_is_rejected() -> None:
     game = GameState(1234).to_dict()
     game["spec_version"] = "0.2.0"

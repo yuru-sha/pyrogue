@@ -56,6 +56,7 @@ CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します�
 - CLIとGUIで個別のルールを実装せず、`GameState.execute`を共有する。
 - UIへTCODのConsole、色、画像、タイル型をゲーム状態から持ち込まない。
 - 保存形式を変更するときは `GAME_VERSION` と互換性検査を同時に更新する。
+- 勝利・死亡サマリーには `player.deepest_floor` を使い、`current_floor` と混同しない。
 - 死亡・勝利は終端状態として扱い、死亡セーブをロードしない。
 - SPECにない機能、依存関係、抽象化を追加しない。
 

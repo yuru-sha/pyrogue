@@ -134,6 +134,9 @@ class FloorManager:
                 self.context.add_message("Failed to generate the new floor.")
                 return False
 
+            if direction == "down":
+                self.context.player.update_deepest_floor(target_floor)
+
             # プレイヤーの位置を設定
             self._set_player_position_on_new_floor(new_floor_data, direction)
 
