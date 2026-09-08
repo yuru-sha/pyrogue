@@ -361,7 +361,11 @@ class Engine:
             "player_stats": player_stats,
             "current_floor": final_floor,
         }
-        self.save_manager.trigger_permadeath_on_death(game_data)
+        game = self.game_screen.rogue_game
+        if game.is_dead:
+            self.save_manager.finalize_death(game)
+        else:
+            self.save_manager.trigger_permadeath_on_death(game_data)
 
         self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER
