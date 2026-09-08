@@ -601,7 +601,7 @@ class CLIEngine:
     def display_game_state(self) -> None:
         """現在のゲーム状態を表示。"""
         if self.spec_game is not None:
-            print(render_ascii(self.spec_game))
+            print(render_ascii(self.spec_game.display_cells(), self.spec_game.width, self.spec_game.height))
             print(self.spec_game.status_text())
             return
         try:

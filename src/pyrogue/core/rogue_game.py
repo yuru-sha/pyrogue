@@ -142,21 +142,6 @@ class ItemState:
     effect: str = ""
 
     @property
-    def char(self) -> str:
-        """Return the traditional Rogue glyph for this item."""
-        return {
-            ItemKind.WEAPON: ")",
-            ItemKind.ARMOR: "]",
-            ItemKind.FOOD: ":",
-            ItemKind.POTION: "!",
-            ItemKind.SCROLL: "?",
-            ItemKind.WAND: "/",
-            ItemKind.RING: "=",
-            ItemKind.GOLD: "*",
-            ItemKind.AMULET: ",",
-        }[self.kind]
-
-    @property
     def display_name(self) -> str:
         """Return the name visible with the current identification state."""
         if self.identified or self.kind in {
@@ -193,7 +178,6 @@ class MonsterDefinition:
     """Static combat and spawning data for one monster type."""
 
     id: str
-    char: str
     name: str
     min_floor: int
     max_floor: int
@@ -209,32 +193,32 @@ class MonsterDefinition:
 
 # The roster and the dice-shaped combat data follow Rogue's A-Z monster set.
 MONSTER_TYPES: tuple[MonsterDefinition, ...] = (
-    MonsterDefinition("aquator", "A", "aquator", 8, 18, 5, 18, 2, 5, (1, 8), 0, 20, 4),
-    MonsterDefinition("bat", "B", "bat", 1, 8, 1, 5, 8, 1, (1, 2), 0, 1, 8),
-    MonsterDefinition("centaur", "C", "centaur", 4, 12, 4, 15, 4, 4, (1, 6), 0, 15, 5),
-    MonsterDefinition("dragon", "D", "dragon", 17, 26, 10, 45, -3, 10, (4, 10), 0, 500, 2),
-    MonsterDefinition("emu", "E", "emu", 1, 7, 1, 6, 7, 1, (1, 2), 0, 2, 8),
-    MonsterDefinition("venus_flytrap", "F", "venus flytrap", 12, 26, 8, 25, 3, 6, (2, 5), 0, 30, 3),
-    MonsterDefinition("griffin", "G", "griffin", 15, 26, 13, 35, -2, 13, (3, 5), 0, 200, 2),
-    MonsterDefinition("hobgoblin", "H", "hobgoblin", 1, 10, 3, 10, 5, 3, (1, 8), 0, 5, 7),
-    MonsterDefinition("ice_monster", "I", "ice monster", 1, 12, 2, 8, 5, 2, (1, 3), 0, 5, 7),
-    MonsterDefinition("jabberwock", "J", "jabberwock", 21, 26, 15, 60, -2, 15, (2, 12), 0, 300, 1),
-    MonsterDefinition("kestrel", "K", "kestrel", 1, 4, 1, 5, 7, 1, (1, 2), 0, 1, 8),
-    MonsterDefinition("leprechaun", "L", "leprechaun", 5, 17, 7, 12, 8, 7, (1, 2), 0, 10, 5),
-    MonsterDefinition("medusa", "M", "medusa", 18, 26, 8, 25, 2, 8, (3, 6), 0, 50, 3),
-    MonsterDefinition("nymph", "N", "nymph", 3, 12, 3, 10, 9, 3, (1, 2), 0, 10, 5),
-    MonsterDefinition("orc", "O", "orc", 4, 15, 5, 14, 6, 5, (1, 8), 0, 15, 6),
-    MonsterDefinition("phantom", "P", "phantom", 10, 22, 8, 28, 3, 8, (2, 6), 0, 35, 4),
-    MonsterDefinition("quagga", "Q", "quagga", 1, 9, 3, 12, 4, 3, (1, 5), 0, 5, 7),
-    MonsterDefinition("rattlesnake", "R", "rattlesnake", 1, 12, 2, 7, 3, 2, (1, 6), 0, 5, 7),
-    MonsterDefinition("snake", "S", "snake", 1, 6, 2, 6, 3, 2, (1, 3), 0, 2, 8),
-    MonsterDefinition("troll", "T", "troll", 9, 20, 6, 22, 3, 6, (2, 6), 0, 25, 5),
-    MonsterDefinition("ur_vile", "U", "ur-vile", 15, 26, 7, 28, 3, 7, (4, 6), 0, 50, 3),
-    MonsterDefinition("vampire", "V", "vampire", 13, 26, 8, 30, 2, 8, (1, 10), 0, 50, 3),
-    MonsterDefinition("wraith", "W", "wraith", 7, 18, 5, 20, 4, 5, (1, 6), 0, 20, 5),
-    MonsterDefinition("xeroc", "X", "xeroc", 5, 20, 7, 25, 3, 7, (1, 8), 0, 30, 3),
-    MonsterDefinition("yeti", "Y", "yeti", 5, 15, 4, 18, 4, 4, (1, 6), 0, 20, 5),
-    MonsterDefinition("zombie", "Z", "zombie", 7, 20, 6, 18, 3, 6, (1, 8), 0, 10, 5),
+    MonsterDefinition("aquator", "aquator", 8, 18, 5, 18, 2, 5, (1, 8), 0, 20, 4),
+    MonsterDefinition("bat", "bat", 1, 8, 1, 5, 8, 1, (1, 2), 0, 1, 8),
+    MonsterDefinition("centaur", "centaur", 4, 12, 4, 15, 4, 4, (1, 6), 0, 15, 5),
+    MonsterDefinition("dragon", "dragon", 17, 26, 10, 45, -3, 10, (4, 10), 0, 500, 2),
+    MonsterDefinition("emu", "emu", 1, 7, 1, 6, 7, 1, (1, 2), 0, 2, 8),
+    MonsterDefinition("venus_flytrap", "venus flytrap", 12, 26, 8, 25, 3, 6, (2, 5), 0, 30, 3),
+    MonsterDefinition("griffin", "griffin", 15, 26, 13, 35, -2, 13, (3, 5), 0, 200, 2),
+    MonsterDefinition("hobgoblin", "hobgoblin", 1, 10, 3, 10, 5, 3, (1, 8), 0, 5, 7),
+    MonsterDefinition("ice_monster", "ice monster", 1, 12, 2, 8, 5, 2, (1, 3), 0, 5, 7),
+    MonsterDefinition("jabberwock", "jabberwock", 21, 26, 15, 60, -2, 15, (2, 12), 0, 300, 1),
+    MonsterDefinition("kestrel", "kestrel", 1, 4, 1, 5, 7, 1, (1, 2), 0, 1, 8),
+    MonsterDefinition("leprechaun", "leprechaun", 5, 17, 7, 12, 8, 7, (1, 2), 0, 10, 5),
+    MonsterDefinition("medusa", "medusa", 18, 26, 8, 25, 2, 8, (3, 6), 0, 50, 3),
+    MonsterDefinition("nymph", "nymph", 3, 12, 3, 10, 9, 3, (1, 2), 0, 10, 5),
+    MonsterDefinition("orc", "orc", 4, 15, 5, 14, 6, 5, (1, 8), 0, 15, 6),
+    MonsterDefinition("phantom", "phantom", 10, 22, 8, 28, 3, 8, (2, 6), 0, 35, 4),
+    MonsterDefinition("quagga", "quagga", 1, 9, 3, 12, 4, 3, (1, 5), 0, 5, 7),
+    MonsterDefinition("rattlesnake", "rattlesnake", 1, 12, 2, 7, 3, 2, (1, 6), 0, 5, 7),
+    MonsterDefinition("snake", "snake", 1, 6, 2, 6, 3, 2, (1, 3), 0, 2, 8),
+    MonsterDefinition("troll", "troll", 9, 20, 6, 22, 3, 6, (2, 6), 0, 25, 5),
+    MonsterDefinition("ur_vile", "ur-vile", 15, 26, 7, 28, 3, 7, (4, 6), 0, 50, 3),
+    MonsterDefinition("vampire", "vampire", 13, 26, 8, 30, 2, 8, (1, 10), 0, 50, 3),
+    MonsterDefinition("wraith", "wraith", 7, 18, 5, 20, 4, 5, (1, 6), 0, 20, 5),
+    MonsterDefinition("xeroc", "xeroc", 5, 20, 7, 25, 3, 7, (1, 8), 0, 30, 3),
+    MonsterDefinition("yeti", "yeti", 5, 15, 4, 18, 4, 4, (1, 6), 0, 20, 5),
+    MonsterDefinition("zombie", "zombie", 7, 20, 6, 18, 3, 6, (1, 8), 0, 10, 5),
 )
 MONSTER_BY_ID = {monster.id: monster for monster in MONSTER_TYPES}
 
@@ -254,11 +238,6 @@ class MonsterState:
     def definition(self) -> MonsterDefinition:
         """Return the static definition for this monster."""
         return MONSTER_BY_ID[self.type_id]
-
-    @property
-    def char(self) -> str:
-        """Return the monster glyph."""
-        return self.definition.char
 
     @property
     def name(self) -> str:
@@ -311,11 +290,6 @@ class TrapState:
     x: int
     y: int
     discovered: bool = False
-
-    @property
-    def char(self) -> str:
-        """Return the trap glyph."""
-        return "^"
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the complete game state to JSON-compatible values."""
@@ -520,6 +494,7 @@ class DisplayCell:
     explored: bool
     entity: EntityKind | None = None
     priority: int = 0
+    entity_variant: str | None = None
 
     @property
     def logical_terrain(self) -> Terrain | None:
@@ -1073,9 +1048,11 @@ class GameState:
         """Return the current map as renderer-neutral display cells."""
         visible = self.visible_positions()
         cells: dict[Position, DisplayCell] = {}
-        monster_positions = {(monster.x, monster.y) for monster in self.floor.monsters if monster.hp > 0}
-        item_positions = {item.position for item in self.floor.items if item.position is not None}
-        trap_positions = {(trap.x, trap.y) for trap in self.floor.traps if trap.discovered}
+        monster_positions = {
+            (monster.x, monster.y): monster.type_id for monster in self.floor.monsters if monster.hp > 0
+        }
+        item_positions = {item.position: item.kind.value for item in self.floor.items if item.position is not None}
+        trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if trap.discovered}
         for y in range(self.height):
             for x in range(self.width):
                 position = (x, y)
@@ -1084,16 +1061,22 @@ class GameState:
                 terrain = self.floor.tile_at(position) if is_visible or is_explored else None
                 entity: EntityKind | None = None
                 priority = 0
+                entity_variant: str | None = None
                 if is_visible:
                     if position == self.player.position:
                         entity, priority = EntityKind.PLAYER, 100
                     elif position in monster_positions:
                         entity, priority = EntityKind.MONSTER, 90
+                        entity_variant = monster_positions[position]
                     elif position in item_positions:
                         entity, priority = EntityKind.ITEM, 80
+                        entity_variant = item_positions[position]
                     elif position in trap_positions:
                         entity, priority = EntityKind.TRAP, 70
-                cells[position] = DisplayCell(position, terrain, is_visible, is_explored, entity, priority)
+                        entity_variant = trap_positions[position]
+                cells[position] = DisplayCell(
+                    position, terrain, is_visible, is_explored, entity, priority, entity_variant
+                )
         return cells
 
     get_display_cells = display_cells
