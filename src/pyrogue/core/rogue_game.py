@@ -1606,9 +1606,8 @@ class GameState:
     def _trigger_trap(self, trap: TrapState) -> str:
         trap.discovered = True
         if trap.kind == TrapKind.TRAP_DOOR:
-            self.player.hp = max(0, self.player.hp - 4)
             message = "You fall through a trap door."
-            if self.player.hp > 0 and self.current_floor < MAX_FLOOR:
+            if self.current_floor < MAX_FLOOR:
                 self._descend_to_next_floor()
         elif trap.kind == TrapKind.BEAR:
             self.player.hp = max(0, self.player.hp - BEAR_TRAP_DAMAGE)

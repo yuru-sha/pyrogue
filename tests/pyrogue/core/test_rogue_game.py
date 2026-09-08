@@ -456,7 +456,7 @@ def test_teleport_trap_reveals_and_moves_the_player() -> None:
     assert game.player.position != before
 
 
-def test_trap_door_damages_and_moves_the_player_down_one_floor() -> None:
+def test_trap_door_moves_the_player_down_one_floor_without_damage() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
     direction, position = _walkable_direction(game)
@@ -467,7 +467,7 @@ def test_trap_door_damages_and_moves_the_player_down_one_floor() -> None:
 
     assert result.success
     assert trap.discovered
-    assert game.player.hp == 8
+    assert game.player.hp == game.player.max_hp
     assert game.current_floor == 2
     assert game.player.deepest_floor == 2
     assert game.player.position == game.floor.up_stairs
