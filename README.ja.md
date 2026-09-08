@@ -32,13 +32,13 @@ uv run --locked game --seed 1234
 canonical経路は次の小さな流れです。
 
 ```text
-GameState -> DisplayCell -> GameRenderer
+GameState -> DisplayCell -> CLI / GameRenderer
        ^          ^
        +-- コマンド / JSONセーブ
 ```
 
 `GameState`が乱数、階層、エンティティ、インベントリ、戦闘、飢え、視界、終了状態を
-所有します。UIは`DisplayCell`を文字と色へ変換するだけです。JSONセーブにはバージョン、
+所有します。CLIとTCOD rendererは同じ`DisplayCell`を文字と色へ変換します。JSONセーブにはバージョン、
 全状態、乱数状態、死亡・勝利状態、パーマデス情報を含め、非互換バージョンは明示的に拒否します。
 
 ## 開発

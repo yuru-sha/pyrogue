@@ -13,6 +13,7 @@ import tcod.event
 
 from pyrogue.core.command_handler import CommonCommandHandler, GUICommandContext
 from pyrogue.core.game_states import GameStates
+from pyrogue.core.rogue_game import ItemKind
 
 if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
@@ -48,6 +49,10 @@ class InputHandler:
         self.targeting_y = 0
         self.wand_direction_mode = False
         self.selected_wand = None
+        self.item_selection_action: str | None = None
+        self.direction_selection_action: str | None = None
+        self.direction_selection_mode = False
+        self.selected_item_id: int | None = None
 
         # CommonCommandHandlerを初期化
         self.command_context = GUICommandContext(game_screen)
@@ -66,10 +71,12 @@ class InputHandler:
             新しいゲーム状態、またはNone
 
         """
+        if self.direction_selection_mode:
+            return self._handle_direction_selection_key(event)
         if self.targeting_mode:
             self._handle_targeting_key(event)
         elif self.wand_direction_mode:
-            self._handle_wand_direction_key(event)
+            return self._handle_wand_direction_key(event)
         else:
             return self._handle_normal_key(event)
         return None
@@ -376,6 +383,13 @@ class InputHandler:
         }
         if key == tcod.event.KeySym.ESCAPE:
             return GameStates.MENU if self.game_screen.engine else None
+        if key == ord("i"):
+            game.execute("inventory")
+            return GameStates.SHOW_INVENTORY
+        if key == ord("t"):
+            return self._start_item_selection("throw")
+        if key == ord("z"):
+            return self._start_item_selection("zap")
         if key in key_commands:
             command = key_commands[key]
         elif mod & tcod.event.Modifier.CTRL and key in {ord("s"), ord("S")}:
@@ -394,9 +408,101 @@ class InputHandler:
         if command == "S":
             self.game_screen.save_game()
             return None
+        if command == "z":
+            wand = next((item for item in game.player.inventory if item.kind == ItemKind.WAND), None)
+            if wand and wand.effect != "light":
+                self.wand_direction_mode = True
+                self.selected_wand = wand.id
+                self.game_screen.add_message("Zap wand in which direction?")
+                return None
         result = game.execute(command)
         if result.state.value == "quit":
             return GameStates.EXIT
+        if result.state.value == "dead":
+            return GameStates.GAME_OVER
+        if result.state.value == "victory":
+            return GameStates.VICTORY
+        return None
+
+    def _start_item_selection(self, action: str) -> GameStates | None:
+        """Open the canonical inventory before an item-and-direction action."""
+        items = self.game_screen.player.inventory
+        if action == "zap":
+            items = [item for item in items if item.kind == ItemKind.WAND]
+        if not items:
+            message = "You have no wands to zap." if action == "zap" else "You have nothing to throw."
+            self.game_screen.add_message(message)
+            return None
+        self.item_selection_action = action
+        self.direction_selection_action = None
+        self.direction_selection_mode = False
+        self.selected_item_id = None
+        return GameStates.SHOW_INVENTORY
+
+    def begin_direction_selection(self, action: str, item_id: int) -> None:
+        """Move from inventory selection to direction selection."""
+        self.item_selection_action = None
+        self.direction_selection_action = action
+        self.direction_selection_mode = True
+        self.selected_item_id = item_id
+        verb = "throw" if action == "throw" else "zap"
+        self.game_screen.add_message(f"In which direction do you want to {verb}?")
+        if self.game_screen.engine:
+            self.game_screen.engine.state = GameStates.PLAYERS_TURN
+
+    def reset_selection(self) -> None:
+        """Clear transient item and direction selections after a new/load game."""
+        self.item_selection_action = None
+        self.direction_selection_action = None
+        self.direction_selection_mode = False
+        self.selected_item_id = None
+        self.wand_direction_mode = False
+        self.selected_wand = None
+
+    def _handle_direction_selection_key(self, event: tcod.event.KeyDown) -> GameStates | None:
+        """Execute a selected canonical item in the chosen direction."""
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            self.reset_selection()
+            self.game_screen.add_message("Cancelled.")
+            return None
+
+        direction_keys = {
+            ord("h"): "west",
+            ord("j"): "south",
+            ord("k"): "north",
+            ord("l"): "east",
+            ord("y"): "northwest",
+            ord("u"): "northeast",
+            ord("b"): "southwest",
+            ord("n"): "southeast",
+            tcod.event.KeySym.LEFT: "west",
+            tcod.event.KeySym.RIGHT: "east",
+            tcod.event.KeySym.UP: "north",
+            tcod.event.KeySym.DOWN: "south",
+            tcod.event.KeySym.KP_4: "west",
+            tcod.event.KeySym.KP_6: "east",
+            tcod.event.KeySym.KP_8: "north",
+            tcod.event.KeySym.KP_2: "south",
+            tcod.event.KeySym.KP_7: "northwest",
+            tcod.event.KeySym.KP_9: "northeast",
+            tcod.event.KeySym.KP_1: "southwest",
+            tcod.event.KeySym.KP_3: "southeast",
+        }
+        direction = direction_keys.get(event.sym)
+        if direction is None:
+            text = getattr(event, "text", "")
+            direction = direction_keys.get(ord(text)) if len(text) == 1 else None
+        if direction is None:
+            self.game_screen.add_message("Choose a direction (use movement keys).")
+            return None
+
+        action = self.direction_selection_action
+        item_id = self.selected_item_id
+        self.reset_selection()
+        if action is None or item_id is None:
+            self.game_screen.add_message("Cancelled.")
+            return None
+        result = self.game_screen.rogue_game.execute(action, [item_id, direction])
         if result.state.value == "dead":
             return GameStates.GAME_OVER
         if result.state.value == "victory":
@@ -1176,7 +1282,7 @@ Press any key to continue...
         self.wand_direction_mode = True
         self.selected_wand = wand
 
-    def _handle_wand_direction_key(self, event) -> None:
+    def _handle_wand_direction_key(self, event) -> GameStates | None:
         """
         ワンド方向選択のキー処理。
 
@@ -1216,16 +1322,24 @@ Press any key to continue...
 
         if key in direction_keys:
             direction = direction_keys[key]
-            self._execute_wand_zap(direction)
-        elif key == tcod.event.KeySym.ESCAPE:
+            return self._execute_wand_zap(direction)
+        if key == tcod.event.KeySym.ESCAPE:
             # キャンセル
+            canonical_wand = isinstance(self.selected_wand, int)
             self.wand_direction_mode = False
             self.selected_wand = None
-            self.game_screen.game_logic.add_message("Cancelled.")
+            if canonical_wand:
+                self.game_screen.add_message("Cancelled.")
+            else:
+                self.game_screen.game_logic.add_message("Cancelled.")
+            return None
+        if isinstance(self.selected_wand, int):
+            self.game_screen.add_message("Choose a direction (use movement keys).")
         else:
             self.game_screen.game_logic.add_message("Choose a direction (use movement keys).")
+        return None
 
-    def _execute_wand_zap(self, direction: tuple[int, int]) -> None:
+    def _execute_wand_zap(self, direction: tuple[int, int]) -> GameStates | None:
         """
         ワンドの発動処理。
 
@@ -1235,13 +1349,33 @@ Press any key to continue...
 
         """
         if not hasattr(self, "selected_wand") or not self.selected_wand:
-            return
+            return None
 
         wand = self.selected_wand
 
         # 方向選択モードを終了
         self.wand_direction_mode = False
         self.selected_wand = None
+
+        if isinstance(wand, int):
+            direction_names = {
+                (-1, 0): "west",
+                (0, 1): "south",
+                (0, -1): "north",
+                (1, 0): "east",
+                (-1, -1): "northwest",
+                (1, -1): "northeast",
+                (-1, 1): "southwest",
+                (1, 1): "southeast",
+            }
+            result = self.game_screen.rogue_game.execute("zap", [wand, direction_names[direction]])
+            if result.state.value == "dead":
+                return GameStates.GAME_OVER
+            if result.state.value == "victory":
+                return GameStates.VICTORY
+            if result.state.value == "quit":
+                return GameStates.EXIT
+            return None
 
         # ワンドの効果を適用
         if hasattr(wand, "apply_effect"):
@@ -1261,6 +1395,7 @@ Press any key to continue...
                 self.game_screen.game_logic.add_message(f"The {wand.name} fails to work.")
         else:
             self.game_screen.game_logic.add_message(f"The {wand.name} is not functional.")
+        return None
 
     def _handle_examine_action(self) -> None:
         """

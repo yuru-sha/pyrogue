@@ -32,7 +32,7 @@ def test_cli_victory_summary_reports_deepest_floor(capsys) -> None:
 
     cli.process_command("ascend")
 
-    assert "Deepest Floor: B26F" in capsys.readouterr().out
+    assert "Deepest floor: B26F" in capsys.readouterr().out
 
 
 def test_legacy_cli_victory_summary_reports_deepest_floor(capsys) -> None:

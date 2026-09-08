@@ -1,96 +1,20 @@
-# ruff: noqa: T201
-"""GameScreenのセーブ/ロード機能のテスト"""
-
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-
-from pyrogue.core.engine import Engine
+from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_screen import GameScreen
 
 
-def test_game_screen_save_load():
-    """GameScreenのセーブ/ロード機能をテスト"""
-    print("=== GameScreenセーブ/ロード機能テスト ===")
+def test_game_screen_save_load(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.player.hp = 7
+    game.player.gold = 42
+    expected = game.to_dict()
 
-    try:
-        # Engineを作成（最小限の設定）
-        engine = Engine()
+    assert game_screen.save_game()
+    assert SaveManager(tmp_path).save_file.exists()
 
-        # GameScreenを作成
-        game_screen = GameScreen(engine)
+    game.player.hp = 1
+    game.player.gold = 999
+    assert game_screen.load_game()
 
-        # テスト用データを設定
-        original_x = game_screen.player_x = 15
-        original_y = game_screen.player_y = 10
-        original_floor = game_screen.current_floor = 3
-        original_hp = game_screen.player_stats["hp"] = 18
-        original_gold = game_screen.player_stats["gold"] = 200
-
-        print("セーブ前の状態:")
-        print(f"  位置: ({original_x}, {original_y})")
-        print(f"  階層: {original_floor}")
-        print(f"  HP: {original_hp}")
-        print(f"  Gold: {original_gold}")
-
-        # セーブ
-        print("\n1. セーブを実行...")
-        save_success = game_screen.save_game()
-        print(f"   セーブ結果: {'成功' if save_success else '失敗'}")
-
-        # ゲーム状態を変更
-        game_screen.player_x = 99
-        game_screen.player_y = 99
-        game_screen.current_floor = 99
-        game_screen.player_stats["hp"] = 1
-        game_screen.player_stats["gold"] = 999
-
-        print("\n変更後の状態:")
-        print(f"  位置: ({game_screen.player_x}, {game_screen.player_y})")
-        print(f"  階層: {game_screen.current_floor}")
-        print(f"  HP: {game_screen.player_stats['hp']}")
-        print(f"  Gold: {game_screen.player_stats['gold']}")
-
-        # ロード
-        print("\n2. ロードを実行...")
-        load_success = game_screen.load_game()
-        print(f"   ロード結果: {'成功' if load_success else '失敗'}")
-
-        if load_success:
-            print("\nロード後の状態:")
-            print(f"  位置: ({game_screen.player_x}, {game_screen.player_y})")
-            print(f"  階層: {game_screen.current_floor}")
-            print(f"  HP: {game_screen.player_stats['hp']}")
-            print(f"  Gold: {game_screen.player_stats['gold']}")
-
-            # 復元確認
-            restored_correctly = (
-                game_screen.player_x == original_x
-                and game_screen.player_y == original_y
-                and game_screen.current_floor == original_floor
-                and game_screen.player_stats["hp"] == original_hp
-                and game_screen.player_stats["gold"] == original_gold
-            )
-            print(f"\n復元確認: {'正常' if restored_correctly else '異常'}")
-
-        # 死亡テスト
-        print("\n3. 死亡時のパーマデス処理をテスト...")
-        game_screen.player_stats["hp"] = 0
-        game_screen.check_player_death()
-
-        # 死亡後のロード試行
-        load_after_death = game_screen.load_game()
-        print(f"   死亡後のロード結果: {'成功' if load_after_death else '失敗（正常）'}")
-
-        print("\n=== テスト完了 ===")
-
-    except Exception as e:  # noqa: BLE001 - keep standalone test output readable
-        print(f"テスト中にエラーが発生: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-
-if __name__ == "__main__":
-    test_game_screen_save_load()
+    assert game_screen.rogue_game.to_dict() == expected

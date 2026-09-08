@@ -26,10 +26,10 @@ CLIとGUIは同じ `GameState` コマンドを使います。seedを指定しな
 ## 実装の見方
 
 ```text
-GameState -> DisplayCell -> GameRenderer
+GameState -> DisplayCell -> CLI / GameRenderer
 ```
 
-ゲームルールは `src/pyrogue/core/rogue_game.py` に集約し、表示層は表示セルを文字へ変換します。
+ゲームルールは `src/pyrogue/core/rogue_game.py` に集約し、CLIとGUIの表示層は同じ表示セルを文字へ変換します。
 この境界により、TCOD画面を起動せずに階層生成、戦闘、保存、勝敗をテストできます。
 
 ## 仕様と記録

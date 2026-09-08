@@ -227,6 +227,9 @@ class MenuScreen:
             save_data = self.save_manager.load_game_state()
 
             if save_data is None:
+                if self.save_manager.last_error is not None:
+                    print(f"Failed to load save data: {self.save_manager.last_error}")
+                    return GameStates.MENU
                 # セーブデータがない場合は新しいゲームを開始
                 self.engine.new_game()
                 return GameStates.PLAYERS_TURN

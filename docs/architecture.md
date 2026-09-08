@@ -22,7 +22,7 @@ GameState.execute(command, args)
 GameState.display_cells()
         |
         v
-GameRenderer (文字・色)
+CLI文字レンダラー / TCOD GameRenderer (文字・色)
 ```
 
 `GameState` は地形、階層キャッシュ、プレイヤー、エンティティ、インベントリ、戦闘、
@@ -34,6 +34,7 @@ GameRenderer (文字・色)
 - `pyrogue.core.rogue_game`: canonicalなデータモデル、生成、ルール、コマンド、JSON変換。
 - `pyrogue.core.game_state`: canonical APIの公開用re-export。
 - `pyrogue.core.cli_engine`: 文字入力を `GameState.execute` に渡すCLIアダプター。
+- `pyrogue.presentation.display_renderer`: CLIとGUIが共有する表示セルから文字への変換。
 - `pyrogue.ui.screens.game_screen`: GUIライフサイクルとcanonical状態の保持。
 - `pyrogue.ui.components.input_handler`: TCODイベントを同じコマンドへ変換。
 - `pyrogue.ui.components.game_renderer`: `DisplayCell` を画面へ描画。
@@ -41,6 +42,8 @@ GameRenderer (文字・色)
 
 旧来のTCODゲームモジュールは既存利用者との互換性のため残していますが、新しいCLI起動、
 seed指定、GUIの描画・入力・保存はcanonical経路を使用します。
+GUIのインベントリも `GameState.player.inventory` を表示し、投擲・杖の使用は選択した
+アイテムIDと方向を `GameState.execute` に渡します。選択途中の情報だけをUIが保持します。
 
 ## 階層生成
 
