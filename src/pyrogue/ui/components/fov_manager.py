@@ -67,6 +67,16 @@ class FOVManager:
         プレイヤーの現在位置に基づいて視界を再計算し、
         探索済みエリアを更新します。
         """
+        game = getattr(self.game_screen, "rogue_game", None)
+        if game is not None:
+            self.visible.fill(False)
+            if not self.fov_enabled:
+                self.visible.fill(True)
+            else:
+                for x, y in game.visible_positions():
+                    self.visible[y, x] = True
+            return
+
         if not self.fov_enabled:
             # FOVが無効の場合は全体を可視にする
             self.visible.fill(True)
@@ -283,4 +293,7 @@ class FOVManager:
         """
         if not (0 <= x < self.game_screen.dungeon_width and 0 <= y < self.game_screen.dungeon_height):
             return False
+        game = getattr(self.game_screen, "rogue_game", None)
+        if game is not None:
+            return (x, y) in game.floor.explored
         return self.game_screen.game_logic.get_explored_tiles()[y, x]

@@ -771,6 +771,12 @@ DIRECTIONS: dict[str, Position] = {
     "e": (1, 0),
     "west": (-1, 0),
     "w": (-1, 0),
+    "nw": (-1, -1),
+    "ne": (1, -1),
+    "northeast": (1, -1),
+    "northwest": (-1, -1),
+    "southwest": (-1, 1),
+    "southeast": (1, 1),
 }
 COMMAND_ALIASES = {
     "fight": "attack",
@@ -788,6 +794,7 @@ EQUIPMENT_KINDS = {
     "put_on_ring": ItemKind.RING,
 }
 UNEQUIPMENT_KINDS = {
+    "unequip_weapon": ItemKind.WEAPON,
     "unequip_armor": ItemKind.ARMOR,
     "remove_ring": ItemKind.RING,
 }

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.rogue_game import GameState
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
 
     from pyrogue.core.engine import Engine
     from pyrogue.core.game_states import GameStates
-    from pyrogue.entities.actors.player import Player
+    from pyrogue.core.rogue_game import PlayerState
 
 
 class GameScreen:
@@ -33,7 +32,7 @@ class GameScreen:
     Attributes
     ----------
         engine: ゲームエンジンインスタンス
-        game_logic: ゲームロジック管理インスタンス
+        rogue_game: canonicalなゲーム状態
         renderer: 描画処理コンポーネント
         input_handler: 入力処理コンポーネント
         fov_manager: FOV管理コンポーネント
@@ -64,8 +63,6 @@ class GameScreen:
             self.dungeon_width = 80
             self.dungeon_height = 45
 
-        # ゲームロジックを初期化
-        self.game_logic = GameLogic(engine, self.dungeon_width, self.dungeon_height)
         self.rogue_game = GameState(seed)
 
         # 各コンポーネントを初期化
@@ -73,12 +70,10 @@ class GameScreen:
         self.input_handler = InputHandler(self)
         self.fov_manager = FOVManager(self)
 
-        # ゲームロジックに自身の参照を設定
-        self.game_logic.set_game_screen_reference(self)
-
     def setup_new_game(self) -> None:
         """新しいゲームをセットアップ。"""
         self.rogue_game = GameState(self.seed)
+        self.input_handler.reset_selection()
 
     def update_console(self) -> None:
         """コンソールを更新する（エンジンから呼ばれる）。"""
@@ -125,7 +120,7 @@ class GameScreen:
 
     def save_game(self) -> bool:
         """
-        ゲーム状態を保存（CommonCommandHandler経由の統合処理）。
+        canonicalなゲーム状態を保存。
 
         Returns
         -------
@@ -138,7 +133,7 @@ class GameScreen:
 
     def load_game(self) -> bool:
         """
-        ゲーム状態を読み込み（CommonCommandHandler経由の統合処理）。
+        canonicalなゲーム状態を読み込み。
 
         Returns
         -------
@@ -154,11 +149,12 @@ class GameScreen:
             self.rogue_game = GameState.from_dict(data)
         except (TypeError, ValueError):
             return False
+        self.input_handler.reset_selection()
         return True
 
-    # GameLogic連携プロパティ
+    # canonical GameStateへの互換アクセサ
     @property
-    def player(self) -> Player:
+    def player(self) -> PlayerState:
         """プレイヤーオブジェクトへのアクセス。"""
         return self.rogue_game.player
 
@@ -178,57 +174,23 @@ class GameScreen:
 
     def _create_dungeon_object(self):
         """ダンジョンオブジェクトのプロキシを作成。"""
-        if self.rogue_game is not None:
-            game = self.rogue_game
-
-            class SpecDungeonProxy:
-                current_floor = property(lambda _: game.current_floor)
-                tiles = property(lambda _: game.floor.tiles)
-                width = game.width
-                height = game.height
-                explored = property(lambda _: game.floor.explored)
-                monsters = property(lambda _: game.floor.monsters)
-                items = property(lambda _: game.floor.items)
-
-                def get_blocking_entity_at(self, x, y):
-                    return next((monster for monster in game.floor.monsters if (monster.x, monster.y) == (x, y)), None)
-
-            return SpecDungeonProxy()
+        game = self.rogue_game
 
         class DungeonProxy:
-            def __init__(self, game_screen) -> None:
-                self.game_screen = game_screen
-
-            @property
-            def current_floor(self):
-                return self.game_screen.game_logic.dungeon_manager.current_floor
-
-            @property
-            def tiles(self):
-                current_floor = self.game_screen.game_logic.get_current_floor_data()
-                return current_floor.tiles
-
-            @property
-            def width(self):
-                return self.game_screen.dungeon_width
-
-            @property
-            def height(self):
-                return self.game_screen.dungeon_height
-
-            @property
-            def explored(self):
-                current_floor = self.game_screen.game_logic.get_current_floor_data()
-                return current_floor.explored
+            current_floor = property(lambda _: game.current_floor)
+            tiles = property(lambda _: game.floor.tiles)
+            width = game.width
+            height = game.height
+            explored = property(lambda _: game.floor.explored)
+            monsters = property(lambda _: game.floor.monsters)
+            items = property(lambda _: game.floor.items)
 
             def get_blocking_entity_at(self, x, y):
-                # モンスターがその位置にいるかチェック
-                current_floor = self.game_screen.game_logic.get_current_floor_data()
-                return current_floor.monster_spawner.get_monster_at(x, y)
+                return next((monster for monster in game.floor.monsters if (monster.x, monster.y) == (x, y)), None)
 
-        return DungeonProxy(self)
+        return DungeonProxy()
 
-    # 状態チェック用メソッド（GameLogicから取得）
+    # canonical GameStateの状態チェック
     def check_player_death(self) -> bool:
         """プレイヤーの死亡をチェック。"""
         return self.rogue_game.is_dead

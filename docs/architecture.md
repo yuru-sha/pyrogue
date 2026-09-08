@@ -41,6 +41,8 @@ GameRenderer (文字・色)
 
 旧来のTCODゲームモジュールは既存利用者との互換性のため残していますが、新しいCLI起動、
 seed指定、GUIの描画・入力・保存はcanonical経路を使用します。
+GUIのインベントリも `GameState.player.inventory` を表示し、投擲・杖の使用は選択した
+アイテムIDと方向を `GameState.execute` に渡します。選択途中の情報だけをUIが保持します。
 
 ## 階層生成
 
