@@ -357,11 +357,7 @@ class Engine:
 
         """
         # Permadeath機能：セーブデータを自動削除
-        game_data = {
-            "player_stats": player_stats,
-            "current_floor": final_floor,
-        }
-        self.save_manager.finalize_death(game_data)
+        self.save_manager.finalize_death(self.game_screen.rogue_game)
 
         self.game_over_screen.set_game_over_data(player_stats, final_floor, cause_of_death)
         self.state = GameStates.GAME_OVER
