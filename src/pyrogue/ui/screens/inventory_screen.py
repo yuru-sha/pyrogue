@@ -128,8 +128,12 @@ class InventoryScreen(Screen):
             if not items:
                 return
             selection_delta = {
+                tcod.event.KeySym.LEFT: -1,
+                tcod.event.KeySym.RIGHT: 1,
                 tcod.event.KeySym.UP: -1,
                 tcod.event.KeySym.DOWN: 1,
+                ord("h"): -1,
+                ord("l"): 1,
                 ord("k"): -1,
                 ord("j"): 1,
             }

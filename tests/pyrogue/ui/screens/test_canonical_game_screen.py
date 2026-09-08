@@ -185,7 +185,7 @@ def test_zap_selects_wand_then_direction_in_canonical_game_state() -> None:
 def test_throw_and_zap_item_selection_share_vi_arrow_and_letter_targets() -> None:
     def selected_item_id(action: str, kind: ItemKind, events: list[SimpleNamespace]) -> int | None:
         game_screen = GameScreen(None, seed=1234)
-        items = [ItemState(1100 + index, kind, f"test item {index}", identified=True) for index in range(3)]
+        items = [ItemState(1100 + index, kind, f"test item {index}", identified=True) for index in range(5)]
         game_screen.player.inventory = items
         inventory_screen = InventoryScreen(game_screen)
 
@@ -197,10 +197,19 @@ def test_throw_and_zap_item_selection_share_vi_arrow_and_letter_targets() -> Non
         return game_screen.input_handler.selected_item_id
 
     down = SimpleNamespace(sym=tcod.event.KeySym.DOWN, mod=0, text="")
+    left = SimpleNamespace(sym=tcod.event.KeySym.LEFT, mod=0, text="")
+    right = SimpleNamespace(sym=tcod.event.KeySym.RIGHT, mod=0, text="")
+    up = SimpleNamespace(sym=tcod.event.KeySym.UP, mod=0, text="")
     expected_item_id = 1102
     for action, kind in (("t", ItemKind.FOOD), ("z", ItemKind.WAND)):
+        assert selected_item_id(action, kind, [key_event("h")] * 3) == expected_item_id
         assert selected_item_id(action, kind, [key_event("j"), key_event("j")]) == expected_item_id
+        assert selected_item_id(action, kind, [key_event("k")] * 3) == expected_item_id
+        assert selected_item_id(action, kind, [key_event("l"), key_event("l")]) == expected_item_id
+        assert selected_item_id(action, kind, [left] * 3) == expected_item_id
         assert selected_item_id(action, kind, [down, down]) == expected_item_id
+        assert selected_item_id(action, kind, [up] * 3) == expected_item_id
+        assert selected_item_id(action, kind, [right, right]) == expected_item_id
         assert selected_item_id(action, kind, [key_event("c")]) == expected_item_id
 
 
