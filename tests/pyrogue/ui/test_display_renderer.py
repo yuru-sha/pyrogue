@@ -9,7 +9,7 @@ from pyrogue.core.rogue_game import (
     TrapKind,
     TrapState,
 )
-from pyrogue.ui.display_renderer import cell_glyph, render_ascii
+from pyrogue.presentation.display_renderer import cell_glyph, render_ascii
 
 
 def test_ascii_renderer_uses_display_cells_and_keeps_entity_priority() -> None:

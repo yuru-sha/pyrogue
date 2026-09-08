@@ -14,7 +14,7 @@ import tcod
 import tcod.console
 
 from pyrogue.map.tile import Floor, StairsDown, StairsUp, Wall
-from pyrogue.ui.display_renderer import cell_glyph
+from pyrogue.presentation.display_renderer import cell_glyph
 from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:

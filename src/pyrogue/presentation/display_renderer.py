@@ -59,10 +59,7 @@ MONSTER_GLYPHS = {
 }
 
 
-def cell_glyph(
-    cell: DisplayCell,
-    show_traps: bool = True,
-) -> str:
+def cell_glyph(cell: DisplayCell, show_traps: bool = True) -> str:
     """Convert one display cell to its ASCII glyph."""
     if cell.entity == EntityKind.PLAYER:
         return "@"
@@ -78,5 +75,5 @@ def cell_glyph(
 
 
 def render_ascii(cells: Mapping[Position, DisplayCell], width: int, height: int, show_traps: bool = False) -> str:
-    """Render the explored game state as plain text."""
+    """Render display cells as plain text."""
     return "\n".join("".join(cell_glyph(cells[(x, y)], show_traps) for x in range(width)) for y in range(height))

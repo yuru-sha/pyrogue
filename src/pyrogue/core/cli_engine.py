@@ -28,7 +28,7 @@ from pyrogue.core.game_logic import GameLogic
 from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GameState, GameStatus, ItemKind
 from pyrogue.core.save_manager import SaveManager
-from pyrogue.ui.display_renderer import render_ascii
+from pyrogue.presentation.display_renderer import render_ascii
 from pyrogue.utils import game_logger
 
 
