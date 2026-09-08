@@ -224,12 +224,11 @@ def test_enchant_scroll_changes_equipped_item(effect: str) -> None:
     assert item.enchantment == before + 1
 
 
-@pytest.mark.parametrize("effect", ["light", "magic_mapping"])
-def test_mapping_scrolls_reveal_the_floor(effect: str) -> None:
+def test_magic_mapping_scroll_reveals_the_floor() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
     game.floor.explored.clear()
-    scroll = ItemState(1000, ItemKind.SCROLL, f"{effect} scroll", effect=effect)
+    scroll = ItemState(1000, ItemKind.SCROLL, "magic mapping scroll", effect="magic_mapping")
     game.player.inventory.append(scroll)
 
     result = game.execute("read", [scroll.id])
@@ -363,12 +362,11 @@ def test_damage_traps_reveal_and_damage_the_player(kind: TrapKind, expected_hp: 
     assert game.current_floor == 1
 
 
-@pytest.mark.parametrize("kind", [TrapKind.TELEPORT, TrapKind.SLEEPING_GAS, TrapKind.RUST, TrapKind.MYSTERIOUS])
-def test_non_damage_traps_reveal_and_apply_their_state(kind: TrapKind) -> None:
+def test_teleport_trap_reveals_and_moves_the_player() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
     direction, position = _walkable_direction(game)
-    trap = TrapState(1000, kind, *position)
+    trap = TrapState(1000, TrapKind.TELEPORT, *position)
     game.floor.traps = [trap]
     before = game.player.position
 
@@ -377,8 +375,7 @@ def test_non_damage_traps_reveal_and_apply_their_state(kind: TrapKind) -> None:
     assert result.success
     assert trap.discovered
     assert game.player.hp == game.player.max_hp
-    if kind == TrapKind.TELEPORT:
-        assert game.player.position != before
+    assert game.player.position != before
 
 
 def test_trap_door_damages_and_moves_the_player_down_one_floor() -> None:

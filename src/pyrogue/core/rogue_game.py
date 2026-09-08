@@ -1393,7 +1393,7 @@ class GameState:
             if armor:
                 armor.enchantment += 1
             message = "Your armor glows blue for a moment."
-        elif effect in {"light", "magic_mapping"}:
+        elif effect == "magic_mapping":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "You feel more familiar with the dungeon."
         elif effect == "teleport":
