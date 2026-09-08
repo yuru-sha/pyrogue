@@ -47,6 +47,26 @@ def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> Non
     assert gui.rogue_game.to_dict() == cli.spec_game.to_dict()
 
 
+def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None:
+    cli = CLIEngine(seed=1234, spec_mode=True)
+    gui = GameScreen(None, seed=1234)
+
+    for game in (cli.spec_game, gui.rogue_game):
+        game.floor.monsters.clear()
+        position = (game.player.x + 1, game.player.y)
+        assert game.floor.is_walkable(position)
+        game.player.inventory = []
+        game.player.equipped_weapon = None
+        game.player.equipped_armor = None
+        game.floor.monsters.append(MonsterState(2000, "bat", *position, 20))
+        game.player.inventory.append(ItemState(1000, ItemKind.WAND, "test wand", effect="magic_missile", charges=2))
+
+    assert gui.handle_key(_key("z")) is None
+    assert cli.process_command("z") is True
+
+    assert gui.rogue_game.to_dict() == cli.spec_game.to_dict()
+
+
 def test_headless_gui_target_selection_moves_and_confirms() -> None:
     game_screen = GameScreen(None, seed=1234)
     start = game_screen.player.position
