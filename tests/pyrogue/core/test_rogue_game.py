@@ -406,7 +406,6 @@ def test_cursed_ring_cannot_be_removed() -> None:
     ("kind", "expected_hp"),
     [
         (TrapKind.BEAR, 10),
-        (TrapKind.POISON_DART, 9),
         (TrapKind.ARROW, 9),
     ],
 )
@@ -422,6 +421,22 @@ def test_damage_traps_reveal_and_damage_the_player(kind: TrapKind, expected_hp: 
     assert result.success
     assert trap.discovered
     assert game.player.hp == expected_hp
+    assert game.current_floor == 1
+
+
+def test_poison_dart_trap_deals_randomized_damage_and_weakens_the_player() -> None:
+    game = GameState(1234)
+    game.floor.monsters.clear()
+    direction, position = _walkable_direction(game)
+    trap = TrapState(1000, TrapKind.POISON_DART, *position)
+    game.floor.traps = [trap]
+
+    result = game.execute("move", [direction])
+
+    assert result.success
+    assert trap.discovered
+    assert 8 <= game.player.hp <= 11
+    assert game.player.strength == 15
     assert game.current_floor == 1
 
 
@@ -441,7 +456,7 @@ def test_teleport_trap_reveals_and_moves_the_player() -> None:
     assert game.player.position != before
 
 
-def test_trap_door_damages_and_moves_the_player_down_one_floor() -> None:
+def test_trap_door_moves_the_player_down_one_floor_without_damage() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
     direction, position = _walkable_direction(game)
@@ -452,7 +467,7 @@ def test_trap_door_damages_and_moves_the_player_down_one_floor() -> None:
 
     assert result.success
     assert trap.discovered
-    assert game.player.hp == 8
+    assert game.player.hp == game.player.max_hp
     assert game.current_floor == 2
     assert game.player.deepest_floor == 2
     assert game.player.position == game.floor.up_stairs

@@ -76,7 +76,7 @@ class InputHandler:
         if self.targeting_mode:
             self._handle_targeting_key(event)
         elif self.wand_direction_mode:
-            self._handle_wand_direction_key(event)
+            return self._handle_wand_direction_key(event)
         else:
             return self._handle_normal_key(event)
         return None
@@ -408,6 +408,13 @@ class InputHandler:
         if command == "S":
             self.game_screen.save_game()
             return None
+        if command == "z":
+            wand = next((item for item in game.player.inventory if item.kind == ItemKind.WAND), None)
+            if wand and wand.effect != "light":
+                self.wand_direction_mode = True
+                self.selected_wand = wand.id
+                self.game_screen.add_message("Zap wand in which direction?")
+                return None
         result = game.execute(command)
         if result.state.value == "quit":
             return GameStates.EXIT
@@ -1275,7 +1282,7 @@ Press any key to continue...
         self.wand_direction_mode = True
         self.selected_wand = wand
 
-    def _handle_wand_direction_key(self, event) -> None:
+    def _handle_wand_direction_key(self, event) -> GameStates | None:
         """
         ワンド方向選択のキー処理。
 
@@ -1315,16 +1322,24 @@ Press any key to continue...
 
         if key in direction_keys:
             direction = direction_keys[key]
-            self._execute_wand_zap(direction)
-        elif key == tcod.event.KeySym.ESCAPE:
+            return self._execute_wand_zap(direction)
+        if key == tcod.event.KeySym.ESCAPE:
             # キャンセル
+            canonical_wand = isinstance(self.selected_wand, int)
             self.wand_direction_mode = False
             self.selected_wand = None
-            self.game_screen.game_logic.add_message("Cancelled.")
+            if canonical_wand:
+                self.game_screen.add_message("Cancelled.")
+            else:
+                self.game_screen.game_logic.add_message("Cancelled.")
+            return None
+        if isinstance(self.selected_wand, int):
+            self.game_screen.add_message("Choose a direction (use movement keys).")
         else:
             self.game_screen.game_logic.add_message("Choose a direction (use movement keys).")
+        return None
 
-    def _execute_wand_zap(self, direction: tuple[int, int]) -> None:
+    def _execute_wand_zap(self, direction: tuple[int, int]) -> GameStates | None:
         """
         ワンドの発動処理。
 
@@ -1334,13 +1349,33 @@ Press any key to continue...
 
         """
         if not hasattr(self, "selected_wand") or not self.selected_wand:
-            return
+            return None
 
         wand = self.selected_wand
 
         # 方向選択モードを終了
         self.wand_direction_mode = False
         self.selected_wand = None
+
+        if isinstance(wand, int):
+            direction_names = {
+                (-1, 0): "west",
+                (0, 1): "south",
+                (0, -1): "north",
+                (1, 0): "east",
+                (-1, -1): "northwest",
+                (1, -1): "northeast",
+                (-1, 1): "southwest",
+                (1, 1): "southeast",
+            }
+            result = self.game_screen.rogue_game.execute("zap", [wand, direction_names[direction]])
+            if result.state.value == "dead":
+                return GameStates.GAME_OVER
+            if result.state.value == "victory":
+                return GameStates.VICTORY
+            if result.state.value == "quit":
+                return GameStates.EXIT
+            return None
 
         # ワンドの効果を適用
         if hasattr(wand, "apply_effect"):
@@ -1360,6 +1395,7 @@ Press any key to continue...
                 self.game_screen.game_logic.add_message(f"The {wand.name} fails to work.")
         else:
             self.game_screen.game_logic.add_message(f"The {wand.name} is not functional.")
+        return None
 
     def _handle_examine_action(self) -> None:
         """
