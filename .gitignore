@@ -186,6 +186,7 @@ saves/
 
 # Local agent settings
 .claude/settings.local.json
+.codex/config.toml
 
 # Machine-local agent links; keep only project-owned skills versioned.
 .agents/agent-capabilities/
