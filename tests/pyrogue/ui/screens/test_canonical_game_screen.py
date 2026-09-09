@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import pytest
 import tcod.event
 
 from pyrogue.core.cli_engine import CLIEngine
@@ -70,6 +71,46 @@ def test_headless_gui_key_execution_matches_cli() -> None:
     assert cli.process_command(".") is True
 
     assert game_screen.rogue_game.to_dict() == cli.spec_game.to_dict()
+
+
+@pytest.mark.parametrize(
+    ("sym", "mod", "text", "start_floor", "stair", "expected_floor"),
+    [
+        (tcod.event.KeySym.PERIOD, tcod.event.Modifier.SHIFT, ".", 1, "down_stairs", 2),
+        (tcod.event.KeySym.GREATER, 0, "", 1, "down_stairs", 2),
+        (tcod.event.KeySym.COMMA, tcod.event.Modifier.SHIFT, ",", 2, "up_stairs", 1),
+        (tcod.event.KeySym.LESS, 0, "", 2, "up_stairs", 1),
+    ],
+)
+def test_headless_gui_stair_keys_use_canonical_stair_commands(
+    sym: tcod.event.KeySym,
+    mod: tcod.event.Modifier | int,
+    text: str,
+    start_floor: int,
+    stair: str,
+    expected_floor: int,
+) -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+
+    if start_floor == 2:
+        game.player.position = game.floor.down_stairs
+        assert game.execute("descend").success
+        game.floor.monsters.clear()
+
+    game.player.position = getattr(game.floor, stair)
+    turns_before = game.player.turns_played
+    messages_before = len(game.messages)
+    event = SimpleNamespace(sym=sym, mod=mod, text=text)
+
+    assert game_screen.handle_key(event) is None
+
+    new_messages = game.messages[messages_before:]
+    assert game.current_floor == expected_floor
+    assert game.player.turns_played == turns_before + 1
+    assert "You wait." not in new_messages
+    assert not any("pick up" in message or "nothing here" in message for message in new_messages)
 
 
 def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> None:
