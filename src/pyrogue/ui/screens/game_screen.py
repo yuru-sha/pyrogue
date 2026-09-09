@@ -100,9 +100,7 @@ class GameScreen:
 
     def execute(self, command: str, args: Iterable[object] = ()) -> CommandResult:
         """Execute a GUI command while respecting the display-only FOV override."""
-        if self.fov_manager.fov_enabled:
-            return self.rogue_game.execute(command, args)
-        return self.rogue_game.execute(command, args, update_explored=False)
+        return self.rogue_game.execute(command, args, update_explored=self.fov_manager.fov_enabled)
 
     def handle_key(self, event: tcod.event.KeyDown) -> GameStates | None:
         """

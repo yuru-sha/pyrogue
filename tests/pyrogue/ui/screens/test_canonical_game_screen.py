@@ -180,8 +180,10 @@ def test_headless_gui_fov_override_keeps_exploration_stable_across_turn_and_togg
 
     game_screen.handle_key(tab)
     explored_before_turn = set(game.floor.explored)
+    turns_before = game.player.turns_played
 
     assert game_screen.handle_key(_key(".")) is None
+    assert game.player.turns_played == turns_before + 1
     assert game.floor.explored == explored_before_turn
 
     game_screen.handle_key(tab)

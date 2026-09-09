@@ -35,8 +35,8 @@ def test_gui_slash_key_uses_canonical_item_identification(monkeypatch) -> None:
     results = []
     execute = game.execute
 
-    def record_execute(command, args=()):
-        result = execute(command, args)
+    def record_execute(command, args=(), **kwargs):
+        result = execute(command, args, **kwargs)
         results.append(result)
         return result
 
@@ -78,5 +78,10 @@ def test_gui_tab_toggles_canonical_fov_without_mutating_state() -> None:
     assert screen.input_handler.handle_key(SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")) is None
 
     assert not screen.fov_manager.fov_enabled
+    assert game.floor.explored == set()
+    assert game.to_dict() == state_before
+
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")) is None
+    assert screen.fov_manager.fov_enabled
     assert game.floor.explored == set()
     assert game.to_dict() == state_before

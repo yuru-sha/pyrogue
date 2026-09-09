@@ -1743,7 +1743,7 @@ class GameState:
         return self.COMMAND_KEYS.get(normalized, (normalized, None))
 
     def execute(self, command: str, args: Iterable[Any] = (), *, update_explored: bool = True) -> CommandResult:
-        """Execute one canonical command and return its state transition."""
+        """Execute one command, optionally omitting automatic visibility recording for display-only callers."""
         previous_update = getattr(self, "_update_explored", True)
         self._update_explored = update_explored
         try:
