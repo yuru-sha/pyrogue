@@ -1115,10 +1115,11 @@ class GameState:
                     visible.add((x, y))
         return visible
 
-    def visible_positions(self) -> set[Position]:
-        """Calculate and record the cells visible from the player."""
+    def visible_positions(self, update_explored: bool = True) -> set[Position]:
+        """Calculate visible cells, optionally recording them as explored."""
         visible = self._calculate_visible_positions()
-        self.floor.explored.update(visible)
+        if update_explored:
+            self.floor.explored.update(visible)
         return visible
 
     def _illuminate_current_area(self) -> None:
@@ -1212,7 +1213,8 @@ class GameState:
             )
             self.player.hp = min(self.player.max_hp, self.player.hp + regeneration)
             self._process_monsters()
-        self.visible_positions()
+        if getattr(self, "_update_explored", True):
+            self.visible_positions()
 
     def _die(self, cause: str) -> None:
         self.player.hp = 0
@@ -1740,7 +1742,16 @@ class GameState:
         normalized = command.strip().lower()
         return self.COMMAND_KEYS.get(normalized, (normalized, None))
 
-    def execute(self, command: str, args: Iterable[Any] = ()) -> CommandResult:  # noqa: PLR0911
+    def execute(self, command: str, args: Iterable[Any] = (), *, update_explored: bool = True) -> CommandResult:
+        """Execute one canonical command and return its state transition."""
+        previous_update = getattr(self, "_update_explored", True)
+        self._update_explored = update_explored
+        try:
+            return self._execute(command, args)
+        finally:
+            self._update_explored = previous_update
+
+    def _execute(self, command: str, args: Iterable[Any] = ()) -> CommandResult:  # noqa: PLR0911
         """Execute one canonical command and return its state transition."""
         args = list(args)
         if self.status != GameStatus.PLAYING:
@@ -1806,7 +1817,7 @@ class GameState:
             action = USE_ACTIONS.get(item.kind)
             if action is None:
                 return self._result(False, "That item cannot be used.")
-            return self.execute(action, [item.id, *args[1:]])
+            return self._execute(action, [item.id, *args[1:]])
         if command in {"inventory", "info", "character"}:
             if command != "inventory":
                 return self._result(True, self.status_text())

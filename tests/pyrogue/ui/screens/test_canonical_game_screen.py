@@ -171,6 +171,23 @@ def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
     assert all(position not in console.cells for position in map_positions.values())
 
 
+def test_headless_gui_fov_override_keeps_exploration_stable_across_turn_and_toggle() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    game.floor.explored.clear()
+    tab = SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")
+
+    game_screen.handle_key(tab)
+    explored_before_turn = set(game.floor.explored)
+
+    assert game_screen.handle_key(_key(".")) is None
+    assert game.floor.explored == explored_before_turn
+
+    game_screen.handle_key(tab)
+    assert game.floor.explored == explored_before_turn
+
+
 def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:
     game_screen, inventory_screen = game_and_inventory()
 

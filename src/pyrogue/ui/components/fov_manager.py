@@ -73,7 +73,7 @@ class FOVManager:
             if not self.fov_enabled:
                 self.visible.fill(True)
             else:
-                for x, y in game.visible_positions():
+                for x, y in game.visible_positions(update_explored=False):
                     self.visible[y, x] = True
             return
 
