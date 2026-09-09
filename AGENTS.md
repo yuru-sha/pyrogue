@@ -64,3 +64,17 @@ make verify
 ## Git and feedback
 
 Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. When a review finding or failure needs a permanent fix, use [docs/feedback.md](docs/feedback.md) to decide whether the guard belongs in a test, `make verify`, a hook, documentation, or a Skill without bloating this file.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues; use the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default canonical triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout with root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
