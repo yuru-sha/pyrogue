@@ -74,7 +74,7 @@ def test_headless_gui_key_execution_matches_cli() -> None:
 
 
 @pytest.mark.parametrize(
-    ("sym", "mod", "text", "start_floor", "stair", "expected_floor"),
+    ("sym", "mod", "text", "start_floor", "stair_attribute", "expected_floor"),
     [
         (tcod.event.KeySym.PERIOD, tcod.event.Modifier.SHIFT, ".", 1, "down_stairs", 2),
         (tcod.event.KeySym.GREATER, 0, "", 1, "down_stairs", 2),
@@ -87,7 +87,7 @@ def test_headless_gui_stair_keys_use_canonical_stair_commands(
     mod: tcod.event.Modifier | int,
     text: str,
     start_floor: int,
-    stair: str,
+    stair_attribute: str,
     expected_floor: int,
 ) -> None:
     game_screen = GameScreen(None, seed=1234)
@@ -99,7 +99,7 @@ def test_headless_gui_stair_keys_use_canonical_stair_commands(
         assert game.execute("descend").success
         game.floor.monsters.clear()
 
-    game.player.position = getattr(game.floor, stair)
+    game.player.position = getattr(game.floor, stair_attribute)
     turns_before = game.player.turns_played
     messages_before = len(game.messages)
     event = SimpleNamespace(sym=sym, mod=mod, text=text)
