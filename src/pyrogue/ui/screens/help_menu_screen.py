@@ -177,6 +177,8 @@ class HelpMenuScreen:
                     "",
                     "Essential Commands:",
                     "  , (comma)  - Pick up items",
+                    "  Shift+, / < - Ascend stairs",
+                    "  Shift+. / > - Descend stairs",
                     "  i          - Open inventory",
                     "  ?          - Show help (in-game)",
                     "  o          - Open doors",

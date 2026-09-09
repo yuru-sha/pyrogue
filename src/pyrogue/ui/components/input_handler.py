@@ -386,7 +386,19 @@ class InputHandler:
             return self._start_item_selection("throw")
         if key == ord("z"):
             return self._start_item_selection("zap")
-        if key in key_commands:
+        if (
+            (key == tcod.event.KeySym.PERIOD and mod & tcod.event.Modifier.SHIFT)
+            or key == tcod.event.KeySym.GREATER
+            or unicode_char == ">"
+        ):
+            command = ">"
+        elif (
+            (key == tcod.event.KeySym.COMMA and mod & tcod.event.Modifier.SHIFT)
+            or key == tcod.event.KeySym.LESS
+            or unicode_char == "<"
+        ):
+            command = "<"
+        elif key in key_commands:
             command = key_commands[key]
         elif mod & tcod.event.Modifier.CTRL and key in {ord("s"), ord("S")}:
             command = "S"
