@@ -173,18 +173,18 @@ class InventoryScreen(Screen):
                 ItemKind.RING: "put_on_ring",
             }.get(item.kind)
             if command:
-                self.game_screen.rogue_game.execute(command, [item.id])
+                self.game_screen.execute(command, [item.id])
             else:
                 self.game_screen.add_message(f"You cannot equip the {item.display_name}.")
         elif event.sym == ord("u"):
             if item.kind == ItemKind.WAND:
                 self.game_screen.input_handler.begin_direction_selection("zap", item.id)
             elif item.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
-                self.game_screen.rogue_game.execute("use", [item.id])
+                self.game_screen.execute("use", [item.id])
             else:
                 self.game_screen.add_message(f"You cannot use the {item.display_name}.")
         elif event.sym == ord("d"):
-            self.game_screen.rogue_game.execute("drop", [item.id])
+            self.game_screen.execute("drop", [item.id])
             self._clamp_selection(self._items())
         elif event.sym == ord("r"):
             self._enter_unequip_mode()
@@ -232,5 +232,5 @@ class InventoryScreen(Screen):
             index = event.sym - ord("a")
             if index < len(self.equipped_items):
                 command, item = self.equipped_items[index]
-                self.game_screen.rogue_game.execute(command, [item.id])
+                self.game_screen.execute(command, [item.id])
                 self.unequip_mode = False

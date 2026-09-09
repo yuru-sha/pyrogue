@@ -2,7 +2,8 @@
 FOV（視界）管理コンポーネント。
 
 このモジュールは、GameScreen から分離された視界システムを担当します。
-FOV計算、可視範囲の管理、探索済みエリアの更新を行います。
+FOV計算と可視範囲の管理を行います。canonicalな探索済み状態の更新は
+GameStateのコマンド処理が担当します。
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ class FOVManager:
     """
     FOV（視界）システムの管理クラス。
 
-    プレイヤーの視界計算、可視範囲の管理、探索済みエリアの更新を担当します。
+    プレイヤーの視界計算と可視範囲の管理を担当します。
 
     Attributes
     ----------
@@ -64,8 +65,7 @@ class FOVManager:
         """
         FOVマップとプレイヤーの視界を更新。
 
-        プレイヤーの現在位置に基づいて視界を再計算し、
-        探索済みエリアを更新します。
+        プレイヤーの現在位置に基づいて視界を再計算します。
         """
         game = getattr(self.game_screen, "rogue_game", None)
         if game is not None:
@@ -73,7 +73,7 @@ class FOVManager:
             if not self.fov_enabled:
                 self.visible.fill(True)
             else:
-                for x, y in game.visible_positions():
+                for x, y in game.visible_positions(update_explored=False):
                     self.visible[y, x] = True
             return
 

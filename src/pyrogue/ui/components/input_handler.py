@@ -380,7 +380,7 @@ class InputHandler:
         if key == tcod.event.KeySym.ESCAPE:
             return GameStates.MENU if self.game_screen.engine else None
         if key == ord("i"):
-            game.execute("inventory")
+            self.game_screen.execute("inventory")
             return GameStates.SHOW_INVENTORY
         if key == ord("t"):
             return self._start_item_selection("throw")
@@ -423,7 +423,7 @@ class InputHandler:
                 self.selected_wand = wand.id
                 self.game_screen.add_message("Zap wand in which direction?")
                 return None
-        result = game.execute(command)
+        result = self.game_screen.execute(command)
         if result.state.value == "quit":
             return GameStates.EXIT
         if result.state.value == "dead":
@@ -433,12 +433,8 @@ class InputHandler:
         return None
 
     def _handle_fov_toggle(self) -> GameStates | None:
-        """Toggle the FOV view and add its status message to the active game."""
-        message = self.game_screen.toggle_fov()
-        if getattr(self.game_screen, "rogue_game", None) is not None:
-            self.game_screen.add_message(message)
-        else:
-            self.game_screen.game_logic.add_message(message)
+        """Toggle the FOV view without changing the active game state."""
+        self.game_screen.toggle_fov()
         return None
 
     def _start_item_selection(self, action: str) -> GameStates | None:
@@ -519,7 +515,7 @@ class InputHandler:
         if action is None or item_id is None:
             self.game_screen.add_message("Cancelled.")
             return None
-        result = self.game_screen.rogue_game.execute(action, [item_id, direction])
+        result = self.game_screen.execute(action, [item_id, direction])
         if result.state.value == "dead":
             return GameStates.GAME_OVER
         if result.state.value == "victory":
@@ -1385,7 +1381,7 @@ Press any key to continue...
                 (-1, 1): "southwest",
                 (1, 1): "southeast",
             }
-            result = self.game_screen.rogue_game.execute("zap", [wand, direction_names[direction]])
+            result = self.game_screen.execute("zap", [wand, direction_names[direction]])
             if result.state.value == "dead":
                 return GameStates.GAME_OVER
             if result.state.value == "victory":

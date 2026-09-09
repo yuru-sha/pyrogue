@@ -59,6 +59,10 @@ GUIのインベントリも `GameState.player.inventory` を表示し、投擲�
 GUIのTabはFOV表示を一時的に切り替えます。無効化中は`GameState.display_cells(show_all=True)`を
 canonicalな表示経路から呼び出して全体を描画しますが、探索済み集合は更新しません。
 
+GUIのコマンドアダプターはFOV無効化中、GameState.execute の update_explored=False を使い、
+自動的な可視範囲の記録だけを抑止します。この実行オプションはセーブ対象ではなく、
+lightやmagic mappingなど明示的なゲーム効果は引き続き適用します。
+
 ## 保存形式
 
 セーブはJSONです。仕様バージョン、seed、全階層、プレイヤー、エンティティ、メッセージ、

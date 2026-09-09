@@ -212,6 +212,25 @@ def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
     assert all(position not in console.cells for position in map_positions.values())
 
 
+def test_headless_gui_fov_override_keeps_exploration_stable_across_turn_and_toggle() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    game.floor.explored.clear()
+    tab = SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")
+
+    game_screen.handle_key(tab)
+    explored_before_turn = set(game.floor.explored)
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(_key(".")) is None
+    assert game.player.turns_played == turns_before + 1
+    assert game.floor.explored == explored_before_turn
+
+    game_screen.handle_key(tab)
+    assert game.floor.explored == explored_before_turn
+
+
 def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:
     game_screen, inventory_screen = game_and_inventory()
 
@@ -236,6 +255,29 @@ def test_inventory_equips_item_through_canonical_game_state() -> None:
     inventory_screen.handle_input(key_event("e"))
 
     assert game_screen.player.equipped_weapon == weapon.id
+
+
+def test_inventory_use_with_fov_override_applies_effect_without_exploring() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    game.floor.explored.clear()
+    game.player.hp = 4
+    potion = ItemState(id=1000, kind=ItemKind.POTION, name="healing potion", identified=True, effect="healing")
+    game.player.inventory = [potion]
+    tab = SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")
+
+    game_screen.handle_key(tab)
+    explored_before = set(game.floor.explored)
+    turns_before = game.player.turns_played
+
+    inventory_screen.handle_input(key_event("u"))
+
+    assert not game_screen.fov_manager.fov_enabled
+    assert potion not in game.player.inventory
+    assert game.player.hp == game.player.max_hp
+    assert game.player.turns_played == turns_before + 1
+    assert game.floor.explored == explored_before
 
 
 def test_inventory_unequips_weapon_through_canonical_game_state() -> None:

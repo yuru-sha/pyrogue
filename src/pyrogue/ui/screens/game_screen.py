@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyrogue.core.rogue_game import DisplayCell, GameState
+from pyrogue.core.rogue_game import CommandResult, DisplayCell, GameState
 from pyrogue.ui.components.fov_manager import FOVManager
 from pyrogue.ui.components.game_renderer import GameRenderer
 from pyrogue.ui.components.input_handler import InputHandler
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     import tcod
 
     from pyrogue.core.engine import Engine
@@ -95,6 +97,10 @@ class GameScreen:
     def display_cells(self) -> dict[tuple[int, int], DisplayCell]:
         """Return canonical display cells using the current GUI FOV setting."""
         return self.rogue_game.display_cells(show_all=not self.fov_manager.fov_enabled)
+
+    def execute(self, command: str, args: Iterable[object] = ()) -> CommandResult:
+        """Execute a GUI command while respecting the display-only FOV override."""
+        return self.rogue_game.execute(command, args, update_explored=self.fov_manager.fov_enabled)
 
     def handle_key(self, event: tcod.event.KeyDown) -> GameStates | None:
         """
