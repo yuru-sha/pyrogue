@@ -178,7 +178,10 @@ class InventoryScreen(Screen):
                 self.game_screen.add_message(f"You cannot equip the {item.display_name}.")
         elif event.sym == ord("u"):
             if item.kind == ItemKind.WAND:
-                self.game_screen.input_handler.begin_direction_selection("zap", item.id)
+                if item.effect == "light":
+                    self._use_light_wand(item)
+                else:
+                    self.game_screen.input_handler.begin_direction_selection("zap", item.id)
             elif item.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
                 self.game_screen.execute("use", [item.id])
             else:
@@ -190,12 +193,25 @@ class InventoryScreen(Screen):
             self._enter_unequip_mode()
 
     def _begin_pending_action(self, item: ItemState) -> None:
-        """Pass the selected canonical item to the direction selector."""
+        """Start the selected canonical item action."""
         action = self.game_screen.input_handler.item_selection_action
         if action == "zap" and item.kind != ItemKind.WAND:
             self.game_screen.add_message("You can only zap a wand.")
             return
+        if action == "zap" and item.effect == "light":
+            self._use_light_wand(item)
+            return
         self.game_screen.input_handler.begin_direction_selection(action or "throw", item.id)
+
+    def _use_light_wand(self, item: ItemState) -> None:
+        """Use a light wand through the canonical command without a direction."""
+        self.game_screen.input_handler.reset_selection()
+        result = self.game_screen.execute("zap", [item.id])
+        if self.game_screen.engine:
+            if result.state.value == "dead":
+                self.game_screen.engine.game_over()
+            else:
+                self.game_screen.engine.state = GameStates.PLAYERS_TURN
 
     def _enter_unequip_mode(self) -> None:
         """Show the currently equipped canonical armor and rings."""
