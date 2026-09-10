@@ -1423,6 +1423,8 @@ class GameState:
     def eat(self, value: Any = None) -> CommandResult:
         """Consume a food ration and restore food units."""
         item = self._find_item(value)
+        if value is None:
+            item = next((item for item in self.player.inventory if item.kind == ItemKind.FOOD), None)
         if not item or item.kind != ItemKind.FOOD:
             return self._result(False, "You have no food to eat.")
         self._remove_inventory_item(item)
@@ -1447,6 +1449,8 @@ class GameState:
     def quaff(self, value: Any = None) -> CommandResult:
         """Drink a potion and apply its effect."""
         item = self._find_item(value)
+        if value is None:
+            item = next((item for item in self.player.inventory if item.kind == ItemKind.POTION), None)
         if not item or item.kind != ItemKind.POTION:
             return self._result(False, "You have no potion to drink.")
         message = self._use_potion(item)

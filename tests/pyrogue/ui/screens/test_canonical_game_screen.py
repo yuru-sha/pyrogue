@@ -257,6 +257,41 @@ def test_inventory_equips_item_through_canonical_game_state() -> None:
     assert game_screen.player.equipped_weapon == weapon.id
 
 
+def test_direct_gui_eat_key_selects_food_after_wrong_kind_item() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    wrong_item = ItemState(id=1000, kind=ItemKind.ARMOR, name="ring mail")
+    food = ItemState(id=1001, kind=ItemKind.FOOD, name="food ration", nutrition=100)
+    game.player.inventory = [wrong_item, food]
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(key_event("e")) is None
+
+    assert wrong_item in game.player.inventory
+    assert food not in game.player.inventory
+    assert game.player.turns_played == turns_before + 1
+
+
+def test_direct_gui_quaff_key_selects_potion_after_wrong_kind_item() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    wrong_item = ItemState(id=1000, kind=ItemKind.FOOD, name="food ration")
+    potion = ItemState(id=1001, kind=ItemKind.POTION, name="healing potion", effect="healing")
+    game.player.inventory = [wrong_item, potion]
+    game.player.hp = 1
+    hp_before = game.player.hp
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(key_event("q")) is None
+
+    assert wrong_item in game.player.inventory
+    assert potion not in game.player.inventory
+    assert game.player.hp > hp_before
+    assert game.player.turns_played == turns_before + 1
+
+
 def test_inventory_use_with_fov_override_applies_effect_without_exploring() -> None:
     game_screen, inventory_screen = game_and_inventory()
     game = game_screen.rogue_game
