@@ -1382,9 +1382,9 @@ class GameState:
         self._finish_turn()
         return self._result(True, "", True, item)
 
-    def _find_item(self, value: Any) -> ItemState | None:
+    def _find_item(self, value: Any, *, kind: ItemKind | None = None) -> ItemState | None:
         if value is None:
-            return self.player.inventory[0] if self.player.inventory else None
+            return next((item for item in self.player.inventory if kind is None or item.kind == kind), None)
         text = str(value).strip().lower()
         if text.isdigit():
             item_id = int(text)
@@ -1422,7 +1422,7 @@ class GameState:
 
     def eat(self, value: Any = None) -> CommandResult:
         """Consume a food ration and restore food units."""
-        item = self._find_item(value)
+        item = self._find_item(value, kind=ItemKind.FOOD)
         if not item or item.kind != ItemKind.FOOD:
             return self._result(False, "You have no food to eat.")
         self._remove_inventory_item(item)
@@ -1446,7 +1446,7 @@ class GameState:
 
     def quaff(self, value: Any = None) -> CommandResult:
         """Drink a potion and apply its effect."""
-        item = self._find_item(value)
+        item = self._find_item(value, kind=ItemKind.POTION)
         if not item or item.kind != ItemKind.POTION:
             return self._result(False, "You have no potion to drink.")
         message = self._use_potion(item)
@@ -1457,9 +1457,7 @@ class GameState:
 
     def read(self, value: Any = None) -> CommandResult:
         """Read a scroll and apply its effect."""
-        item = self._find_item(value)
-        if value is None:
-            item = next((item for item in self.player.inventory if item.kind == ItemKind.SCROLL), None)
+        item = self._find_item(value, kind=ItemKind.SCROLL)
         if not item or item.kind != ItemKind.SCROLL:
             return self._result(False, "You have no scroll to read.")
         item.identified = True
@@ -1503,11 +1501,7 @@ class GameState:
 
     def equip(self, value: Any, kind: ItemKind) -> CommandResult:
         """Equip a weapon, armor item, or ring from the pack."""
-        item = (
-            next((item for item in self.player.inventory if item.kind == kind), None)
-            if value is None
-            else self._find_item(value)
-        )
+        item = self._find_item(value, kind=kind)
         if not item or item.kind != kind:
             return self._result(False, f"You have no {kind.value} to equip.")
         if item.cursed and item.id in self.player.equipped_item_ids:
@@ -1578,9 +1572,7 @@ class GameState:
 
     def zap(self, value: Any, direction: Position | None = None) -> CommandResult:
         """Use one charge from a wand in the given direction."""
-        item = self._find_item(value)
-        if value is None:
-            item = next((item for item in self.player.inventory if item.kind == ItemKind.WAND), None)
+        item = self._find_item(value, kind=ItemKind.WAND)
         if not item or item.kind != ItemKind.WAND:
             return self._result(False, "Usage: zap <wand> <direction>")
         if item.charges <= 0:
