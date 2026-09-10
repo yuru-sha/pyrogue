@@ -368,6 +368,24 @@ def test_zap_light_wand_executes_without_direction_selection(monkeypatch) -> Non
     assert game.player.turns_played == turns_before + 1
 
 
+def test_zap_light_wand_preserves_game_over_state_after_enemy_turn() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    _, monster_position = _walkable_direction(game)
+    game.player.hp = 1
+    game.floor.monsters.append(MonsterState(1003, "dragon", *monster_position, hp=45))
+    wand = ItemState(id=1004, kind=ItemKind.WAND, name="light", charges=1, effect="light")
+    game.player.inventory = [wand]
+
+    assert game_screen.handle_key(key_event("z")) == GameStates.SHOW_INVENTORY
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+    inventory_screen.handle_input(key_event("a"))
+
+    assert game.status.value == "dead"
+    assert game_screen.engine.state == GameStates.GAME_OVER
+
+
 def test_throw_and_zap_item_selection_share_vi_arrow_and_letter_targets() -> None:
     def selected_item_id(action: str, kind: ItemKind, events: list[SimpleNamespace]) -> int | None:
         game_screen = GameScreen(None, seed=1234)

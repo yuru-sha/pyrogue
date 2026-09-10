@@ -197,9 +197,12 @@ class InventoryScreen(Screen):
             return
         if action == "zap" and item.effect == "light":
             self.game_screen.input_handler.reset_selection()
-            self.game_screen.execute("zap", [item.id])
+            result = self.game_screen.execute("zap", [item.id])
             if self.game_screen.engine:
-                self.game_screen.engine.state = GameStates.PLAYERS_TURN
+                self.game_screen.engine.state = {
+                    "dead": GameStates.GAME_OVER,
+                    "victory": GameStates.VICTORY,
+                }.get(result.state.value, GameStates.PLAYERS_TURN)
             return
         self.game_screen.input_handler.begin_direction_selection(action or "throw", item.id)
 
