@@ -333,6 +333,41 @@ def test_zap_selects_wand_then_direction_in_canonical_game_state() -> None:
     assert not game_screen.input_handler.direction_selection_mode
 
 
+def test_zap_light_wand_executes_without_direction_selection(monkeypatch) -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    wand = ItemState(
+        id=1002,
+        kind=ItemKind.WAND,
+        name="light",
+        identified=True,
+        charges=2,
+        effect="light",
+    )
+    game.player.inventory = [wand]
+    calls = []
+    execute = game_screen.execute
+
+    def record_execute(command, args=()):
+        calls.append((command, list(args)))
+        return execute(command, args)
+
+    monkeypatch.setattr(game_screen, "execute", record_execute)
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(key_event("z")) == GameStates.SHOW_INVENTORY
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+    inventory_screen.handle_input(key_event("a"))
+
+    assert calls == [("zap", [wand.id])]
+    assert not game_screen.input_handler.direction_selection_mode
+    assert game_screen.input_handler.item_selection_action is None
+    assert game_screen.engine.state == GameStates.PLAYERS_TURN
+    assert wand.charges == 1
+    assert game.player.turns_played == turns_before + 1
+
+
 def test_throw_and_zap_item_selection_share_vi_arrow_and_letter_targets() -> None:
     def selected_item_id(action: str, kind: ItemKind, events: list[SimpleNamespace]) -> int | None:
         game_screen = GameScreen(None, seed=1234)
@@ -380,7 +415,14 @@ def test_load_restores_canonical_inventory_and_clears_stale_selection(monkeypatc
 
     monkeypatch.setattr(save_manager, "SaveManager", FakeSaveManager)
     game_screen, inventory_screen = game_and_inventory()
-    wand = ItemState(id=1002, kind=ItemKind.WAND, name="light", identified=True, charges=1, effect="light")
+    wand = ItemState(
+        id=1002,
+        kind=ItemKind.WAND,
+        name="magic missile",
+        identified=True,
+        charges=1,
+        effect="magic_missile",
+    )
     game_screen.player.inventory.append(wand)
 
     game_screen.handle_key(key_event("z"))

@@ -195,6 +195,12 @@ class InventoryScreen(Screen):
         if action == "zap" and item.kind != ItemKind.WAND:
             self.game_screen.add_message("You can only zap a wand.")
             return
+        if action == "zap" and item.effect == "light":
+            self.game_screen.input_handler.reset_selection()
+            self.game_screen.execute("zap", [item.id])
+            if self.game_screen.engine:
+                self.game_screen.engine.state = GameStates.PLAYERS_TURN
+            return
         self.game_screen.input_handler.begin_direction_selection(action or "throw", item.id)
 
     def _enter_unequip_mode(self) -> None:
