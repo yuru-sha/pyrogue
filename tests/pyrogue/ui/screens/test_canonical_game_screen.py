@@ -368,6 +368,23 @@ def test_zap_light_wand_executes_without_direction_selection(monkeypatch) -> Non
     assert game.player.turns_played == turns_before + 1
 
 
+def test_inventory_use_light_wand_executes_without_direction_selection() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    wand = ItemState(id=1005, kind=ItemKind.WAND, name="light", charges=1, effect="light")
+    game.player.inventory = [wand]
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(key_event("i")) == GameStates.SHOW_INVENTORY
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+    inventory_screen.handle_input(key_event("u"))
+
+    assert not game_screen.input_handler.direction_selection_mode
+    assert wand.charges == 0
+    assert game.player.turns_played == turns_before + 1
+
+
 def test_zap_light_wand_preserves_game_over_state_after_enemy_turn() -> None:
     game_screen, inventory_screen = game_and_inventory()
     game = game_screen.rogue_game
