@@ -231,6 +231,41 @@ def test_headless_gui_fov_override_keeps_exploration_stable_across_turn_and_togg
     assert game.floor.explored == explored_before_turn
 
 
+@pytest.mark.parametrize("lifecycle", ["new", "load"])
+def test_game_lifecycle_resets_fov_override_and_masks_hidden_cells(monkeypatch, lifecycle: str) -> None:
+    from pyrogue.core import save_manager
+
+    game_screen = GameScreen(None, seed=1234)
+    saved_state = game_screen.rogue_game.to_dict()
+    tab = SimpleNamespace(sym=tcod.event.KeySym.TAB, mod=0, text="")
+
+    game_screen.handle_key(tab)
+    explored_before = set(game_screen.rogue_game.floor.explored)
+    cells_with_fov_disabled = game_screen.display_cells()
+    hidden_position = next(
+        position
+        for position, cell in cells_with_fov_disabled.items()
+        if not cell.visible and not cell.explored and cell.terrain is not None
+    )
+    assert game_screen.rogue_game.floor.explored == explored_before
+
+    if lifecycle == "new":
+        game_screen.setup_new_game()
+    else:
+
+        class FakeSaveManager:
+            def load_game_state(self):
+                return saved_state
+
+        monkeypatch.setattr(save_manager, "SaveManager", FakeSaveManager)
+        assert game_screen.load_game()
+
+    assert game_screen.fov_manager.fov_enabled
+    cells_with_fov_enabled = game_screen.display_cells()
+    assert not cells_with_fov_enabled[hidden_position].visible
+    assert cells_with_fov_enabled[hidden_position].terrain is None
+
+
 def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:
     game_screen, inventory_screen = game_and_inventory()
 

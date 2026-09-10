@@ -75,6 +75,7 @@ class GameScreen:
     def setup_new_game(self) -> None:
         """新しいゲームをセットアップ。"""
         self.rogue_game = GameState(self.seed)
+        self._reset_transient_fov_override()
         self.input_handler.reset_selection()
 
     def update_console(self) -> None:
@@ -159,8 +160,14 @@ class GameScreen:
             self.rogue_game = GameState.from_dict(data)
         except (TypeError, ValueError):
             return False
+        self._reset_transient_fov_override()
         self.input_handler.reset_selection()
         return True
+
+    def _reset_transient_fov_override(self) -> None:
+        """Reset the display-only FOV override for the active game state."""
+        self.fov_manager.fov_enabled = True
+        self.fov_manager.update_fov()
 
     # canonical GameStateへの互換アクセサ
     @property
