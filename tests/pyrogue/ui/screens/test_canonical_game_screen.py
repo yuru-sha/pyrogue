@@ -8,6 +8,7 @@ from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import (
     EntityKind,
     GameState,
+    GameStatus,
     ItemKind,
     ItemState,
     MonsterState,
@@ -46,6 +47,10 @@ def key_event(key: str) -> SimpleNamespace:
 
 def _key(character: str) -> tcod.event.KeyDown:
     return tcod.event.KeyDown(0, ord(character), 0)
+
+
+def _shifted_key(character: str) -> tcod.event.KeyDown:
+    return tcod.event.KeyDown(0, ord(character), tcod.event.Modifier.SHIFT)
 
 
 def game_and_inventory() -> tuple[GameScreen, InventoryScreen]:
@@ -111,6 +116,100 @@ def test_headless_gui_stair_keys_use_canonical_stair_commands(
     assert game.player.turns_played == turns_before + 1
     assert "You wait." not in new_messages
     assert not any("pick up" in message or "nothing here" in message for message in new_messages)
+
+
+def test_headless_gui_shift_wear_uses_actual_tcod_modifier_event() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    armor = ItemState(1000, ItemKind.ARMOR, "plate mail", identified=True)
+    game.player.inventory.insert(0, armor)
+    game.player.equipped_armor = None
+    turns_before = game.player.turns_played
+
+    assert not hasattr(_shifted_key("w"), "text")
+    assert game_screen.handle_key(_shifted_key("w")) is None
+
+    assert game.player.equipped_armor == armor.id
+    assert game.player.turns_played == turns_before + 1
+
+
+def test_headless_gui_shift_remove_armor_uses_actual_tcod_modifier_event() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(_shifted_key("t")) is None
+
+    assert game.player.equipped_armor is None
+    assert game.player.turns_played == turns_before + 1
+
+
+def test_headless_gui_shift_put_on_ring_uses_actual_tcod_modifier_event() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    ring = ItemState(1000, ItemKind.RING, "ring of protection", effect="protection", identified=True)
+    game.player.inventory.append(ring)
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(_shifted_key("p")) is None
+
+    assert game.player.equipped_rings == [ring.id]
+    assert game.player.turns_played == turns_before + 1
+
+
+def test_headless_gui_shift_remove_ring_uses_actual_tcod_modifier_event() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    ring = ItemState(1000, ItemKind.RING, "ring of protection", effect="protection", identified=True)
+    game.player.inventory.append(ring)
+    game.player.equipped_rings.append(ring.id)
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(_shifted_key("r")) is None
+
+    assert ring.id not in game.player.equipped_rings
+    assert game.player.turns_played == turns_before + 1
+
+
+def test_headless_gui_shift_save_uses_actual_tcod_modifier_event(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(_shifted_key("s")) is None
+
+    assert (tmp_path / "game_save.json").exists()
+    assert game.player.turns_played == turns_before
+
+
+def test_headless_gui_shift_quit_uses_actual_tcod_modifier_event() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    turns_before = game.player.turns_played
+
+    assert game_screen.handle_key(_shifted_key("q")) == GameStates.EXIT
+
+    assert game.status == GameStatus.QUIT
+    assert game.player.turns_played == turns_before
+
+
+def test_headless_gui_shift_slash_opens_help_without_text_payload() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    turns_before = game.player.turns_played
+    event = tcod.event.KeyDown(0, tcod.event.KeySym.SLASH, tcod.event.Modifier.SHIFT)
+
+    assert not hasattr(event, "text")
+    assert game_screen.handle_key(event) is None
+
+    assert "? help" in game.messages[-1]
+    assert game.player.turns_played == turns_before
 
 
 def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> None:
