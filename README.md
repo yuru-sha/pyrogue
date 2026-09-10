@@ -1,5 +1,9 @@
 # PyRogue
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
+
+[日本語版 README](README.ja.md)
+
 PyRogue is a small Python 3.12 roguelike inspired by Rogue 5.4. Version 0.3.0
 uses a deterministic, seedable game state and a text-cell renderer for both CLI
 and TCOD GUI play.
