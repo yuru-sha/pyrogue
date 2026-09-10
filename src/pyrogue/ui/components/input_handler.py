@@ -363,6 +363,16 @@ class InputHandler:
     def _handle_spec_key(self, key, unicode_char: str, mod) -> GameStates | None:
         """Execute the shared specification command map for GUI input."""
         game = self.game_screen.rogue_game
+        if mod & tcod.event.Modifier.SHIFT:
+            key = {
+                ord("w"): ord("W"),
+                ord("t"): ord("T"),
+                ord("p"): ord("P"),
+                ord("r"): ord("R"),
+                ord("s"): ord("S"),
+                ord("q"): ord("Q"),
+                tcod.event.KeySym.SLASH: ord("?"),
+            }.get(key, key)
         key_commands = {
             tcod.event.KeySym.LEFT: "h",
             tcod.event.KeySym.RIGHT: "l",
