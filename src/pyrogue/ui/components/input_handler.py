@@ -547,16 +547,12 @@ class InputHandler:
 
         """
         key = event.sym
+        direction = _DIRECTION_KEYS.get(key)
 
         # ターゲット移動
-        if key == tcod.event.KeySym.LEFT or key == ord("h"):
-            self.targeting_x = max(0, self.targeting_x - 1)
-        elif key == tcod.event.KeySym.RIGHT or key == ord("l"):
-            self.targeting_x = min(self.game_screen.dungeon_width - 1, self.targeting_x + 1)
-        elif key == tcod.event.KeySym.UP or key == ord("k"):
-            self.targeting_y = max(0, self.targeting_y - 1)
-        elif key == tcod.event.KeySym.DOWN or key == ord("j"):
-            self.targeting_y = min(self.game_screen.dungeon_height - 1, self.targeting_y + 1)
+        if direction in {(-1, 0), (1, 0), (0, -1), (0, 1)}:
+            self.targeting_x = max(0, min(self.game_screen.dungeon_width - 1, self.targeting_x + direction[0]))
+            self.targeting_y = max(0, min(self.game_screen.dungeon_height - 1, self.targeting_y + direction[1]))
 
         # ターゲット確定
         elif key == tcod.event.KeySym.RETURN:
