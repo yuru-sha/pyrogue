@@ -112,8 +112,15 @@ class CLIEngine:
         # 共通コマンドハンドラーを初期化
         self.command_context = CLICommandContext(self)
         self.command_handler = CommonCommandHandler(self.command_context)
-
         game_logger.debug("CLI engine initialized")
+
+    def _print_legacy_victory(self) -> None:
+        """Print the legacy CLI victory summary and stop the loop."""
+        print("\n🎉 VICTORY! 🎉")
+        print("You have escaped with the Amulet of Yendor!")
+        print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
+        print("You win the game!")
+        self.running = False
 
     def run(self) -> None:
         """
@@ -198,11 +205,7 @@ class CLIEngine:
             and args[0].lower() in ["up", "u"]
             and self.game_logic.check_victory()
         ):
-            print("\n🎉 VICTORY! 🎉")
-            print("You have escaped with the Amulet of Yendor!")
-            print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
-            print("You win the game!")
-            self.running = False
+            self._print_legacy_victory()
             return True
 
         # コマンド処理後にメッセージを表示（CommonCommandHandlerで追加されたメッセージ）
@@ -581,11 +584,7 @@ class CLIEngine:
                     and self.game_logic.dungeon_manager.current_floor == 1
                     and self.game_logic.check_victory()
                 ):
-                    print("\n🎉 VICTORY! 🎉")
-                    print("You have escaped with the Amulet of Yendor!")
-                    print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
-                    print("You win the game!")
-                    self.running = False
+                    self._print_legacy_victory()
                     return success
 
                 self.display_game_state()
