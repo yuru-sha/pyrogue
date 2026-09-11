@@ -112,6 +112,7 @@ class CLIEngine:
         # 共通コマンドハンドラーを初期化
         self.command_context = CLICommandContext(self)
         self.command_handler = CommonCommandHandler(self.command_context)
+        game_logger.debug("CLI engine initialized")
 
     def _print_legacy_victory(self) -> None:
         """Print the legacy CLI victory summary and stop the loop."""
@@ -120,8 +121,6 @@ class CLIEngine:
         print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
         print("You win the game!")
         self.running = False
-
-        game_logger.debug("CLI engine initialized")
 
     def run(self) -> None:
         """
