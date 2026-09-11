@@ -132,3 +132,39 @@ def test_checksum_failure_sets_error_for_invalid_save(tmp_path):
     assert manager.load_game_state() is None
     assert manager.last_error is not None
     assert manager.save_file.read_bytes() == before
+
+
+def test_checksum_failure_rejects_dead_backup_and_cleans_up(tmp_path):
+    """チェックサム失敗時も死亡バックアップをロードしない。"""
+    manager = SaveManager(tmp_path)
+    dead_payload = {
+        "spec_version": GAME_VERSION,
+        "player_stats": {"hp": 0},
+        "current_floor": 1,
+    }
+    assert manager.save_game_state(dead_payload)
+    manager.backup_file.write_bytes(manager.save_file.read_bytes())
+    manager.save_file.write_text("corrupted", encoding="utf-8")
+
+    assert manager.load_game_state() is None
+    assert manager.is_permadeath_triggered
+    assert not manager.save_file.exists()
+    assert not manager.backup_file.exists()
+    assert not manager.metadata_file.exists()
+
+
+def test_checksum_failure_does_not_resurrect_backup_after_dead_metadata(tmp_path):
+    """死亡メタデータがあれば、古い生存バックアップも復旧しない。"""
+    manager = SaveManager(tmp_path)
+    first_payload = {"spec_version": GAME_VERSION, "player_stats": {"hp": 20}, "current_floor": 1}
+    second_payload = {"spec_version": GAME_VERSION, "player_stats": {"hp": 18}, "current_floor": 2}
+    assert manager.save_game_state(first_payload)
+    assert manager.save_game_state(second_payload)
+    manager.metadata_file.write_text(json.dumps({"is_alive": False}), encoding="utf-8")
+    manager.save_file.write_text("corrupted", encoding="utf-8")
+
+    assert manager.load_game_state() is None
+    assert manager.is_permadeath_triggered
+    assert not manager.save_file.exists()
+    assert not manager.backup_file.exists()
+    assert not manager.metadata_file.exists()
