@@ -1490,9 +1490,6 @@ class GameState:
         elif effect == "magic_mapping":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "You feel more familiar with the dungeon."
-        elif effect == "teleport":
-            self.player.position = self._free_position(self.floor, (self.player.position,))
-            message = "You are suddenly teleported."
         else:
             message = "The scroll disappears in a flash of light."
         self._remove_inventory_item(item)
