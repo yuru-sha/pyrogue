@@ -175,7 +175,7 @@ class SaveManager:
                             game_data = json.load(f)
                         if not self._check_save_version(game_data):
                             return None
-                        if not self._check_permadeath_metadata():
+                        if not self._check_permadeath(game_data):
                             return None
                         # 後方互換性: 古いセーブファイルからMP関連属性を削除
                         self._remove_legacy_mp_attributes(game_data)
@@ -192,7 +192,7 @@ class SaveManager:
             if not self._check_save_version(game_data):
                 return None
 
-            if not self._check_permadeath_metadata():
+            if not self._check_permadeath(game_data):
                 return None
 
             # 後方互換性: 古いセーブファイルからMP関連属性を削除
@@ -211,7 +211,7 @@ class SaveManager:
                         game_data = json.load(f)
                     if not self._check_save_version(game_data):
                         return None
-                    if not self._check_permadeath_metadata():
+                    if not self._check_permadeath(game_data):
                         return None
                     # 後方互換性: 古いセーブファイルからMP関連属性を削除
                     self._remove_legacy_mp_attributes(game_data)
@@ -222,8 +222,14 @@ class SaveManager:
 
             return None
 
-    def _check_permadeath_metadata(self) -> bool:
-        """Reject and delete saves whose metadata records a dead player."""
+    def _check_permadeath(self, game_data: dict[str, Any]) -> bool:
+        """Reject and delete saves whose payload or metadata records a dead player."""
+        player_data = game_data.get("player_stats", game_data.get("player", {}))
+        if game_data.get("status") == "dead" or ("player_stats" in game_data and player_data.get("hp", 0) <= 0):
+            game_logger.warning("Cannot load game: player is dead (permadeath)")
+            self._trigger_permadeath()
+            return False
+
         if not self.metadata_file.exists():
             return True
 
