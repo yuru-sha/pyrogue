@@ -212,6 +212,33 @@ def test_headless_gui_shift_slash_opens_help_without_text_payload() -> None:
     assert game.player.turns_played == turns_before
 
 
+@pytest.mark.parametrize("key", ["w", "p", "r", "s", "q"])
+def test_headless_gui_lowercase_commands_without_text_use_lowercase_key(monkeypatch, key: str) -> None:
+    game_screen = GameScreen(None, seed=1234)
+    calls = []
+
+    def execute(command, args=(), **kwargs):
+        calls.append((command, list(args)))
+        return SimpleNamespace(state=SimpleNamespace(value="playing"))
+
+    monkeypatch.setattr(game_screen, "execute", execute)
+    event = _key(key)
+
+    assert not hasattr(event, "text")
+    assert game_screen.handle_key(event) is None
+    assert calls == [(key, [])]
+
+
+def test_headless_gui_lowercase_throw_without_text_starts_item_selection() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    event = _key("t")
+
+    assert not hasattr(event, "text")
+    assert game_screen.handle_key(event) == GameStates.SHOW_INVENTORY
+    assert game_screen.input_handler.item_selection_action == "throw"
+    assert not game_screen.input_handler.direction_selection_mode
+
+
 def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> None:
     cli = CLIEngine(seed=1234, spec_mode=True)
     gui = GameScreen(None, seed=1234)
