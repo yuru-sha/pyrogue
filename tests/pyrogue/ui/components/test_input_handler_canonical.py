@@ -68,6 +68,22 @@ def test_gui_zap_direction_uses_the_canonical_wand_command() -> None:
     assert game.player.turns_played == 1
 
 
+def test_gui_targeting_uses_shared_cardinal_direction_mapping() -> None:
+    screen = GameScreen(None, seed=23)
+    handler = screen.input_handler
+    handler.start_targeting(5, 5)
+
+    for key, expected in (
+        (tcod.event.KeySym.LEFT, (4, 5)),
+        (ord("l"), (5, 5)),
+        (tcod.event.KeySym.UP, (5, 4)),
+        (ord("j"), (5, 5)),
+        (ord("y"), (5, 5)),
+    ):
+        handler.handle_key(SimpleNamespace(sym=key, mod=0, text=""))
+        assert (handler.targeting_x, handler.targeting_y) == expected
+
+
 def test_gui_tab_toggles_canonical_fov_without_mutating_state() -> None:
     screen = GameScreen(None, seed=22)
     game = screen.rogue_game
