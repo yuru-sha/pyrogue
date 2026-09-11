@@ -175,6 +175,8 @@ class SaveManager:
                             game_data = json.load(f)
                         if not self._check_save_version(game_data):
                             return None
+                        if not self._check_permadeath_metadata():
+                            return None
                         # 後方互換性: 古いセーブファイルからMP関連属性を削除
                         self._remove_legacy_mp_attributes(game_data)
                         game_logger.info("Game loaded from backup file after checksum failure")
@@ -190,16 +192,8 @@ class SaveManager:
             if not self._check_save_version(game_data):
                 return None
 
-            # メタデータを確認
-            if self.metadata_file.exists():
-                with open(self.metadata_file) as f:
-                    metadata = json.load(f)
-
-                # プレイヤーが死亡している場合はロードを拒否
-                if not metadata.get("is_alive", True):
-                    game_logger.warning("Cannot load game: player is dead (permadeath)")
-                    self._trigger_permadeath()
-                    return None
+            if not self._check_permadeath_metadata():
+                return None
 
             # 後方互換性: 古いセーブファイルからMP関連属性を削除
             self._remove_legacy_mp_attributes(game_data)
@@ -217,6 +211,8 @@ class SaveManager:
                         game_data = json.load(f)
                     if not self._check_save_version(game_data):
                         return None
+                    if not self._check_permadeath_metadata():
+                        return None
                     # 後方互換性: 古いセーブファイルからMP関連属性を削除
                     self._remove_legacy_mp_attributes(game_data)
                     game_logger.info("Game loaded from backup file")
@@ -225,6 +221,21 @@ class SaveManager:
                     game_logger.error(f"Backup file also corrupted: {backup_error}")
 
             return None
+
+    def _check_permadeath_metadata(self) -> bool:
+        """Reject and delete saves whose metadata records a dead player."""
+        if not self.metadata_file.exists():
+            return True
+
+        with open(self.metadata_file) as f:
+            metadata = json.load(f)
+
+        if metadata.get("is_alive", True):
+            return True
+
+        game_logger.warning("Cannot load game: player is dead (permadeath)")
+        self._trigger_permadeath()
+        return False
 
     def _check_save_version(self, game_data: Any) -> bool:
         """Validate the JSON save envelope and its exact specification version."""
