@@ -19,6 +19,40 @@ if TYPE_CHECKING:
     from pyrogue.ui.screens.game_screen import GameScreen
 
 
+_DIRECTION_KEYS = {
+    ord("h"): (-1, 0),
+    ord("j"): (0, 1),
+    ord("k"): (0, -1),
+    ord("l"): (1, 0),
+    ord("y"): (-1, -1),
+    ord("u"): (1, -1),
+    ord("b"): (-1, 1),
+    ord("n"): (1, 1),
+    tcod.event.KeySym.LEFT: (-1, 0),
+    tcod.event.KeySym.RIGHT: (1, 0),
+    tcod.event.KeySym.UP: (0, -1),
+    tcod.event.KeySym.DOWN: (0, 1),
+    tcod.event.KeySym.KP_4: (-1, 0),
+    tcod.event.KeySym.KP_6: (1, 0),
+    tcod.event.KeySym.KP_8: (0, -1),
+    tcod.event.KeySym.KP_2: (0, 1),
+    tcod.event.KeySym.KP_7: (-1, -1),
+    tcod.event.KeySym.KP_9: (1, -1),
+    tcod.event.KeySym.KP_1: (-1, 1),
+    tcod.event.KeySym.KP_3: (1, 1),
+}
+_DIRECTION_NAMES = {
+    (-1, 0): "west",
+    (0, 1): "south",
+    (0, -1): "north",
+    (1, 0): "east",
+    (-1, -1): "northwest",
+    (1, -1): "northeast",
+    (-1, 1): "southwest",
+    (1, 1): "southeast",
+}
+
+
 class InputHandler:
     """
     入力処理システムの管理クラス。
@@ -362,7 +396,6 @@ class InputHandler:
 
     def _handle_spec_key(self, key, unicode_char: str, mod) -> GameStates | None:
         """Execute the shared specification command map for GUI input."""
-        game = self.game_screen.rogue_game
         if mod & tcod.event.Modifier.SHIFT:
             key = {
                 ord("w"): ord("W"),
@@ -426,13 +459,6 @@ class InputHandler:
         if command == "S":
             self.game_screen.save_game()
             return None
-        if command == "z":
-            wand = next((item for item in game.player.inventory if item.kind == ItemKind.WAND), None)
-            if wand and wand.effect != "light":
-                self.wand_direction_mode = True
-                self.selected_wand = wand.id
-                self.game_screen.add_message("Zap wand in which direction?")
-                return None
         result = self.game_screen.execute(command)
         if result.state.value == "quit":
             return GameStates.EXIT
@@ -489,35 +515,14 @@ class InputHandler:
             self.game_screen.add_message("Cancelled.")
             return None
 
-        direction_keys = {
-            ord("h"): "west",
-            ord("j"): "south",
-            ord("k"): "north",
-            ord("l"): "east",
-            ord("y"): "northwest",
-            ord("u"): "northeast",
-            ord("b"): "southwest",
-            ord("n"): "southeast",
-            tcod.event.KeySym.LEFT: "west",
-            tcod.event.KeySym.RIGHT: "east",
-            tcod.event.KeySym.UP: "north",
-            tcod.event.KeySym.DOWN: "south",
-            tcod.event.KeySym.KP_4: "west",
-            tcod.event.KeySym.KP_6: "east",
-            tcod.event.KeySym.KP_8: "north",
-            tcod.event.KeySym.KP_2: "south",
-            tcod.event.KeySym.KP_7: "northwest",
-            tcod.event.KeySym.KP_9: "northeast",
-            tcod.event.KeySym.KP_1: "southwest",
-            tcod.event.KeySym.KP_3: "southeast",
-        }
-        direction = direction_keys.get(event.sym)
+        direction = _DIRECTION_KEYS.get(event.sym)
         if direction is None:
             text = getattr(event, "text", "")
-            direction = direction_keys.get(ord(text)) if len(text) == 1 else None
+            direction = _DIRECTION_KEYS.get(ord(text)) if len(text) == 1 else None
         if direction is None:
             self.game_screen.add_message("Choose a direction (use movement keys).")
             return None
+        direction = _DIRECTION_NAMES[direction]
 
         action = self.direction_selection_action
         item_id = self.selected_item_id
@@ -1317,34 +1322,8 @@ Press any key to continue...
         key = event.sym
 
         # 方向キーの処理
-        direction_keys = {
-            # Vi-keys
-            ord("h"): (-1, 0),  # 左
-            ord("j"): (0, 1),  # 下
-            ord("k"): (0, -1),  # 上
-            ord("l"): (1, 0),  # 右
-            ord("y"): (-1, -1),  # 左上
-            ord("u"): (1, -1),  # 右上
-            ord("b"): (-1, 1),  # 左下
-            ord("n"): (1, 1),  # 右下
-            # 矢印キー
-            tcod.event.KeySym.LEFT: (-1, 0),
-            tcod.event.KeySym.RIGHT: (1, 0),
-            tcod.event.KeySym.UP: (0, -1),
-            tcod.event.KeySym.DOWN: (0, 1),
-            # テンキー
-            tcod.event.KeySym.KP_4: (-1, 0),  # 左
-            tcod.event.KeySym.KP_6: (1, 0),  # 右
-            tcod.event.KeySym.KP_8: (0, -1),  # 上
-            tcod.event.KeySym.KP_2: (0, 1),  # 下
-            tcod.event.KeySym.KP_7: (-1, -1),  # 左上
-            tcod.event.KeySym.KP_9: (1, -1),  # 右上
-            tcod.event.KeySym.KP_1: (-1, 1),  # 左下
-            tcod.event.KeySym.KP_3: (1, 1),  # 右下
-        }
-
-        if key in direction_keys:
-            direction = direction_keys[key]
+        if key in _DIRECTION_KEYS:
+            direction = _DIRECTION_KEYS[key]
             return self._execute_wand_zap(direction)
         if key == tcod.event.KeySym.ESCAPE:
             # キャンセル
@@ -1381,17 +1360,7 @@ Press any key to continue...
         self.selected_wand = None
 
         if isinstance(wand, int):
-            direction_names = {
-                (-1, 0): "west",
-                (0, 1): "south",
-                (0, -1): "north",
-                (1, 0): "east",
-                (-1, -1): "northwest",
-                (1, -1): "northeast",
-                (-1, 1): "southwest",
-                (1, 1): "southeast",
-            }
-            result = self.game_screen.execute("zap", [wand, direction_names[direction]])
+            result = self.game_screen.execute("zap", [wand, _DIRECTION_NAMES[direction]])
             if result.state.value == "dead":
                 return GameStates.GAME_OVER
             if result.state.value == "victory":
