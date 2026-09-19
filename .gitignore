@@ -194,3 +194,4 @@ saves/
 .agents/skills/*
 !.agents/skills/pyrogue-verify/
 !.agents/skills/pyrogue-verify/**
+.codex/config.toml
