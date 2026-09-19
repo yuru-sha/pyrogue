@@ -90,6 +90,16 @@ def test_save_writes_exact_spec_version(tmp_path):
     assert saved["spec_version"] == GAME_VERSION
 
 
+def test_legacy_payload_with_omitted_hp_round_trips_as_alive(tmp_path):
+    """保存時に生存と判定されたlegacy payloadはロード時も生存として扱う。"""
+    manager = SaveManager(tmp_path)
+    payload = {"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}
+
+    assert manager.save_game_state(payload)
+    assert manager.load_game_state() == payload
+    assert not manager.is_permadeath_triggered
+
+
 @pytest.mark.parametrize(
     "payload",
     [
