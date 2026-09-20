@@ -225,7 +225,7 @@ class SaveManager:
     def _check_permadeath(self, game_data: dict[str, Any]) -> bool:
         """Reject and delete saves whose payload or metadata records a dead player."""
         player_data = game_data.get("player_stats", game_data.get("player", {}))
-        if game_data.get("status") == "dead" or ("player_stats" in game_data and player_data.get("hp", 0) <= 0):
+        if game_data.get("status") == "dead" or ("player_stats" in game_data and player_data.get("hp", 20) <= 0):
             game_logger.warning("Cannot load game: player is dead (permadeath)")
             self._trigger_permadeath()
             return False
