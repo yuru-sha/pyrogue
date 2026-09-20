@@ -100,6 +100,22 @@ def test_legacy_payload_with_omitted_hp_round_trips_as_alive(tmp_path):
     assert not manager.is_permadeath_triggered
 
 
+@pytest.mark.parametrize("checksum_file_present", [True, False], ids=["checksum-failure", "main-file-failure"])
+def test_legacy_payload_with_omitted_hp_loads_from_backup(tmp_path, checksum_file_present):
+    """省略されたHPを持つlegacy payloadは両方のバックアップ経路で復旧できる。"""
+    manager = SaveManager(tmp_path)
+    payload = {"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}
+
+    assert manager.save_game_state(payload)
+    manager.backup_file.write_bytes(manager.save_file.read_bytes())
+    if not checksum_file_present:
+        manager.checksum_file.unlink()
+    manager.save_file.write_text("corrupted", encoding="utf-8")
+
+    assert manager.load_game_state() == payload
+    assert not manager.is_permadeath_triggered
+
+
 @pytest.mark.parametrize(
     "payload",
     [
