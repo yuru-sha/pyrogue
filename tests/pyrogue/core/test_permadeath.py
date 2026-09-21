@@ -11,8 +11,19 @@ import pickle
 import tempfile
 from unittest.mock import patch
 
-from pyrogue.core.rogue_game import GAME_VERSION
+from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState
 from pyrogue.core.save_manager import SaveManager
+
+
+def _game_at_floor(seed: int, floor_number: int) -> GameState:
+    game = GameState(seed)
+    if floor_number != game.current_floor:
+        floor = game._ensure_floor(floor_number)
+        assert floor.up_stairs is not None
+        game.current_floor = floor_number
+        game.player.position = floor.up_stairs
+        floor.player_position = floor.up_stairs
+    return game
 
 
 class TestPermadeathSystem:
@@ -32,18 +43,13 @@ class TestPermadeathSystem:
         with tempfile.TemporaryDirectory() as temp_dir:
             save_manager = SaveManager(temp_dir)
 
-            # テストデータを作成
-            game_data = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 50,
-                    "hp_max": 100,
-                    "level": 5,
-                    "exp": 1000,
-                },
-                "current_floor": 3,
-                "inventory": ["sword", "potion"],
-            }
+            game = _game_at_floor(1234, 3)
+            game.player.inventory = [
+                ItemState(id=9001, kind=ItemKind.WEAPON, name="sword"),
+                ItemState(id=9002, kind=ItemKind.POTION, name="potion"),
+            ]
+            game_data = game.to_dict()
+            game_data["player"].update({"hp": 50, "max_hp": 100, "level": 5, "exp": 1000})
 
             # セーブ
             success = save_manager.save_game_state(game_data)
@@ -52,9 +58,9 @@ class TestPermadeathSystem:
             # ロード
             loaded_data = save_manager.load_game_state()
             assert loaded_data is not None
-            assert loaded_data["player_stats"]["hp"] == 50
+            assert loaded_data["player"]["hp"] == 50
             assert loaded_data["current_floor"] == 3
-            assert loaded_data["inventory"] == ["sword", "potion"]
+            assert [item["name"] for item in loaded_data["player"]["inventory"]] == ["sword", "potion"]
 
     def test_permadeath_triggered_on_death(self):
         """プレイヤー死亡時のPermadeath発動テスト。"""
@@ -62,29 +68,15 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # セーブファイルを作成
-            game_data = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 50,
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            game_data = _game_at_floor(1234, 3).to_dict()
             save_manager.save_game_state(game_data)
 
             # セーブファイルが存在することを確認
             assert save_manager.has_save_file() is True
 
             # プレイヤー死亡データでPermadeath発動
-            death_data = {
-                "player_stats": {
-                    "hp": 0,  # 死亡状態
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            death_data = GameState(1234).to_dict()
+            death_data["status"] = "dead"
             save_manager.trigger_permadeath_on_death(death_data)
 
             # セーブファイルが削除されることを確認
@@ -99,20 +91,14 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # 死亡したプレイヤーのデータを作成
-            game_data = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 0,  # 死亡状態
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            game_data = _game_at_floor(1234, 3).to_dict()
+            game_data["status"] = "dead"
+            game_data["player"]["hp"] = 0
 
             # 直接メタデータを作成（死亡状態を記録）
             metadata = {
                 "save_time": 1234567890,
-                "save_version": "0.2.0",
+                "save_version": GAME_VERSION,
                 "player_level": 5,
                 "current_floor": 3,
                 "player_hp": 0,
@@ -142,15 +128,8 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # セーブデータを作成
-            game_data = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 50,
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            game_data = GameState(1234).to_dict()
+            game_data["player"]["hp"] = 50
 
             # セーブ
             success = save_manager.save_game_state(game_data)
@@ -166,7 +145,7 @@ class TestPermadeathSystem:
             # セーブファイルを改竄（内容を変更）
             with open(save_manager.save_file, "wb") as f:
                 tampered_data = game_data.copy()
-                tampered_data["player_stats"]["hp"] = 999  # 改竄
+                tampered_data["player"]["hp"] = 999  # 改竄
                 pickle.dump(tampered_data, f)
 
             # 改竄されたファイルのロードは失敗することを確認
@@ -179,25 +158,15 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # Permadeathを発動
-            death_data = {
-                "player_stats": {
-                    "hp": 0,
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            death_data = GameState(1234).to_dict()
+            death_data["status"] = "dead"
             save_manager.trigger_permadeath_on_death(death_data)
 
             # Permadeath発動後はセーブできないことを確認
-            new_data = {
-                "player_stats": {
-                    "hp": 100,
-                    "hp_max": 100,
-                    "level": 6,
-                },
-                "current_floor": 4,
-            }
+            new_data = GameState(5678).to_dict()
+            new_data["player"]["hp"] = 100
+            new_data["player"]["max_hp"] = 100
+            new_data["player"]["level"] = 6
 
             success = save_manager.save_game_state(new_data)
             assert success is False
@@ -209,15 +178,8 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # セーブデータを作成
-            game_data = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 75,
-                    "hp_max": 100,
-                    "level": 8,
-                },
-                "current_floor": 10,
-            }
+            game_data = _game_at_floor(1234, 10).to_dict()
+            game_data["player"].update({"hp": 75, "max_hp": 100, "level": 8})
 
             # セーブ
             save_manager.save_game_state(game_data)
@@ -237,15 +199,7 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # セーブデータを作成
-            game_data = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 50,
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            game_data = GameState(1234).to_dict()
             save_manager.save_game_state(game_data)
 
             # セーブファイルが存在することを確認
@@ -265,27 +219,14 @@ class TestPermadeathSystem:
             save_manager = SaveManager(temp_dir)
 
             # 最初のセーブ
-            game_data1 = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 50,
-                    "hp_max": 100,
-                    "level": 5,
-                },
-                "current_floor": 3,
-            }
+            game_data1 = _game_at_floor(1234, 3).to_dict()
+            game_data1["player"]["level"] = 5
             save_manager.save_game_state(game_data1)
 
             # 2回目のセーブ（バックアップが作成される）
-            game_data2 = {
-                "spec_version": GAME_VERSION,
-                "player_stats": {
-                    "hp": 75,
-                    "hp_max": 100,
-                    "level": 6,
-                },
-                "current_floor": 4,
-            }
+            game_data2 = _game_at_floor(5678, 4).to_dict()
+            game_data2["player"]["level"] = 6
+            game_data2["player"]["hp"] = 75
             save_manager.save_game_state(game_data2)
 
             # メインセーブファイルを破損
@@ -295,7 +236,7 @@ class TestPermadeathSystem:
             # バックアップから復旧できることを確認
             loaded_data = save_manager.load_game_state()
             assert loaded_data is not None
-            assert loaded_data["player_stats"]["level"] == 5  # バックアップの内容
+            assert loaded_data["player"]["level"] == 5  # バックアップの内容
             assert loaded_data["current_floor"] == 3
 
     @patch("pyrogue.core.save_manager.game_logger")

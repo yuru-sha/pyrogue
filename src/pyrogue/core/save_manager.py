@@ -259,15 +259,17 @@ class SaveManager:
             self.last_error = SaveError(f"Unsupported save version: {save_version}")
             return False
 
-        if "seed" in game_data or "floors" in game_data or "rng_state" in game_data:
-            required_keys = ("seed", "player", "floors", "rng_state")
-            object_fields = ("player", "floors")
-        elif "player" in game_data:
-            required_keys = ("player", "inventory", "current_floor", "floor_data")
-            object_fields = ("player", "inventory", "floor_data")
-        else:
-            required_keys = ("player_stats", "current_floor")
-            object_fields = ("player_stats",)
+        if {"player_stats", "current_floor"} <= game_data.keys() or {
+            "player",
+            "inventory",
+            "current_floor",
+            "floor_data",
+        } <= game_data.keys():
+            self.last_error = SaveError("Unsupported legacy save format")
+            return False
+
+        required_keys = ("seed", "player", "floors", "rng_state")
+        object_fields = ("player", "floors")
 
         missing_keys = [key for key in required_keys if key not in game_data]
         if missing_keys:

@@ -240,9 +240,13 @@ class CLIEngine:
         game_command = raw_command if len(raw_command) == 1 else raw_command.lower()
         args = parts[1:]
         if game_command.lower() == "load":
-            data = SaveManager().load_game_state()
+            save_manager = SaveManager()
+            data = save_manager.load_game_state()
             if data is None:
-                print("No compatible save file found.")
+                if save_manager.last_error is None:
+                    print("No compatible save file found.")
+                else:
+                    print(f"Failed to load save data: {save_manager.last_error}")
                 return True
             try:
                 self.spec_game = GameState.from_dict(data)

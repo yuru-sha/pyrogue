@@ -1,9 +1,11 @@
+import json
 from types import SimpleNamespace
 
 import tcod.event
 
 from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState
+from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState
+from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_screen import GameScreen
 
 
@@ -101,3 +103,19 @@ def test_gui_tab_toggles_canonical_fov_without_mutating_state() -> None:
     assert screen.fov_manager.fov_enabled
     assert game.floor.explored == set()
     assert game.to_dict() == state_before
+
+
+def test_gui_ctrl_l_reports_legacy_save_incompatibility_and_preserves_file(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    screen = GameScreen(None, seed=24)
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(
+        json.dumps({"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}),
+        encoding="utf-8",
+    )
+    before = manager.save_file.read_bytes()
+
+    screen.input_handler.handle_key(SimpleNamespace(sym=ord("l"), mod=tcod.event.Modifier.CTRL, text="l"))
+
+    assert any("Unsupported legacy save format" in message for message in screen.rogue_game.messages)
+    assert manager.save_file.read_bytes() == before

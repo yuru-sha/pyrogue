@@ -42,6 +42,7 @@ class MenuScreen:
         self.engine = engine
         self.menu_selection = 0
         self.save_manager = SaveManager()
+        self.load_error_message: str | None = None
         self.menu_options = self._get_menu_options()
 
     def update_console(self, console: tcod.console.Console) -> None:
@@ -144,6 +145,14 @@ class MenuScreen:
                 fg=color,
             )
 
+        if self.load_error_message:
+            self.console.print(
+                max(0, (self.console.width - len(self.load_error_message)) // 2),
+                self.console.height - 5,
+                self.load_error_message,
+                fg=(255, 80, 80),
+            )
+
         # 操作説明の表示
         help_text = "Use UP/DOWN arrows to navigate, ENTER to select, ESC to quit"
         self.console.print(
@@ -223,12 +232,13 @@ class MenuScreen:
 
         """
         try:
+            self.load_error_message = None
             # セーブデータをロード
             save_data = self.save_manager.load_game_state()
 
             if save_data is None:
                 if self.save_manager.last_error is not None:
-                    print(f"Failed to load save data: {self.save_manager.last_error}")
+                    self.load_error_message = f"Failed to load save data: {self.save_manager.last_error}"
                     return GameStates.MENU
                 # セーブデータがない場合は新しいゲームを開始
                 self.engine.new_game()
