@@ -5,6 +5,14 @@ import pytest
 from pyrogue.core.rogue_game import GAME_VERSION, GameState, SaveCompatibilityError
 from pyrogue.core.save_manager import SaveError, SaveManager
 
+_LEGACY_SAVE_PAYLOADS = [
+    pytest.param({"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}, id="player-stats"),
+    pytest.param(
+        {"spec_version": GAME_VERSION, "player": {}, "inventory": {}, "current_floor": 1, "floor_data": {}},
+        id="player-floor-data",
+    ),
+]
+
 
 def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game = GameState(1234)
@@ -37,6 +45,37 @@ def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
 
 @pytest.mark.parametrize(
     "payload",
+    _LEGACY_SAVE_PAYLOADS,
+)
+def test_load_rejects_legacy_save_shapes_without_deleting_them(tmp_path, payload):
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
+    before = manager.save_file.read_bytes()
+
+    assert manager.load_game_state() is None
+    assert isinstance(manager.last_error, SaveError)
+    assert "legacy" in str(manager.last_error).lower()
+    assert manager.save_file.read_bytes() == before
+    assert not manager.is_permadeath_triggered
+
+
+@pytest.mark.parametrize(
+    "payload",
+    _LEGACY_SAVE_PAYLOADS,
+)
+def test_save_rejects_legacy_shapes_without_touching_existing_save(tmp_path, payload):
+    manager = SaveManager(tmp_path)
+    assert manager.save_game_state(GameState(1234).to_dict())
+    before = manager.save_file.read_bytes()
+
+    assert not manager.save_game_state(payload)
+    assert isinstance(manager.last_error, SaveError)
+    assert "legacy" in str(manager.last_error).lower()
+    assert manager.save_file.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "payload",
     [
         {},
         {"player": {}},
@@ -49,7 +88,7 @@ def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
 def test_save_rejects_invalid_spec_version_without_touching_existing_save(tmp_path, payload):
     """不正な仕様バージョンのセーブは既存ファイルを変更しない。"""
     manager = SaveManager(tmp_path)
-    valid_payload = {"spec_version": GAME_VERSION, "player_stats": {"hp": 10}, "current_floor": 1}
+    valid_payload = GameState(1234).to_dict()
     assert manager.save_game_state(valid_payload)
     before = manager.save_file.read_bytes()
 
@@ -84,36 +123,10 @@ def test_save_writes_exact_spec_version(tmp_path):
     """正常なセーブには現在の仕様バージョンをそのまま書き込む。"""
     manager = SaveManager(tmp_path)
 
-    assert manager.save_game_state({"spec_version": GAME_VERSION, "player_stats": {"hp": 10}, "current_floor": 1})
+    assert manager.save_game_state(GameState(1234).to_dict())
     saved = json.loads(manager.save_file.read_text(encoding="utf-8"))
 
     assert saved["spec_version"] == GAME_VERSION
-
-
-def test_legacy_payload_with_omitted_hp_round_trips_as_alive(tmp_path):
-    """保存時に生存と判定されたlegacy payloadはロード時も生存として扱う。"""
-    manager = SaveManager(tmp_path)
-    payload = {"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}
-
-    assert manager.save_game_state(payload)
-    assert manager.load_game_state() == payload
-    assert not manager.is_permadeath_triggered
-
-
-@pytest.mark.parametrize("checksum_file_present", [True, False], ids=["checksum-failure", "main-file-failure"])
-def test_legacy_payload_with_omitted_hp_loads_from_backup(tmp_path, checksum_file_present):
-    """省略されたHPを持つlegacy payloadは両方のバックアップ経路で復旧できる。"""
-    manager = SaveManager(tmp_path)
-    payload = {"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}
-
-    assert manager.save_game_state(payload)
-    manager.backup_file.write_bytes(manager.save_file.read_bytes())
-    if not checksum_file_present:
-        manager.checksum_file.unlink()
-    manager.save_file.write_text("corrupted", encoding="utf-8")
-
-    assert manager.load_game_state() == payload
-    assert not manager.is_permadeath_triggered
 
 
 @pytest.mark.parametrize(
@@ -124,7 +137,7 @@ def test_legacy_payload_with_omitted_hp_loads_from_backup(tmp_path, checksum_fil
     ],
 )
 def test_save_and_load_reject_current_version_without_required_shape(tmp_path, payload):
-    """現行バージョンでもcanonical/legacyの必須項目がなければ拒否する。"""
+    """現行バージョンでもcanonicalの必須項目がなければ拒否する。"""
     manager = SaveManager(tmp_path)
     manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -160,25 +173,11 @@ def test_checksum_failure_sets_error_for_invalid_save(tmp_path):
     assert manager.save_file.read_bytes() == before
 
 
-@pytest.mark.parametrize(
-    "dead_payload",
-    [
-        {
-            "spec_version": GAME_VERSION,
-            "status": "dead",
-            "player_stats": {"hp": 20},
-            "current_floor": 1,
-        },
-        {
-            "spec_version": GAME_VERSION,
-            "player_stats": {"hp": 0},
-            "current_floor": 1,
-        },
-    ],
-)
-def test_checksum_failure_rejects_dead_backup_payload_and_cleans_up(tmp_path, dead_payload):
+def test_checksum_failure_rejects_dead_backup_payload_and_cleans_up(tmp_path):
     """チェックサム失敗時も死亡バックアップをロードしない。"""
     manager = SaveManager(tmp_path)
+    dead_payload = GameState(1234).to_dict()
+    dead_payload["status"] = "dead"
     assert manager.save_game_state(dead_payload)
     manager.metadata_file.write_text(json.dumps({"is_alive": True}), encoding="utf-8")
     manager.backup_file.write_bytes(manager.save_file.read_bytes())
@@ -194,8 +193,8 @@ def test_checksum_failure_rejects_dead_backup_payload_and_cleans_up(tmp_path, de
 def test_checksum_failure_does_not_resurrect_backup_after_dead_metadata(tmp_path):
     """死亡メタデータがあれば、古い生存バックアップも復旧しない。"""
     manager = SaveManager(tmp_path)
-    first_payload = {"spec_version": GAME_VERSION, "player_stats": {"hp": 20}, "current_floor": 1}
-    second_payload = {"spec_version": GAME_VERSION, "player_stats": {"hp": 18}, "current_floor": 2}
+    first_payload = GameState(1234).to_dict()
+    second_payload = GameState(5678).to_dict()
     assert manager.save_game_state(first_payload)
     assert manager.save_game_state(second_payload)
     manager.metadata_file.write_text(json.dumps({"is_alive": False}), encoding="utf-8")

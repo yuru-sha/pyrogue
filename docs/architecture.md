@@ -70,3 +70,5 @@ lightやmagic mappingなど明示的なゲーム効果は引き続き適用し�
 IDカウンタ、RNG状態、死亡・勝利・パーマデス状態を保存します。`spec_version` が現在の
 `0.3.0` と一致しないファイルは自動移行せず、互換性エラーとして拒否します。`current_floor` は
 現在位置、`player.deepest_floor` は到達記録であり、勝利・死亡サマリーは後者を表示します。
+現在の`spec_version`を持つ場合も、必須フィールド（`seed`、`player`、`floors`、`rng_state`）を欠く旧形式は、
+ファイルを変更せず互換性エラーとして拒否します。

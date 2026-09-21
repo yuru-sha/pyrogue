@@ -153,8 +153,11 @@ class GameScreen:
         """
         from pyrogue.core.save_manager import SaveManager
 
-        data = SaveManager().load_game_state()
+        save_manager = SaveManager()
+        data = save_manager.load_game_state()
         if data is None:
+            if save_manager.last_error is not None:
+                self.add_message(f"Failed to load save data: {save_manager.last_error}")
             return False
         try:
             self.rogue_game = GameState.from_dict(data)

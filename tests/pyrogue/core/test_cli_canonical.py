@@ -1,5 +1,7 @@
+import json
+
 from pyrogue.core.cli_engine import CLIEngine
-from pyrogue.core.rogue_game import ItemKind, ItemState, TrapKind, TrapState
+from pyrogue.core.rogue_game import GAME_VERSION, ItemKind, ItemState, TrapKind, TrapState
 from pyrogue.core.save_manager import SaveManager
 
 
@@ -74,6 +76,21 @@ def test_cli_save_load_restores_canonical_state(tmp_path, monkeypatch, capsys) -
     assert cli.process_command("load") is True
 
     assert cli.spec_game.to_dict() == expected
+
+
+def test_cli_reports_legacy_save_incompatibility_and_preserves_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    manager = SaveManager(tmp_path)
+    manager.save_file.write_text(
+        json.dumps({"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}), encoding="utf-8"
+    )
+    before = manager.save_file.read_bytes()
+    cli = CLIEngine(seed=1234, spec_mode=True)
+
+    assert cli.process_command("load") is True
+
+    assert "Unsupported legacy save format" in capsys.readouterr().out
+    assert manager.save_file.read_bytes() == before
 
 
 def test_cli_slash_identifies_one_unknown_item(capsys, monkeypatch) -> None:
