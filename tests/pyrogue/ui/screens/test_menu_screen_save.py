@@ -18,17 +18,23 @@ def test_invalid_save_does_not_start_new_game(tmp_path):
     menu.engine.new_game.assert_not_called()
 
 
-def test_legacy_save_reports_incompatibility_and_is_preserved(tmp_path, capsys):
+def test_legacy_save_reports_in_menu_and_is_preserved(tmp_path):
     menu = MenuScreen.__new__(MenuScreen)
     menu.save_manager = SaveManager(tmp_path)
     menu.engine = Mock()
+    menu.console = Mock(width=80, height=40)
+    menu.menu_selection = 0
     menu.save_manager.save_file.write_text(
         json.dumps({"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}), encoding="utf-8"
     )
     before = menu.save_manager.save_file.read_bytes()
 
     assert menu._load_game() == GameStates.MENU
+    menu.render()
 
-    assert "Unsupported legacy save format" in capsys.readouterr().out
+    assert any(
+        call.args[2] == "Failed to load save data: Unsupported legacy save format"
+        for call in menu.console.print.call_args_list
+    )
     assert menu.save_manager.save_file.read_bytes() == before
     menu.engine.new_game.assert_not_called()
