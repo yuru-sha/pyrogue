@@ -1,6 +1,6 @@
 import pytest
 
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState
+from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState, Room, Terrain
 
 
 def game_with_adjacent_monster(type_id: str, hp: int = 100) -> tuple[GameState, MonsterState]:
@@ -103,6 +103,406 @@ def test_execute_wait_resolves_each_monster_damage_component() -> None:
 
     assert result.success
     assert game.player.hp == 91
+
+
+def test_execute_wait_rusts_equipped_armor_when_aquator_hits() -> None:
+    game, _ = game_with_adjacent_monster("aquator")
+    armor = game.player.equipped(ItemKind.ARMOR)
+    assert armor is not None
+    initial_armor_class = game.player.effective_armor_class()
+    game.rng.seed(3)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert armor.enchantment == 0
+    assert game.player.effective_armor_class() == initial_armor_class + 1
+
+
+@pytest.mark.parametrize(("seed", "expected_strength"), [(0, 15), (10, 16)])
+def test_execute_wait_rattlesnake_poison_uses_rogue_saving_throw(seed: int, expected_strength: int) -> None:
+    game, _ = game_with_adjacent_monster("rattlesnake")
+    game.player.armor_class = 100
+    game.rng.seed(seed)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert game.player.strength == expected_strength
+
+
+@pytest.mark.parametrize(("seed", "expected_max_hp"), [(0, 98), (1, 100)])
+def test_execute_wait_vampire_sometimes_drains_maximum_hit_points(seed: int, expected_max_hp: int) -> None:
+    game, _ = game_with_adjacent_monster("vampire")
+    game.player.armor_class = 100
+    game.rng.seed(seed)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert game.player.max_hp == expected_max_hp
+
+
+def test_execute_wait_wraith_sometimes_drains_experience_level_and_maximum_hit_points() -> None:
+    game, _ = game_with_adjacent_monster("wraith")
+    game.player.level = 3
+    game.player.exp = 41
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert game.player.level == 2
+    assert game.player.exp == 21
+    assert game.player.max_hp == 95
+    assert game.player.hp == 91
+
+
+def test_execute_wait_wraith_kills_player_with_no_experience() -> None:
+    game, _ = game_with_adjacent_monster("wraith")
+    game.player.exp = 0
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    game.execute("wait")
+
+    assert game.player.dead
+    assert game.player.hp == 0
+
+
+def test_execute_wait_ice_monster_freezes_player_for_two_or_three_turns() -> None:
+    game, monster = game_with_adjacent_monster("ice_monster")
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert game.player.frozen_turns in {2, 3}
+    monster.asleep = True
+    remaining = game.player.frozen_turns
+
+    blocked = game.execute("wait")
+
+    assert blocked.turn_consumed
+    assert blocked.message == "You are frozen."
+    assert game.player.frozen_turns == remaining - 1
+
+
+def test_frozen_turns_round_trip_and_default_for_older_state() -> None:
+    game = GameState(seed=20)
+    game.player.frozen_turns = 2
+    game.player.confused_turns = 4
+    game.player.held = True
+    game.player.flytrap_hits = 2
+
+    restored = GameState.from_dict(game.to_dict()).player
+    assert restored.frozen_turns == 2
+    assert restored.confused_turns == 4
+    assert restored.held
+    assert restored.flytrap_hits == 2
+    old_state = game.to_dict()
+    old_state["player"].pop("frozen_turns")
+    old_state["player"].pop("confused_turns")
+    old_state["player"].pop("held")
+    old_state["player"].pop("flytrap_hits")
+    restored_old = GameState.from_dict(old_state).player
+    assert restored_old.frozen_turns == 0
+    assert restored_old.confused_turns == 0
+    assert not restored_old.held
+    assert restored_old.flytrap_hits == 0
+
+
+def test_sleep_and_freeze_timers_both_advance_on_blocked_turns() -> None:
+    game = GameState(seed=23)
+    game.floor.monsters.clear()
+    game.player.sleep_turns = 2
+    game.player.frozen_turns = 2
+
+    game.execute("wait")
+
+    assert game.player.sleep_turns == 1
+    assert game.player.frozen_turns == 1
+
+
+def test_execute_move_randomizes_one_in_five_confused_moves() -> None:
+    game = GameState(seed=22)
+    game.floor.monsters.clear()
+    game.player.position = (5, 5)
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            if dx or dy:
+                game.floor.set_tile((5 + dx, 5 + dy), Terrain.FLOOR)
+    game.player.confused_turns = 20
+    game.rng.seed(2)
+
+    result = game.execute("move", ["east"])
+
+    assert result.success
+    assert game.player.position == (4, 4)
+    assert game.player.confused_turns == 19
+
+
+def test_execute_wait_venus_flytrap_holds_player_and_increases_damage() -> None:
+    game, _ = game_with_adjacent_monster("venus_flytrap")
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    game.execute("wait")
+
+    assert game.player.held
+    assert game.player.flytrap_hits == 1
+    assert game.player.hp == 99
+    game.rng.seed(0)
+    game.execute("wait")
+    assert game.player.flytrap_hits == 2
+    assert game.player.hp == 98
+
+
+def test_execute_move_cannot_escape_flytrap_and_killing_it_releases_player() -> None:
+    game, monster = game_with_adjacent_monster("venus_flytrap", hp=1)
+    game.player.armor_class = 100
+    game.rng.seed(0)
+    game.execute("wait")
+    start = game.player.position
+    target = (start[0], start[1] - 1)
+    game.floor.set_tile(target, Terrain.DOOR_CLOSED)
+
+    blocked = game.execute("move", ["north"])
+
+    assert not blocked.success
+    assert game.player.position == start
+    assert game.floor.tile_at(target) == Terrain.DOOR_CLOSED
+    game.player.level = 100
+    killed = game.execute("attack", ["east"])
+
+    assert killed.success
+    assert monster not in game.floor.monsters
+    assert not game.player.held
+    assert game.player.flytrap_hits == 0
+
+
+def test_execute_wait_leprechaun_steals_gold_and_disappears_without_experience() -> None:
+    game, monster = game_with_adjacent_monster("leprechaun")
+    game.player.gold = 1000
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert game.player.gold == 842
+    assert monster not in game.floor.monsters
+    assert game.player.monsters_killed == 0
+    assert game.player.exp == 0
+
+
+def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> None:
+    game, monster = game_with_adjacent_monster("nymph")
+    ring = ItemState(910, ItemKind.RING, "ring of protection", effect="protection")
+    game.player.inventory.append(ring)
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert ring not in game.player.inventory
+    assert monster not in game.floor.monsters
+    assert game.player.monsters_killed == 0
+    assert game.player.exp == 0
+
+
+def test_execute_wait_medusa_gaze_confuses_player_once() -> None:
+    game, monster = game_with_adjacent_monster("medusa")
+    monster.running = True
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert monster.gaze_attempted
+    assert game.player.confused_turns in {19, 20}
+    serialized = GameState.from_dict(game.to_dict())
+    assert serialized.floor.monsters[0].gaze_attempted
+    old_state = game.to_dict()
+    old_state["floors"]["1"]["monsters"][0].pop("gaze_attempted")
+    assert not GameState.from_dict(old_state).floor.monsters[0].gaze_attempted
+    remaining = game.player.confused_turns
+    game.execute("wait")
+    assert game.player.confused_turns == remaining - 1
+
+
+def test_execute_wait_medusa_does_not_gaze_before_running() -> None:
+    game, monster = game_with_adjacent_monster("medusa")
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    game.execute("wait")
+
+    assert not monster.running
+    assert not monster.gaze_attempted
+    assert game.player.confused_turns == 0
+
+
+def test_execute_wait_medusa_does_not_gaze_from_far_down_a_corridor() -> None:
+    game, monster = game_with_adjacent_monster("medusa")
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    monster.x, monster.y = (9, 5)
+    monster.running = True
+    for x in range(5, 10):
+        game.floor.set_tile((x, 5), Terrain.FLOOR)
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    game.execute("wait")
+
+    assert not monster.gaze_attempted
+    assert game.player.confused_turns == 0
+
+
+def test_execute_wait_medusa_does_not_gaze_from_a_different_room() -> None:
+    game = GameState(seed=21)
+    game.floor.monsters.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(11, 5, 5, 5)]
+    game.player.position = (7, 7)
+    game.player.armor_class = 100
+    medusa = MonsterState(910, "medusa", 13, 7, 100, running=True)
+    game.floor.monsters.append(medusa)
+    for x in range(7, 14):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    game.rng.seed(0)
+
+    game.execute("wait")
+
+    assert not medusa.gaze_attempted
+    assert game.player.confused_turns == 0
+
+
+def test_execute_wait_dragon_breathes_when_aligned_and_in_range() -> None:
+    game = GameState(seed=21)
+    game.floor.monsters.clear()
+    room = Room(5, 5, 15, 5)
+    game.floor.rooms = [room]
+    game.player.position = (7, 7)
+    game.player.hp = game.player.max_hp = 100
+    game.player.armor_class = 100
+    dragon = MonsterState(911, "dragon", 13, 7, 100, running=True)
+    game.floor.monsters.append(dragon)
+    for x in range(7, 14):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    game.rng.seed(2)
+
+    result = game.execute("wait")
+
+    assert result.success
+    assert game.player.hp < 100
+    assert (dragon.x, dragon.y) == (13, 7)
+
+
+def test_execute_wait_dragon_does_not_breathe_across_passages_separated_by_a_room() -> None:
+    game = GameState(seed=21)
+    game.floor.monsters.clear()
+    game.floor.rooms = [Room(7, 5, 3, 5)]
+    game.player.position = (5, 7)
+    game.player.hp = game.player.max_hp = 100
+    game.player.armor_class = 100
+    for x in range(5, 12):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    dragon = MonsterState(913, "dragon", 11, 7, 100, running=True)
+    game.floor.monsters.append(dragon)
+    game.rng.seed(2)
+
+    game.execute("wait")
+
+    assert game.player.hp == 100
+    assert (dragon.x, dragon.y) == (10, 7)
+
+
+def test_execute_wait_dragon_fire_bounces_off_wall_and_hits_monster() -> None:
+    game = GameState(seed=21)
+    game.floor.monsters.clear()
+    room = Room(5, 5, 15, 5)
+    game.floor.rooms = [room]
+    game.player.position = (11, 7)
+    game.player.hp = game.player.max_hp = 100
+    game.player.armor_class = 100
+    for x in range(7, 12):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    game.floor.set_tile((10, 7), Terrain.WALL)
+    bat = MonsterState(914, "bat", 9, 7, 100)
+    dragon = MonsterState(915, "dragon", 7, 7, 100, running=True)
+    game.floor.monsters.extend((bat, dragon))
+    game.rng.seed(2)
+
+    game.execute("wait")
+
+    assert bat.hp < 100
+    assert game.player.hp == 100
+    assert dragon in game.floor.monsters
+
+
+def test_dragon_breath_continues_down_return_path_after_monster_saves(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=21)
+    game.floor.monsters.clear()
+    game.floor.rooms = [Room(5, 5, 15, 5)]
+    game.player.position = (11, 7)
+    game.player.hp = game.player.max_hp = 100
+    game.floor.set_tile((10, 7), Terrain.WALL)
+    bat_that_saves = MonsterState(916, "bat", 9, 7, 100)
+    bat_that_fails = MonsterState(917, "bat", 8, 7, 100)
+    dragon = MonsterState(918, "dragon", 7, 7, 100, running=True)
+    game.floor.monsters.extend((bat_that_saves, bat_that_fails, dragon))
+    rolls = iter((19, 1, 2, 2, 2, 2, 2, 2))
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: 0)
+    monkeypatch.setattr(game.rng, "randint", lambda start, stop: next(rolls))
+
+    assert game._try_dragon_breath(dragon)
+
+    assert bat_that_saves.hp == 100
+    assert bat_that_fails.hp == 88
+    assert game.player.hp == 100
+
+
+@pytest.mark.parametrize("type_id", ["leprechaun", "vampire", "wraith"])
+def test_execute_wait_does_not_apply_monster_special_effect_after_lethal_hit(type_id: str) -> None:
+    game, monster = game_with_adjacent_monster(type_id)
+    game.player.hp = 1
+    game.player.gold = 1000
+    game.player.level = 3
+    game.player.exp = 40
+    game.player.max_hp = 100
+    game.player.armor_class = 100
+    game.rng.seed(0)
+
+    game.execute("wait")
+
+    assert game.player.dead
+    assert monster in game.floor.monsters
+    if type_id == "leprechaun":
+        assert game.player.gold == 1000
+    else:
+        assert game.player.max_hp == 100
+        assert game.player.level == 3
+        assert game.player.exp == 40
+
+
+def test_execute_zap_awards_experience_when_wand_kills_monster() -> None:
+    game, monster = game_with_adjacent_monster("bat", hp=1)
+    expected_exp = monster.experience_reward
+    wand = ItemState(912, ItemKind.WAND, "wand of magic missile", effect="magic_missile", charges=1)
+    game.player.inventory.append(wand)
+    game.rng.seed(0)
+
+    result = game.execute("zap", [wand.id, "east"])
+
+    assert result.success
+    assert monster not in game.floor.monsters
+    assert game.player.monsters_killed == 1
+    assert game.player.exp == expected_exp
 
 
 def test_execute_throw_uses_matching_launcher_and_thrown_damage() -> None:
