@@ -38,6 +38,7 @@ UNIDENTIFIED_ITEM_NAMES = {
         "ring of sustain strength",
         "ring of searching",
         "ring of regeneration",
+        "ring of increase damage",
     ),
     ItemKind.WAND: (
         "wand of magic missile",
