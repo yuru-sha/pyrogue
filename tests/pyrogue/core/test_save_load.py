@@ -17,6 +17,9 @@ _LEGACY_SAVE_PAYLOADS = [
 def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game = GameState(1234)
     game.player.gold = 42
+    monster = game.floor.monsters[0]
+    monster.hp -= 1
+    monster.running = True
     manager = SaveManager(tmp_path)
     expected = game.to_dict()
 

@@ -273,6 +273,7 @@ class MonsterState:
     asleep: bool = False
     max_hp: int | None = None
     exp_value: int | None = None
+    running: bool = False
 
     def __post_init__(self) -> None:
         if self.max_hp is None:
@@ -314,6 +315,7 @@ class MonsterState:
             "asleep": self.asleep,
             "max_hp": self.max_hp,
             "exp_value": self.exp_value,
+            "running": self.running,
         }
 
     @classmethod
@@ -328,6 +330,7 @@ class MonsterState:
             asleep=bool(data.get("asleep", False)),
             max_hp=int(data["max_hp"]) if data.get("max_hp") is not None else None,
             exp_value=int(data["exp_value"]) if data.get("exp_value") is not None else None,
+            running=bool(data.get("running", False)),
         )
 
     @property
@@ -485,6 +488,7 @@ class PlayerState:
             self.level
             + (weapon.hit_bonus + weapon.enchantment if weapon else 0)
             + _strength_adjustment(STR_TO_HIT, self.effective_strength())
+            + (self.ring_bonus("dexterity") if weapon else 0)
         )
 
     @property
@@ -806,6 +810,7 @@ SCROLL_EFFECTS = {
 RING_EFFECTS = {
     "ring of protection": "protection",
     "ring of add strength": "strength",
+    "ring of dexterity": "dexterity",
     "ring of sustain strength": "sustain",
     "ring of searching": "search",
     "ring of regeneration": "regeneration",
@@ -968,7 +973,7 @@ class GameState:
                 "KIRJE",
                 "FOOBIE BLETCH",
             ],
-            ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby"],
+            ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby", "diamond"],
             ItemKind.WAND: ["glass", "iron", "silver", "copper", "brass", "crystal"],
         }
         appearances = {}
@@ -1094,6 +1099,7 @@ class GameState:
         bow.enchantment = 0
         arrows.quantity = self.rng.randint(25, 39)
         arrows.damage_dice = (1, 1)
+        arrows.enchantment = 0
         self.player.equipped_weapon = mace.id
         self.player.equipped_armor = armor.id
 
@@ -1127,10 +1133,11 @@ class GameState:
             level = definition.level + level_add
             max_hp = _roll(self.rng, (level, 8))
             exp_add = max_hp // (8 if level == 1 else 6)
-            exp_multiplier = (
-                20 if level >= MONSTER_EXPERIENCE_X20_LEVEL else 4 if level >= MONSTER_EXPERIENCE_X4_LEVEL else 1
-            )
-            exp_value = (definition.exp + level_add * 10 + exp_add) * exp_multiplier
+            if level >= MONSTER_EXPERIENCE_X20_LEVEL:
+                exp_add *= 20
+            elif level >= MONSTER_EXPERIENCE_X4_LEVEL:
+                exp_add *= 4
+            exp_value = definition.exp + level_add * 10 + exp_add
             monster = MonsterState(
                 self._next_monster_id,
                 definition.id,
@@ -1325,6 +1332,7 @@ class GameState:
                     damage_bonus += launcher.damage_bonus + launcher.enchantment
             strength = attacker.effective_strength()
             if weapon and attacker.equipped_weapon == weapon.id:
+                hit_bonus += attacker.ring_bonus("dexterity")
                 damage_bonus += attacker.ring_bonus("increase_damage")
             attacker_name = "you"
         else:
@@ -1340,6 +1348,8 @@ class GameState:
         defender_ac = (
             defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
         )
+        if isinstance(defender, PlayerState) or not defender.running:
+            hit_bonus += 4
         need = 20 - level - defender_ac
         hit = False
         damage = 0
@@ -1427,6 +1437,7 @@ class GameState:
                 other.x == target[0] and other.y == target[1] for other in self.floor.monsters if other is not monster
             ):
                 monster.x, monster.y = target
+                monster.running = True
 
     def move(self, dx: int, dy: int) -> CommandResult:
         """Move one step, open a closed door, or attack an adjacent monster."""
@@ -1671,7 +1682,14 @@ class GameState:
         projectile.position = landing
         self.floor.items.append(projectile)
         self._finish_turn()
-        return self._result(True, f"You throw the {item.display_name}.", True, result)
+        message = f"You throw the {item.display_name}."
+        if result and hit_monster:
+            message += (
+                f" It hits the {hit_monster.name} for {result.damage} damage."
+                if result.hit
+                else f" It misses the {hit_monster.name}."
+            )
+        return self._result(True, message, True, result)
 
     def zap(self, value: Any, direction: Position | None = None) -> CommandResult:
         """Use one charge from a wand in the given direction."""

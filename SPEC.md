@@ -106,7 +106,7 @@ canonical `GameState` が適用する主な効果は次のとおりとする。
 | 杖 | damage | 方向上の最初のモンスターに magic missile は 1d4、それ以外は 6d6 のダメージを与える |
 | 杖 | light | 現在の部屋を照らす。方向は要求しない |
 | 杖 | teleport monster | 方向上の最初のモンスターを同じ階の空いたセルへ移動する |
-| 指輪 | protection / add strength / increase damage | 防御値 / 強さ由来の命中・ダメージ / 装備中の武器ダメージに補正値を反映する |
+| 指輪 | protection / add strength / dexterity / increase damage | 防御値 / 強さ由来の命中・ダメージ / 装備中の武器の命中・ダメージに補正値を反映する |
 | 指輪 | sustain strength | 毒矢と rattlesnake による強さ低下を防ぐ |
 | 指輪 | searching | 各ターンに隣接する罠を自動発見する |
 | 指輪 | regeneration | 装備中の指輪1個につき、ターンごとにHPを1回復する |

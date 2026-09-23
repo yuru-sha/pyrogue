@@ -35,6 +35,7 @@ UNIDENTIFIED_ITEM_NAMES = {
     ItemKind.RING: (
         "ring of protection",
         "ring of add strength",
+        "ring of dexterity",
         "ring of sustain strength",
         "ring of searching",
         "ring of regeneration",
