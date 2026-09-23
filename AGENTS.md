@@ -61,6 +61,11 @@ make verify
 
 `make verify` runs the high-confidence secret-pattern scan, Ruff, Ruff format, mypy, compileall, pytest, and the CLI smoke suite. It is not a complete secret scanner; use an organizational or CI scanner as well when available.
 
+## Commit Messages
+
+- Follow the commit-message policy in `CONTRIBUTING.md`.
+- Do not create commits unless the user explicitly requests it.
+
 ## Git and feedback
 
 Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. When a review finding or failure needs a permanent fix, use [docs/feedback.md](docs/feedback.md) to decide whether the guard belongs in a test, `make verify`, a hook, documentation, or a Skill without bloating this file.

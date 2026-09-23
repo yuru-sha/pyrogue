@@ -1,5 +1,7 @@
 # PyRogue
 
+[English](README.md) | [日本語](README.ja.md)
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
 
 PyRogueは、Rogue 5.4を参考にしたPython 3.12製の小さなローグライクゲームです。
@@ -54,3 +56,7 @@ make verify
 
 仕様の正本は[SPEC.md](SPEC.md)（0.3.0）です。現在の文書一覧は[docs/README.md](docs/README.md)を
 参照してください。
+
+## GitHub Release
+
+See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).

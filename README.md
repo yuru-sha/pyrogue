@@ -1,8 +1,8 @@
 # PyRogue
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
+[English](README.md) | [日本語](README.ja.md)
 
-[日本語版 README](README.ja.md)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
 
 PyRogue is a small Python 3.12 roguelike inspired by Rogue 5.4. Version 0.3.0
 uses a deterministic, seedable game state and a text-cell renderer for both CLI
@@ -58,3 +58,7 @@ make verify
 
 See [SPEC.md](SPEC.md) for the authoritative 0.3.0 behavior and [docs/README.md](docs/README.md)
 for the current documentation map.
+
+## GitHub Release
+
+See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).
