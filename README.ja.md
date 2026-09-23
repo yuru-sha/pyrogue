@@ -1,5 +1,7 @@
 # PyRogue
 
+[English](README.md) | [日本語](README.ja.md)
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
 
 PyRogueは、Rogue 5.4を参考にしたPython 3.12製の小さなローグライクゲームです。
