@@ -51,7 +51,7 @@ class CLIEngine:
                 self.game_state = GameState.from_dict(data)
                 print("Game loaded successfully.")
             except (TypeError, ValueError):
-                print("Save file is not compatible with PyRogue 0.3.0.")
+                print("Save file is not compatible with PyRogue 0.3.1.")
                 return True
             self.display_game_state()
             return True

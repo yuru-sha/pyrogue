@@ -5,7 +5,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/pyrogue)
 
 PyRogueは、Rogue 5.4を参考にしたPython 3.12製の小さなローグライクゲームです。
-0.3.0では、seedを指定できる決定的なゲーム状態と、CLI/TCOD GUIで共有する
+0.3.1では、seedを指定できる決定的なゲーム状態と、CLI/TCOD GUIで共有する
 テキストセル描画を採用しています。
 
 ## 起動
@@ -54,7 +54,7 @@ GameState -> DisplayCell -> CLI / GameRenderer
 make verify
 ```
 
-仕様の正本は[SPEC.md](SPEC.md)（0.3.0）です。現在の文書一覧は[docs/README.md](docs/README.md)を
+仕様の正本は[SPEC.md](SPEC.md)（0.3.1）です。現在の文書一覧は[docs/README.md](docs/README.md)を
 参照してください。
 
 ## GitHub Release

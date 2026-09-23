@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.0"
+GAME_VERSION = "0.3.1"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -33,6 +33,30 @@ STARVETIME = 850
 CURSE_CHANCE = 0.5
 BEAR_TRAP_DAMAGE = 2
 MAX_EQUIPPED_RINGS = 2
+EXPERIENCE_LEVELS = (
+    10,
+    20,
+    40,
+    80,
+    160,
+    320,
+    640,
+    1300,
+    2600,
+    5200,
+    13000,
+    26000,
+    50000,
+    100000,
+    200000,
+    400000,
+    800000,
+    2000000,
+    4000000,
+    8000000,
+)
+MONSTER_EXPERIENCE_X4_LEVEL = 7
+MONSTER_EXPERIENCE_X20_LEVEL = 10
 SLEEP_TURNS = 5
 MYSTERIOUS_TRAP_MESSAGES = (
     "You are suddenly in a parallel dimension.",
@@ -199,7 +223,7 @@ class MonsterDefinition:
     hp: int
     armor_class: int
     hit_bonus: int
-    damage_dice: tuple[int, int]
+    damage_dice: tuple[tuple[int, int], ...]
     damage_bonus: int
     exp: int
     spawn_weight: int = 1
@@ -207,32 +231,32 @@ class MonsterDefinition:
 
 # The roster and the dice-shaped combat data follow Rogue's A-Z monster set.
 MONSTER_TYPES: tuple[MonsterDefinition, ...] = (
-    MonsterDefinition("aquator", "aquator", 8, 18, 5, 18, 2, 5, (1, 8), 0, 20, 4),
-    MonsterDefinition("bat", "bat", 1, 8, 1, 5, 8, 1, (1, 2), 0, 1, 8),
-    MonsterDefinition("centaur", "centaur", 4, 12, 4, 15, 4, 4, (1, 6), 0, 15, 5),
-    MonsterDefinition("dragon", "dragon", 17, 26, 10, 45, -3, 10, (4, 10), 0, 500, 2),
-    MonsterDefinition("emu", "emu", 1, 7, 1, 6, 7, 1, (1, 2), 0, 2, 8),
-    MonsterDefinition("venus_flytrap", "venus flytrap", 12, 26, 8, 25, 3, 6, (2, 5), 0, 30, 3),
-    MonsterDefinition("griffin", "griffin", 15, 26, 13, 35, -2, 13, (3, 5), 0, 200, 2),
-    MonsterDefinition("hobgoblin", "hobgoblin", 1, 10, 3, 10, 5, 3, (1, 8), 0, 5, 7),
-    MonsterDefinition("ice_monster", "ice monster", 1, 12, 2, 8, 5, 2, (1, 3), 0, 5, 7),
-    MonsterDefinition("jabberwock", "jabberwock", 21, 26, 15, 60, -2, 15, (2, 12), 0, 300, 1),
-    MonsterDefinition("kestrel", "kestrel", 1, 4, 1, 5, 7, 1, (1, 2), 0, 1, 8),
-    MonsterDefinition("leprechaun", "leprechaun", 5, 17, 7, 12, 8, 7, (1, 2), 0, 10, 5),
-    MonsterDefinition("medusa", "medusa", 18, 26, 8, 25, 2, 8, (3, 6), 0, 50, 3),
-    MonsterDefinition("nymph", "nymph", 3, 12, 3, 10, 9, 3, (1, 2), 0, 10, 5),
-    MonsterDefinition("orc", "orc", 4, 15, 5, 14, 6, 5, (1, 8), 0, 15, 6),
-    MonsterDefinition("phantom", "phantom", 10, 22, 8, 28, 3, 8, (2, 6), 0, 35, 4),
-    MonsterDefinition("quagga", "quagga", 1, 9, 3, 12, 4, 3, (1, 5), 0, 5, 7),
-    MonsterDefinition("rattlesnake", "rattlesnake", 1, 12, 2, 7, 3, 2, (1, 6), 0, 5, 7),
-    MonsterDefinition("snake", "snake", 1, 6, 2, 6, 3, 2, (1, 3), 0, 2, 8),
-    MonsterDefinition("troll", "troll", 9, 20, 6, 22, 3, 6, (2, 6), 0, 25, 5),
-    MonsterDefinition("ur_vile", "ur-vile", 15, 26, 7, 28, 3, 7, (4, 6), 0, 50, 3),
-    MonsterDefinition("vampire", "vampire", 13, 26, 8, 30, 2, 8, (1, 10), 0, 50, 3),
-    MonsterDefinition("wraith", "wraith", 7, 18, 5, 20, 4, 5, (1, 6), 0, 20, 5),
-    MonsterDefinition("xeroc", "xeroc", 5, 20, 7, 25, 3, 7, (1, 8), 0, 30, 3),
-    MonsterDefinition("yeti", "yeti", 5, 15, 4, 18, 4, 4, (1, 6), 0, 20, 5),
-    MonsterDefinition("zombie", "zombie", 7, 20, 6, 18, 3, 6, (1, 8), 0, 10, 5),
+    MonsterDefinition("aquator", "aquator", 8, 18, 5, 18, 2, 5, ((0, 0), (0, 0)), 0, 20, 4),
+    MonsterDefinition("bat", "bat", 1, 8, 1, 5, 3, 1, ((1, 2),), 0, 1, 8),
+    MonsterDefinition("centaur", "centaur", 4, 12, 4, 15, 4, 4, ((1, 2), (1, 5), (1, 5)), 0, 17, 5),
+    MonsterDefinition("dragon", "dragon", 17, 26, 10, 45, -1, 10, ((1, 8), (1, 8), (3, 10)), 0, 5000, 2),
+    MonsterDefinition("emu", "emu", 1, 7, 1, 6, 7, 1, ((1, 2),), 0, 2, 8),
+    MonsterDefinition("venus_flytrap", "venus flytrap", 12, 26, 8, 25, 3, 8, ((0, 0),), 0, 80, 3),
+    MonsterDefinition("griffin", "griffin", 15, 26, 13, 35, 2, 13, ((4, 3), (3, 5)), 0, 2000, 2),
+    MonsterDefinition("hobgoblin", "hobgoblin", 1, 10, 1, 10, 5, 1, ((1, 8),), 0, 3, 7),
+    MonsterDefinition("ice_monster", "ice monster", 1, 12, 1, 8, 9, 1, ((0, 0),), 0, 5, 7),
+    MonsterDefinition("jabberwock", "jabberwock", 21, 26, 15, 60, 6, 15, ((2, 12), (2, 4)), 0, 3000, 1),
+    MonsterDefinition("kestrel", "kestrel", 1, 4, 1, 5, 7, 1, ((1, 4),), 0, 1, 8),
+    MonsterDefinition("leprechaun", "leprechaun", 5, 17, 3, 12, 8, 3, ((1, 1),), 0, 10, 5),
+    MonsterDefinition("medusa", "medusa", 18, 26, 8, 25, 2, 8, ((3, 4), (3, 4), (2, 5)), 0, 200, 3),
+    MonsterDefinition("nymph", "nymph", 3, 12, 3, 10, 9, 3, ((0, 0),), 0, 37, 5),
+    MonsterDefinition("orc", "orc", 4, 15, 1, 14, 6, 1, ((1, 8),), 0, 5, 6),
+    MonsterDefinition("phantom", "phantom", 10, 22, 8, 28, 3, 8, ((4, 4),), 0, 120, 4),
+    MonsterDefinition("quagga", "quagga", 1, 9, 3, 12, 3, 3, ((1, 5), (1, 5)), 0, 15, 7),
+    MonsterDefinition("rattlesnake", "rattlesnake", 1, 12, 2, 7, 3, 2, ((1, 6),), 0, 9, 7),
+    MonsterDefinition("snake", "snake", 1, 6, 1, 6, 5, 1, ((1, 3),), 0, 2, 8),
+    MonsterDefinition("troll", "troll", 9, 20, 6, 22, 4, 6, ((1, 8), (1, 8), (2, 6)), 0, 120, 5),
+    MonsterDefinition("ur_vile", "ur-vile", 15, 26, 7, 28, -2, 7, ((1, 9), (1, 9), (2, 9)), 0, 190, 3),
+    MonsterDefinition("vampire", "vampire", 13, 26, 8, 30, 1, 8, ((1, 10),), 0, 350, 3),
+    MonsterDefinition("wraith", "wraith", 7, 18, 5, 20, 4, 5, ((1, 6),), 0, 55, 5),
+    MonsterDefinition("xeroc", "xeroc", 5, 20, 7, 25, 7, 7, ((4, 4),), 0, 100, 3),
+    MonsterDefinition("yeti", "yeti", 5, 15, 4, 18, 6, 4, ((1, 6), (1, 6)), 0, 50, 5),
+    MonsterDefinition("zombie", "zombie", 7, 20, 2, 18, 8, 2, ((1, 8),), 0, 6, 5),
 )
 MONSTER_BY_ID = {monster.id: monster for monster in MONSTER_TYPES}
 
@@ -247,6 +271,13 @@ class MonsterState:
     y: int
     hp: int
     asleep: bool = False
+    max_hp: int | None = None
+    exp_value: int | None = None
+    running: bool = False
+
+    def __post_init__(self) -> None:
+        if self.max_hp is None:
+            self.max_hp = self.definition.hp
 
     @property
     def definition(self) -> MonsterDefinition:
@@ -264,11 +295,6 @@ class MonsterState:
         return self.definition.level
 
     @property
-    def max_hp(self) -> int:
-        """Return the monster's maximum hit points."""
-        return self.definition.hp
-
-    @property
     def attack(self) -> int:
         """Return the monster's attack bonus."""
         return self.definition.hit_bonus
@@ -280,7 +306,17 @@ class MonsterState:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the monster to JSON-compatible values."""
-        return {"id": self.id, "type_id": self.type_id, "x": self.x, "y": self.y, "hp": self.hp, "asleep": self.asleep}
+        return {
+            "id": self.id,
+            "type_id": self.type_id,
+            "x": self.x,
+            "y": self.y,
+            "hp": self.hp,
+            "asleep": self.asleep,
+            "max_hp": self.max_hp,
+            "exp_value": self.exp_value,
+            "running": self.running,
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> MonsterState:
@@ -292,7 +328,15 @@ class MonsterState:
             y=int(data["y"]),
             hp=int(data["hp"]),
             asleep=bool(data.get("asleep", False)),
+            max_hp=int(data["max_hp"]) if data.get("max_hp") is not None else None,
+            exp_value=int(data["exp_value"]) if data.get("exp_value") is not None else None,
+            running=bool(data.get("running", False)),
         )
+
+    @property
+    def experience_reward(self) -> int:
+        """Return the experience stored for this monster, or its base value."""
+        return self.definition.exp if self.exp_value is None else self.exp_value
 
 
 @dataclass
@@ -440,7 +484,12 @@ class PlayerState:
     @property
     def attack(self) -> int:
         weapon = self.equipped(ItemKind.WEAPON)
-        return self.level + (weapon.hit_bonus + weapon.enchantment if weapon else 0) + self.ring_bonus("strength")
+        return (
+            self.level
+            + (weapon.hit_bonus + weapon.enchantment if weapon else 0)
+            + _strength_adjustment(STR_TO_HIT, self.effective_strength())
+            + (self.ring_bonus("dexterity") if weapon else 0)
+        )
 
     @property
     def defense(self) -> int:
@@ -712,12 +761,26 @@ def _roll(rng: random.Random, dice: tuple[int, int]) -> int:
 
 
 WEAPON_DATA: dict[str, tuple[tuple[int, int], int, int]] = {
-    "mace": ((2, 4), 2, 0),
-    "long sword": ((3, 4), 3, 0),
+    "mace": ((2, 4), 1, 1),
+    "long sword": ((3, 4), 0, 0),
     "short bow": ((1, 1), 1, 0),
-    "dagger": ((1, 6), 1, 0),
-    "two handed sword": ((4, 4), 4, 0),
-    "spear": ((2, 3), 2, 0),
+    "dagger": ((1, 6), 0, 0),
+    "two handed sword": ((4, 4), 0, 0),
+    "spear": ((2, 3), 0, 0),
+    "darts": ((1, 1), 0, 0),
+    "shuriken": ((1, 2), 0, 0),
+    "arrows": ((1, 1), 0, 0),
+}
+THROWN_WEAPON_DATA: dict[str, tuple[tuple[int, int], str | None]] = {
+    "mace": ((1, 3), None),
+    "long sword": ((1, 2), None),
+    "short bow": ((1, 1), None),
+    "dagger": ((1, 4), None),
+    "two handed sword": ((1, 2), None),
+    "spear": ((1, 6), None),
+    "darts": ((1, 3), None),
+    "shuriken": ((2, 4), None),
+    "arrows": ((2, 3), "short bow"),
 }
 ARMOR_DATA = {
     "leather armor": 2,
@@ -747,9 +810,11 @@ SCROLL_EFFECTS = {
 RING_EFFECTS = {
     "ring of protection": "protection",
     "ring of add strength": "strength",
+    "ring of dexterity": "dexterity",
     "ring of sustain strength": "sustain",
     "ring of searching": "search",
     "ring of regeneration": "regeneration",
+    "ring of increase damage": "increase_damage",
 }
 WAND_EFFECTS = {
     "wand of magic missile": "magic_missile",
@@ -908,7 +973,7 @@ class GameState:
                 "KIRJE",
                 "FOOBIE BLETCH",
             ],
-            ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby"],
+            ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby", "diamond"],
             ItemKind.WAND: ["glass", "iron", "silver", "copper", "brass", "crystal"],
         }
         appearances = {}
@@ -1027,13 +1092,14 @@ class GameState:
             item.cursed = False
             self.player.inventory.append(item)
         armor.armor_bonus = 3
-        armor.enchantment = 0
+        armor.enchantment = 1
         mace.hit_bonus = mace.damage_bonus = 1
-        mace.enchantment = 1
+        mace.enchantment = 0
         bow.hit_bonus = 1
-        bow.enchantment = 1
+        bow.enchantment = 0
         arrows.quantity = self.rng.randint(25, 39)
-        arrows.damage_dice = (1, 2)
+        arrows.damage_dice = (1, 1)
+        arrows.enchantment = 0
         self.player.equipped_weapon = mace.id
         self.player.equipped_armor = armor.id
 
@@ -1063,7 +1129,23 @@ class GameState:
         for _ in range(count):
             definition = self.rng.choices(available, weights=[monster.spawn_weight for monster in available], k=1)[0]
             position = self._free_position(floor, stairs)
-            monster = MonsterState(self._next_monster_id, definition.id, *position, definition.hp)
+            level_add = max(0, floor.number - MAX_FLOOR)
+            level = definition.level + level_add
+            max_hp = _roll(self.rng, (level, 8))
+            exp_add = max_hp // (8 if level == 1 else 6)
+            if level >= MONSTER_EXPERIENCE_X20_LEVEL:
+                exp_add *= 20
+            elif level >= MONSTER_EXPERIENCE_X4_LEVEL:
+                exp_add *= 4
+            exp_value = definition.exp + level_add * 10 + exp_add
+            monster = MonsterState(
+                self._next_monster_id,
+                definition.id,
+                *position,
+                max_hp,
+                max_hp=max_hp,
+                exp_value=exp_value,
+            )
             self._next_monster_id += 1
             floor.monsters.append(monster)
 
@@ -1177,14 +1259,17 @@ class GameState:
         return CommandResult(success, message, turn_consumed, self.status, data)
 
     def _required_exp(self) -> int:
-        return self.player.level * 100
+        return EXPERIENCE_LEVELS[min(self.player.level - 1, len(EXPERIENCE_LEVELS) - 1)]
 
     def _level_up_if_needed(self) -> None:
-        while self.player.exp >= self._required_exp():
-            self.player.exp -= self._required_exp()
+        old_level = self.player.level
+        while self.player.level <= len(EXPERIENCE_LEVELS) and self.player.exp >= self._required_exp():
             self.player.level += 1
-            self.player.max_hp += 4
-            self.player.hp = self.player.max_hp
+        gained = self.player.level - old_level
+        if gained:
+            hp_gain = _roll(self.rng, (gained, 10))
+            self.player.max_hp += hp_gain
+            self.player.hp += hp_gain
             self._message(f"You have attained level {self.player.level}.")
 
     def _consume_food(self) -> None:
@@ -1224,36 +1309,54 @@ class GameState:
         self._message(f"You died ({cause}).")
 
     def _resolve_attack(
-        self, attacker: PlayerState | MonsterState, defender: PlayerState | MonsterState
+        self,
+        attacker: PlayerState | MonsterState,
+        defender: PlayerState | MonsterState,
+        weapon: ItemState | None = None,
+        *,
+        thrown: bool = False,
     ) -> CombatResult:
         if isinstance(attacker, PlayerState):
-            weapon = attacker.item(attacker.equipped_weapon) if attacker.equipped_weapon else None
+            weapon = weapon or (attacker.item(attacker.equipped_weapon) if attacker.equipped_weapon else None)
             level = attacker.level
-            hit_bonus = weapon.hit_bonus + (weapon.enchantment if weapon else 0) if weapon else 0
-            damage_dice = weapon.damage_dice if weapon else (1, 2)
-            damage_bonus = weapon.damage_bonus if weapon else 0
+            weapon_data = THROWN_WEAPON_DATA.get(weapon.name) if thrown and weapon else None
+            damage_dice: tuple[tuple[int, int], ...] = (
+                (weapon_data[0],) if weapon_data else ((weapon.damage_dice if weapon else (1, 4)),)
+            )
+            hit_bonus = (weapon.hit_bonus + weapon.enchantment) if weapon else 0
+            damage_bonus = (weapon.damage_bonus + weapon.enchantment) if weapon else 0
+            if weapon_data and weapon_data[1] and attacker.equipped_weapon:
+                launcher = attacker.item(attacker.equipped_weapon)
+                if launcher and launcher.name == weapon_data[1]:
+                    hit_bonus += launcher.hit_bonus + launcher.enchantment
+                    damage_bonus += launcher.damage_bonus + launcher.enchantment
+            strength = attacker.effective_strength()
+            if weapon and attacker.equipped_weapon == weapon.id:
+                hit_bonus += attacker.ring_bonus("dexterity")
+                damage_bonus += attacker.ring_bonus("increase_damage")
             attacker_name = "you"
         else:
             definition = attacker.definition
             level = definition.level
-            hit_bonus = definition.hit_bonus
             damage_dice = definition.damage_dice
+            hit_bonus = 0
             damage_bonus = definition.damage_bonus
+            strength = 10
             attacker_name = definition.name
-        strength = attacker.strength if isinstance(attacker, PlayerState) else 0
-        strength_ring_bonus = attacker.ring_bonus("strength") if isinstance(attacker, PlayerState) else 0
-        if isinstance(attacker, PlayerState):
-            damage_bonus += _strength_adjustment(STR_TO_DAMAGE, strength) + strength_ring_bonus
+        hit_bonus += _strength_adjustment(STR_TO_HIT, strength)
+        damage_bonus += _strength_adjustment(STR_TO_DAMAGE, strength)
         defender_ac = (
             defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
         )
-        # This is the shape of Rogue's swing(): d20 + level + hit modifiers vs AC.
-        strength_bonus = (
-            _strength_adjustment(STR_TO_HIT, strength) + strength_ring_bonus if isinstance(attacker, PlayerState) else 0
-        )
-        hit = self.rng.randint(1, 20) + level + hit_bonus + strength_bonus > defender_ac
-        damage = _roll(self.rng, damage_dice) + damage_bonus if hit else 0
-        damage = max(0, damage)
+        if isinstance(defender, PlayerState) or not defender.running:
+            hit_bonus += 4
+        need = 20 - level - defender_ac
+        hit = False
+        damage = 0
+        for dice in damage_dice:
+            if self.rng.randrange(20) + hit_bonus >= need:
+                hit = True
+                damage += max(0, _roll(self.rng, dice) + damage_bonus)
         if isinstance(defender, PlayerState):
             defender.hp = max(0, defender.hp - damage)
             defeated = defender.hp == 0
@@ -1264,18 +1367,26 @@ class GameState:
             defender_name = defender.definition.name
         return CombatResult(hit, damage, defeated, attacker_name, defender_name)
 
+    def _apply_player_attack(
+        self, monster: MonsterState, weapon: ItemState | None = None, *, thrown: bool = False
+    ) -> CombatResult:
+        result = self._resolve_attack(self.player, monster, weapon, thrown=thrown)
+        if result.target_defeated:
+            self.player.monsters_killed += 1
+            self.player.exp += monster.experience_reward
+            self._message(f"You defeated the {monster.name}.")
+            self._level_up_if_needed()
+            self.floor.monsters.remove(monster)
+        if monster.asleep:
+            monster.asleep = False
+        return result
+
     def _player_attack(self, monster: MonsterState) -> CommandResult:
-        result = self._resolve_attack(self.player, monster)
+        result = self._apply_player_attack(monster)
         if result.hit:
             message = f"You hit the {monster.name} for {result.damage} damage."
         else:
             message = f"You miss the {monster.name}."
-        if result.target_defeated:
-            self.player.monsters_killed += 1
-            self.player.exp += monster.definition.exp
-            self._message(f"You defeated the {monster.name}.")
-            self._level_up_if_needed()
-            self.floor.monsters.remove(monster)
         self._message(message)
         self._finish_turn()
         return self._result(True, "", True, result)
@@ -1308,6 +1419,8 @@ class GameState:
         for monster in list(self.floor.monsters):
             if monster.hp <= 0 or self.status != GameStatus.PLAYING:
                 continue
+            if monster.asleep:
+                continue
             distance = max(abs(monster.x - self.player.x), abs(monster.y - self.player.y))
             if distance <= 1:
                 self._monster_attack(monster)
@@ -1324,6 +1437,7 @@ class GameState:
                 other.x == target[0] and other.y == target[1] for other in self.floor.monsters if other is not monster
             ):
                 monster.x, monster.y = target
+                monster.running = True
 
     def move(self, dx: int, dy: int) -> CommandResult:
         """Move one step, open a closed door, or attack an adjacent monster."""
@@ -1554,18 +1668,29 @@ class GameState:
             return self._result(False, "Usage: throw <item> <direction>")
         if item.id in self.player.equipped_item_ids and item.cursed:
             return self._result(False, "You cannot throw a cursed equipped item.")
-        self._remove_inventory_item(item)
         landing, hit_monster = self._trace_projectile(direction)
-        if hit_monster:
-            hit_monster.hp = max(0, hit_monster.hp - max(1, _roll(self.rng, item.damage_dice)))
-            if hit_monster.hp == 0:
-                self.floor.monsters.remove(hit_monster)
-                self.player.monsters_killed += 1
-        if hit_monster is None:
-            item.position = landing
-            self.floor.items.append(item)
+        result = self._apply_player_attack(hit_monster, item, thrown=True) if hit_monster else None
+        if item.quantity > 1:
+            item.quantity -= 1
+            projectile = ItemState.from_dict(item.to_dict())
+            projectile.id = self._next_item_id
+            projectile.quantity = 1
+            self._next_item_id += 1
+        else:
+            self._remove_inventory_item(item)
+            projectile = item
+        if not result or not result.hit:
+            projectile.position = landing
+            self.floor.items.append(projectile)
         self._finish_turn()
-        return self._result(True, f"You throw the {item.display_name}.", True)
+        message = f"You throw the {item.display_name}."
+        if result and hit_monster:
+            message += (
+                f" It hits the {hit_monster.name} for {result.damage} damage."
+                if result.hit
+                else f" It misses the {hit_monster.name}."
+            )
+        return self._result(True, message, True, result)
 
     def zap(self, value: Any, direction: Position | None = None) -> CommandResult:
         """Use one charge from a wand in the given direction."""
