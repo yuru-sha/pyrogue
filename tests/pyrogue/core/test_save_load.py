@@ -36,7 +36,7 @@ def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
     assert manager.save_game_state(GameState(1234).to_dict())
     manager.checksum_file.unlink()
     payload = json.loads(manager.save_file.read_text(encoding="utf-8"))
-    payload["spec_version"] = "0.2.0"
+    payload["spec_version"] = "0.3.0"
     manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
 
     assert manager.load_game_state() is None
@@ -84,7 +84,7 @@ def test_save_rejects_legacy_shapes_without_touching_existing_save(tmp_path, pay
         {"player": {}},
         {"spec_version": None},
         {"spec_version": 0.3},
-        {"spec_version": "0.2.0"},
+        {"spec_version": "0.3.0"},
         {"version": GAME_VERSION},
     ],
 )
@@ -107,7 +107,7 @@ def test_save_rejects_invalid_spec_version_without_touching_existing_save(tmp_pa
         {"player": {}},
         {"spec_version": None},
         {"spec_version": 0.3},
-        {"spec_version": "0.2.0"},
+        {"spec_version": "0.3.0"},
         {"version": GAME_VERSION},
     ],
 )
@@ -154,7 +154,7 @@ def test_save_and_load_reject_current_version_without_required_shape(tmp_path, p
 def test_load_invalid_save_does_not_delete_files_when_metadata_marks_dead(tmp_path):
     """不正なセーブは死亡メタデータがあってもファイルを削除しない。"""
     manager = SaveManager(tmp_path)
-    manager.save_file.write_text(json.dumps({"spec_version": "0.2.0"}), encoding="utf-8")
+    manager.save_file.write_text(json.dumps({"spec_version": "0.3.0"}), encoding="utf-8")
     manager.metadata_file.write_text(json.dumps({"is_alive": False}), encoding="utf-8")
     before_save = manager.save_file.read_bytes()
     before_metadata = manager.metadata_file.read_bytes()
@@ -167,7 +167,7 @@ def test_load_invalid_save_does_not_delete_files_when_metadata_marks_dead(tmp_pa
 def test_checksum_failure_sets_error_for_invalid_save(tmp_path):
     """チェックサム不一致の不正セーブはファイルなしと区別できる。"""
     manager = SaveManager(tmp_path)
-    manager.save_file.write_text(json.dumps({"spec_version": "0.2.0"}), encoding="utf-8")
+    manager.save_file.write_text(json.dumps({"spec_version": "0.3.0"}), encoding="utf-8")
     manager.checksum_file.write_text("invalid checksum", encoding="utf-8")
     before = manager.save_file.read_bytes()
 

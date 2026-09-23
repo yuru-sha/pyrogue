@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.0"
+GAME_VERSION = "0.3.1"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26

@@ -237,12 +237,12 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
 
 def test_old_save_version_is_rejected() -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.2.0"
+    game["spec_version"] = "0.3.0"
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.0"
+    assert GAME_VERSION == "0.3.1"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
