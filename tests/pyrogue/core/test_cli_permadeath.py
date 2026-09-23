@@ -8,8 +8,8 @@ from pyrogue.core.save_manager import SaveManager
 
 
 def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
-    engine = CLIEngine(seed=1234, spec_mode=True)
-    game = engine.spec_game
+    engine = CLIEngine(seed=1234)
+    game = engine.game_state
     game.player.gold = 7
     game.player.monsters_killed = 2
     game.player.deepest_floor = 4

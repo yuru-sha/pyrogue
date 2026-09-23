@@ -1,224 +1,21 @@
-"""
-CLI ゲームエンジンモジュール。
-
-このモジュールはコマンドラインインターフェースでゲームを実行するための
-エンジンを提供します。主にテストと自動化のために使用されます。
-
-主要機能:
-    - コマンドライン入力の解析
-    - ゲーム状態の表示
-    - 非対話型のゲーム実行
-    - 自動テスト用のインターフェース
-
-Example:
--------
-    $ python -m pyrogue.main --cli
-    > move north
-    > attack goblin
-    > quit
-
-"""
+"""CLI adapter for the canonical game state."""
 
 from __future__ import annotations
 
-import sys
-
-from pyrogue.core.command_handler import CommandContext, CommonCommandHandler
-from pyrogue.core.game_logic import GameLogic
-from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import GameState, GameStatus, ItemKind
+from pyrogue.core.rogue_game import GameState, GameStatus
 from pyrogue.core.save_manager import SaveManager
 from pyrogue.presentation.display_renderer import render_ascii
-from pyrogue.utils import game_logger
-
-
-class CLICommandContext(CommandContext):
-    """CLI用のコマンドコンテキスト実装。"""
-
-    def __init__(self, engine: CLIEngine):
-        self.engine = engine
-
-    @property
-    def game_logic(self) -> GameLogic:
-        """ゲームロジックへのアクセス。"""
-        return self.engine.game_logic
-
-    @property
-    def player(self):
-        """プレイヤーへのアクセス。"""
-        return self.engine.game_logic.player
-
-    @property
-    def dungeon_manager(self):
-        """ダンジョンマネージャーへのアクセス。"""
-        return self.engine.game_logic.dungeon_manager
-
-    def add_message(self, message: str) -> None:
-        """メッセージの追加。"""
-        # GameLogicのmessage_logにも追加
-        self.engine.game_logic.add_message(message)
-        print(message)
-
-    def display_player_status(self) -> None:
-        """プレイヤーステータスの表示。"""
-        self.engine.display_player_status()
-
-    def display_inventory(self) -> None:
-        """インベントリの表示。"""
-        self.engine.display_inventory()
-
-    def display_game_state(self) -> None:
-        """ゲーム状態の表示。"""
-        self.engine.display_game_state()
 
 
 class CLIEngine:
-    """
-    コマンドラインインターフェース用のゲームエンジン。
+    """Run the shared GameState command API in a terminal."""
 
-    テキストベースのコマンドでゲームを操作できる簡素化されたエンジン。
-    主に自動テスト、デバッグ、および非対話型の実行に使用されます。
-
-    サポートされるコマンド:
-        - move <direction>: 移動（north, south, east, west）
-        - attack [target]: 攻撃
-        - use <item>: アイテム使用
-        - inventory: インベントリ表示
-        - status: プレイヤー状態表示
-        - look: 現在の状況表示
-        - help: コマンド一覧表示
-        - quit: ゲーム終了
-
-    Attributes
-    ----------
-        state: 現在のゲーム状態
-        running: ゲームループ実行フラグ
-        game_screen: ゲーム画面インスタンス
-
-    """
-
-    def __init__(self, seed: int | None = None, spec_mode: bool = False) -> None:
-        """CLIエンジンを初期化。"""
-        self.state = GameStates.PLAYERS_TURN
-        self.running = False
-        self.spec_game = GameState(seed) if (spec_mode or seed is not None) else None
-        if self.spec_game is not None:
-            self.game_logic = None
-            self.command_context = None
-            self.command_handler = None
-            return
-        self.game_logic = GameLogic(None)  # CLIモードではエンジンはNone
-
-        # 共通コマンドハンドラーを初期化
-        self.command_context = CLICommandContext(self)
-        self.command_handler = CommonCommandHandler(self.command_context)
-        game_logger.debug("CLI engine initialized")
-
-    def _print_legacy_victory(self) -> None:
-        """Print the legacy CLI victory summary and stop the loop."""
-        print("\n🎉 VICTORY! 🎉")
-        print("You have escaped with the Amulet of Yendor!")
-        print(f"Deepest Floor: B{self.game_logic.player.deepest_floor}F")
-        print("You win the game!")
+    def __init__(self, seed: int | None = None) -> None:
+        self.game_state = GameState(seed)
         self.running = False
 
     def run(self) -> None:
-        """
-        CLIメインループを実行。
-
-        標準入力からコマンドを読み取り、処理し、結果を表示します。
-        """
-        if self.spec_game is not None:
-            self._run_spec()
-            return
-
-        self.running = True
-        print("PyRogue CLI Mode - Type 'help' for commands")
-
-        # 新しいゲームを開始
-        self.game_logic.setup_new_game()
-        self.display_game_state()
-
-        try:
-            while self.running:
-                try:
-                    command = input("> ").strip()
-                    if not command:
-                        continue
-
-                    result = self.process_command(command)
-                    if result is False:
-                        self.running = False
-                        break
-
-                    # ゲーム状態を更新
-                    self.update_game_state()
-
-                except KeyboardInterrupt:
-                    print("\nGame interrupted by user")
-                    self.running = False
-                    break
-                except EOFError:
-                    print("\nEnd of input reached")
-                    self.running = False
-                    break
-
-        except Exception as e:
-            game_logger.error(f"Fatal error in CLI loop: {e}")
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-
-    def process_command(self, command: str) -> bool | None:
-        """
-        コマンドを処理し、適切なアクションを実行。
-
-        Args:
-        ----
-            command: ユーザーが入力したコマンド文字列
-
-        Returns:
-        -------
-            False if game should quit, True if game should continue, None for invalid commands
-
-        """
-        if self.spec_game is not None:
-            return self._process_spec_command(command)
-
-        parts = command.lower().split()
-        if not parts:
-            return None
-
-        cmd = parts[0]
-        args = parts[1:] if len(parts) > 1 else []
-
-        # 共通コマンドハンドラーを使用
-        result = self.command_handler.handle_command(cmd, args)
-
-        if result.message:
-            print(result.message)
-
-        # 階段コマンド成功後の勝利チェック
-        if (
-            result.success
-            and cmd == "stairs"
-            and len(args) > 0
-            and args[0].lower() in ["up", "u"]
-            and self.game_logic.check_victory()
-        ):
-            self._print_legacy_victory()
-            return True
-
-        # コマンド処理後にメッセージを表示（CommonCommandHandlerで追加されたメッセージ）
-        if result.success:
-            self.display_recent_messages()
-
-        if result.should_quit or not result.success:
-            return False
-
-        return True
-
-    def _run_spec(self) -> None:
-        """Run the specification-driven CLI loop."""
+        """Read and execute commands until the game ends or input closes."""
         self.running = True
         print("PyRogue CLI Mode - Type '?' for help")
         self.display_game_state()
@@ -231,14 +28,16 @@ class CLIEngine:
             if command:
                 self.process_command(command)
 
-    def _process_spec_command(self, command: str) -> bool:
-        """Execute the same command map used by the GUI."""
+    def process_command(self, command: str) -> bool:
+        """Execute one canonical game command and print its result."""
         parts = command.split()
         if not parts:
             return True
+
         raw_command = parts[0]
         game_command = raw_command if len(raw_command) == 1 else raw_command.lower()
         args = parts[1:]
+
         if game_command.lower() == "load":
             save_manager = SaveManager()
             data = save_manager.load_game_state()
@@ -249,585 +48,46 @@ class CLIEngine:
                     print(f"Failed to load save data: {save_manager.last_error}")
                 return True
             try:
-                self.spec_game = GameState.from_dict(data)
+                self.game_state = GameState.from_dict(data)
                 print("Game loaded successfully.")
             except (TypeError, ValueError):
                 print("Save file is not compatible with PyRogue 0.3.0.")
                 return True
             self.display_game_state()
             return True
+
         if game_command in {"S", "save"}:
-            result = self.spec_game.execute("save")
-            if result.success and SaveManager().save_game_state(self.spec_game.to_dict()):
+            result = self.game_state.execute("save")
+            if result.success and SaveManager().save_game_state(self.game_state.to_dict()):
                 print("Game saved successfully.")
             else:
                 print("Failed to save game.")
             return True
-        result = self.spec_game.execute(game_command, args)
+
+        result = self.game_state.execute(game_command, args)
         if result.message:
             print(result.message)
         if result.success:
             self.display_game_state()
+
         if result.state == GameStatus.DEAD:
-            summary = SaveManager().finalize_death(self.spec_game)
-            if summary is None:
-                return True
-            print("GAME OVER")
-            print(f"Score: {summary['score']}")
-            print(f"Deepest floor: B{summary['deepest_floor']}F")
-            print(f"Cause: {summary['cause']}")
+            summary = SaveManager().finalize_death(self.game_state)
+            if summary is not None:
+                print("GAME OVER")
+                print(f"Score: {summary['score']}")
+                print(f"Deepest floor: B{summary['deepest_floor']}F")
+                print(f"Cause: {summary['cause']}")
         elif result.state == GameStatus.VICTORY:
-            summary = result.data or self.spec_game.victory_summary
+            summary = result.data or self.game_state.victory_summary
             print("VICTORY!")
             print(f"Score: {summary['score']}")
             print(f"Deepest floor: B{summary['deepest_floor']}F")
+
         if result.state in {GameStatus.QUIT, GameStatus.DEAD, GameStatus.VICTORY}:
             self.running = False
         return True
 
-    def handle_debug_command(self, args: list[str]) -> bool:
-        """デバッグコマンドを処理。"""
-        if not args:
-            return False
-
-        debug_cmd = args[0].lower()
-
-        if debug_cmd == "damage" and len(args) > 1:
-            try:
-                damage = int(args[1])
-                self.game_logic.player.hp = max(0, self.game_logic.player.hp - damage)
-                msg = f"Player took {damage} damage. HP: {self.game_logic.player.hp}/{self.game_logic.player.max_hp}"
-                self.game_logic.add_message(msg)
-                print(msg)
-
-                # 死亡チェック
-                if self.game_logic.player.hp <= 0:
-                    self.game_logic.add_message("You have died!")
-                    print("You have died!")
-                    return False
-                return True
-            except ValueError:
-                print("Invalid damage value")
-                return False
-        elif debug_cmd == "hp" and len(args) > 1:
-            try:
-                hp = int(args[1])
-                self.game_logic.player.hp = max(0, min(hp, self.game_logic.player.max_hp))
-                msg = f"Player HP set to {self.game_logic.player.hp}"
-                self.game_logic.add_message(msg)
-                print(msg)
-
-                # 死亡チェック
-                if self.game_logic.player.hp <= 0:
-                    self.game_logic.add_message("You have died!")
-                    print("You have died!")
-                    return False
-                return True
-            except ValueError:
-                print("Invalid HP value")
-                return False
-        elif debug_cmd == "kill" and len(args) > 1:
-            try:
-                count = int(args[1])
-                self.game_logic.player.monsters_killed += count
-                msg = f"Added {count} monster kills. Total: {self.game_logic.player.monsters_killed}"
-                self.game_logic.add_message(msg)
-                print(msg)
-                return True
-            except ValueError:
-                print("Invalid kill count value")
-                return False
-        elif debug_cmd == "spawn":
-            # 周囲にモンスターを生成
-            floor_data = self.game_logic.get_current_floor_data()
-            if floor_data and hasattr(floor_data, "monster_spawner"):
-                from pyrogue.entities.actors.monster import Monster
-
-                x = self.game_logic.player.x + 1
-                y = self.game_logic.player.y
-                test_monster = Monster(
-                    x=x,
-                    y=y,
-                    name="Test Bat",
-                    char="b",
-                    hp=4,
-                    max_hp=4,
-                    attack=2,
-                    defense=1,
-                    level=1,
-                    exp_value=10,
-                    view_range=3,
-                    color=(255, 255, 255),
-                )
-                floor_data.monster_spawner.monsters.append(test_monster)
-                msg = f"Spawned Test Bat at ({x}, {y})"
-                self.game_logic.add_message(msg)
-                print(msg)
-                return True
-            msg = "Could not spawn monster"
-            self.game_logic.add_message(msg)
-            print(msg)
-            return False
-        else:
-            print("Debug commands: 'debug damage <amount>', 'debug hp <value>', 'debug kill <count>', 'debug spawn'")
-            return False
-
-    def handle_move(self, direction: str) -> bool:
-        """
-        移動コマンドを処理。
-
-        Args:
-        ----
-            direction: 移動方向（north, south, east, west）
-
-        Returns:
-        -------
-            コマンドが成功したかどうか
-
-        """
-        if self.spec_game is not None:
-            result = self.spec_game.execute("move", [direction])
-            if result.message:
-                print(result.message)
-            return result.success
-
-        direction_map = {
-            "north": (0, -1),
-            "south": (0, 1),
-            "east": (1, 0),
-            "west": (-1, 0),
-            "n": (0, -1),
-            "s": (0, 1),
-            "e": (1, 0),
-            "w": (-1, 0),
-        }
-
-        if direction not in direction_map:
-            print(f"Invalid direction: {direction}")
-            return False
-
-        dx, dy = direction_map[direction]
-
-        try:
-            # GameLogicの移動処理を呼び出し
-            success = self.game_logic.handle_player_move(dx, dy)
-            if success:
-                print(f"Moved {direction}")
-                self.display_game_state()
-                # メッセージを表示
-                self.display_recent_messages()
-            else:
-                print("Cannot move in that direction")
-            return success
-        except Exception as e:
-            print(f"Error moving: {e}")
-            return False
-
-    def handle_attack(self, _target: str | None = None) -> bool:
-        """
-        攻撃コマンドを処理。
-
-        Args:
-        ----
-            _target: 攻撃対象（省略可能、現在未使用）
-
-        Returns:
-        -------
-            コマンドが成功したかどうか
-
-        """
-        if self.spec_game is not None:
-            result = self.spec_game.execute("attack", [_target] if _target else [])
-            if result.message:
-                print(result.message)
-            return result.success
-        try:
-            # 隣接する敵を攻撃
-            player = self.game_logic.player
-            current_floor = self.game_logic.get_current_floor_data()
-
-            # 隣接する8方向をチェック
-            for dy in [-1, 0, 1]:
-                for dx in [-1, 0, 1]:
-                    if dx == 0 and dy == 0:
-                        continue
-
-                    x = player.x + dx
-                    y = player.y + dy
-
-                    monster = current_floor.monster_spawner.get_monster_at(x, y)
-                    if monster:
-                        self.game_logic.handle_combat()
-                        print(f"Attacked {monster.name}!")
-                        self.display_game_state()
-                        return True
-
-            print("No enemy to attack")
-            return False
-        except Exception as e:
-            print(f"Error attacking: {e}")
-            return False
-
-    def handle_use_item(self, item_name: str) -> bool:
-        """
-        アイテム使用コマンドを処理。
-
-        Args:
-        ----
-            item_name: 使用するアイテム名
-
-        Returns:
-        -------
-            コマンドが成功したかどうか
-
-        """
-        if self.spec_game is not None:
-            item = self.spec_game._find_item(item_name)
-            actions = {
-                ItemKind.FOOD: "eat",
-                ItemKind.POTION: "quaff",
-                ItemKind.SCROLL: "read",
-            }
-            action = actions.get(item.kind) if item else None
-            result = self.spec_game.execute(action, [item_name]) if action else None
-            if result and result.message:
-                print(result.message)
-            return bool(result and result.success)
-        try:
-            # アイテム使用処理
-            inventory = self.game_logic.inventory
-
-            # インベントリから該当するアイテムを検索
-            for item in inventory.items:
-                if item.name.lower() == item_name.lower():
-                    # 新しいeffectシステムを使用
-                    context = type(
-                        "EffectContext",
-                        (),
-                        {
-                            "player": self.game_logic.player,
-                            "dungeon": self.game_logic.get_current_floor_data(),
-                            "game_screen": self,
-                        },
-                    )()
-
-                    success = self.game_logic.player.use_item(item, context=context)
-                    if success:
-                        print(f"Used {item.name}")
-                        self.display_game_state()
-                        return True
-                    print(f"Cannot use {item.name}")
-                    return False
-
-            print(f"You don't have {item_name}")
-            return False
-        except Exception as e:
-            print(f"Error using item: {e}")
-            return False
-
-    def handle_get_item(self) -> bool:
-        """
-        アイテム取得コマンドを処理。
-
-        Returns
-        -------
-            コマンドが成功したかどうか
-
-        """
-        if self.spec_game is not None:
-            result = self.spec_game.execute("pickup")
-            if result.message:
-                print(result.message)
-            return result.success
-        try:
-            message = self.game_logic.handle_get_item()
-            if message:
-                print(message)
-                self.display_game_state()
-            else:
-                print("There is nothing here to pick up.")
-            return message is not None
-        except Exception as e:
-            print(f"Error getting item: {e}")
-            return False
-
-    def handle_stairs(self, direction: str) -> bool:
-        """
-        階段使用コマンドを処理。
-
-        Args:
-        ----
-            direction: 階段の方向（up/down）
-
-        Returns:
-        -------
-            コマンドが成功したかどうか
-
-        """
-        if self.spec_game is not None:
-            action = "ascend" if direction.lower() in {"up", "u"} else "descend"
-            result = self.spec_game.execute(action)
-            if result.message:
-                print(result.message)
-            return result.success
-        try:
-            if direction.lower() in ["up", "u"]:
-                success = self.game_logic.ascend_stairs()
-            elif direction.lower() in ["down", "d"]:
-                success = self.game_logic.descend_stairs()
-            else:
-                print("Invalid direction. Use 'up' or 'down'")
-                return False
-
-            if success:
-                print(f"Used stairs {direction}")
-
-                # 勝利条件チェック（B1Fから上に脱出してアミュレットを持っている場合）
-                if (
-                    direction.lower() in ["up", "u"]
-                    and self.game_logic.dungeon_manager.current_floor == 1
-                    and self.game_logic.check_victory()
-                ):
-                    self._print_legacy_victory()
-                    return success
-
-                self.display_game_state()
-                self.display_recent_messages()
-            else:
-                print(f"Cannot use stairs {direction}")
-            return success
-        except Exception as e:
-            print(f"Error using stairs: {e}")
-            return False
-
-    def display_recent_messages(self) -> None:
-        """最近のメッセージを表示。"""
-        if self.spec_game is not None:
-            for message in self.spec_game.messages[-3:]:
-                print(f"  {message}")
-            return
-        try:
-            if self.game_logic.message_log:
-                recent_messages = self.game_logic.message_log[-3:]  # 最新の3つ
-                if recent_messages:
-                    print("\nMessages:")
-                    for msg in recent_messages:
-                        print(f"  {msg}")
-        except Exception as e:
-            print(f"Error displaying messages: {e}")
-
     def display_game_state(self) -> None:
-        """現在のゲーム状態を表示。"""
-        if self.spec_game is not None:
-            print(render_ascii(self.spec_game.display_cells(), self.spec_game.width, self.spec_game.height))
-            print(self.spec_game.status_text())
-            return
-        try:
-            if not self.game_logic.player:
-                print("Game not initialized")
-                return
-
-            player = self.game_logic.player
-
-            print("\n" + "=" * 50)
-            print(f"Floor: B{self.game_logic.dungeon_manager.current_floor}F")
-            print(f"Player: ({player.x}, {player.y})")
-            print(f"HP: {player.hp}/{player.max_hp}")
-            print(f"Level: {player.level}")
-            print(f"Gold: {player.gold}")
-            print(f"Hunger: {player.hunger}%")
-
-            # 周囲の情報を表示
-            self.display_surroundings()
-
-        except Exception as e:
-            print(f"Error displaying game state: {e}")
-
-    def display_surroundings(self) -> None:
-        """プレイヤーの周囲の情報を表示。"""
-        try:
-            if not self.game_logic.player:
-                return
-
-            player = self.game_logic.player
-            floor_data = self.game_logic.get_current_floor_data()
-
-            print("\nSurroundings:")
-
-            # 周囲のタイルを確認
-            for dy in range(-1, 2):
-                for dx in range(-1, 2):
-                    if dx == 0 and dy == 0:
-                        continue
-
-                    x, y = player.x + dx, player.y + dy
-                    if 0 <= y < floor_data.tiles.shape[0] and 0 <= x < floor_data.tiles.shape[1]:
-                        tile = floor_data.tiles[y, x]
-                        direction = self.get_direction_name(dx, dy)
-                        tile_name = getattr(tile, "name", tile.__class__.__name__)
-                        print(f"  {direction}: {tile_name}")
-
-            # 周囲の敵を表示
-            nearby_enemies = []
-            for monster in floor_data.monster_spawner.monsters:
-                distance = abs(monster.x - player.x) + abs(monster.y - player.y)
-                if distance <= 2:  # 隣接しているか近く
-                    nearby_enemies.append(monster)
-
-            if nearby_enemies:
-                print("\nNearby enemies:")
-                for enemy in nearby_enemies:
-                    print(f"  {enemy.name} at ({enemy.x}, {enemy.y}) - HP: {enemy.hp}/{enemy.max_hp}")
-
-            # 周囲のアイテムを表示
-            nearby_items = []
-            for item in floor_data.item_spawner.items:
-                distance = abs(item.x - player.x) + abs(item.y - player.y)
-                if distance <= 1:  # 隣接または同じ位置
-                    nearby_items.append(item)
-
-            if nearby_items:
-                print("\nNearby items:")
-                for item in nearby_items:
-                    if item.x == player.x and item.y == player.y:
-                        print(f"  {item.name} (here - type 'get' to pick up)")
-                    else:
-                        print(f"  {item.name} at ({item.x}, {item.y})")
-
-        except Exception as e:
-            print(f"Error displaying surroundings: {e}")
-
-    def get_direction_name(self, dx: int, dy: int) -> str:
-        """座標の差から方向名を取得。"""
-        if dx == 0 and dy == -1:
-            return "North"
-        if dx == 0 and dy == 1:
-            return "South"
-        if dx == 1 and dy == 0:
-            return "East"
-        if dx == -1 and dy == 0:
-            return "West"
-        if dx == -1 and dy == -1:
-            return "Northwest"
-        if dx == 1 and dy == -1:
-            return "Northeast"
-        if dx == -1 and dy == 1:
-            return "Southwest"
-        if dx == 1 and dy == 1:
-            return "Southeast"
-        return "Unknown"
-
-    def display_player_status(self) -> None:
-        """プレイヤーの詳細ステータスを表示。"""
-        if self.spec_game is not None:
-            print(self.spec_game.status_text())
-            return
-        try:
-            if not self.game_logic.player:
-                print("Game not initialized")
-                return
-
-            player = self.game_logic.player
-
-            print("\n" + "=" * 30)
-            print("PLAYER STATUS")
-            print("=" * 30)
-            print(f"Level: {player.level}")
-            print(f"HP: {player.hp}/{player.max_hp}")
-            print(f"Attack: {player.get_attack()}")
-            print(f"Defense: {player.get_defense()}")
-            print(f"Gold: {player.gold}")
-            print(f"Hunger: {player.hunger}%")
-            print(f"Position: ({player.x}, {player.y})")
-            print(f"EXP: {player.exp}")
-            print(f"Monsters Killed: {player.monsters_killed}")
-            print(f"Deepest Floor: {player.deepest_floor}")
-            print(f"Turns Played: {player.turns_played}")
-            print(f"Score: {player.calculate_score()}")
-            print(f"Has Amulet: {'Yes' if getattr(player, 'has_amulet', False) else 'No'}")
-
-            # 現在の足下のタイルを表示
-            floor_data = self.game_logic.get_current_floor_data()
-            if floor_data:
-                current_tile = floor_data.tiles[player.y, player.x]
-                print(f"Current tile: {current_tile.__class__.__name__}")
-                if hasattr(current_tile, "char"):
-                    print(f"Tile char: '{current_tile.char}'")
-
-        except Exception as e:
-            print(f"Error displaying player status: {e}")
-
-    def display_inventory(self) -> None:
-        """インベントリを表示。"""
-        if self.spec_game is not None:
-            print(self.spec_game.execute("inventory").message)
-            return
-        try:
-            if not self.game_logic.player:
-                print("Game not initialized")
-                return
-
-            inventory = self.game_logic.inventory
-
-            print("\n" + "=" * 30)
-            print("INVENTORY")
-            print("=" * 30)
-
-            if not inventory.items:
-                print("Inventory is empty")
-            else:
-                for i, item in enumerate(inventory.items):
-                    equipped_str = ""
-                    if hasattr(item, "item_type"):
-                        if inventory.is_equipped(item):
-                            slot = inventory.get_equipped_slot(item)
-                            if slot == "ring_left":
-                                equipped_str = " (E-L)"
-                            elif slot == "ring_right":
-                                equipped_str = " (E-R)"
-                            else:
-                                equipped_str = " (E)"
-                    print(f"{i + 1}. {item.name}{equipped_str}")
-
-            # 装備情報を表示
-            equipped = inventory.equipped
-            print("\nEquipment:")
-            print(f"  Weapon: {equipped['weapon'].name if equipped['weapon'] else 'None'}")
-            print(f"  Armor: {equipped['armor'].name if equipped['armor'] else 'None'}")
-            print(f"  Ring(L): {equipped['ring_left'].name if equipped['ring_left'] else 'None'}")
-            print(f"  Ring(R): {equipped['ring_right'].name if equipped['ring_right'] else 'None'}")
-
-        except Exception as e:
-            print(f"Error displaying inventory: {e}")
-
-    def update_game_state(self) -> None:
-        """ゲーム状態を更新。"""
-        if self.spec_game is not None:
-            self.running = self.spec_game.status == GameStatus.PLAYING
-            return
-        try:
-            # ゲームオーバー条件のみをチェック
-            # 勝利条件は ascend_stairs メソッド内でのみチェックする
-            if self.game_logic.check_player_death():
-                print("\nGAME OVER!")
-                print(f"You died on floor B{self.game_logic.dungeon_manager.current_floor}F.")
-                self.running = False
-
-        except Exception as e:
-            print(f"Error updating game state: {e}")
-
-    def show_help(self) -> None:
-        """利用可能なコマンドを表示。"""
-        if self.spec_game is not None:
-            print(self.spec_game.execute("help").message)
-            return
-        print("\nAvailable Commands:")
-        print("  move <direction>  - Move player (north/south/east/west/n/s/e/w)")
-        print("  get               - Pick up item at current position (, key)")
-        print("  stairs <up/down>  - Use stairs (up/down)")
-        print("  inventory         - Show inventory")
-        print("  status            - Show player status")
-        print("  look              - Show current surroundings")
-        print("  help              - Show this help message")
-        print("  quit/exit         - Exit the game")
-        print()
+        """Print the canonical map and player status."""
+        print(render_ascii(self.game_state.display_cells(), self.game_state.width, self.game_state.height))
+        print(self.game_state.status_text())

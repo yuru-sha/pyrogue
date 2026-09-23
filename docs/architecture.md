@@ -40,8 +40,8 @@ CLI文字レンダラー / TCOD GameRenderer (文字・色)
 - `pyrogue.ui.components.game_renderer`: `DisplayCell` を画面へ描画。
 - `pyrogue.core.save_manager`: JSONセーブ、チェックサム、バージョン拒否、パーマデス検査。死亡時は `finalize_death` をCLI/GUIで共有する。
 
-旧来のTCODゲームモジュールは既存利用者との互換性のため残していますが、新しいCLI起動、
-seed指定、GUIの描画・入力・保存はcanonical経路を使用します。
+旧来のTCODゲームモジュールは既存利用者との互換性のため残しています。CLIEngineの全初期化経路と
+GUIの描画・入力・保存はcanonical経路を使用し、旧GameLogicのCLIプレイ経路はありません。
 GUIのインベントリも `GameState.player.inventory` を表示し、投擲・杖の使用は選択した
 アイテムIDを `GameState.execute` に渡します。方向が必要な操作だけ方向も渡し、light の杖は
 方向を要求しません。選択途中の情報だけをUIが保持します。

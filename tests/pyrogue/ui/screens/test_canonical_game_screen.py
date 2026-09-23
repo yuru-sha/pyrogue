@@ -69,13 +69,13 @@ def _walkable_direction(game: GameState) -> tuple[str, tuple[int, int]]:
 
 
 def test_headless_gui_key_execution_matches_cli() -> None:
-    cli = CLIEngine(seed=1234, spec_mode=True)
+    cli = CLIEngine(seed=1234)
     game_screen = GameScreen(None, seed=1234)
 
     assert game_screen.handle_key(_key(".")) is None
     assert cli.process_command(".") is True
 
-    assert game_screen.rogue_game.to_dict() == cli.spec_game.to_dict()
+    assert game_screen.rogue_game.to_dict() == cli.game_state.to_dict()
 
 
 @pytest.mark.parametrize(
@@ -240,10 +240,10 @@ def test_headless_gui_lowercase_throw_without_text_starts_item_selection() -> No
 
 
 def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> None:
-    cli = CLIEngine(seed=1234, spec_mode=True)
+    cli = CLIEngine(seed=1234)
     gui = GameScreen(None, seed=1234)
 
-    for game in (cli.spec_game, gui.rogue_game):
+    for game in (cli.game_state, gui.rogue_game):
         game.floor.monsters.clear()
         direction, position = _walkable_direction(game)
         wand = ItemState(1000, ItemKind.WAND, "test wand", effect="magic_missile", charges=2)
@@ -252,18 +252,18 @@ def test_headless_gui_and_cli_select_the_same_item_and_target_direction() -> Non
 
     direction, _ = _walkable_direction(gui.rogue_game)
     gui_result = gui.rogue_game.execute("zap", [1000, direction])
-    cli_result = cli.spec_game.execute("zap", [1000, direction])
+    cli_result = cli.game_state.execute("zap", [1000, direction])
 
     assert gui_result == cli_result
-    assert gui.rogue_game.to_dict() == cli.spec_game.to_dict()
+    assert gui.rogue_game.to_dict() == cli.game_state.to_dict()
 
 
 def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None:
-    cli = CLIEngine(seed=1234, spec_mode=True)
+    cli = CLIEngine(seed=1234)
     gui = GameScreen(None, seed=1234)
     inventory = InventoryScreen(gui)
 
-    for game in (cli.spec_game, gui.rogue_game):
+    for game in (cli.game_state, gui.rogue_game):
         game.floor.monsters.clear()
         position = (game.player.x + 1, game.player.y)
         assert game.floor.is_walkable(position)
@@ -279,7 +279,7 @@ def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None
     assert cli.process_command("zap 1000 east") is True
 
     gui_state = gui.rogue_game.to_dict()
-    cli_state = cli.spec_game.to_dict()
+    cli_state = cli.game_state.to_dict()
     gui_state.pop("messages")
     cli_state.pop("messages")
     assert gui_state == cli_state

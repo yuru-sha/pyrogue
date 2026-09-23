@@ -8,6 +8,14 @@ from pyrogue.entities.actors.player import Player
 from pyrogue.map.tile import StairsDown
 
 
+def test_cli_defaults_to_canonical_game_state(capsys) -> None:
+    cli = CLIEngine()
+
+    assert isinstance(cli.game_state, GameState)
+    assert cli.process_command("help") is True
+    assert "hjkl yubn move" in capsys.readouterr().out
+
+
 def test_cli_victory_summary_reports_deepest_floor(capsys) -> None:
     game = GameState(1234)
 
@@ -28,25 +36,11 @@ def test_cli_victory_summary_reports_deepest_floor(capsys) -> None:
 
     game.player.position = game.floor.up_stairs
     cli = CLIEngine(seed=1234)
-    cli.spec_game = game
+    cli.game_state = game
 
     cli.process_command("ascend")
 
     assert "Deepest floor: B26F" in capsys.readouterr().out
-
-
-def test_legacy_cli_victory_summary_reports_deepest_floor(capsys) -> None:
-    cli = CLIEngine()
-    cli.game_logic = SimpleNamespace(
-        ascend_stairs=lambda: True,
-        check_victory=lambda: True,
-        dungeon_manager=SimpleNamespace(current_floor=1),
-        player=SimpleNamespace(deepest_floor=26),
-    )
-
-    assert cli.handle_stairs("up")
-
-    assert "Deepest Floor: B26F" in capsys.readouterr().out
 
 
 def test_floor_manager_updates_deepest_floor_on_descent() -> None:
