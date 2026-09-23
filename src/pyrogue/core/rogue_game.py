@@ -1679,8 +1679,9 @@ class GameState:
         else:
             self._remove_inventory_item(item)
             projectile = item
-        projectile.position = landing
-        self.floor.items.append(projectile)
+        if not result or not result.hit:
+            projectile.position = landing
+            self.floor.items.append(projectile)
         self._finish_turn()
         message = f"You throw the {item.display_name}."
         if result and hit_monster:

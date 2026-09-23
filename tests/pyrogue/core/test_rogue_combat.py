@@ -121,7 +121,29 @@ def test_execute_throw_uses_matching_launcher_and_thrown_damage() -> None:
     assert monster.hp == 95
     assert arrows in game.player.inventory
     assert arrows.quantity == 1
-    assert any(item.name == "arrows" and item.quantity == 1 for item in game.floor.items)
+    assert not any(item.name == "arrows" for item in game.floor.items)
+
+
+@pytest.mark.parametrize("target_exists", [False, True])
+def test_execute_throw_drops_projectile_when_it_does_not_hit(target_exists: bool) -> None:
+    game, monster = game_with_adjacent_monster("kestrel")
+    dagger = ItemState(906, ItemKind.WEAPON, "dagger")
+    game.player.inventory.append(dagger)
+    if target_exists:
+        monster.type_id = "ur_vile"
+        monster.running = True
+        game.player.strength = 10
+    else:
+        game.floor.monsters.remove(monster)
+
+    result = game.execute("throw", [dagger.id, "east"])
+
+    if target_exists:
+        assert result.data is not None
+        assert not result.data.hit
+    else:
+        assert result.data is None
+    assert dagger in game.floor.items
 
 
 @pytest.mark.parametrize(

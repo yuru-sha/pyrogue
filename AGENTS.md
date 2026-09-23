@@ -36,7 +36,7 @@ Codex sandbox, approval, and network permissions are configured outside the repo
 ## Project constraints
 
 - Use Python 3.12 or later and `uv.lock`. Recreate dependencies with `uv sync --locked --extra dev`.
-- Follow the v0.3.0 game requirements in `SPEC.md`. Do not add features, dependencies, or abstractions outside the specification.
+- Follow the v0.3.1 game requirements in `SPEC.md`. Do not add features, dependencies, or abstractions outside the specification.
 - The canonical rules path is `GameState` and `GameState.execute` in `src/pyrogue/core/rogue_game.py`. Do not add separate rules to the CLI or GUI.
 - Use the seeded RNG owned by the game state and preserve determinism.
 - When changing save formats or `GAME_VERSION`, update compatibility checks and tests together.
