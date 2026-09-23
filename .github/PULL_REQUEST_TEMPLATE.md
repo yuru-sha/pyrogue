@@ -1,13 +1,15 @@
-## Summary
+## Change
 
-<!-- 変更の目的と、SPEC.md の対象箇所を記載してください。 -->
+<!-- Problem, resulting behavior, and issue/acceptance criteria. -->
 
 ## Verification
 
-- [ ] `make verify`
-- [ ] 未実施の確認（GUI、実機、異なるOS、外部CIなど）を記載した
-- [ ] 秘密情報や意図しないファイルを含まないことを確認した
+<!-- Commands actually run; disclose unavailable or failing checks. -->
 
-## Feedback loop
+- Standards review:
+- Spec review:
+- Remaining risks / follow-up:
 
-<!-- 再発防止が必要な指摘は docs/feedback.md に沿って、テスト・hook・docs・Skill の更新先を記載してください。 -->
+<!-- Record a regression test or durable instruction update for a corrected
+failure. CI, mergeability, and review-thread state must refer to the current SHA.
+Use synthetic examples only; never paste private history or credentials. -->
