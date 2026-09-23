@@ -41,7 +41,7 @@ def main() -> None:
 
     try:
         if args.cli:
-            engine = CLIEngine(seed=args.seed, spec_mode=True)
+            engine = CLIEngine(seed=args.seed)
             engine.run()
         else:
             engine = Engine(seed=args.seed)

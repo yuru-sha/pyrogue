@@ -21,13 +21,13 @@ def _walkable_step(game) -> tuple[str, tuple[int, int]]:
 
 def test_cli_death_prints_summary_and_removes_save(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
-    cli = CLIEngine(seed=1234, spec_mode=True)
+    cli = CLIEngine(seed=1234)
     save_manager = SaveManager(tmp_path)
 
     assert cli.process_command("save") is True
     assert save_manager.save_file.exists()
 
-    game = cli.spec_game
+    game = cli.game_state
     game.floor.monsters.clear()
     game.player.hp = 1
     direction, position = _walkable_step(game)
@@ -45,8 +45,8 @@ def test_cli_death_prints_summary_and_removes_save(tmp_path, monkeypatch, capsys
 
 
 def test_cli_victory_prints_deepest_floor(capsys) -> None:
-    cli = CLIEngine(seed=1234, spec_mode=True)
-    game = cli.spec_game
+    cli = CLIEngine(seed=1234)
+    game = cli.game_state
     game.player.has_amulet = True
     game.player.deepest_floor = 26
     game.player.position = game.floor.up_stairs
@@ -62,20 +62,20 @@ def test_cli_victory_prints_deepest_floor(capsys) -> None:
 
 def test_cli_save_load_restores_canonical_state(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
-    cli = CLIEngine(seed=1234, spec_mode=True)
-    game = cli.spec_game
+    cli = CLIEngine(seed=1234)
+    game = cli.game_state
     game.player.hp = 7
     game.player.gold = 42
 
     assert cli.process_command("save") is True
     capsys.readouterr()
-    expected = cli.spec_game.to_dict()
+    expected = cli.game_state.to_dict()
 
     game.player.hp = 1
     game.player.gold = 999
     assert cli.process_command("load") is True
 
-    assert cli.spec_game.to_dict() == expected
+    assert cli.game_state.to_dict() == expected
 
 
 def test_cli_reports_legacy_save_incompatibility_and_preserves_file(tmp_path, monkeypatch, capsys):
@@ -85,7 +85,7 @@ def test_cli_reports_legacy_save_incompatibility_and_preserves_file(tmp_path, mo
         json.dumps({"spec_version": GAME_VERSION, "player_stats": {}, "current_floor": 1}), encoding="utf-8"
     )
     before = manager.save_file.read_bytes()
-    cli = CLIEngine(seed=1234, spec_mode=True)
+    cli = CLIEngine(seed=1234)
 
     assert cli.process_command("load") is True
 
@@ -94,7 +94,7 @@ def test_cli_reports_legacy_save_incompatibility_and_preserves_file(tmp_path, mo
 
 
 def test_cli_slash_identifies_one_unknown_item(capsys, monkeypatch) -> None:
-    cli = CLIEngine(seed=1234, spec_mode=True)
+    cli = CLIEngine(seed=1234)
     item = ItemState(
         1000,
         ItemKind.POTION,
@@ -103,16 +103,16 @@ def test_cli_slash_identifies_one_unknown_item(capsys, monkeypatch) -> None:
         identified=False,
         effect="healing",
     )
-    cli.spec_game.player.inventory.append(item)
+    cli.game_state.player.inventory.append(item)
     results = []
-    execute = cli.spec_game.execute
+    execute = cli.game_state.execute
 
     def record_execute(command, args=()):
         result = execute(command, args)
         results.append(result)
         return result
 
-    monkeypatch.setattr(cli.spec_game, "execute", record_execute)
+    monkeypatch.setattr(cli.game_state, "execute", record_execute)
 
     assert cli.process_command("/") is True
 
