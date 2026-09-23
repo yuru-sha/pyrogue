@@ -58,3 +58,7 @@ make verify
 
 See [SPEC.md](SPEC.md) for the authoritative 0.3.0 behavior and [docs/README.md](docs/README.md)
 for the current documentation map.
+
+## GitHub Release
+
+See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).

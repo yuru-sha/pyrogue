@@ -56,3 +56,7 @@ make verify
 
 仕様の正本は[SPEC.md](SPEC.md)（0.3.0）です。現在の文書一覧は[docs/README.md](docs/README.md)を
 参照してください。
+
+## GitHub Release
+
+See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).
