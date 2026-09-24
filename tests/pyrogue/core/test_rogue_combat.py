@@ -1,6 +1,19 @@
+from unittest.mock import Mock
+
 import pytest
 
-from pyrogue.core.rogue_game import GameState, ItemKind, ItemState, MonsterState, Room, Terrain
+from pyrogue.core.rogue_game import (
+    MONSTER_SPAWN_ORDER,
+    MONSTER_TYPES,
+    EntityKind,
+    GameState,
+    ItemKind,
+    ItemState,
+    MonsterState,
+    Room,
+    Terrain,
+)
+from pyrogue.presentation.display_renderer import MONSTER_GLYPHS
 
 
 def game_with_adjacent_monster(type_id: str, hp: int = 100) -> tuple[GameState, MonsterState]:
@@ -13,6 +26,106 @@ def game_with_adjacent_monster(type_id: str, hp: int = 100) -> tuple[GameState, 
     return game, monster
 
 
+def test_monster_definitions_match_rogue_54_source_table() -> None:
+    expected = {
+        "aquator": (5, 2, ((0, 0), (0, 0)), 20, 0, {"mean"}),
+        "bat": (1, 3, ((1, 2),), 1, 0, {"fly"}),
+        "centaur": (4, 4, ((1, 2), (1, 5), (1, 5)), 17, 15, set()),
+        "dragon": (10, -1, ((1, 8), (1, 8), (3, 10)), 5000, 100, {"mean"}),
+        "emu": (1, 7, ((1, 2),), 2, 0, {"mean"}),
+        "venus_flytrap": (8, 3, ((0, 0),), 80, 0, {"mean"}),
+        "griffin": (13, 2, ((4, 3), (3, 5)), 2000, 20, {"mean", "fly", "regenerate"}),
+        "hobgoblin": (1, 5, ((1, 8),), 3, 0, {"mean"}),
+        "ice_monster": (1, 9, ((0, 0),), 5, 0, set()),
+        "jabberwock": (15, 6, ((2, 12), (2, 4)), 3000, 70, set()),
+        "kestrel": (1, 7, ((1, 4),), 1, 0, {"mean", "fly"}),
+        "leprechaun": (3, 8, ((1, 1),), 10, 0, set()),
+        "medusa": (8, 2, ((3, 4), (3, 4), (2, 5)), 200, 40, {"mean"}),
+        "nymph": (3, 9, ((0, 0),), 37, 100, set()),
+        "orc": (1, 6, ((1, 8),), 5, 15, {"greed"}),
+        "phantom": (8, 3, ((4, 4),), 120, 0, {"invisible"}),
+        "quagga": (3, 3, ((1, 5), (1, 5)), 15, 0, {"mean"}),
+        "rattlesnake": (2, 3, ((1, 6),), 9, 0, {"mean"}),
+        "snake": (1, 5, ((1, 3),), 2, 0, {"mean"}),
+        "troll": (6, 4, ((1, 8), (1, 8), (2, 6)), 120, 50, {"mean", "regenerate"}),
+        "ur_vile": (7, -2, ((1, 9), (1, 9), (2, 9)), 190, 0, {"mean"}),
+        "vampire": (8, 1, ((1, 10),), 350, 20, {"mean", "regenerate"}),
+        "wraith": (5, 4, ((1, 6),), 55, 0, set()),
+        "xeroc": (7, 7, ((4, 4),), 100, 30, set()),
+        "yeti": (4, 6, ((1, 6), (1, 6)), 50, 30, set()),
+        "zombie": (2, 8, ((1, 8),), 6, 0, {"mean"}),
+    }
+
+    assert {
+        monster.id: (
+            monster.level,
+            monster.armor_class,
+            monster.damage_dice,
+            monster.exp,
+            monster.carry_chance,
+            set(monster.abilities),
+        )
+        for monster in MONSTER_TYPES
+    } == expected
+    assert tuple(monster.name for monster in MONSTER_TYPES) == (
+        "aquator",
+        "bat",
+        "centaur",
+        "dragon",
+        "emu",
+        "venus flytrap",
+        "griffin",
+        "hobgoblin",
+        "ice monster",
+        "jabberwock",
+        "kestrel",
+        "leprechaun",
+        "medusa",
+        "nymph",
+        "orc",
+        "phantom",
+        "quagga",
+        "rattlesnake",
+        "snake",
+        "troll",
+        "black unicorn",
+        "vampire",
+        "wraith",
+        "xeroc",
+        "yeti",
+        "zombie",
+    )
+    assert "".join(MONSTER_GLYPHS[monster.id] for monster in MONSTER_TYPES) == "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    assert MONSTER_SPAWN_ORDER == (
+        "kestrel",
+        "emu",
+        "bat",
+        "snake",
+        "hobgoblin",
+        "ice_monster",
+        "rattlesnake",
+        "orc",
+        "zombie",
+        "leprechaun",
+        "centaur",
+        "quagga",
+        "aquator",
+        "nymph",
+        "yeti",
+        "venus_flytrap",
+        "troll",
+        "wraith",
+        "phantom",
+        "xeroc",
+        "ur_vile",
+        "medusa",
+        "vampire",
+        "griffin",
+        "jabberwock",
+        "dragon",
+    )
+
+
 def test_spawned_monsters_use_rogue_hit_points_and_experience_values() -> None:
     game = GameState(seed=123)
 
@@ -21,6 +134,415 @@ def test_spawned_monsters_use_rogue_hit_points_and_experience_values() -> None:
         exp_bonus = monster.max_hp // (8 if monster.level == 1 else 6)
         assert monster.max_hp == monster.hp
         assert monster.experience_reward == monster.definition.exp + exp_bonus
+
+
+@pytest.mark.parametrize(
+    ("floor_number", "expected_types"),
+    [
+        (1, {"kestrel", "emu", "bat", "snake", "hobgoblin"}),
+        (26, {"ur_vile", "medusa", "vampire", "griffin", "jabberwock", "dragon"}),
+    ],
+)
+def test_spawn_selection_uses_rogue_level_window(floor_number: int, expected_types: set[str]) -> None:
+    game = GameState(seed=123)
+    game.floor.number = floor_number
+    game.floor.monsters.clear()
+    game.rng.seed(123)
+
+    game._spawn_monsters(game.floor)
+
+    assert game.floor.monsters
+    assert {monster.type_id for monster in game.floor.monsters} <= expected_types
+
+
+def test_spawn_selection_uses_rogue_random_offset() -> None:
+    game = GameState(seed=125)
+    game.floor.number = 6
+    game.floor.monsters.clear()
+    rng = Mock()
+    rng.randrange.return_value = 0
+    rng.choice.side_effect = lambda choices: choices[0]
+    rng.randint.return_value = 1
+    game.rng = rng
+
+    game._spawn_monsters(game.floor)
+
+    assert {monster.type_id for monster in game.floor.monsters} == {"kestrel"}
+
+
+def test_visible_nonmean_monster_does_not_chase_until_attacked() -> None:
+    game = GameState(seed=124)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    monster = MonsterState(900, "centaur", 10, 5, 100)
+    game.floor.monsters.append(monster)
+    for x in range(5, 11):
+        game.floor.set_tile((x, 5), Terrain.FLOOR)
+
+    game.execute("wait")
+
+    assert (monster.x, monster.y) == (10, 5)
+    assert not monster.running
+
+
+def test_pursuer_routes_around_a_blocking_monster() -> None:
+    game = GameState(seed=126)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    for y in (4, 5, 6):
+        for x in range(5, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    blocker = MonsterState(900, "centaur", 9, 5, 100)
+    pursuer = MonsterState(901, "snake", 10, 5, 100)
+    game.floor.monsters.extend((blocker, pursuer))
+
+    game.execute("wait")
+
+    assert (pursuer.x, pursuer.y) in {(9, 4), (9, 6)}
+
+
+def test_pursuer_does_not_cut_a_blocked_diagonal_corner() -> None:
+    game, monster = game_with_adjacent_monster("snake")
+    game.player.position = (6, 6)
+    monster.x, monster.y = 7, 7
+    game.floor.set_tile((6, 6), Terrain.FLOOR)
+    game.floor.set_tile((7, 7), Terrain.FLOOR)
+    game.floor.set_tile((7, 6), Terrain.WALL)
+    game.floor.set_tile((6, 7), Terrain.WALL)
+    monster.running = True
+
+    game.execute("wait")
+
+    assert game.player.hp == 100
+    assert (monster.x, monster.y) == (7, 7)
+
+
+def test_running_pursuer_tracks_player_through_a_blocked_line_of_sight() -> None:
+    game = GameState(seed=130)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    pursuer = MonsterState(907, "snake", 10, 5, 100, running=True)
+    game.floor.monsters.append(pursuer)
+    for x in range(5, 12):
+        for y in range(4, 7):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.floor.set_tile((8, 5), Terrain.WALL)
+    assert not game._can_see((pursuer.x, pursuer.y), game.player.position, pursuer.level + 4)
+
+    game.execute("wait")
+
+    assert pursuer.x < 10
+
+
+@pytest.mark.parametrize(("monster_type", "seed"), [("bat", 583), ("phantom", 43)])
+def test_random_movement_can_choose_to_stay(monster_type: str, seed: int) -> None:
+    game = GameState(seed=131)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 10)
+    monster = MonsterState(908, monster_type, 10, 10, 100, running=True)
+    game.floor.monsters.append(monster)
+    for x in range(5, 12):
+        for y in range(9, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.rng.seed(seed)
+    original_position = (monster.x, monster.y)
+
+    game.execute("wait")
+
+    assert (monster.x, monster.y) == original_position
+
+
+def test_flying_bat_gets_second_move_after_a_random_stay() -> None:
+    game = GameState(seed=132)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 10)
+    bat = MonsterState(909, "bat", 10, 10, 100, running=True)
+    game.floor.monsters.append(bat)
+    for x in range(5, 12):
+        for y in range(9, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.rng.seed(39)
+
+    game.execute("wait")
+
+    assert (bat.x, bat.y) == (9, 10)
+
+
+def test_visible_greedy_orc_chases_gold_in_players_room() -> None:
+    game = GameState(seed=129)
+    game.floor.monsters.clear()
+    game.floor.rooms = [Room(5, 5, 15, 5)]
+    game.player.position = (5, 7)
+    orc = MonsterState(905, "orc", 10, 7, 100)
+    gold = ItemState(906, ItemKind.GOLD, "gold", position=(12, 7))
+    game.floor.monsters.append(orc)
+    game.floor.items.append(gold)
+    for x in range(5, 16):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+
+    game.execute("wait")
+
+    assert (orc.x, orc.y) == (11, 7)
+    assert gold in game.floor.items
+
+
+def test_unseen_monster_with_carry_chance_takes_an_item_from_its_room(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=133)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(910, "centaur", 15, 7, 100, running=True)
+    item = ItemState(911, ItemKind.POTION, "healing potion", position=(16, 7))
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 19):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+
+    assert (centaur.x, centaur.y) == (16, 7)
+    assert item not in game.floor.items
+    assert item in centaur.carried_items
+    assert item.position is None
+    assert centaur.running
+
+    game.execute("wait")
+
+    assert (centaur.x, centaur.y) == (15, 7)
+    assert centaur.running
+
+
+def test_carrying_monster_keeps_its_floor_item_target_across_turns(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=134)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(912, "centaur", 15, 7, 100, running=True)
+    item = ItemState(913, ItemKind.POTION, "healing potion", position=(18, 7))
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 19):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+    game.execute("wait")
+
+    assert (centaur.x, centaur.y) == (17, 7)
+    assert centaur.target_item_id == item.id
+
+
+def test_monster_searches_for_carry_items_once_per_room(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=136)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(918, "centaur", 15, 7, 100, running=True)
+    item = ItemState(919, ItemKind.POTION, "healing potion", position=(18, 7))
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 20):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+    carry_rolls = iter((99, 0))
+    carry_roll_count = 0
+
+    def count_carry_rolls(stop: int, *args: int) -> int:
+        nonlocal carry_roll_count
+        if stop == 100 and not args:
+            carry_roll_count += 1
+            return next(carry_rolls)
+        return randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", count_carry_rolls)
+
+    game.execute("wait")
+    game.execute("wait")
+
+    assert carry_roll_count == 1
+    assert centaur.target_item_id is None
+
+
+def test_monster_reselects_its_carry_destination_after_entering_a_room(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    game = GameState(seed=137)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(920, "centaur", 15, 7, 100, running=True)
+    item = ItemState(921, ItemKind.POTION, "healing potion", position=(18, 7))
+    centaur.target_item_id = item.id
+    centaur.carry_search_room_index = 0
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 20):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+    monkeypatch.setattr(
+        game.rng,
+        "randrange",
+        lambda stop, *args: 99 if stop == 100 and not args else randrange(stop, *args),
+    )
+
+    game.execute("wait")
+
+    assert centaur.target_item_id is None
+    assert centaur.carry_search_room_index == 1
+
+
+def test_monsters_do_not_target_the_same_floor_item(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=135)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 16, 5)]
+    game.player.position = (5, 7)
+    first = MonsterState(914, "centaur", 15, 7, 100, running=True)
+    second = MonsterState(915, "centaur", 20, 7, 100, running=True)
+    items = [
+        ItemState(916, ItemKind.POTION, "healing potion", position=(25, 7)),
+        ItemState(917, ItemKind.SCROLL, "identify scroll", position=(26, 7)),
+    ]
+    game.floor.monsters.extend((first, second))
+    game.floor.items.extend(items)
+    for x in range(5, 28):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+
+    assert first.target_item_id is not None
+    assert second.target_item_id is not None
+    assert first.target_item_id != second.target_item_id
+
+
+@pytest.mark.parametrize("first_item_x", [15, 16], ids=["already-on-item", "moves-onto-item"])
+def test_monster_claims_next_carry_item_immediately_after_pickup(
+    first_item_x: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    game = GameState(seed=138)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 10, 5)]
+    game.player.position = (5, 7)
+    first = MonsterState(922, "centaur", 15, 7, 100, running=True)
+    second = MonsterState(923, "centaur", 20, 7, 100, running=True)
+    first_item = ItemState(924, ItemKind.POTION, "healing potion", position=(first_item_x, 7))
+    next_item = ItemState(925, ItemKind.SCROLL, "identify scroll", position=(23, 7))
+    first.target_item_id = first_item.id
+    first.carry_search_room_index = 1
+    game.floor.monsters.extend((first, second))
+    game.floor.items.extend((first_item, next_item))
+    for x in range(5, 25):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+
+    assert first_item in first.carried_items
+    assert (first.x, first.y) == (first_item_x, 7)
+    assert first.target_item_id == next_item.id
+    assert second.target_item_id is None
+
+
+def test_flying_monster_gets_rogue_second_move_when_far_from_player() -> None:
+    game = GameState(seed=125)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    monster = MonsterState(901, "kestrel", 10, 5, 100, running=True)
+    game.floor.monsters.append(monster)
+    for x in range(5, 11):
+        game.floor.set_tile((x, 5), Terrain.FLOOR)
+
+    game.execute("wait")
+
+    assert (monster.x, monster.y) == (8, 5)
+
+
+def test_bat_can_move_randomly_while_chasing() -> None:
+    game = GameState(seed=128)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 10)
+    bat = MonsterState(904, "bat", 10, 10, 100, running=True)
+    game.floor.monsters.append(bat)
+    for x in range(5, 12):
+        for y in range(9, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.rng.seed(2)
+
+    game.execute("wait")
+
+    assert (bat.x, bat.y) == (9, 11)
+
+
+def test_phantom_is_hidden_until_the_player_discovers_it() -> None:
+    game = GameState(seed=126)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    phantom = MonsterState(902, "phantom", 6, 5, 100)
+    game.floor.monsters.append(phantom)
+    game.floor.set_tile((5, 5), Terrain.FLOOR)
+    game.floor.set_tile((6, 5), Terrain.FLOOR)
+
+    assert game.display_cells()[(6, 5)].entity is None
+
+    game.execute("attack", ["east"])
+
+    assert game.display_cells()[(6, 5)].entity == EntityKind.MONSTER
+
+
+def test_xeroc_uses_an_item_disguise_until_attacked() -> None:
+    game = GameState(seed=127)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    xeroc = MonsterState(903, "xeroc", 6, 5, 100, disguise="potion")
+    game.floor.monsters.append(xeroc)
+    game.floor.set_tile((5, 5), Terrain.FLOOR)
+    game.floor.set_tile((6, 5), Terrain.FLOOR)
+
+    disguised = game.display_cells()[(6, 5)]
+    assert disguised.entity == EntityKind.ITEM
+    assert disguised.entity_variant == "potion"
+
+    game.execute("attack", ["east"])
+
+    revealed = game.display_cells()[(6, 5)]
+    assert revealed.entity == EntityKind.MONSTER
+    assert revealed.entity_variant == "xeroc"
 
 
 def test_deep_monsters_scale_hp_and_only_scale_the_hp_experience_bonus() -> None:
@@ -39,6 +561,27 @@ def test_deep_monsters_scale_hp_and_only_scale_the_hp_experience_bonus() -> None
         elif monster.level >= 7:
             exp_bonus *= 4
         assert monster.experience_reward == monster.definition.exp + exp_bonus
+
+
+def test_spawned_monsters_apply_rogue_depth_adjustments() -> None:
+    game = GameState(seed=131)
+    game.floor.number = 28
+    game.floor.monsters.clear()
+    game.rng.seed(131)
+
+    game._spawn_monsters(game.floor)
+
+    assert game.floor.monsters
+    for monster in game.floor.monsters:
+        assert monster.level == monster.definition.level + 2
+        assert monster.defense == monster.definition.armor_class - 2
+        assert 1 <= monster.max_hp <= monster.level * 8
+        exp_bonus = monster.max_hp // (8 if monster.level == 1 else 6)
+        if monster.level > 9:
+            exp_bonus *= 20
+        elif monster.level > 6:
+            exp_bonus *= 4
+        assert monster.experience_reward == monster.definition.exp + 20 + exp_bonus
 
 
 @pytest.mark.parametrize(("seed", "running", "expected_hit"), [(12, True, True), (16, True, False), (16, False, True)])
@@ -226,6 +769,22 @@ def test_sleep_and_freeze_timers_both_advance_on_blocked_turns() -> None:
     assert game.player.frozen_turns == 1
 
 
+def test_sleeping_monster_waits_for_the_player_to_wake_it() -> None:
+    game, monster = game_with_adjacent_monster("medusa")
+    monster.asleep = True
+    game.player.armor_class = 100
+
+    game.execute("wait")
+
+    assert monster.asleep
+    assert not monster.running
+
+    game.execute("attack", ["east"])
+
+    assert not monster.asleep
+    assert monster.running
+
+
 def test_execute_move_randomizes_one_in_five_confused_moves() -> None:
     game = GameState(seed=22)
     game.floor.monsters.clear()
@@ -253,11 +812,11 @@ def test_execute_wait_venus_flytrap_holds_player_and_increases_damage() -> None:
 
     assert game.player.held
     assert game.player.flytrap_hits == 1
-    assert game.player.hp == 99
+    assert game.player.hp == 100
     game.rng.seed(0)
     game.execute("wait")
     assert game.player.flytrap_hits == 2
-    assert game.player.hp == 98
+    assert game.player.hp == 99
 
 
 def test_execute_move_cannot_escape_flytrap_and_killing_it_releases_player() -> None:
@@ -302,6 +861,8 @@ def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> 
     game, monster = game_with_adjacent_monster("nymph")
     ring = ItemState(910, ItemKind.RING, "ring of protection", effect="protection")
     game.player.inventory.append(ring)
+    carried_item = ItemState(914, ItemKind.POTION, "healing potion")
+    monster.carried_items.append(carried_item)
     game.player.armor_class = 100
     game.rng.seed(0)
 
@@ -310,6 +871,7 @@ def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> 
     assert result.success
     assert ring not in game.player.inventory
     assert monster not in game.floor.monsters
+    assert carried_item not in game.floor.items
     assert game.player.monsters_killed == 0
     assert game.player.exp == 0
 
@@ -335,16 +897,16 @@ def test_execute_wait_medusa_gaze_confuses_player_once() -> None:
     assert game.player.confused_turns == remaining - 1
 
 
-def test_execute_wait_medusa_does_not_gaze_before_running() -> None:
+def test_execute_wait_medusa_gazes_when_first_seen() -> None:
     game, monster = game_with_adjacent_monster("medusa")
     game.player.armor_class = 100
     game.rng.seed(0)
 
     game.execute("wait")
 
-    assert not monster.running
-    assert not monster.gaze_attempted
-    assert game.player.confused_turns == 0
+    assert monster.running
+    assert monster.gaze_attempted
+    assert game.player.confused_turns in {19, 20}
 
 
 def test_execute_wait_medusa_does_not_gaze_from_far_down_a_corridor() -> None:
@@ -401,6 +963,23 @@ def test_execute_wait_dragon_breathes_when_aligned_and_in_range() -> None:
     assert result.success
     assert game.player.hp < 100
     assert (dragon.x, dragon.y) == (13, 7)
+
+
+def test_fire_wand_bounces_off_dragon() -> None:
+    game = GameState(seed=130)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    dragon = MonsterState(919, "dragon", 7, 5, 100)
+    wand = ItemState(920, ItemKind.WAND, "wand of fire", effect="fire", charges=1)
+    game.floor.monsters.append(dragon)
+    game.player.inventory.append(wand)
+    for x in range(5, 8):
+        game.floor.set_tile((x, 5), Terrain.FLOOR)
+
+    game.execute("zap", [wand.id, "east"])
+
+    assert dragon.hp == 100
 
 
 def test_execute_wait_dragon_does_not_breathe_across_passages_separated_by_a_room() -> None:

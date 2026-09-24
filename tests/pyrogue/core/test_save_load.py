@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from pyrogue.core.rogue_game import GAME_VERSION, GameState, SaveCompatibilityError
+from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState, MonsterState, SaveCompatibilityError
 from pyrogue.core.save_manager import SaveError, SaveManager
 
 _LEGACY_SAVE_PAYLOADS = [
@@ -20,6 +20,12 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     monster = game.floor.monsters[0]
     monster.hp -= 1
     monster.running = True
+    monster.level_bonus = 2
+    monster.revealed = True
+    monster.carried_items.append(ItemState(9998, ItemKind.POTION, "healing potion"))
+    monster.target_item_id = game.floor.items[0].id
+    monster.carry_search_room_index = 0
+    game.floor.monsters.append(MonsterState(9999, "xeroc", 1, 1, 5, disguise="stairs"))
     manager = SaveManager(tmp_path)
     expected = game.to_dict()
 
@@ -28,7 +34,29 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     loaded = manager.load_game_state()
 
     assert loaded == expected
-    assert GameState.from_dict(loaded).to_dict() == expected
+    restored = GameState.from_dict(loaded)
+    assert restored.to_dict() == expected
+    assert restored.floor.monsters[0].carry_search_room_index == 0
+
+
+def test_load_defaults_new_monster_fields_for_older_saves() -> None:
+    old_state = GameState(1234).to_dict()
+    old_monster = old_state["floors"]["1"]["monsters"][0]
+    old_monster.pop("level_bonus")
+    old_monster.pop("revealed")
+    old_monster.pop("disguise")
+    old_monster.pop("carried_items")
+    old_monster.pop("target_item_id")
+    old_monster.pop("carry_search_room_index")
+
+    monster = GameState.from_dict(old_state).floor.monsters[0]
+
+    assert monster.level_bonus == 0
+    assert not monster.revealed
+    assert monster.disguise is None
+    assert monster.carried_items == []
+    assert monster.target_item_id is None
+    assert monster.carry_search_room_index is None
 
 
 def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
@@ -36,7 +64,7 @@ def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
     assert manager.save_game_state(GameState(1234).to_dict())
     manager.checksum_file.unlink()
     payload = json.loads(manager.save_file.read_text(encoding="utf-8"))
-    payload["spec_version"] = "0.3.0"
+    payload["spec_version"] = "0.3.2"
     manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
 
     assert manager.load_game_state() is None
