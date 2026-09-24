@@ -1,16 +1,19 @@
 import json
+import random
 
 import pytest
 
 from pyrogue.core.rogue_game import (
     GAME_VERSION,
     MAX_FLOOR,
+    DungeonGenerator,
     FloorState,
     GameState,
     GameStatus,
     ItemKind,
     ItemState,
     MonsterState,
+    Room,
     SaveCompatibilityError,
     Terrain,
     TrapKind,
@@ -96,14 +99,90 @@ def test_appearance_mapping_survives_json_round_trip() -> None:
 
 
 def test_every_floor_has_reachable_stairs() -> None:
-    generator = GameState(1234).generator
+    for seed in (1234, 5678, 9012):
+        generator = GameState(seed).generator
+        for floor_number in range(1, MAX_FLOOR + 1):
+            floor = generator.generate(floor_number)
+            assert floor.up_stairs is not None
+            if floor_number < MAX_FLOOR:
+                assert floor.down_stairs is not None
+                assert generator._path_exists(floor, floor.up_stairs, floor.down_stairs)
 
-    for floor_number in range(1, MAX_FLOOR + 1):
-        floor = generator.generate(floor_number)
-        assert floor.up_stairs is not None
-        if floor_number < MAX_FLOOR:
-            assert floor.down_stairs is not None
-            assert generator._path_exists(floor, floor.up_stairs, floor.down_stairs)
+
+def test_room_layout_uses_nine_regions_and_varies_by_seed() -> None:
+    first = DungeonGenerator(rng=random.Random(1)).generate(1)  # noqa: S311
+    second = DungeonGenerator(rng=random.Random(2)).generate(1)  # noqa: S311
+
+    assert 6 <= len(first.rooms) <= 9
+    assert 6 <= len(second.rooms) <= 9
+    assert {(room.x, room.y, room.width, room.height) for room in first.rooms} != {
+        (room.x, room.y, room.width, room.height) for room in second.rooms
+    }
+    assert first.rooms
+
+
+def test_dark_rooms_are_seeded_and_not_present_on_first_floor() -> None:
+    generator = DungeonGenerator(rng=random.Random(4))  # noqa: S311
+
+    assert not any(room.is_dark for room in generator.generate(1).rooms)
+    deep_floor = generator.generate(MAX_FLOOR)
+    assert any(room.is_dark for room in deep_floor.rooms)
+    assert any(room.is_maze for room in deep_floor.rooms)
+    assert generator.generate(7).rooms
+
+
+def test_rooms_occupy_distinct_cells_and_doors_are_on_room_edges() -> None:
+    floor = DungeonGenerator(rng=random.Random(4)).generate(7)  # noqa: S311
+    cell_width, cell_height = floor.width // 3, floor.height // 3
+    cells = {
+        ((room.x + room.width // 2) // cell_width, (room.y + room.height // 2) // cell_height) for room in floor.rooms
+    }
+    doors = [
+        (x, y) for y, row in enumerate(floor.tiles) for x, terrain in enumerate(row) if terrain == Terrain.DOOR_CLOSED
+    ]
+
+    assert len(cells) == len(floor.rooms)
+    assert doors
+    assert all(
+        any(
+            room.contains(x, y) and (x in {room.x, room.x + room.width - 1} or y in {room.y, room.y + room.height - 1})
+            for room in floor.rooms
+        )
+        for x, y in doors
+    )
+
+
+def test_visibility_is_limited_inside_a_dark_room() -> None:
+    game = GameState(1234)
+    room = game.floor.rooms[0]
+    game.floor.rooms[0] = Room(room.x, room.y, room.width, room.height, is_dark=True)
+    game.player.position = room.center
+
+    visible = game.visible_positions(update_explored=False)
+
+    assert visible <= {(game.player.x + dx, game.player.y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+
+
+def test_light_illuminates_a_dark_room_and_survives_saving() -> None:
+    game = GameState(1234)
+    room = game.floor.rooms[0]
+    game.floor.rooms[0] = Room(room.x, room.y, room.width, room.height, is_dark=True)
+    game.player.position = room.center
+    game.floor.monsters.clear()
+    scroll = ItemState(1000, ItemKind.SCROLL, "light scroll", effect="light")
+    game.player.inventory.append(scroll)
+
+    assert game.read(scroll.id).success
+
+    assert game.floor.rooms[0].is_lit
+    assert all(
+        (x, y) in game.visible_positions(update_explored=False)
+        for y in range(room.y, room.y + room.height)
+        for x in range(room.x, room.x + room.width)
+        if game.floor.tile_at((x, y)) != Terrain.WALL
+    )
+    restored = GameState.from_dict(json.loads(json.dumps(game.to_dict())))
+    assert restored.floor.rooms[0].is_lit
 
 
 def test_vi_commands_do_not_collide_with_search() -> None:
