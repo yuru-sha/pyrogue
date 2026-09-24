@@ -21,7 +21,7 @@ seed, and command sequence produces the same game state.
 
 ## Rules at a glance
 
-- 26 floors, ordinary room-and-corridor floors, and maze floors at 7, 13, and 19.
+- 26 floors with Rogue-style 3×3 room regions, connected corridors, occasional room mazes, and depth-dependent dark rooms.
 - Field of view, explored-map memory, reachable stairs, turn-based combat, and permadeath.
 - Rogue-style A-Z monsters, original traps, hunger, food, equipment, potions, scrolls, wands, rings, gold, and the Amulet.
 - The Amulet is carried back to the surface; merely reaching floor 26 does not win.

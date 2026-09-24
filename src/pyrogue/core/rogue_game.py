@@ -12,7 +12,6 @@ import random
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from itertools import pairwise
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -24,7 +23,8 @@ GAME_VERSION = "0.3.3"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
-MAZE_FLOORS = frozenset({7, 13, 19})
+# Retained for imports; canonical floors use occasional room mazes, not fixed maze levels.
+MAZE_FLOORS: frozenset[int] = frozenset()
 MAX_PACK = 23
 HUNGERTIME = 1300
 STOMACHSIZE = 2000
@@ -176,7 +176,7 @@ class SaveCompatibilityError(ValueError):
     """The save was created for another game-state format."""
 
 
-@dataclass(frozen=True)
+@dataclass
 class Room:
     """Rectangular room bounds in dungeon coordinates."""
 
@@ -184,6 +184,9 @@ class Room:
     y: int
     width: int
     height: int
+    is_dark: bool = False
+    is_maze: bool = False
+    is_lit: bool = False
 
     @property
     def center(self) -> Position:
@@ -692,7 +695,7 @@ class CommandResult:
 
 
 class DungeonGenerator:
-    """Deterministic room/maze generator with guaranteed stair paths."""
+    """Generate Rogue-style nine-region floors with connected stairs."""
 
     def __init__(
         self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, rng: random.Random | None = None
@@ -703,7 +706,7 @@ class DungeonGenerator:
 
     def generate(self, floor_number: int) -> FloorState:
         """Generate one deterministic floor."""
-        floor = self._generate_maze(floor_number) if floor_number in MAZE_FLOORS else self._generate_rooms(floor_number)
+        floor = self._generate_rooms(floor_number)
         if floor.up_stairs and floor.down_stairs and not self._path_exists(floor, floor.up_stairs, floor.down_stairs):
             raise RuntimeError
         return floor
@@ -712,13 +715,38 @@ class DungeonGenerator:
         return [[Terrain.WALL for _ in range(self.width)] for _ in range(self.height)]
 
     def _carve_room(self, tiles: list[list[Terrain]], room: Room) -> None:
-        for y in range(room.y, room.y + room.height):
-            for x in range(room.x, room.x + room.width):
+        if room.is_maze:
+            start = (room.x + 1, room.y + 1)
+            if start[0] >= room.x + room.width - 1 or start[1] >= room.y + room.height - 1:
+                start = room.center
+            stack = [start]
+            tiles[start[1]][start[0]] = Terrain.FLOOR
+            while stack:
+                x, y = stack[-1]
+                candidates = [
+                    (x + dx * 2, y + dy * 2, dx, dy)
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    if room.x < x + dx * 2 < room.x + room.width - 1
+                    and room.y < y + dy * 2 < room.y + room.height - 1
+                    and tiles[y + dy * 2][x + dx * 2] == Terrain.WALL
+                ]
+                if not candidates:
+                    stack.pop()
+                    continue
+                nx, ny, dx, dy = self.rng.choice(candidates)
+                tiles[y + dy][x + dx] = Terrain.FLOOR
+                tiles[ny][nx] = Terrain.FLOOR
+                stack.append((nx, ny))
+            return
+        for y in range(room.y + 1, room.y + room.height - 1):
+            for x in range(room.x + 1, room.x + room.width - 1):
                 if 0 < x < self.width - 1 and 0 < y < self.height - 1:
                     tiles[y][x] = Terrain.FLOOR
 
     def _carve_corridor(self, tiles: list[list[Terrain]], first: Position, second: Position) -> None:
         x, y = first
+        if 0 < x < self.width - 1 and 0 < y < self.height - 1:
+            tiles[y][x] = Terrain.FLOOR
         horizontal_first = self.rng.choice((True, False))
         bend = (second[0], first[1]) if horizontal_first else (first[0], second[1])
         points = (bend, second)
@@ -734,77 +762,154 @@ class DungeonGenerator:
     def _generate_rooms(self, floor_number: int) -> FloorState:
         tiles = self._blank()
         rooms: list[Room] = []
-        columns, rows = 4, 3
-        cell_width = max(8, (self.width - 2) // columns)
-        cell_height = max(8, (self.height - 2) // rows)
-        for row in range(rows):
-            for column in range(columns):
-                cell_x = 1 + column * cell_width
-                cell_y = 1 + row * cell_height
-                max_width = min(cell_width - 2, 14)
-                max_height = min(cell_height - 2, 8)
-                room_width = self.rng.randint(5, max(5, max_width))
-                room_height = self.rng.randint(4, max(4, max_height))
-                max_x = max(cell_x + 1, cell_x + cell_width - room_width - 1)
-                max_y = max(cell_y + 1, cell_y + cell_height - room_height - 1)
-                room = Room(
-                    self.rng.randint(cell_x + 1, max_x),
-                    self.rng.randint(cell_y + 1, max_y),
-                    room_width,
-                    room_height,
-                )
-                rooms.append(room)
-                self._carve_room(tiles, room)
+        columns = rows = 3
+        cell_width = self.width // columns
+        cell_height = self.height // rows
+        missing_regions = set(self.rng.sample(range(columns * rows), self.rng.randrange(4)))
+        regions: dict[int, Room] = {}
+        for index in range(columns * rows):
+            if index in missing_regions:
+                continue
+            column, row = index % columns, index // columns
+            left, top = column * cell_width + 1, row * cell_height + 1
+            right = min((column + 1) * cell_width, self.width - 1)
+            bottom = min((row + 1) * cell_height, self.height - 1)
+            room_width = self.rng.randint(4, max(4, right - left - 1))
+            room_height = self.rng.randint(4, max(4, bottom - top - 1))
+            x = self.rng.randint(left, max(left, right - room_width))
+            y = self.rng.randint(top, max(top, bottom - room_height))
+            dark = self.rng.randrange(10) < floor_number - 1
+            maze = dark and self.rng.randrange(15) == 0
+            if maze:
+                x, y = left, top
+                room_width, room_height = right - left - 1, bottom - top - 1
+            room = Room(x, y, room_width, room_height, dark and not maze, maze)
+            regions[index] = room
+            rooms.append(room)
+            self._carve_room(tiles, room)
 
-        for first, second in pairwise(rooms):
-            self._carve_corridor(tiles, first.center, second.center)
+        # Connect adjacent regions first, routing through missing regions.
+        parent = list(range(columns * rows))
 
-        start = rooms[0].center
-        end = rooms[-1].center
-        up_stairs = start if floor_number >= 1 else None
+        def root(index: int) -> int:
+            while parent[index] != index:
+                parent[index] = parent[parent[index]]
+                index = parent[index]
+            return index
+
+        edges = [
+            (self.rng.random(), index, index + 1) for index in range(columns * rows) if index % columns < columns - 1
+        ] + [(self.rng.random(), index, index + columns) for index in range(columns * (rows - 1))]
+
+        def connect_regions(a: int, b: int) -> None:
+            first, second = regions.get(a), regions.get(b)
+            first_column, first_row = a % columns, a // columns
+            second_column, second_row = b % columns, b // columns
+            direction = (second_column - first_column, second_row - first_row)
+            first_center = self._region_center(a, cell_width, cell_height, columns)
+            second_center = self._region_center(b, cell_width, cell_height, columns)
+            first_target = second.center if second else second_center
+            second_target = first.center if first else first_center
+            first_port = first_center if first is None else self._room_door(tiles, first, direction, first_target)
+            second_port = (
+                second_center
+                if second is None
+                else self._room_door(tiles, second, (-direction[0], -direction[1]), second_target)
+            )
+            if first:
+                self._connect_room_door(tiles, first, first_port, direction)
+            if second:
+                self._connect_room_door(tiles, second, second_port, (-direction[0], -direction[1]))
+            first_exit = (first_port[0] + direction[0], first_port[1] + direction[1]) if first else first_center
+            second_exit = (second_port[0] - direction[0], second_port[1] - direction[1]) if second else second_center
+            self._carve_corridor(tiles, first_exit, second_exit)
+            if first:
+                tiles[first_port[1]][first_port[0]] = Terrain.FLOOR if first.is_maze else Terrain.DOOR_CLOSED
+            if second:
+                tiles[second_port[1]][second_port[0]] = Terrain.FLOOR if second.is_maze else Terrain.DOOR_CLOSED
+
+        connected_edges: set[tuple[int, int]] = set()
+        for _, a, b in sorted(edges):
+            if root(a) == root(b):
+                continue
+            parent[root(a)] = root(b)
+            connected_edges.add((a, b))
+            connect_regions(a, b)
+
+        # Rogue tries up to four extra adjacent passages after connecting every region.
+        for _ in range(self.rng.randrange(5)):
+            available_edges = [(a, b) for _, a, b in edges if (a, b) not in connected_edges]
+            if not available_edges:
+                break
+            a, b = self.rng.choice(available_edges)
+            connected_edges.add((a, b))
+            connect_regions(a, b)
+
+        start_room = rooms[0]
+        start = next(
+            (x, y)
+            for y in range(start_room.y, start_room.y + start_room.height)
+            for x in range(start_room.x, start_room.x + start_room.width)
+            if tiles[y][x] == Terrain.FLOOR
+        )
+        end_room = max(
+            rooms,
+            key=lambda room: abs(room.center[0] - start_room.center[0]) + abs(room.center[1] - start_room.center[1]),
+        )
+        end = next(
+            (x, y)
+            for y in range(end_room.y, end_room.y + end_room.height)
+            for x in range(end_room.x, end_room.x + end_room.width)
+            if tiles[y][x] == Terrain.FLOOR
+        )
+        up_stairs = start
         down_stairs = end if floor_number < MAX_FLOOR else None
         tiles[start[1]][start[0]] = Terrain.STAIRS_UP
         if down_stairs:
             tiles[end[1]][end[0]] = Terrain.STAIRS_DOWN
-
-        # Doors are logical barriers which the reachability check treats as
-        # traversable; the game opens them before moving through them.
-        for room in rooms[1:-1:2]:
-            door = (room.x, room.y + room.height // 2)
-            if tiles[door[1]][door[0]] == Terrain.FLOOR:
-                tiles[door[1]][door[0]] = Terrain.DOOR_CLOSED
-
         return FloorState(floor_number, self.width, self.height, tiles, rooms, up_stairs, down_stairs)
 
-    def _generate_maze(self, floor_number: int) -> FloorState:
-        tiles = self._blank()
-        start = (1, 1)
-        stack = [start]
-        tiles[start[1]][start[0]] = Terrain.FLOOR
-        while stack:
-            x, y = stack[-1]
-            candidates = []
-            for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2)):
-                nx, ny = x + dx, y + dy
-                if 1 <= nx < self.width - 1 and 1 <= ny < self.height - 1 and tiles[ny][nx] == Terrain.WALL:
-                    candidates.append((nx, ny, dx // 2, dy // 2))
-            if not candidates:
-                stack.pop()
-                continue
-            nx, ny, step_x, step_y = self.rng.choice(candidates)
-            tiles[y + step_y][x + step_x] = Terrain.FLOOR
-            tiles[ny][nx] = Terrain.FLOOR
-            stack.append((nx, ny))
+    def _region_center(self, index: int, cell_width: int, cell_height: int, columns: int) -> Position:
+        return (index % columns * cell_width + cell_width // 2, index // columns * cell_height + cell_height // 2)
 
-        reachable = self._reachable_positions(tiles, start)
-        end = max(reachable, key=lambda position: abs(position[0] - start[0]) + abs(position[1] - start[1]))
-        tiles[start[1]][start[0]] = Terrain.STAIRS_UP
-        if floor_number < MAX_FLOOR:
-            tiles[end[1]][end[0]] = Terrain.STAIRS_DOWN
-            down_stairs: Position | None = end
-        else:
-            down_stairs = None
-        return FloorState(floor_number, self.width, self.height, tiles, [], start, down_stairs)
+    def _room_door(self, tiles: list[list[Terrain]], room: Room, direction: Position, target: Position) -> Position:
+        dx, dy = direction
+        if room.is_maze:
+            passages = [
+                (x, y)
+                for y in range(room.y + 1, room.y + room.height - 1)
+                for x in range(room.x + 1, room.x + room.width - 1)
+                if tiles[y][x] == Terrain.FLOOR
+            ]
+            if dx:
+                edge_x = room.x + room.width - 1 if dx > 0 else room.x
+                passage = min(
+                    passages,
+                    key=lambda point: (abs(point[0] - edge_x + dx), abs(point[1] - target[1])),
+                )
+                return edge_x, passage[1]
+            edge_y = room.y + room.height - 1 if dy > 0 else room.y
+            passage = min(
+                passages,
+                key=lambda point: (abs(point[1] - edge_y + dy), abs(point[0] - target[0])),
+            )
+            return passage[0], edge_y
+        if dx:
+            y = min(max(target[1], room.y + 1), room.y + room.height - 2)
+            return (room.x + room.width - 1 if dx > 0 else room.x, y)
+        x = min(max(target[0], room.x + 1), room.x + room.width - 2)
+        return (x, room.y + room.height - 1 if dy > 0 else room.y)
+
+    def _connect_room_door(self, tiles: list[list[Terrain]], room: Room, door: Position, direction: Position) -> None:
+        inside = (door[0] - direction[0], door[1] - direction[1])
+        if not room.is_maze:
+            self._carve_corridor(tiles, room.center, inside)
+            return
+        x, y = inside
+        while room.contains(x, y) and tiles[y][x] == Terrain.WALL:
+            tiles[y][x] = Terrain.FLOOR
+            x -= direction[0]
+            y -= direction[1]
 
     def _reachable_positions(self, tiles: list[list[Terrain]], start: Position) -> set[Position]:
         seen = {start}
@@ -1277,11 +1382,19 @@ class GameState:
         """Calculate the cells visible from the player without changing state."""
         visible = set()
         origin = self.player.position
-        radius = 8
+        room = next((room for room in self.floor.rooms if room.contains(*origin)), None)
+        radius = 1 if room and room.is_dark and not room.is_lit else 8
         for y in range(max(0, origin[1] - radius), min(self.height, origin[1] + radius + 1)):
             for x in range(max(0, origin[0] - radius), min(self.width, origin[0] + radius + 1)):
                 if max(abs(x - origin[0]), abs(y - origin[1])) <= radius and self._can_see(origin, (x, y), radius):
                     visible.add((x, y))
+        if room and room.is_dark and room.is_lit:
+            visible.update(
+                (x, y)
+                for y in range(room.y, room.y + room.height)
+                for x in range(room.x, room.x + room.width)
+                if self.floor.tile_at((x, y)) != Terrain.WALL
+            )
         return visible
 
     def visible_positions(self, update_explored: bool = True) -> set[Position]:
@@ -1297,6 +1410,8 @@ class GameState:
         if room is None:
             self.visible_positions()
             return
+        if room.is_dark:
+            room.is_lit = True
         for y in range(room.y, room.y + room.height):
             for x in range(room.x, room.x + room.width):
                 if self.floor.tile_at((x, y)) != Terrain.WALL:
