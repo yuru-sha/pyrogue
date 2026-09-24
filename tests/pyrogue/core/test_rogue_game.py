@@ -11,6 +11,7 @@ from pyrogue.core.rogue_game import (
     ItemState,
     MonsterState,
     SaveCompatibilityError,
+    Terrain,
     TrapKind,
     TrapState,
 )
@@ -181,6 +182,24 @@ def test_unidentified_appearances_are_seeded_and_restored() -> None:
     )
 
 
+def test_destination_floor_monsters_wait_until_the_next_player_action() -> None:
+    game = GameState(1234)
+    destination = game._ensure_floor(2)
+    destination.monsters.clear()
+    arrival = destination.up_stairs
+    monster_position = (arrival[0] + 1, arrival[1])
+    destination.set_tile(monster_position, Terrain.FLOOR)
+    monster = MonsterState(900, "snake", *monster_position, 100)
+    destination.monsters.append(monster)
+    game.player.position = game.floor.down_stairs
+
+    result = game.descend()
+
+    assert result.turn_consumed
+    assert not monster.running
+    assert (monster.x, monster.y) == monster_position
+
+
 def test_amulet_requires_returning_to_surface() -> None:
     game = GameState(1234)
 
@@ -237,12 +256,12 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
 
 def test_old_save_version_is_rejected() -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.3.0"
+    game["spec_version"] = "0.3.1"
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.1"
+    assert GAME_VERSION == "0.3.2"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:

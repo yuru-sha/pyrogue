@@ -53,7 +53,7 @@ def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
     assert manager.save_game_state(GameState(1234).to_dict())
     manager.checksum_file.unlink()
     payload = json.loads(manager.save_file.read_text(encoding="utf-8"))
-    payload["spec_version"] = "0.3.0"
+    payload["spec_version"] = "0.3.1"
     manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
 
     assert manager.load_game_state() is None

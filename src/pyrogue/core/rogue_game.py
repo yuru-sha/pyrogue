@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.1"
+GAME_VERSION = "0.3.2"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -1182,7 +1182,7 @@ class GameState:
         count = min(12, 3 + (floor.number - 1) // 3)
         stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         for _ in range(count):
-            index = floor.number + self.rng.randrange(10) - 5
+            index = floor.number + self.rng.randrange(10) - 6
             if index < 0:
                 index = self.rng.randrange(5)
             elif index >= len(MONSTER_SPAWN_ORDER):
@@ -1634,6 +1634,28 @@ class GameState:
                     return True
         return True
 
+    def _monster_step_positions(self, monster: MonsterState) -> list[Position]:
+        occupied = {(other.x, other.y) for other in self.floor.monsters if other is not monster and other.hp > 0}
+        positions = []
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if not (dx or dy):
+                    continue
+                position = (monster.x + dx, monster.y + dy)
+                if not self.floor.is_walkable(position) or position in occupied:
+                    continue
+                if (
+                    dx
+                    and dy
+                    and (
+                        not self.floor.is_walkable((monster.x + dx, monster.y))
+                        or not self.floor.is_walkable((monster.x, monster.y + dy))
+                    )
+                ):
+                    continue
+                positions.append(position)
+        return positions
+
     def _process_monsters(self) -> None:
         for monster in list(self.floor.monsters):
             if monster.hp <= 0 or self.status != GameStatus.PLAYING:
@@ -1664,7 +1686,8 @@ class GameState:
             if monster.type_id == "dragon" and monster.running and self._try_dragon_breath(monster):
                 continue
             if distance <= 1:
-                self._monster_attack(monster)
+                if self.player.position in self._monster_step_positions(monster):
+                    self._monster_attack(monster)
                 continue
             if not visible or (not monster.running and "mean" not in abilities):
                 continue
@@ -1692,43 +1715,36 @@ class GameState:
                 player_dy = self.player.y - monster.y
                 if step and player_dx * player_dx + player_dy * player_dy < MONSTER_FLY_MOVE_DISTANCE_SQUARED:
                     break
-                dx = chase_target[0] - monster.x
-                dy = chase_target[1] - monster.y
                 random_move = (
                     self.rng.randrange(2) == 0
                     if monster.type_id == "bat"
                     else monster.type_id == "phantom" and self.rng.randrange(5) == 0
                 )
+                choices = self._monster_step_positions(monster)
                 if random_move:
-                    choices = [
-                        (monster.x + move_x, monster.y + move_y)
-                        for move_x in (-1, 0, 1)
-                        for move_y in (-1, 0, 1)
-                        if (move_x or move_y)
-                        and (
-                            (monster.x + move_x, monster.y + move_y) == self.player.position
-                            or self.floor.is_walkable((monster.x + move_x, monster.y + move_y))
-                        )
-                        and not any(
-                            other.x == monster.x + move_x and other.y == monster.y + move_y
-                            for other in self.floor.monsters
-                            if other is not monster
-                        )
-                    ]
                     target = self.rng.choice(choices) if choices else (monster.x, monster.y)
                 else:
-                    target = (
-                        monster.x + (dx > 0) - (dx < 0),
-                        monster.y + (dy > 0) - (dy < 0),
+                    current_distance = max(abs(monster.x - chase_target[0]), abs(monster.y - chase_target[1]))
+                    closer = [
+                        position
+                        for position in choices
+                        if max(abs(position[0] - chase_target[0]), abs(position[1] - chase_target[1]))
+                        < current_distance
+                    ]
+                    direct_step = (
+                        monster.x + (chase_target[0] > monster.x) - (chase_target[0] < monster.x),
+                        monster.y + (chase_target[1] > monster.y) - (chase_target[1] < monster.y),
                     )
+                    if direct_step in closer:
+                        target = direct_step
+                    elif closer:
+                        target = self.rng.choice(closer)
+                    else:
+                        target = (monster.x, monster.y)
                 if target == self.player.position:
                     self._monster_attack(monster)
                     break
-                if not self.floor.is_walkable(target) or any(
-                    other.x == target[0] and other.y == target[1]
-                    for other in self.floor.monsters
-                    if other is not monster
-                ):
+                if target == (monster.x, monster.y):
                     break
                 monster.x, monster.y = target
                 monster.running = True

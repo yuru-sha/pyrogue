@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 
 from pyrogue.core.rogue_game import (
@@ -137,8 +139,8 @@ def test_spawned_monsters_use_rogue_hit_points_and_experience_values() -> None:
 @pytest.mark.parametrize(
     ("floor_number", "expected_types"),
     [
-        (1, {"kestrel", "emu", "bat", "snake", "hobgoblin", "ice_monster"}),
-        (26, {"medusa", "vampire", "griffin", "jabberwock", "dragon"}),
+        (1, {"kestrel", "emu", "bat", "snake", "hobgoblin"}),
+        (26, {"ur_vile", "medusa", "vampire", "griffin", "jabberwock", "dragon"}),
     ],
 )
 def test_spawn_selection_uses_rogue_level_window(floor_number: int, expected_types: set[str]) -> None:
@@ -151,6 +153,21 @@ def test_spawn_selection_uses_rogue_level_window(floor_number: int, expected_typ
 
     assert game.floor.monsters
     assert {monster.type_id for monster in game.floor.monsters} <= expected_types
+
+
+def test_spawn_selection_uses_rogue_random_offset() -> None:
+    game = GameState(seed=125)
+    game.floor.number = 6
+    game.floor.monsters.clear()
+    rng = Mock()
+    rng.randrange.return_value = 0
+    rng.choice.side_effect = lambda choices: choices[0]
+    rng.randint.return_value = 1
+    game.rng = rng
+
+    game._spawn_monsters(game.floor)
+
+    assert {monster.type_id for monster in game.floor.monsters} == {"kestrel"}
 
 
 def test_visible_nonmean_monster_does_not_chase_until_attacked() -> None:
@@ -167,6 +184,39 @@ def test_visible_nonmean_monster_does_not_chase_until_attacked() -> None:
 
     assert (monster.x, monster.y) == (10, 5)
     assert not monster.running
+
+
+def test_pursuer_routes_around_a_blocking_monster() -> None:
+    game = GameState(seed=126)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    for y in (4, 5, 6):
+        for x in range(5, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    blocker = MonsterState(900, "centaur", 9, 5, 100)
+    pursuer = MonsterState(901, "snake", 10, 5, 100)
+    game.floor.monsters.extend((blocker, pursuer))
+
+    game.execute("wait")
+
+    assert (pursuer.x, pursuer.y) in {(9, 4), (9, 6)}
+
+
+def test_pursuer_does_not_cut_a_blocked_diagonal_corner() -> None:
+    game, monster = game_with_adjacent_monster("snake")
+    game.player.position = (6, 6)
+    monster.x, monster.y = 7, 7
+    game.floor.set_tile((6, 6), Terrain.FLOOR)
+    game.floor.set_tile((7, 7), Terrain.FLOOR)
+    game.floor.set_tile((7, 6), Terrain.WALL)
+    game.floor.set_tile((6, 7), Terrain.WALL)
+    monster.running = True
+
+    game.execute("wait")
+
+    assert game.player.hp == 100
+    assert (monster.x, monster.y) == (7, 7)
 
 
 def test_visible_greedy_orc_chases_gold_in_players_room() -> None:
