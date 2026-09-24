@@ -12,14 +12,14 @@ import random
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.3"
+GAME_VERSION = "0.3.4"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -30,7 +30,6 @@ HUNGERTIME = 1300
 STOMACHSIZE = 2000
 MORETIME = 150
 STARVETIME = 850
-CURSE_CHANCE = 0.5
 BEAR_TRAP_DAMAGE = 2
 MAX_EQUIPPED_RINGS = 2
 EXPERIENCE_LEVELS = (
@@ -87,6 +86,20 @@ MONSTER_SPAWN_ORDER = (
 )
 MONSTER_DISGUISES = ("potion", "scroll", "ring", "wand", "food", "weapon", "armor", "stairs", "gold", "amulet")
 SLEEP_TURNS = 5
+HALLUCINATION_TURNS = 850
+BLINDNESS_TURNS = 850
+LEVITATION_TURNS = 30
+TREASURE_ROOM_CHANCE = 20
+MIN_TREASURE_ITEMS = 2
+MAX_TREASURE_ITEMS = 10
+WEAPON_CURSE_ROLL_THRESHOLD = 10
+WEAPON_ENCHANT_ROLL_THRESHOLD = 15
+ARMOR_CURSE_ROLL_THRESHOLD = 20
+ARMOR_ENCHANT_ROLL_THRESHOLD = 28
+FLOOR_ITEM_SPAWN_CHANCE = 36
+FLOORS_WITHOUT_FOOD_BEFORE_FORCE = 3
+HOLD_MONSTER_RADIUS = 2
+DRAIN_LIFE_MIN_PLAYER_HP = 2
 VS_POISON = 0
 VS_MAGIC = 3
 RUSTABLE_ARMOR_CLASS = 9
@@ -218,10 +231,20 @@ class ItemState:
     damage_bonus: int = 0
     armor_bonus: int = 0
     effect: str = ""
+    armor_protected: bool = False
 
     @property
     def display_name(self) -> str:
         """Return the name visible with the current identification state."""
+        name = (
+            {
+                "arrow": "arrows",
+                "dart": "darts",
+                "shuriken": "shuriken",
+            }.get(self.name, self.name)
+            if self.quantity > 1
+            else self.name
+        )
         if self.identified or self.kind in {
             ItemKind.WEAPON,
             ItemKind.ARMOR,
@@ -229,7 +252,7 @@ class ItemState:
             ItemKind.GOLD,
             ItemKind.AMULET,
         }:
-            return self.name
+            return name
         return self.appearance or f"unknown {self.kind.value}"
 
     def to_dict(self) -> dict[str, Any]:
@@ -328,6 +351,13 @@ class MonsterState:
     carried_items: list[ItemState] = field(default_factory=list)
     target_item_id: int | None = None
     carry_search_room_index: int | None = None
+    held: bool = False
+    invisible: bool = False
+    hasted: bool = False
+    slowed: bool = False
+    confused_turns: int = 0
+    cancelled: bool = False
+    mean_override: bool = False
 
     def __post_init__(self) -> None:
         if self.max_hp is None:
@@ -367,6 +397,13 @@ class MonsterState:
             "y": self.y,
             "hp": self.hp,
             "asleep": self.asleep,
+            "held": self.held,
+            "invisible": self.invisible,
+            "hasted": self.hasted,
+            "slowed": self.slowed,
+            "confused_turns": self.confused_turns,
+            "cancelled": self.cancelled,
+            "mean_override": self.mean_override,
             "max_hp": self.max_hp,
             "exp_value": self.exp_value,
             "running": self.running,
@@ -389,6 +426,13 @@ class MonsterState:
             y=int(data["y"]),
             hp=int(data["hp"]),
             asleep=bool(data.get("asleep", False)),
+            held=bool(data.get("held", False)),
+            invisible=bool(data.get("invisible", False)),
+            hasted=bool(data.get("hasted", False)),
+            slowed=bool(data.get("slowed", False)),
+            confused_turns=int(data.get("confused_turns", 0)),
+            cancelled=bool(data.get("cancelled", False)),
+            mean_override=bool(data.get("mean_override", False)),
             max_hp=int(data["max_hp"]) if data.get("max_hp") is not None else None,
             exp_value=int(data["exp_value"]) if data.get("exp_value") is not None else None,
             running=bool(data.get("running", False)),
@@ -543,12 +587,21 @@ class PlayerState:
     sleep_turns: int = 0
     frozen_turns: int = 0
     confused_turns: int = 0
+    hallucination_turns: int = 0
+    blind_turns: int = 0
+    see_invisible_turns: int = 0
+    monster_detection_turns: int = 0
+    levitation_turns: int = 0
+    haste_turns: int = 0
+    monster_confusion_ready: bool = False
     held: bool = False
     flytrap_hits: int = 0
     deepest_floor: int = 1
     monsters_killed: int = 0
     dead: bool = False
     death_cause: str | None = None
+    identified_item_names: list[str] = field(default_factory=list)
+    max_strength: int = 16
 
     @property
     def position(self) -> Position:
@@ -641,6 +694,8 @@ class PlayerState:
         data = dict(data)
         data["inventory"] = [ItemState.from_dict(item) for item in data.get("inventory", [])]
         data["equipped_rings"] = list(data.get("equipped_rings", []))
+        data["identified_item_names"] = list(data.get("identified_item_names", []))
+        data.setdefault("max_strength", data.get("strength", 16))
         return cls(**{key: value for key, value in data.items() if key in cls.__dataclass_fields__})
 
 
@@ -944,15 +999,15 @@ def _roll(rng: random.Random, dice: tuple[int, int]) -> int:
 
 
 WEAPON_DATA: dict[str, tuple[tuple[int, int], int, int]] = {
-    "mace": ((2, 4), 1, 1),
+    "mace": ((2, 4), 0, 0),
     "long sword": ((3, 4), 0, 0),
-    "short bow": ((1, 1), 1, 0),
+    "short bow": ((1, 1), 0, 0),
+    "arrow": ((1, 1), 0, 0),
     "dagger": ((1, 6), 0, 0),
     "two handed sword": ((4, 4), 0, 0),
-    "spear": ((2, 3), 0, 0),
-    "darts": ((1, 1), 0, 0),
+    "dart": ((1, 1), 0, 0),
     "shuriken": ((1, 2), 0, 0),
-    "arrows": ((1, 1), 0, 0),
+    "spear": ((2, 3), 0, 0),
 }
 THROWN_WEAPON_DATA: dict[str, tuple[tuple[int, int], str | None]] = {
     "mace": ((1, 3), None),
@@ -960,9 +1015,11 @@ THROWN_WEAPON_DATA: dict[str, tuple[tuple[int, int], str | None]] = {
     "short bow": ((1, 1), None),
     "dagger": ((1, 4), None),
     "two handed sword": ((1, 2), None),
-    "spear": ((1, 6), None),
+    "dart": ((1, 3), None),
     "darts": ((1, 3), None),
+    "spear": ((1, 6), None),
     "shuriken": ((2, 4), None),
+    "arrow": ((2, 3), "short bow"),
     "arrows": ((2, 3), "short bow"),
 }
 ARMOR_DATA = {
@@ -975,37 +1032,181 @@ ARMOR_DATA = {
     "banded mail": 6,
     "plate mail": 7,
 }
-POTION_EFFECTS = {
-    "healing potion": "healing",
-    "extra healing potion": "extra_healing",
-    "strength potion": "strength",
-    "restore strength potion": "restore_strength",
+WEAPON_WEIGHTS = {
+    "mace": 11,
+    "long sword": 11,
+    "short bow": 12,
+    "arrow": 12,
+    "dagger": 8,
+    "two handed sword": 10,
+    "dart": 12,
+    "shuriken": 12,
+    "spear": 12,
 }
+ARMOR_WEIGHTS = {
+    "leather armor": 20,
+    "ring mail": 15,
+    "studded leather armor": 15,
+    "scale mail": 13,
+    "chain mail": 12,
+    "splint mail": 10,
+    "banded mail": 10,
+    "plate mail": 5,
+}
+FOOD_WEIGHTS = {"food ration": 90, "slime mold": 10}
+POTION_EFFECTS = {
+    "confusion potion": "confusion",
+    "hallucination potion": "hallucination",
+    "poison potion": "poison",
+    "strength potion": "strength",
+    "see invisible potion": "see_invisible",
+    "healing potion": "healing",
+    "monster detection potion": "monster_detection",
+    "magic detection potion": "magic_detection",
+    "raise level potion": "raise_level",
+    "extra healing potion": "extra_healing",
+    "haste self potion": "haste_self",
+    "restore strength potion": "restore_strength",
+    "blindness potion": "blindness",
+    "levitation potion": "levitation",
+}
+POTION_WEIGHTS = dict(
+    zip(
+        POTION_EFFECTS,
+        (7, 8, 8, 13, 3, 13, 6, 6, 2, 5, 5, 13, 5, 6),
+        strict=True,
+    )
+)
 SCROLL_EFFECTS = {
-    "identify scroll": "identify",
-    "light scroll": "light",
-    "remove curse scroll": "remove_curse",
-    "enchant weapon scroll": "enchant_weapon",
-    "enchant armor scroll": "enchant_armor",
-    "teleportation scroll": "teleport",
+    "monster confusion scroll": "monster_confusion",
     "magic mapping scroll": "magic_mapping",
+    "hold monster scroll": "hold_monster",
+    "sleep scroll": "sleep",
+    "enchant armor scroll": "enchant_armor",
+    "identify potion scroll": "identify_potion",
+    "identify scroll": "identify",
+    "identify weapon scroll": "identify_weapon",
+    "identify armor scroll": "identify_armor",
+    "identify ring, wand or staff scroll": "identify_ring_wand",
+    "scare monster scroll": "scare_monster",
+    "food detection scroll": "food_detection",
+    "teleportation scroll": "teleport",
+    "enchant weapon scroll": "enchant_weapon",
+    "create monster scroll": "create_monster",
+    "remove curse scroll": "remove_curse",
+    "aggravate monsters scroll": "aggravate_monsters",
+    "protect armor scroll": "protect_armor",
+}
+SCROLL_EFFECT_ALIASES = {"light scroll": "light", "teleport scroll": "teleport"}
+SCROLL_IDENTIFY_TARGETS = {
+    "identify_potion": frozenset({ItemKind.POTION}),
+    "identify_weapon": frozenset({ItemKind.WEAPON}),
+    "identify_armor": frozenset({ItemKind.ARMOR}),
+    "identify_ring_wand": frozenset({ItemKind.RING, ItemKind.WAND}),
+}
+SCROLL_WEIGHTS = {
+    "monster confusion scroll": 7,
+    "magic mapping scroll": 4,
+    "hold monster scroll": 2,
+    "sleep scroll": 3,
+    "enchant armor scroll": 7,
+    "identify potion scroll": 10,
+    "identify scroll": 10,
+    "identify weapon scroll": 6,
+    "identify armor scroll": 7,
+    "identify ring, wand or staff scroll": 10,
+    "scare monster scroll": 3,
+    "food detection scroll": 2,
+    "teleportation scroll": 5,
+    "enchant weapon scroll": 8,
+    "create monster scroll": 4,
+    "remove curse scroll": 7,
+    "aggravate monsters scroll": 3,
+    "protect armor scroll": 2,
 }
 RING_EFFECTS = {
     "ring of protection": "protection",
     "ring of add strength": "strength",
-    "ring of dexterity": "dexterity",
     "ring of sustain strength": "sustain",
     "ring of searching": "search",
+    "ring of see invisible": "see_invisible",
+    "ring of adornment": "adornment",
+    "ring of aggravate monster": "aggravate",
+    "ring of add hit": "dexterity",
+    "ring of add damage": "increase_damage",
     "ring of regeneration": "regeneration",
-    "ring of increase damage": "increase_damage",
+    "ring of slow digestion": "slow_digestion",
+    "ring of teleportation": "teleportation",
+    "ring of stealth": "stealth",
+    "ring of maintain armor": "maintain_armor",
+}
+RING_WEIGHTS = {
+    "ring of protection": 9,
+    "ring of add strength": 9,
+    "ring of sustain strength": 5,
+    "ring of searching": 10,
+    "ring of see invisible": 10,
+    "ring of adornment": 1,
+    "ring of aggravate monster": 10,
+    "ring of add hit": 8,
+    "ring of add damage": 8,
+    "ring of regeneration": 4,
+    "ring of slow digestion": 9,
+    "ring of teleportation": 5,
+    "ring of stealth": 7,
+    "ring of maintain armor": 5,
 }
 WAND_EFFECTS = {
-    "wand of magic missile": "magic_missile",
     "wand of light": "light",
+    "wand of invisibility": "invisibility",
     "wand of lightning": "lightning",
     "wand of fire": "fire",
     "wand of cold": "cold",
-    "wand of teleport monster": "teleport_monster",
+    "wand of polymorph": "polymorph",
+    "wand of magic missile": "magic_missile",
+    "wand of haste monster": "haste_monster",
+    "wand of slow monster": "slow_monster",
+    "wand of drain life": "drain_life",
+    "wand of nothing": "nothing",
+    "wand of teleport away": "teleport_away",
+    "wand of teleport to": "teleport_to",
+    "wand of cancellation": "cancellation",
+}
+WAND_WEIGHTS = {
+    "wand of light": 12,
+    "wand of invisibility": 6,
+    "wand of lightning": 3,
+    "wand of fire": 3,
+    "wand of cold": 3,
+    "wand of polymorph": 15,
+    "wand of magic missile": 10,
+    "wand of haste monster": 10,
+    "wand of slow monster": 11,
+    "wand of drain life": 9,
+    "wand of nothing": 1,
+    "wand of teleport away": 6,
+    "wand of teleport to": 6,
+    "wand of cancellation": 5,
+}
+ITEM_KIND_WEIGHTS: tuple[tuple[ItemKind, int], ...] = (
+    (ItemKind.POTION, 26),
+    (ItemKind.SCROLL, 36),
+    (ItemKind.FOOD, 16),
+    (ItemKind.WEAPON, 7),
+    (ItemKind.ARMOR, 7),
+    (ItemKind.RING, 4),
+    (ItemKind.WAND, 4),
+)
+ITEM_NAME_WEIGHTS: dict[ItemKind, dict[str, int]] = {
+    ItemKind.WEAPON: WEAPON_WEIGHTS,
+    ItemKind.ARMOR: ARMOR_WEIGHTS,
+    ItemKind.FOOD: FOOD_WEIGHTS,
+    ItemKind.POTION: POTION_WEIGHTS,
+    ItemKind.SCROLL: SCROLL_WEIGHTS,
+    ItemKind.WAND: WAND_WEIGHTS,
+    ItemKind.RING: RING_WEIGHTS,
+    ItemKind.GOLD: {"gold": 1},
+    ItemKind.AMULET: {"amulet of yendor": 1},
 }
 APPEARANCE_EFFECTS = {
     ItemKind.POTION: tuple(POTION_EFFECTS.values()),
@@ -1013,7 +1214,132 @@ APPEARANCE_EFFECTS = {
     ItemKind.RING: tuple(RING_EFFECTS.values()),
     ItemKind.WAND: tuple(WAND_EFFECTS.values()),
 }
-LEGACY_APPEARANCE_POOL_SIZE = 6
+MAX_SCROLL_TITLE_LENGTH = 40
+POTION_COLORS = (
+    "amber",
+    "aquamarine",
+    "black",
+    "blue",
+    "brown",
+    "clear",
+    "crimson",
+    "cyan",
+    "ecru",
+    "gold",
+    "green",
+    "grey",
+    "magenta",
+    "orange",
+    "pink",
+    "plaid",
+    "purple",
+    "red",
+    "silver",
+    "tan",
+    "tangerine",
+    "topaz",
+    "turquoise",
+    "vermilion",
+    "violet",
+    "white",
+    "yellow",
+)
+SCROLL_SYLLABLES = tuple(
+    """
+    a ab ag aks ala an app arg arze ash bek bie bit bjor blu bot bu byt comp con cos cre dalf dan den do e eep el eng
+    er ere erk esh evs fa fid fri fu gan gar glen gop gre ha hyd i ing ip ish it ite iv jo kho kli klis la lech mar me
+    mi mic mik mon mung mur nej nelg nep ner nes nes nih nin o od ood org orn ox oxy pay ple plu po pot prok re rea
+    rhov ri ro rog rok rol sa san sat sef seh shu ski sna sne snik sno so sol sri sta sun ta tab tem ther ti tox trol
+    tue turs u ulk um un uni ur val viv vly vom wah wed werg wex whon wun xo y yot yu zant zeb zim zok zon zum
+    """.split()  # noqa: SIM905
+)
+RING_STONES = (
+    "agate",
+    "alexandrite",
+    "amethyst",
+    "carnelian",
+    "diamond",
+    "emerald",
+    "germanium",
+    "granite",
+    "garnet",
+    "jade",
+    "kryptonite",
+    "lapis lazuli",
+    "moonstone",
+    "obsidian",
+    "onyx",
+    "opal",
+    "pearl",
+    "peridot",
+    "ruby",
+    "sapphire",
+    "stibotantalite",
+    "tiger eye",
+    "topaz",
+    "turquoise",
+    "taaffeite",
+    "zircon",
+)
+WAND_WOODS = (
+    "avocado wood",
+    "balsa",
+    "bamboo",
+    "banyan",
+    "birch",
+    "cedar",
+    "cherry",
+    "cinnibar",
+    "cypress",
+    "dogwood",
+    "driftwood",
+    "ebony",
+    "elm",
+    "eucalyptus",
+    "fall",
+    "hemlock",
+    "holly",
+    "ironwood",
+    "kukui wood",
+    "mahogany",
+    "manzanita",
+    "maple",
+    "oaken",
+    "persimmon wood",
+    "pecan",
+    "pine",
+    "poplar",
+    "redwood",
+    "rosewood",
+    "spruce",
+    "teak",
+    "walnut",
+    "zebrawood",
+)
+WAND_METALS = (
+    "aluminum",
+    "beryllium",
+    "bone",
+    "brass",
+    "bronze",
+    "copper",
+    "electrum",
+    "gold",
+    "iron",
+    "lead",
+    "magnesium",
+    "mercury",
+    "nickel",
+    "pewter",
+    "platinum",
+    "steel",
+    "silver",
+    "silicon",
+    "tin",
+    "titanium",
+    "tungsten",
+    "zinc",
+)
 
 DIRECTIONS: dict[str, Position] = {
     "north": (0, -1),
@@ -1115,6 +1441,7 @@ class GameState:
         self._next_item_id = 1
         self._next_monster_id = 1
         self._next_trap_id = 1
+        self._floors_without_food = 0
         self._appearance_names = self._make_appearances()
         self._ensure_floor(1)
         self._setup_initial_inventory(self.floor)
@@ -1146,26 +1473,40 @@ class GameState:
         self.messages.append(message)
 
     def _make_appearances(self) -> dict[ItemKind, dict[str, str]]:
-        pools = {
-            ItemKind.POTION: ["red", "blue", "green", "yellow", "purple", "orange"],
-            ItemKind.SCROLL: [
-                "ZELGO MER",
-                "JUYED AWK YACC",
-                "NR 9",
-                "XIXAXA XOXAXA",
-                "KIRJE",
-                "FOOBIE BLETCH",
-            ],
-            ItemKind.RING: ["wooden", "opal", "coral", "black onyx", "pearl", "ruby", "diamond"],
-            ItemKind.WAND: ["glass", "iron", "silver", "copper", "brass", "crystal"],
+        colors = list(POTION_COLORS)
+        stones = list(RING_STONES)
+        self.rng.shuffle(colors)
+        self.rng.shuffle(stones)
+
+        scroll_titles: list[str] = []
+        while len(scroll_titles) < len(SCROLL_EFFECTS):
+            word_count = self.rng.randrange(2, 5)
+            words = [
+                "".join(self.rng.choice(SCROLL_SYLLABLES) for _ in range(self.rng.randrange(1, 4)))
+                for _ in range(word_count)
+            ]
+            title = " ".join(words)
+            if len(title) <= MAX_SCROLL_TITLE_LENGTH and title not in scroll_titles:
+                scroll_titles.append(title)
+
+        woods, metals = list(WAND_WOODS), list(WAND_METALS)
+        sticks = []
+        for _ in WAND_EFFECTS:
+            is_wand = self.rng.randrange(2) == 0
+            pool = metals if is_wand else woods
+            material = pool.pop(self.rng.randrange(len(pool)))
+            sticks.append(f"{material} {'wand' if is_wand else 'staff'}")
+
+        appearances = {
+            ItemKind.POTION: [f"{color} potion" for color in colors],
+            ItemKind.SCROLL: [f"scroll titled '{title}'" for title in scroll_titles],
+            ItemKind.RING: [f"{stone} ring" for stone in stones],
+            ItemKind.WAND: sticks,
         }
-        appearances = {}
-        for values in pools.values():
-            self.rng.shuffle(values)
-        for kind, values in pools.items():
-            appearance_values = [*values, "GARVEN DEH"] if kind == ItemKind.SCROLL else values
-            appearances[kind] = dict(zip(APPEARANCE_EFFECTS[kind], appearance_values, strict=False))
-        return appearances
+        return {
+            kind: dict(zip(effects, appearances[kind][: len(effects)], strict=True))
+            for kind, effects in APPEARANCE_EFFECTS.items()
+        }
 
     def _ensure_floor(self, number: int) -> FloorState:
         if number in self.floors:
@@ -1213,65 +1554,72 @@ class GameState:
         """Move the player to the matching up stairs on the next floor."""
         self.floor.player_position = self.player.position
         self.current_floor += 1
+        self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
         target = self._ensure_floor(self.current_floor)
         self.player.position = target.up_stairs or self._first_floor_position(target)
-        self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
 
     def _new_item(
         self, floor: FloorState, kind: ItemKind, name: str | None = None, *, on_floor: bool = True
     ) -> ItemState:
-        names = {
-            ItemKind.WEAPON: tuple(WEAPON_DATA),
-            ItemKind.ARMOR: tuple(ARMOR_DATA),
-            ItemKind.FOOD: ("food ration",),
-            ItemKind.POTION: tuple(POTION_EFFECTS),
-            ItemKind.SCROLL: tuple(SCROLL_EFFECTS),
-            ItemKind.WAND: tuple(WAND_EFFECTS),
-            ItemKind.RING: tuple(RING_EFFECTS),
-            ItemKind.GOLD: ("gold",),
-            ItemKind.AMULET: ("amulet of yendor",),
-        }
-        name = self.rng.choice(names[kind]) if name is None else name
-        position = self._free_position(floor) if on_floor else None
+        weights = ITEM_NAME_WEIGHTS[kind]
+        name = self.rng.choices(tuple(weights), weights=tuple(weights.values()), k=1)[0] if name is None else name
+        stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
+        position = self._free_position(floor, stairs) if on_floor else None
         item = ItemState(id=self._next_item_id, kind=kind, name=name, position=position)
         self._next_item_id += 1
         appearance_kind = kind in APPEARANCE_EFFECTS
-        if appearance_kind:
-            self.rng.randrange(LEGACY_APPEARANCE_POOL_SIZE)
         if kind == ItemKind.WEAPON:
             item.damage_dice, item.hit_bonus, item.damage_bonus = WEAPON_DATA.get(name, ((1, 4), 0, 0))
-            item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
-            item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
+            if name == "dagger":
+                item.quantity = self.rng.randrange(4) + 2
+            elif name in {"arrow", "dart", "shuriken"}:
+                item.quantity = self.rng.randrange(8) + 8
+            roll = self.rng.randrange(100)
+            if roll < WEAPON_CURSE_ROLL_THRESHOLD:
+                item.hit_bonus -= self.rng.randrange(3) + 1
+                item.cursed = True
+            elif roll < WEAPON_ENCHANT_ROLL_THRESHOLD:
+                item.hit_bonus += self.rng.randrange(3) + 1
         elif kind == ItemKind.ARMOR:
             item.armor_bonus = ARMOR_DATA.get(name, 2)
-            item.enchantment = self.rng.choice((-1, 0, 0, 0, 1))
-            item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
+            roll = self.rng.randrange(100)
+            if roll < ARMOR_CURSE_ROLL_THRESHOLD:
+                item.enchantment = -(self.rng.randrange(3) + 1)
+                item.cursed = True
+            elif roll < ARMOR_ENCHANT_ROLL_THRESHOLD:
+                item.enchantment = self.rng.randrange(3) + 1
         elif kind == ItemKind.FOOD:
             item.nutrition = MORETIME
+            self._floors_without_food = 0
         elif kind == ItemKind.POTION:
-            item.effect = POTION_EFFECTS.get(name, "healing")
+            item.effect = POTION_EFFECTS[name]
         elif kind == ItemKind.SCROLL:
-            item.effect = SCROLL_EFFECTS.get(name, "identify")
+            item.effect = SCROLL_EFFECTS.get(name, SCROLL_EFFECT_ALIASES.get(name, ""))
         elif kind == ItemKind.WAND:
-            item.effect = WAND_EFFECTS.get(name, "magic_missile")
-            item.charges = self.rng.randint(3, 8)
+            item.effect = WAND_EFFECTS[name]
+            item.charges = self.rng.randrange(10) + 10 if item.effect == "light" else self.rng.randrange(5) + 3
         elif kind == ItemKind.RING:
-            item.effect = RING_EFFECTS.get(name, "protection")
-            item.enchantment = self.rng.choice((-1, 0, 0, 1))
-            item.cursed = item.enchantment < 0 and self.rng.random() < CURSE_CHANCE
+            item.effect = RING_EFFECTS[name]
+            if item.effect in {"protection", "strength", "dexterity", "increase_damage"}:
+                item.enchantment = self.rng.randrange(3)
+                if item.enchantment == 0:
+                    item.enchantment = -1
+                    item.cursed = True
+            elif item.effect in {"aggravate", "teleportation"}:
+                item.cursed = True
         elif kind == ItemKind.GOLD:
-            item.quantity = self.rng.randint(2, 5 + floor.number * 2)
+            item.quantity = self.rng.randrange(50 + 10 * floor.number) + 2
         if appearance_kind:
-            item.identified = False
-            item.appearance = self._appearance_names[kind][item.effect]
+            item.identified = name in self.player.identified_item_names or name in SCROLL_EFFECT_ALIASES
+            item.appearance = self._appearance_names[kind].get(item.effect, "")
         return item
 
     def _setup_initial_inventory(self, floor: FloorState) -> None:
-        food = self._new_item(floor, ItemKind.FOOD)
+        food = self._new_item(floor, ItemKind.FOOD, "food ration")
         armor = self._new_item(floor, ItemKind.ARMOR, "ring mail")
         mace = self._new_item(floor, ItemKind.WEAPON, "mace")
         bow = self._new_item(floor, ItemKind.WEAPON, "short bow")
-        arrows = self._new_item(floor, ItemKind.WEAPON, "arrows")
+        arrows = self._new_item(floor, ItemKind.WEAPON, "arrow")
         for item in (food, armor, mace, bow, arrows):
             item.position = None
             item.identified = True
@@ -1285,61 +1633,138 @@ class GameState:
         bow.enchantment = 0
         arrows.quantity = self.rng.randint(25, 39)
         arrows.damage_dice = (1, 1)
+        arrows.hit_bonus = 0
+        arrows.damage_bonus = 0
         arrows.enchantment = 0
         self.player.equipped_weapon = mace.id
         self.player.equipped_armor = armor.id
 
     def _spawn_items(self, floor: FloorState) -> None:
-        if floor.number == MAX_FLOOR:
-            amulet = self._new_item(floor, ItemKind.AMULET)
-            amulet.position = floor.down_stairs or self._free_position(floor)
-            floor.items.append(amulet)
+        self._floors_without_food += 1
+        if self.player.has_amulet and floor.number < self.player.deepest_floor:
             return
-        guaranteed = {
-            1: (ItemKind.WEAPON, ItemKind.ARMOR, ItemKind.FOOD),
-            2: (ItemKind.POTION, ItemKind.SCROLL, ItemKind.WAND, ItemKind.RING, ItemKind.GOLD),
-        }.get(floor.number, ())
-        kinds = list(guaranteed)
-        kinds.extend(self.rng.choices(list(ItemKind)[:8], weights=[12, 10, 20, 20, 15, 8, 8, 15], k=2))
-        for kind in kinds:
+        if self.rng.randrange(TREASURE_ROOM_CHANCE) == 0:
+            self._spawn_treasure_room(floor)
+        for _ in range(9):
+            if self.rng.randrange(100) >= FLOOR_ITEM_SPAWN_CHANCE:
+                continue
+            kind = (
+                ItemKind.FOOD
+                if self._floors_without_food > FLOORS_WITHOUT_FOOD_BEFORE_FORCE
+                else self.rng.choices(
+                    [kind for kind, _ in ITEM_KIND_WEIGHTS],
+                    weights=[weight for _, weight in ITEM_KIND_WEIGHTS],
+                    k=1,
+                )[0]
+            )
             item = self._new_item(floor, kind)
             if item.position not in {floor.up_stairs, floor.down_stairs}:
                 floor.items.append(item)
+        for room in floor.rooms:
+            if self.rng.randrange(2) != 0:
+                continue
+            candidates = [
+                (x, y)
+                for y in range(room.y + 1, room.y + room.height - 1)
+                for x in range(room.x + 1, room.x + room.width - 1)
+                if floor.is_walkable((x, y))
+                and (x, y) not in self._occupied(floor)
+                and (x, y) not in {floor.up_stairs, floor.down_stairs}
+            ]
+            if candidates:
+                gold = self._new_item(floor, ItemKind.GOLD, on_floor=False)
+                gold.position = self.rng.choice(candidates)
+                floor.items.append(gold)
+        if floor.number == MAX_FLOOR:
+            amulet = self._new_item(floor, ItemKind.AMULET, on_floor=False)
+            amulet.position = self._free_position(floor)
+            floor.items.append(amulet)
+
+    def _spawn_treasure_room(self, floor: FloorState) -> None:
+        rooms = floor.rooms
+        if not rooms:
+            return
+        room = self.rng.choice(rooms)
+        stairs = {position for position in (floor.up_stairs, floor.down_stairs) if position is not None}
+        occupied = self._occupied(floor) | stairs
+        positions = [
+            (x, y)
+            for y in range(room.y + 1, room.y + room.height - 1)
+            for x in range(room.x + 1, room.x + room.width - 1)
+            if floor.is_walkable((x, y)) and (x, y) not in occupied
+        ]
+        if len(positions) < MIN_TREASURE_ITEMS:
+            return
+        spots = min(MAX_TREASURE_ITEMS - MIN_TREASURE_ITEMS, len(positions) - MIN_TREASURE_ITEMS)
+        item_count = MIN_TREASURE_ITEMS + (self.rng.randrange(spots) if spots else 0)
+        for _ in range(item_count):
+            position = self.rng.choice(positions)
+            positions.remove(position)
+            kind = self.rng.choices(
+                [kind for kind, _ in ITEM_KIND_WEIGHTS],
+                weights=[weight for _, weight in ITEM_KIND_WEIGHTS],
+                k=1,
+            )[0]
+            item = self._new_item(floor, kind, on_floor=False)
+            item.position = position
+            floor.items.append(item)
+        monster_count = max(item_count + 2, (self.rng.randrange(spots) if spots else 0) + MIN_TREASURE_ITEMS)
+        for _ in range(min(monster_count, len(positions))):
+            position = self.rng.choice(positions)
+            positions.remove(position)
+            self._new_monster(floor, position, level_offset=1, mean_override=True)
 
     def _spawn_monsters(self, floor: FloorState) -> None:
         count = min(12, 3 + (floor.number - 1) // 3)
         stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         for _ in range(count):
-            index = floor.number + self.rng.randrange(10) - 6
-            if index < 0:
-                index = self.rng.randrange(5)
-            elif index >= len(MONSTER_SPAWN_ORDER):
-                index = self.rng.randrange(5) + len(MONSTER_SPAWN_ORDER) - 5
-            definition = MONSTER_BY_ID[MONSTER_SPAWN_ORDER[index]]
-            position = self._free_position(floor, stairs)
-            level_add = max(0, floor.number - MAX_FLOOR)
-            level = definition.level + level_add
-            max_hp = _roll(self.rng, (level, 8))
-            monster = MonsterState(
-                self._next_monster_id,
-                definition.id,
-                *position,
-                max_hp,
-                max_hp=max_hp,
-                level_bonus=level_add,
-                disguise=(
-                    self.rng.choice(MONSTER_DISGUISES[: 10 if floor.number >= MAX_FLOOR else 9])
-                    if definition.id == "xeroc"
-                    else None
-                ),
-            )
-            monster.exp_value = monster.experience_reward
-            self._next_monster_id += 1
-            floor.monsters.append(monster)
-            if floor.number >= self.player.deepest_floor and self.rng.randrange(100) < definition.carry_chance:
-                item_roll = self.rng.randrange(100)
-                item_kind = next(kind for threshold, kind in MONSTER_PACK_ITEM_THRESHOLDS if item_roll < threshold)
-                monster.carried_items.append(self._new_item(floor, item_kind, on_floor=False))
+            self._new_monster(floor, avoid=stairs)
+
+    def _new_monster(
+        self,
+        floor: FloorState,
+        position: Position | None = None,
+        *,
+        avoid: Iterable[Position] = (),
+        level_offset: int = 0,
+        mean_override: bool = False,
+    ) -> MonsterState:
+        """Create one level-appropriate monster and its possible carried item."""
+        level = floor.number + level_offset
+        index = level + self.rng.randrange(10) - 6
+        if index < 0:
+            index = self.rng.randrange(5)
+        elif index >= len(MONSTER_SPAWN_ORDER):
+            index = self.rng.randrange(5) + len(MONSTER_SPAWN_ORDER) - 5
+        definition = MONSTER_BY_ID[MONSTER_SPAWN_ORDER[index]]
+        position = position or self._free_position(floor, avoid)
+        level_add = max(0, level - MAX_FLOOR)
+        monster_level = definition.level + level_add
+        max_hp = _roll(self.rng, (monster_level, 8))
+        monster = MonsterState(
+            self._next_monster_id,
+            definition.id,
+            *position,
+            max_hp,
+            max_hp=max_hp,
+            level_bonus=level_add,
+            mean_override=mean_override,
+            disguise=(
+                self.rng.choice(MONSTER_DISGUISES[: 10 if floor.number >= MAX_FLOOR else 9])
+                if definition.id == "xeroc"
+                else None
+            ),
+        )
+        monster.exp_value = monster.experience_reward
+        self._next_monster_id += 1
+        floor.monsters.append(monster)
+        if self.player.has_ring_effect("aggravate"):
+            monster.running = True
+        if floor.number >= self.player.deepest_floor and self.rng.randrange(100) < definition.carry_chance:
+            item_roll = self.rng.randrange(100)
+            item_kind = next(kind for threshold, kind in MONSTER_PACK_ITEM_THRESHOLDS if item_roll < threshold)
+            monster.carried_items.append(self._new_item(floor, item_kind, on_floor=False))
+        return monster
 
     def _spawn_traps(self, floor: FloorState) -> None:
         count = 1 + min(2, floor.number // 9)
@@ -1380,6 +1805,8 @@ class GameState:
 
     def _calculate_visible_positions(self) -> set[Position]:
         """Calculate the cells visible from the player without changing state."""
+        if self.player.blind_turns > 0:
+            return {self.player.position}
         visible = set()
         origin = self.player.position
         room = next((room for room in self.floor.rooms if room.contains(*origin)), None)
@@ -1434,18 +1861,29 @@ class GameState:
                 entity: EntityKind | None = None
                 priority = 0
                 entity_variant: str | None = None
-                if is_displayed:
+                monster = monster_positions.get(position)
+                detected = monster is not None and self.player.monster_detection_turns > 0
+                if is_displayed or detected:
                     if position == self.player.position:
                         entity, priority = EntityKind.PLAYER, 100
-                    elif (monster := monster_positions.get(position)) is not None and (
-                        "invisible" not in monster.definition.abilities or monster.revealed
+                    elif monster is not None and (
+                        monster.cancelled
+                        or not (monster.invisible or "invisible" in monster.definition.abilities)
+                        or monster.revealed
+                        or self.player.see_invisible_turns > 0
+                        or self.player.has_ring_effect("see_invisible")
+                        or detected
                     ):
                         if monster.disguise is not None:
                             entity, priority = EntityKind.ITEM, 80
                             entity_variant = monster.disguise
                         else:
                             entity, priority = EntityKind.MONSTER, 90
-                            entity_variant = monster.type_id
+                            entity_variant = (
+                                MONSTER_TYPES[(monster.id + self.player.turns_played) % len(MONSTER_TYPES)].id
+                                if self.player.hallucination_turns > 0
+                                else monster.type_id
+                            )
                     elif position in item_positions:
                         entity, priority = EntityKind.ITEM, 80
                         entity_variant = item_positions[position]
@@ -1479,6 +1917,8 @@ class GameState:
             self._message(f"You have attained level {self.player.level}.")
 
     def _consume_food(self) -> None:
+        if self.player.has_ring_effect("slow_digestion") and self.rng.randrange(2) == 0:
+            return
         old_food = self.player.food_units
         self.player.food_units -= 1
         if self.player.food_units <= 0:
@@ -1498,6 +1938,18 @@ class GameState:
             self.player.frozen_turns -= 1
         if self.player.confused_turns > 0:
             self.player.confused_turns -= 1
+        if self.player.hallucination_turns > 0:
+            self.player.hallucination_turns -= 1
+        for state in (
+            "blind_turns",
+            "see_invisible_turns",
+            "monster_detection_turns",
+            "levitation_turns",
+            "haste_turns",
+        ):
+            value = getattr(self.player, state)
+            if value > 0:
+                setattr(self.player, state, value - 1)
         if self.status == GameStatus.PLAYING:
             if self.player.has_ring_effect("search"):
                 self._reveal_nearby_traps()
@@ -1507,7 +1959,9 @@ class GameState:
                 if (ring := self.player.item(ring_id)) is not None and ring.effect == "regeneration"
             )
             self.player.hp = min(self.player.max_hp, self.player.hp + regeneration)
-            if process_monsters:
+            if self.player.has_ring_effect("teleportation") and self.rng.randrange(50) == 0:
+                self._teleport_player()
+            if process_monsters and not (self.player.haste_turns and self.player.turns_played % 2):
                 self._process_monsters()
         if getattr(self, "_update_explored", True):
             self.visible_positions()
@@ -1517,6 +1971,8 @@ class GameState:
         if (
             armor is None
             or armor.name.lower() == "leather armor"
+            or armor.armor_protected
+            or self.player.has_ring_effect("maintain_armor")
             or self.player.effective_armor_class() >= RUSTABLE_ARMOR_CLASS
         ):
             return False
@@ -1598,10 +2054,14 @@ class GameState:
         self, monster: MonsterState, weapon: ItemState | None = None, *, thrown: bool = False
     ) -> CombatResult:
         result = self._resolve_attack(self.player, monster, weapon, thrown=thrown)
+        if result.hit and self.player.monster_confusion_ready:
+            monster.confused_turns = max(monster.confused_turns, HUH_DURATION)
+            self.player.monster_confusion_ready = False
         if result.target_defeated:
             self._defeat_monster(monster)
         else:
             monster.asleep = False
+            monster.held = False
             monster.running = True
         return result
 
@@ -1653,22 +2113,22 @@ class GameState:
             return
         if result.hit:
             self._message(f"The {monster.name} hits you for {result.damage} damage.")
-            if monster.type_id == "aquator" and self._rust_armor():
+            if not monster.cancelled and monster.type_id == "aquator" and self._rust_armor():
                 self._message("The aquator's touch weakens your armor.")
-            elif monster.type_id == "ice_monster":
+            elif not monster.cancelled and monster.type_id == "ice_monster":
                 self.player.frozen_turns += self.rng.randrange(2) + 2
                 self._message(f"You are frozen by the {monster.name}.")
-            elif monster.type_id == "venus_flytrap":
+            elif not monster.cancelled and monster.type_id == "venus_flytrap":
                 self.player.held = True
                 self.player.hp -= self.player.flytrap_hits
                 self.player.flytrap_hits += 1
                 if self.player.hp <= 0:
                     self._die(monster.name)
-            elif monster.type_id == "rattlesnake" and not self._saving_throw(VS_POISON):
+            elif not monster.cancelled and monster.type_id == "rattlesnake" and not self._saving_throw(VS_POISON):
                 if not self.player.has_ring_effect("sustain"):
                     self.player.strength = max(1, self.player.strength - 1)
                     self._message("The rattlesnake's bite weakens you.")
-            elif monster.type_id in {"wraith", "vampire"}:
+            elif not monster.cancelled and monster.type_id in {"wraith", "vampire"}:
                 drain_chance = 15 if monster.type_id == "wraith" else 30
                 if self.rng.randrange(100) < drain_chance:
                     if monster.type_id == "wraith":
@@ -1689,14 +2149,14 @@ class GameState:
                     self._message("You suddenly feel weaker.")
                     if self.player.max_hp <= 0:
                         self._die(monster.name)
-            elif monster.type_id == "leprechaun":
+            elif not monster.cancelled and monster.type_id == "leprechaun":
                 gold_roll = 50 + 10 * self.current_floor
                 stolen = self.rng.randrange(gold_roll) + 2
                 if not self._saving_throw(VS_MAGIC):
                     stolen += sum(self.rng.randrange(gold_roll) + 2 for _ in range(4))
                 self.player.gold = max(0, self.player.gold - stolen)
                 self.floor.monsters.remove(monster)
-            elif monster.type_id == "nymph":
+            elif not monster.cancelled and monster.type_id == "nymph":
                 magic_items = [
                     item
                     for item in self.player.inventory
@@ -1790,6 +2250,8 @@ class GameState:
                 position = (monster.x + dx, monster.y + dy)
                 if not self.floor.is_walkable(position) or position in occupied:
                     continue
+                if any(item.position == position and item.effect == "scare_monster" for item in self.floor.items):
+                    continue
                 if (
                     dx
                     and dy
@@ -1819,7 +2281,7 @@ class GameState:
                 item.position is not None
                 and room.contains(*item.position)
                 and item.id not in claimed
-                and not (item.kind == ItemKind.SCROLL and item.name.lower() == "scare monster scroll")
+                and not (item.kind == ItemKind.SCROLL and item.effect == "scare_monster")
                 and self.rng.randrange(100) < monster.definition.carry_chance
             ):
                 monster.target_item_id = item.id
@@ -1840,9 +2302,30 @@ class GameState:
         for monster in list(self.floor.monsters):
             if monster.hp <= 0 or self.status != GameStatus.PLAYING:
                 continue
-            if monster.asleep:
+            if monster.asleep or monster.held:
                 continue
-            visible = self._can_see((monster.x, monster.y), self.player.position, monster.level + 4)
+            if monster.slowed and self.player.turns_played % 2:
+                continue
+            if monster.confused_turns > 0:
+                monster.confused_turns -= 1
+                choices = self._monster_step_positions(monster)
+                if choices:
+                    target = self.rng.choice(choices)
+                    if target == self.player.position:
+                        self._monster_attack(monster)
+                    else:
+                        monster.x, monster.y = target
+                continue
+            visible = self.player.blind_turns <= 0 and self._can_see(
+                (monster.x, monster.y), self.player.position, monster.level + 4
+            )
+            visible = visible and (
+                monster.cancelled
+                or not (monster.invisible or "invisible" in monster.definition.abilities)
+                or monster.revealed
+                or self.player.see_invisible_turns > 0
+                or self.player.has_ring_effect("see_invisible")
+            )
             distance = max(abs(monster.x - self.player.x), abs(monster.y - self.player.y))
             # ponytail: rooms have no darkness flag; add one if dark rooms are modeled.
             player_room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
@@ -1852,16 +2335,30 @@ class GameState:
             )
             monster_room = self.floor.rooms[monster_room_index] if monster_room_index >= 0 else None
             in_gaze_range = (player_room is not None and player_room == monster_room) or distance < LAMP_DISTANCE
-            abilities = monster.definition.abilities
+            abilities = (
+                frozenset()
+                if monster.cancelled
+                else monster.definition.abilities | (frozenset({"mean"}) if monster.mean_override else frozenset())
+            )
             if monster.carry_search_room_index is not None and monster.carry_search_room_index != monster_room_index:
                 monster.target_item_id = None
                 monster.carry_search_room_index = None
-            if visible and not monster.running and ("mean" in abilities or "greed" in abilities):
+            failed_to_wake = False
+            if visible and not monster.running and "mean" in abilities:
+                failed_to_wake = (
+                    (self.player.has_ring_effect("stealth") and self.rng.randrange(3) != 0)
+                    or (self.player.levitation_turns > 0 and self.rng.randrange(3) != 0)
+                    or self.rng.randrange(3) == 0
+                )
+                if not failed_to_wake:
+                    monster.running = True
+            if visible and not monster.running and "greed" in abilities:
                 monster.running = True
             if visible and monster.running:
                 monster.carry_search_room_index = monster_room_index
             if (
-                monster.type_id == "medusa"
+                not monster.cancelled
+                and monster.type_id == "medusa"
                 and monster.running
                 and not monster.gaze_attempted
                 and visible
@@ -1872,11 +2369,18 @@ class GameState:
                     confused_turns = HUH_DURATION - HUH_DURATION // 20 + self.rng.randrange(HUH_DURATION // 10)
                     self.player.confused_turns += confused_turns
                     self._message("The medusa's gaze confuses you.")
-            if monster.type_id == "dragon" and monster.running and self._try_dragon_breath(monster):
+            if (
+                not monster.cancelled
+                and monster.type_id == "dragon"
+                and monster.running
+                and self._try_dragon_breath(monster)
+            ):
                 continue
             if distance <= 1:
                 if self.player.position in self._monster_step_positions(monster):
                     self._monster_attack(monster)
+                continue
+            if failed_to_wake:
                 continue
             if not monster.running and (not visible or "mean" not in abilities):
                 continue
@@ -1911,7 +2415,7 @@ class GameState:
                     continue
                 target_item = None
             chase_target = target_item.position if target_item and target_item.position else self.player.position
-            for step in range(2 if "fly" in abilities else 1):
+            for step in range(2 if "fly" in abilities or monster.hasted else 1):
                 player_dx = self.player.x - monster.x
                 player_dy = self.player.y - monster.y
                 if step and player_dx * player_dx + player_dy * player_dy < MONSTER_FLY_MOVE_DISTANCE_SQUARED:
@@ -1975,7 +2479,7 @@ class GameState:
             return self._result(False, message)
         self.player.position = target
         trap = next((trap for trap in self.floor.traps if (trap.x, trap.y) == target), None)
-        trap_message = self._trigger_trap(trap) if trap else ""
+        trap_message = self._trigger_trap(trap) if trap and self.player.levitation_turns <= 0 else ""
         self._finish_turn()
         return self._result(True, trap_message, True)
 
@@ -2037,6 +2541,25 @@ class GameState:
         self.player.equipped_rings = [ring_id for ring_id in self.player.equipped_rings if ring_id != item.id]
         self.player.inventory.remove(item)
 
+    def _identify_item(self, item: ItemState) -> None:
+        item.identified = True
+        if item.name not in self.player.identified_item_names:
+            self.player.identified_item_names.append(item.name)
+        if item.kind in APPEARANCE_EFFECTS:
+            items = list(self.player.inventory)
+            for floor in self.floors.values():
+                items.extend(floor.items)
+                items.extend(carried for monster in floor.monsters for carried in monster.carried_items)
+            for known in items:
+                if known.kind == item.kind and known.effect == item.effect:
+                    known.identified = True
+
+    def _aggravate_monsters(self) -> None:
+        for monster in self.floor.monsters:
+            monster.asleep = False
+            monster.held = False
+            monster.running = True
+
     def drop(self, value: Any = None) -> CommandResult:
         """Drop one pack item on the current floor."""
         item = self._find_item(value)
@@ -2062,17 +2585,84 @@ class GameState:
 
     def _use_potion(self, item: ItemState) -> str:
         effect = item.effect
-        if effect in {"healing", "extra_healing"}:
-            amount = 8 if effect == "healing" else 16
-            self.player.hp = min(self.player.max_hp, self.player.hp + amount)
-            return "You feel better."
-        if effect == "strength":
+        if effect == "hallucination":
+            self.player.hallucination_turns = HALLUCINATION_TURNS
+            message = "Oh, wow! Everything seems so cosmic!"
+        elif effect == "poison":
+            if self.player.has_ring_effect("sustain"):
+                message = "You feel momentarily sick."
+            else:
+                self.player.strength = max(1, self.player.strength - self.rng.randrange(3) - 1)
+                message = "You feel very sick."
+        elif effect == "confusion":
+            self.player.confused_turns = max(self.player.confused_turns, HUH_DURATION)
+            message = "You feel confused."
+        elif effect == "see_invisible":
+            self.player.see_invisible_turns = max(self.player.see_invisible_turns, HALLUCINATION_TURNS)
+            message = "You can see invisible things."
+        elif effect == "blindness":
+            self.player.blind_turns = max(self.player.blind_turns, BLINDNESS_TURNS)
+            message = "A cloak of darkness falls around you."
+        elif effect == "levitation":
+            self.player.levitation_turns = max(self.player.levitation_turns, LEVITATION_TURNS)
+            message = "You start to float in the air."
+        elif effect == "haste_self":
+            if self.player.haste_turns > 0:
+                self.player.haste_turns = 0
+                self.player.sleep_turns += self.rng.randrange(8)
+                message = "You faint from exhaustion."
+            else:
+                self.player.haste_turns = self.rng.randrange(4) + 4
+                message = "You feel yourself moving much faster."
+        elif effect == "monster_detection":
+            monsters = len(self.floor.monsters)
+            self.player.monster_detection_turns = HUH_DURATION
+            message = f"You sense {monsters} monster{'s' if monsters != 1 else ''} on this level."
+        elif effect == "magic_detection":
+            positions = [
+                str(item.position)
+                for item in self.floor.items
+                if item.position is not None and self._item_is_magic(item)
+            ]
+            positions.extend(
+                str((monster.x, monster.y))
+                for monster in self.floor.monsters
+                if any(self._item_is_magic(item) for item in monster.carried_items)
+            )
+            message = f"You sense magic at {', '.join(positions)}." if positions else "You have a strange feeling."
+        elif effect == "raise_level":
+            if self.player.level < len(EXPERIENCE_LEVELS):
+                self.player.exp = max(self.player.exp, self._required_exp())
+                self._level_up_if_needed()
+            message = "You suddenly feel much more skillful."
+        elif effect in {"healing", "extra_healing"}:
+            healing = _roll(self.rng, (self.player.level, 4 if effect == "healing" else 8))
+            self.player.hp += healing
+            if self.player.hp > self.player.max_hp:
+                if effect == "extra_healing" and self.player.hp > self.player.max_hp + self.player.level + 1:
+                    self.player.max_hp += 1
+                self.player.max_hp += 1
+                self.player.hp = self.player.max_hp
+            self.player.blind_turns = 0
+            if effect == "extra_healing":
+                self.player.hallucination_turns = 0
+            message = "You begin to feel much better." if effect == "extra_healing" else "You begin to feel better."
+        elif effect == "strength":
             self.player.strength = min(31, self.player.strength + 1)
-            return "You feel stronger."
-        if effect == "restore_strength":
-            self.player.strength = 16
-            return "You feel your strength return."
-        return "You feel a strange sensation."
+            self.player.max_strength = max(self.player.max_strength, self.player.strength)
+            message = "You feel stronger."
+        elif effect == "restore_strength":
+            self.player.strength = self.player.max_strength
+            message = "You feel your strength return."
+        else:
+            message = "You feel a strange sensation."
+        return message
+
+    @staticmethod
+    def _item_is_magic(item: ItemState) -> bool:
+        return item.kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND, ItemKind.AMULET} or bool(
+            item.enchantment or item.hit_bonus or item.damage_bonus or item.armor_protected
+        )
 
     def quaff(self, value: Any = None) -> CommandResult:
         """Drink a potion and apply its effect."""
@@ -2080,37 +2670,104 @@ class GameState:
         if not item or item.kind != ItemKind.POTION:
             return self._result(False, "You have no potion to drink.")
         message = self._use_potion(item)
-        item.identified = True
+        self._identify_item(item)
         self._remove_inventory_item(item)
         self._finish_turn()
         return self._result(True, message, True)
 
-    def read(self, value: Any = None) -> CommandResult:
+    def read(self, value: Any = None, target_value: Any = None) -> CommandResult:
         """Read a scroll and apply its effect."""
         item = self._find_item(value, kind=ItemKind.SCROLL)
         if not item or item.kind != ItemKind.SCROLL:
             return self._result(False, "You have no scroll to read.")
-        item.identified = True
         effect = item.effect
-        if effect == "identify":
-            for other in self.player.inventory:
-                if other.kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND}:
-                    other.identified = True
-            message = "You identify the objects in your pack."
+        if effect in {"enchant_weapon", "enchant_armor"}:
+            kind = ItemKind.WEAPON if effect == "enchant_weapon" else ItemKind.ARMOR
+            if self.player.equipped(kind) is None:
+                return self._result(False, f"You have no {kind.value} to enchant.")
+        target: ItemState | None = None
+        if effect in SCROLL_IDENTIFY_TARGETS:
+            target = self._find_item(target_value) if target_value is not None else None
+            if target is None or target.kind not in SCROLL_IDENTIFY_TARGETS[effect]:
+                return self._result(False, "Choose an item of the matching type to identify.")
+        self._identify_item(item)
+        if effect in {"identify", "identify_potion", "identify_weapon", "identify_armor", "identify_ring_wand"}:
+            if effect == "identify":
+                for other in self.player.inventory:
+                    if other.kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND}:
+                        self._identify_item(other)
+                message = "You identify the objects in your pack."
+            else:
+                target = cast("ItemState", target)
+                self._identify_item(target)
+                message = f"You identify the {target.name}."
         elif effect == "remove_curse":
             for other in self.player.inventory:
                 other.cursed = False
             message = "You feel as if somebody is watching over you."
         elif effect == "enchant_weapon":
-            weapon = self.player.equipped(ItemKind.WEAPON)
-            if weapon:
-                weapon.enchantment += 1
+            weapon = cast("ItemState", self.player.equipped(ItemKind.WEAPON))
+            weapon.cursed = False
+            if self.rng.randrange(2) == 0:
+                weapon.hit_bonus += 1
+            else:
+                weapon.damage_bonus += 1
             message = "Your weapon glows blue for a moment."
         elif effect == "enchant_armor":
-            armor = self.player.equipped(ItemKind.ARMOR)
-            if armor:
-                armor.enchantment += 1
+            armor = cast("ItemState", self.player.equipped(ItemKind.ARMOR))
+            armor.cursed = False
+            armor.enchantment += 1
             message = "Your armor glows blue for a moment."
+        elif effect == "protect_armor":
+            protected_armor = self.player.equipped(ItemKind.ARMOR)
+            if protected_armor:
+                protected_armor.armor_protected = True
+                message = "Your armor is covered by a shimmering shield."
+            else:
+                message = "You feel a strange sense of loss."
+        elif effect == "monster_confusion":
+            self.player.monster_confusion_ready = True
+            message = "Your hands begin to glow."
+        elif effect == "hold_monster":
+            monsters = [
+                monster
+                for monster in self.floor.monsters
+                if monster.running
+                and max(abs(monster.x - self.player.x), abs(monster.y - self.player.y)) <= HOLD_MONSTER_RADIUS
+            ]
+            for monster in monsters:
+                monster.held = True
+                monster.running = False
+            message = "The monsters around you freeze." if monsters else "You feel a strange sense of loss."
+        elif effect == "sleep":
+            self.player.sleep_turns = max(self.player.sleep_turns, self.rng.randrange(SLEEP_TURNS) + 4)
+            message = "You fall asleep."
+        elif effect == "scare_monster":
+            message = "You hear maniacal laughter in the distance."
+        elif effect == "food_detection":
+            positions = ", ".join(
+                str(food.position)
+                for food in self.floor.items
+                if food.kind == ItemKind.FOOD and food.position is not None
+            )
+            message = f"You smell food at {positions}." if positions else "Your nose tingles."
+        elif effect == "create_monster":
+            adjacent = [
+                (self.player.x + dx, self.player.y + dy)
+                for dx in (-1, 0, 1)
+                for dy in (-1, 0, 1)
+                if (dx or dy)
+                and self.floor.is_walkable((self.player.x + dx, self.player.y + dy))
+                and (self.player.x + dx, self.player.y + dy) not in self._occupied(self.floor)
+            ]
+            if adjacent:
+                self._new_monster(self.floor, self.rng.choice(adjacent))
+                message = "You hear a cry of anguish in the distance."
+            else:
+                message = "You hear a faint cry of anguish in the distance."
+        elif effect == "aggravate_monsters":
+            self._aggravate_monsters()
+            message = "You hear a high pitched humming noise."
         elif effect == "light":
             self._illuminate_current_area()
             message = "The room is lit."
@@ -2131,16 +2788,22 @@ class GameState:
         item = self._find_item(value, kind=kind)
         if not item or item.kind != kind:
             return self._result(False, f"You have no {kind.value} to equip.")
-        if item.cursed and item.id in self.player.equipped_item_ids:
-            return self._result(False, "That item is already cursed on you.")
         if kind == ItemKind.WEAPON:
+            old = self.player.item(self.player.equipped_weapon) if self.player.equipped_weapon is not None else None
+            if old and old.id != item.id and old.cursed:
+                return self._result(False, "You cannot remove a cursed weapon.")
             self.player.equipped_weapon = item.id
         elif kind == ItemKind.ARMOR:
+            old = self.player.item(self.player.equipped_armor) if self.player.equipped_armor is not None else None
+            if old and old.id != item.id and old.cursed:
+                return self._result(False, "You cannot remove cursed armor.")
             self.player.equipped_armor = item.id
         elif item.id not in self.player.equipped_rings:
             if len(self.player.equipped_rings) >= MAX_EQUIPPED_RINGS:
-                self.player.equipped_rings.pop(0)
+                return self._result(False, "You are already wearing two rings.")
             self.player.equipped_rings.append(item.id)
+            if item.effect == "aggravate":
+                self._aggravate_monsters()
         self._finish_turn()
         return self._result(True, f"You equip the {item.display_name}.", True)
 
@@ -2215,13 +2878,22 @@ class GameState:
             return self._result(False, "Usage: zap <wand> <direction>")
         if item.charges <= 0:
             return self._result(False, "The wand has no charges left.")
-        if item.effect == "light":
+        if item.effect == "drain_life" and self.player.hp < DRAIN_LIFE_MIN_PLAYER_HP:
+            return self._result(False, "You are too weak to use it.")
+        if item.effect in {"light", "drain_life"}:
             target = None
         else:
             if direction is None or direction not in DIRECTIONS.values():
                 return self._result(False, "You need to choose a direction.")
             _, target = self._trace_projectile(direction)
         item.charges -= 1
+        if (
+            target
+            and target.type_id == "venus_flytrap"
+            and item.effect
+            in {"invisibility", "polymorph", "teleport_away", "teleport_monster", "teleport_to", "cancellation"}
+        ):
+            self.player.held = False
         if target and item.effect in {"magic_missile", "lightning", "fire", "cold"}:
             if target.type_id == "dragon" and item.effect == "fire":
                 message = "The fire bounces off the dragon."
@@ -2232,15 +2904,90 @@ class GameState:
                 message = f"The {item.display_name} hits the {target.name}."
                 if target.hp == 0:
                     self._defeat_monster(target)
-        elif target and item.effect == "teleport_monster":
+        elif target and item.effect in {"teleport_away", "teleport_monster"}:
             target.x, target.y = self._free_position(self.floor, (self.player.position,))
             message = f"The {target.name} vanishes."
+        elif target and item.effect == "teleport_to":
+            dx, dy = cast("Position", direction)
+            destination = self.player.x + dx, self.player.y + dy
+            if destination != (target.x, target.y) and destination not in {
+                (monster.x, monster.y) for monster in self.floor.monsters if monster is not target
+            }:
+                target.x, target.y = destination
+            message = f"The {target.name} appears nearby."
+        elif target and item.effect == "invisibility":
+            target.invisible = True
+            target.revealed = False
+            message = f"The {target.name} disappears."
+        elif target and item.effect == "polymorph":
+            target.type_id = self.rng.choice(MONSTER_TYPES).id
+            target.level_bonus = max(0, self.current_floor - MAX_FLOOR)
+            target.asleep = False
+            target.running = self.player.has_ring_effect("aggravate")
+            target.gaze_attempted = False
+            target.revealed = False
+            target.disguise = (
+                self.rng.choice(MONSTER_DISGUISES[: 10 if self.current_floor >= MAX_FLOOR else 9])
+                if target.type_id == "xeroc"
+                else None
+            )
+            target.target_item_id = None
+            target.carry_search_room_index = None
+            target.max_hp = _roll(self.rng, (target.level, 8))
+            target.hp = target.max_hp
+            target.exp_value = None
+            target.exp_value = target.experience_reward
+            target.held = target.invisible = target.hasted = target.slowed = target.cancelled = False
+            target.confused_turns = 0
+            target.mean_override = False
+            message = "The monster changes."
+        elif target and item.effect == "haste_monster":
+            target.slowed = False
+            target.hasted = True
+            message = f"The {target.name} moves much faster."
+        elif target and item.effect == "slow_monster":
+            target.hasted = False
+            target.slowed = True
+            message = f"The {target.name} moves more slowly."
+        elif item.effect == "drain_life":
+            room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
+            if room is not None:
+                targets = [monster for monster in self.floor.monsters if room.contains(monster.x, monster.y)]
+            else:
+                targets = [
+                    monster
+                    for monster in self.floor.monsters
+                    if max(abs(monster.x - self.player.x), abs(monster.y - self.player.y)) <= LAMP_DISTANCE
+                ]
+            if targets:
+                self.player.hp //= 2
+                damage = self.player.hp // len(targets)
+                for monster in targets:
+                    monster.hp = max(0, monster.hp - damage)
+                    if monster.hp == 0:
+                        self._defeat_monster(monster)
+                    else:
+                        monster.running = True
+                message = "A wave of life force drains from you."
+            else:
+                message = "You have a tingling feeling."
+        elif target and item.effect == "cancellation":
+            target.cancelled = True
+            target.disguise = None
+            target.invisible = False
+            target.held = False
+            target.hasted = False
+            target.slowed = False
+            target.confused_turns = 0
+            message = f"The {target.name} looks less dangerous."
         elif item.effect == "light":
             self._illuminate_current_area()
             message = "The room is lit."
+        elif item.effect == "nothing":
+            message = "Nothing happens."
         else:
             message = "The wand has no visible effect."
-        item.identified = True
+        self._identify_item(item)
         self._finish_turn()
         return self._result(True, message, True)
 
@@ -2306,7 +3053,7 @@ class GameState:
         )
         if not item:
             return self._result(False, "You have nothing new to identify.")
-        item.identified = True
+        self._identify_item(item)
         return self._result(True, f"You identify the {item.name}.")
 
     def ascend(self) -> CommandResult:
@@ -2419,7 +3166,7 @@ class GameState:
         if command == "quaff":
             return self.quaff(args[0] if args else None)
         if command == "read":
-            return self.read(args[0] if args else None)
+            return self.read(args[0] if args else None, args[1] if len(args) > 1 else None)
         equipment_kind = EQUIPMENT_KINDS.get(command)
         if equipment_kind is not None:
             return self.equip(args[0] if args else None, equipment_kind)
@@ -2429,7 +3176,7 @@ class GameState:
         if command == "throw":
             return self.throw(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else (1, 0))
         if command == "zap":
-            return self.zap(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else (0, 0))
+            return self.zap(args[0] if args else None, self._direction(args[1]) if len(args) > 1 else None)
         if command == "search":
             return self.search()
         if command == "identify_trap":
@@ -2463,7 +3210,7 @@ class GameState:
         if command == "help":
             return self._result(
                 True,
-                "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read, w/W equip, t throw, z zap, s search, ^ trap, / identify, </> stairs, ? help",
+                "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read <scroll> [item], w/W equip, t throw, z zap, s search, ^ trap, / identify, </> stairs, ? help",
             )
         if command == "save":
             return self._result(True, "Game state ready to save.", False, self.to_dict())
@@ -2490,6 +3237,7 @@ class GameState:
             "messages": self.messages[-100:],
             "rng_state": _jsonable(self.rng.getstate()),
             "next_ids": {"item": self._next_item_id, "monster": self._next_monster_id, "trap": self._next_trap_id},
+            "floors_without_food": self._floors_without_food,
             "appearances": {
                 kind.value: [values[effect] for effect in APPEARANCE_EFFECTS[kind]]
                 for kind, values in self._appearance_names.items()
@@ -2516,6 +3264,7 @@ class GameState:
         game._next_item_id = int(data.get("next_ids", {}).get("item", 1))  # noqa: SLF001
         game._next_monster_id = int(data.get("next_ids", {}).get("monster", 1))  # noqa: SLF001
         game._next_trap_id = int(data.get("next_ids", {}).get("trap", 1))  # noqa: SLF001
+        game._floors_without_food = int(data.get("floors_without_food", 0))  # noqa: SLF001
         game._appearance_names = game._make_appearances()  # noqa: SLF001
         for raw_kind, values in data.get("appearances", {}).items():
             kind = ItemKind(raw_kind)

@@ -7,16 +7,19 @@ from pyrogue.core.game_states import GameStates
 from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState
 from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_screen import GameScreen
+from pyrogue.ui.screens.inventory_screen import InventoryScreen
 
 
-def test_gui_read_key_uses_the_canonical_scroll_command() -> None:
+def test_gui_read_key_selects_a_scroll_for_the_canonical_command() -> None:
     screen = GameScreen(None, seed=20)
     game = screen.rogue_game
     game.floor.monsters.clear()
     scroll = ItemState(id=930, kind=ItemKind.SCROLL, name="light scroll", effect="light")
     game.player.inventory.append(scroll)
+    inventory = InventoryScreen(screen)
 
-    screen.input_handler.handle_key(SimpleNamespace(sym=ord("r"), mod=0, text="r"))
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=ord("r"), mod=0, text="r")) == GameStates.SHOW_INVENTORY
+    inventory.handle_input(SimpleNamespace(sym=ord("a"), mod=0, text="a"))
 
     assert scroll not in game.player.inventory
     assert game.player.turns_played == 1

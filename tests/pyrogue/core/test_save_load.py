@@ -17,9 +17,21 @@ _LEGACY_SAVE_PAYLOADS = [
 def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game = GameState(1234)
     game.player.gold = 42
+    game.player.blind_turns = 4
+    game.player.monster_confusion_ready = True
+    game.player.identified_item_names.append("healing potion")
+    game.player.max_strength = 21
+    game._floors_without_food = 3
     monster = game.floor.monsters[0]
     monster.hp -= 1
     monster.running = True
+    monster.held = True
+    monster.invisible = True
+    monster.hasted = True
+    monster.slowed = True
+    monster.confused_turns = 5
+    monster.cancelled = True
+    monster.mean_override = True
     monster.level_bonus = 2
     monster.revealed = True
     monster.carried_items.append(ItemState(9998, ItemKind.POTION, "healing potion"))
@@ -37,6 +49,11 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     restored = GameState.from_dict(loaded)
     assert restored.to_dict() == expected
     assert restored.floor.monsters[0].carry_search_room_index == 0
+    assert restored.player.blind_turns == 4
+    assert restored.player.monster_confusion_ready
+    assert restored.player.max_strength == 21
+    assert restored.floor.monsters[0].mean_override
+    assert restored._floors_without_food == 3
 
 
 def test_load_defaults_new_monster_fields_for_older_saves() -> None:
@@ -48,6 +65,10 @@ def test_load_defaults_new_monster_fields_for_older_saves() -> None:
     old_monster.pop("carried_items")
     old_monster.pop("target_item_id")
     old_monster.pop("carry_search_room_index")
+    old_monster.pop("mean_override")
+    old_state["player"].pop("max_strength")
+    for field in ("held", "invisible", "hasted", "slowed", "confused_turns", "cancelled"):
+        old_monster.pop(field)
 
     monster = GameState.from_dict(old_state).floor.monsters[0]
 
@@ -57,6 +78,13 @@ def test_load_defaults_new_monster_fields_for_older_saves() -> None:
     assert monster.carried_items == []
     assert monster.target_item_id is None
     assert monster.carry_search_room_index is None
+    assert not monster.held
+    assert not monster.invisible
+    assert not monster.hasted
+    assert not monster.slowed
+    assert monster.confused_turns == 0
+    assert not monster.cancelled
+    assert not monster.mean_override
 
 
 def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:

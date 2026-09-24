@@ -282,6 +282,9 @@ def test_visible_greedy_orc_chases_gold_in_players_room() -> None:
     gold = ItemState(906, ItemKind.GOLD, "gold", position=(12, 7))
     game.floor.monsters.append(orc)
     game.floor.items.append(gold)
+    for y in range(game.floor.height):
+        for x in range(game.floor.width):
+            game.floor.set_tile((x, y), Terrain.WALL)
     for x in range(5, 16):
         game.floor.set_tile((x, 7), Terrain.FLOOR)
 
@@ -674,7 +677,7 @@ def test_execute_wait_rattlesnake_poison_uses_rogue_saving_throw(seed: int, expe
     assert game.player.strength == expected_strength
 
 
-@pytest.mark.parametrize(("seed", "expected_max_hp"), [(0, 98), (1, 100)])
+@pytest.mark.parametrize(("seed", "expected_max_hp"), [(0, 100), (3, 98)])
 def test_execute_wait_vampire_sometimes_drains_maximum_hit_points(seed: int, expected_max_hp: int) -> None:
     game, _ = game_with_adjacent_monster("vampire")
     game.player.armor_class = 100
