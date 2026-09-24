@@ -800,10 +800,8 @@ class DungeonGenerator:
         edges = [
             (self.rng.random(), index, index + 1) for index in range(columns * rows) if index % columns < columns - 1
         ] + [(self.rng.random(), index, index + columns) for index in range(columns * (rows - 1))]
-        for _, a, b in sorted(edges):
-            if root(a) == root(b):
-                continue
-            parent[root(a)] = root(b)
+
+        def connect_regions(a: int, b: int) -> None:
             first, second = regions.get(a), regions.get(b)
             first_column, first_row = a % columns, a // columns
             second_column, second_row = b % columns, b // columns
@@ -826,9 +824,26 @@ class DungeonGenerator:
             second_exit = (second_port[0] - direction[0], second_port[1] - direction[1]) if second else second_center
             self._carve_corridor(tiles, first_exit, second_exit)
             if first:
-                tiles[first_port[1]][first_port[0]] = Terrain.DOOR_CLOSED
+                tiles[first_port[1]][first_port[0]] = Terrain.FLOOR if first.is_maze else Terrain.DOOR_CLOSED
             if second:
-                tiles[second_port[1]][second_port[0]] = Terrain.DOOR_CLOSED
+                tiles[second_port[1]][second_port[0]] = Terrain.FLOOR if second.is_maze else Terrain.DOOR_CLOSED
+
+        connected_edges: set[tuple[int, int]] = set()
+        for _, a, b in sorted(edges):
+            if root(a) == root(b):
+                continue
+            parent[root(a)] = root(b)
+            connected_edges.add((a, b))
+            connect_regions(a, b)
+
+        # Rogue tries up to four extra adjacent passages after connecting every region.
+        for _ in range(self.rng.randrange(5)):
+            available_edges = [(a, b) for _, a, b in edges if (a, b) not in connected_edges]
+            if not available_edges:
+                break
+            a, b = self.rng.choice(available_edges)
+            connected_edges.add((a, b))
+            connect_regions(a, b)
 
         start_room = rooms[0]
         start = next(

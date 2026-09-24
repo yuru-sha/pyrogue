@@ -176,10 +176,46 @@ def test_maze_room_keeps_a_connected_lattice_of_passages() -> None:
     )
     assert passages <= generator._reachable_positions(floor.tiles, next(iter(passages)))
     assert all(
+        floor.tile_at((x, y)) != Terrain.DOOR_CLOSED
+        for y in range(maze_room.y, maze_room.y + maze_room.height)
+        for x in range(maze_room.x, maze_room.x + maze_room.width)
+    )
+    maze_exits = {
+        (x, y)
+        for y in range(maze_room.y, maze_room.y + maze_room.height)
+        for x in range(maze_room.x, maze_room.x + maze_room.width)
+        if (
+            x in {maze_room.x, maze_room.x + maze_room.width - 1}
+            or y in {maze_room.y, maze_room.y + maze_room.height - 1}
+        )
+        and floor.tile_at((x, y)) != Terrain.WALL
+    }
+    assert maze_exits
+    assert floor.up_stairs is not None
+    assert maze_exits <= generator._reachable_positions(floor.tiles, floor.up_stairs)
+    assert all(
         sum(floor.tile_at((x + dx, y + dy)) != Terrain.WALL for dx in range(2) for dy in range(2)) < 4
         for y in range(maze_room.y + 1, maze_room.y + maze_room.height - 2)
         for x in range(maze_room.x + 1, maze_room.x + maze_room.width - 2)
     )
+
+
+def test_room_graph_can_have_additional_corridors() -> None:
+    class CountingGenerator(DungeonGenerator):
+        region_corridors = 0
+
+        def _carve_corridor(self, tiles: list[list[Terrain]], first: tuple[int, int], second: tuple[int, int]) -> None:
+            cell_width, cell_height = self.width // 3, self.height // 3
+            first_region = first[0] // cell_width, first[1] // cell_height
+            second_region = second[0] // cell_width, second[1] // cell_height
+            if first_region != second_region:
+                self.region_corridors += 1
+            super()._carve_corridor(tiles, first, second)
+
+    generator = CountingGenerator(rng=random.Random(9))  # noqa: S311
+    generator.generate(1)
+
+    assert 8 < generator.region_corridors <= 12
 
 
 def _use_generated_dark_room(game: GameState) -> Room:
