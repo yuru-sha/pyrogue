@@ -1,11 +1,5 @@
-from types import SimpleNamespace
-from unittest.mock import Mock
-
 from pyrogue.core.cli_engine import CLIEngine
-from pyrogue.core.managers.floor_manager import FloorManager
 from pyrogue.core.rogue_game import MAX_FLOOR, GameState
-from pyrogue.entities.actors.player import Player
-from pyrogue.map.tile import StairsDown
 
 
 def test_cli_defaults_to_canonical_game_state(capsys) -> None:
@@ -41,22 +35,3 @@ def test_cli_victory_summary_reports_deepest_floor(capsys) -> None:
     cli.process_command("ascend")
 
     assert "Deepest floor: B26F" in capsys.readouterr().out
-
-
-def test_floor_manager_updates_deepest_floor_on_descent() -> None:
-    player = Player(0, 0)
-    floor = Mock()
-    floor.get_tile.return_value = StairsDown()
-    floor.get_stairs_up_position.return_value = (2, 2)
-    floor.start_pos = (2, 2)
-    dungeon_manager = Mock(current_floor=1)
-    dungeon_manager.get_current_floor_data.return_value = floor
-    context = SimpleNamespace(
-        player=player,
-        dungeon_manager=dungeon_manager,
-        add_message=Mock(),
-    )
-
-    assert FloorManager(context).handle_stairs_down()
-
-    assert player.deepest_floor == 2

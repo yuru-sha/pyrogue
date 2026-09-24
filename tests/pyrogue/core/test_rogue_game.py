@@ -436,6 +436,23 @@ def test_room_layout_uses_nine_regions_and_varies_by_seed() -> None:
     assert first.rooms
 
 
+def test_seeded_game_can_generate_the_rogue_room_width_limit() -> None:
+    # Rogue 5.4 chooses room width from 4 through region_width - 1.
+    assert any(room.width == 25 for seed in range(64) for room in GameState(seed=seed).floor.rooms if not room.is_maze)
+
+
+def test_excluded_legacy_commands_are_not_available() -> None:
+    game = GameState(seed=25)
+    turns_before = game.player.turns_played
+
+    for command in ("disarm", "wizard", "auto_explore"):
+        result = game.execute(command)
+        assert not result.success
+        assert not result.turn_consumed
+
+    assert game.player.turns_played == turns_before
+
+
 def test_dark_rooms_are_seeded_and_not_present_on_first_floor() -> None:
     generator = DungeonGenerator(rng=random.Random(4))  # noqa: S311
 
@@ -519,18 +536,23 @@ def test_room_graph_can_have_additional_corridors() -> None:
     class CountingGenerator(DungeonGenerator):
         region_corridors = 0
 
-        def _carve_corridor(self, tiles: list[list[Terrain]], first: tuple[int, int], second: tuple[int, int]) -> None:
-            cell_width, cell_height = self.width // 3, self.height // 3
-            first_region = first[0] // cell_width, first[1] // cell_height
-            second_region = second[0] // cell_width, second[1] // cell_height
-            if first_region != second_region:
-                self.region_corridors += 1
-            super()._carve_corridor(tiles, first, second)
+        def _connect_regions(
+            self,
+            tiles: list[list[Terrain]],
+            regions: list[Room | None],
+            region_points: list[tuple[int, int]],
+            first_index: int,
+            second_index: int,
+        ) -> None:
+            self.region_corridors += 1
+            super()._connect_regions(tiles, regions, region_points, first_index, second_index)
 
-    generator = CountingGenerator(rng=random.Random(9))  # noqa: S311
-    generator.generate(1)
+    generators = [CountingGenerator(rng=random.Random(seed)) for seed in range(32)]  # noqa: S311
+    for generator in generators:
+        generator.generate(1)
 
-    assert 8 < generator.region_corridors <= 12
+    assert all(8 <= generator.region_corridors <= 12 for generator in generators)
+    assert any(generator.region_corridors > 8 for generator in generators)
 
 
 def _use_generated_dark_room(game: GameState) -> Room:

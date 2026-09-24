@@ -754,6 +754,9 @@ class CommandResult:
 class DungeonGenerator:
     """Generate Rogue-style nine-region floors with connected stairs."""
 
+    REGION_COUNT = 9
+    GRID_SIZE = 3
+
     def __init__(
         self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, rng: random.Random | None = None
     ) -> None:
@@ -773,9 +776,10 @@ class DungeonGenerator:
 
     def _carve_room(self, tiles: list[list[Terrain]], room: Room) -> None:
         if room.is_maze:
-            start = (room.x + 1, room.y + 1)
-            if start[0] >= room.x + room.width - 1 or start[1] >= room.y + room.height - 1:
-                start = room.center
+            start = (
+                room.x + self.rng.randrange(room.width) // 2 * 2,
+                room.y + self.rng.randrange(room.height) // 2 * 2,
+            )
             stack = [start]
             tiles[start[1]][start[0]] = Terrain.FLOOR
             while stack:
@@ -783,8 +787,8 @@ class DungeonGenerator:
                 candidates = [
                     (x + dx * 2, y + dy * 2, dx, dy)
                     for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                    if room.x < x + dx * 2 < room.x + room.width - 1
-                    and room.y < y + dy * 2 < room.y + room.height - 1
+                    if room.x <= x + dx * 2 < room.x + room.width
+                    and room.y <= y + dy * 2 < room.y + room.height
                     and tiles[y + dy * 2][x + dx * 2] == Terrain.WALL
                 ]
                 if not candidates:
@@ -800,107 +804,63 @@ class DungeonGenerator:
                 if 0 < x < self.width - 1 and 0 < y < self.height - 1:
                     tiles[y][x] = Terrain.FLOOR
 
-    def _carve_corridor(self, tiles: list[list[Terrain]], first: Position, second: Position) -> None:
-        x, y = first
-        if 0 < x < self.width - 1 and 0 < y < self.height - 1:
-            tiles[y][x] = Terrain.FLOOR
-        horizontal_first = self.rng.choice((True, False))
-        bend = (second[0], first[1]) if horizontal_first else (first[0], second[1])
-        points = (bend, second)
-        for target_x, target_y in points:
-            while (x, y) != (target_x, target_y):
-                if x != target_x:
-                    x += 1 if target_x > x else -1
-                elif y != target_y:
-                    y += 1 if target_y > y else -1
-                if 0 < x < self.width - 1 and 0 < y < self.height - 1:
-                    tiles[y][x] = Terrain.FLOOR
-
     def _generate_rooms(self, floor_number: int) -> FloorState:
         tiles = self._blank()
         rooms: list[Room] = []
         columns = rows = 3
         cell_width = self.width // columns
         cell_height = self.height // rows
-        missing_regions = set(self.rng.sample(range(columns * rows), self.rng.randrange(4)))
-        regions: dict[int, Room] = {}
+        missing_count = self.rng.randrange(4)
+        missing_regions = set(self.rng.sample(range(columns * rows), missing_count))
+        regions: list[Room | None] = [None] * (columns * rows)
+        region_points: list[Position] = [(0, 0)] * (columns * rows)
         for index in range(columns * rows):
-            if index in missing_regions:
-                continue
             column, row = index % columns, index // columns
-            left, top = column * cell_width + 1, row * cell_height + 1
-            right = min((column + 1) * cell_width, self.width - 1)
-            bottom = min((row + 1) * cell_height, self.height - 1)
-            room_width = self.rng.randint(4, max(4, right - left - 1))
-            room_height = self.rng.randint(4, max(4, bottom - top - 1))
-            x = self.rng.randint(left, max(left, right - room_width))
-            y = self.rng.randint(top, max(top, bottom - room_height))
+            left, top = column * cell_width + 1, row * cell_height
+            if index in missing_regions:
+                x = left + 1 + self.rng.randrange(cell_width - 2)
+                y = top + 1 + self.rng.randrange(cell_height - 2)
+                region_points[index] = (x, y)
+                continue
             dark = self.rng.randrange(10) < floor_number - 1
             maze = dark and self.rng.randrange(15) == 0
             if maze:
-                x, y = left, top
-                room_width, room_height = right - left - 1, bottom - top - 1
+                x, y = left + 1, top + 1
+                room_width, room_height = cell_width - 2, cell_height - 2
+            else:
+                while True:
+                    room_width = self.rng.randrange(cell_width - 4) + 4
+                    room_height = self.rng.randrange(cell_height - 4) + 4
+                    x = left + self.rng.randrange(cell_width - room_width)
+                    y = top + self.rng.randrange(cell_height - room_height)
+                    if y != 0:
+                        break
             room = Room(x, y, room_width, room_height, dark and not maze, maze)
             regions[index] = room
+            region_points[index] = (x, y)
             rooms.append(room)
             self._carve_room(tiles, room)
 
-        # Connect adjacent regions first, routing through missing regions.
-        parent = list(range(columns * rows))
-
-        def root(index: int) -> int:
-            while parent[index] != index:
-                parent[index] = parent[parent[index]]
-                index = parent[index]
-            return index
-
-        edges = [
-            (self.rng.random(), index, index + 1) for index in range(columns * rows) if index % columns < columns - 1
-        ] + [(self.rng.random(), index, index + columns) for index in range(columns * (rows - 1))]
-
-        def connect_regions(a: int, b: int) -> None:
-            first, second = regions.get(a), regions.get(b)
-            first_column, first_row = a % columns, a // columns
-            second_column, second_row = b % columns, b // columns
-            direction = (second_column - first_column, second_row - first_row)
-            first_center = self._region_center(a, cell_width, cell_height, columns)
-            second_center = self._region_center(b, cell_width, cell_height, columns)
-            first_target = second.center if second else second_center
-            second_target = first.center if first else first_center
-            first_port = first_center if first is None else self._room_door(tiles, first, direction, first_target)
-            second_port = (
-                second_center
-                if second is None
-                else self._room_door(tiles, second, (-direction[0], -direction[1]), second_target)
-            )
-            if first:
-                self._connect_room_door(tiles, first, first_port, direction)
-            if second:
-                self._connect_room_door(tiles, second, second_port, (-direction[0], -direction[1]))
-            first_exit = (first_port[0] + direction[0], first_port[1] + direction[1]) if first else first_center
-            second_exit = (second_port[0] - direction[0], second_port[1] - direction[1]) if second else second_center
-            self._carve_corridor(tiles, first_exit, second_exit)
-            if first:
-                tiles[first_port[1]][first_port[0]] = Terrain.FLOOR if first.is_maze else Terrain.DOOR_CLOSED
-            if second:
-                tiles[second_port[1]][second_port[0]] = Terrain.FLOOR if second.is_maze else Terrain.DOOR_CLOSED
-
-        connected_edges: set[tuple[int, int]] = set()
-        for _, a, b in sorted(edges):
-            if root(a) == root(b):
+        connections = [[False] * self.REGION_COUNT for _ in range(self.REGION_COUNT)]
+        graph = {self.rng.randrange(self.REGION_COUNT)}
+        while len(graph) < self.REGION_COUNT:
+            region_index = self.rng.choice(tuple(graph))
+            adjacent = [other for other in self._adjacent_regions(region_index) if other not in graph]
+            if not adjacent:
                 continue
-            parent[root(a)] = root(b)
-            connected_edges.add((a, b))
-            connect_regions(a, b)
+            neighbor = self.rng.choice(adjacent)
+            self._connect_regions(tiles, regions, region_points, region_index, neighbor)
+            graph.add(neighbor)
+            connections[region_index][neighbor] = connections[neighbor][region_index] = True
 
-        # Rogue tries up to four extra adjacent passages after connecting every region.
         for _ in range(self.rng.randrange(5)):
-            available_edges = [(a, b) for _, a, b in edges if (a, b) not in connected_edges]
-            if not available_edges:
-                break
-            a, b = self.rng.choice(available_edges)
-            connected_edges.add((a, b))
-            connect_regions(a, b)
+            region_index = self.rng.randrange(self.REGION_COUNT)
+            adjacent = [other for other in self._adjacent_regions(region_index) if not connections[region_index][other]]
+            if not adjacent:
+                continue
+            neighbor = self.rng.choice(adjacent)
+            self._connect_regions(tiles, regions, region_points, region_index, neighbor)
+            connections[region_index][neighbor] = connections[neighbor][region_index] = True
 
         start_room = rooms[0]
         start = next(
@@ -926,47 +886,121 @@ class DungeonGenerator:
             tiles[end[1]][end[0]] = Terrain.STAIRS_DOWN
         return FloorState(floor_number, self.width, self.height, tiles, rooms, up_stairs, down_stairs)
 
-    def _region_center(self, index: int, cell_width: int, cell_height: int, columns: int) -> Position:
-        return (index % columns * cell_width + cell_width // 2, index // columns * cell_height + cell_height // 2)
-
-    def _room_door(self, tiles: list[list[Terrain]], room: Room, direction: Position, target: Position) -> Position:
-        dx, dy = direction
-        if room.is_maze:
-            passages = [
-                (x, y)
-                for y in range(room.y + 1, room.y + room.height - 1)
-                for x in range(room.x + 1, room.x + room.width - 1)
-                if tiles[y][x] == Terrain.FLOOR
-            ]
-            if dx:
-                edge_x = room.x + room.width - 1 if dx > 0 else room.x
-                passage = min(
-                    passages,
-                    key=lambda point: (abs(point[0] - edge_x + dx), abs(point[1] - target[1])),
-                )
-                return edge_x, passage[1]
-            edge_y = room.y + room.height - 1 if dy > 0 else room.y
-            passage = min(
-                passages,
-                key=lambda point: (abs(point[1] - edge_y + dy), abs(point[0] - target[0])),
+    @staticmethod
+    def _adjacent_regions(index: int) -> list[int]:
+        column, row = index % DungeonGenerator.GRID_SIZE, index // DungeonGenerator.GRID_SIZE
+        return [
+            other
+            for other in (
+                index - DungeonGenerator.GRID_SIZE,
+                index - 1,
+                index + 1,
+                index + DungeonGenerator.GRID_SIZE,
             )
-            return passage[0], edge_y
-        if dx:
-            y = min(max(target[1], room.y + 1), room.y + room.height - 2)
-            return (room.x + room.width - 1 if dx > 0 else room.x, y)
-        x = min(max(target[0], room.x + 1), room.x + room.width - 2)
-        return (x, room.y + room.height - 1 if dy > 0 else room.y)
+            if 0 <= other < DungeonGenerator.REGION_COUNT
+            and abs(other % DungeonGenerator.GRID_SIZE - column) + abs(other // DungeonGenerator.GRID_SIZE - row) == 1
+        ]
 
-    def _connect_room_door(self, tiles: list[list[Terrain]], room: Room, door: Position, direction: Position) -> None:
-        inside = (door[0] - direction[0], door[1] - direction[1])
-        if not room.is_maze:
-            self._carve_corridor(tiles, room.center, inside)
-            return
-        x, y = inside
-        while room.contains(x, y) and tiles[y][x] == Terrain.WALL:
+    def _connect_regions(
+        self,
+        tiles: list[list[Terrain]],
+        regions: list[Room | None],
+        region_points: list[Position],
+        first_index: int,
+        second_index: int,
+    ) -> None:
+        if abs(first_index - second_index) == 1:
+            first_index, second_index = sorted((first_index, second_index))
+            direction = (1, 0)
+        else:
+            first_index, second_index = sorted((first_index, second_index))
+            direction = (0, 1)
+        first, second = regions[first_index], regions[second_index]
+        start, end = list(region_points[first_index]), list(region_points[second_index])
+        if direction[0]:
+            if first:
+                candidates = [(first.x + first.width - 1, y) for y in range(first.y + 1, first.y + first.height - 1)]
+                if first.is_maze:
+                    start = list(self._maze_port(tiles, first, candidates, (-1, 0)))
+                else:
+                    start = list(self.rng.choice(candidates))
+            if second:
+                candidates = [(second.x, y) for y in range(second.y + 1, second.y + second.height - 1)]
+                if second.is_maze:
+                    end = list(self._maze_port(tiles, second, candidates, (1, 0)))
+                else:
+                    end = list(self.rng.choice(candidates))
+            primary_distance = abs(start[0] - end[0]) - 1
+            turn_distance = abs(start[1] - end[1])
+            turn_delta = (0, 1 if start[1] < end[1] else -1)
+        else:
+            if first:
+                candidates = [(x, first.y + first.height - 1) for x in range(first.x + 1, first.x + first.width - 1)]
+                if first.is_maze:
+                    start = list(self._maze_port(tiles, first, candidates, (0, -1)))
+                else:
+                    start = list(self.rng.choice(candidates))
+            if second:
+                candidates = [(x, second.y) for x in range(second.x + 1, second.x + second.width - 1)]
+                if second.is_maze:
+                    end = list(self._maze_port(tiles, second, candidates, (0, 1)))
+                else:
+                    end = list(self.rng.choice(candidates))
+            primary_distance = abs(start[1] - end[1]) - 1
+            turn_distance = abs(start[0] - end[0])
+            turn_delta = (1 if start[0] < end[0] else -1, 0)
+
+        turn_spot = self.rng.randrange(primary_distance - 1) + 1 if primary_distance > 1 else 1
+        if first:
+            tiles[start[1]][start[0]] = Terrain.FLOOR if first.is_maze else Terrain.DOOR_CLOSED
+        else:
+            self._carve_passage(tiles, *start)
+        if second:
+            tiles[end[1]][end[0]] = Terrain.FLOOR if second.is_maze else Terrain.DOOR_CLOSED
+        else:
+            self._carve_passage(tiles, *end)
+
+        x, y = start
+        step = (direction[0], direction[1])
+        for distance in range(primary_distance):
+            x += step[0]
+            y += step[1]
+            if distance + 1 == turn_spot:
+                for _ in range(turn_distance):
+                    self._carve_passage(tiles, x, y)
+                    x += turn_delta[0]
+                    y += turn_delta[1]
+            self._carve_passage(tiles, x, y)
+
+    def _maze_port(
+        self,
+        tiles: list[list[Terrain]],
+        room: Room,
+        candidates: list[Position],
+        inward: Position,
+    ) -> Position:
+        port = self.rng.choice(candidates)
+        x, y = port
+        dx, dy = inward
+        inside = [
+            (px, py)
+            for py in range(room.y + 1, room.y + room.height - 1)
+            for px in range(room.x + 1, room.x + room.width - 1)
+            if tiles[py][px] == Terrain.FLOOR
+        ]
+        target_x, target_y = min(inside, key=lambda point: abs(point[0] - x) + abs(point[1] - y))
+        tiles[y][x] = Terrain.FLOOR
+        while (x, y) != (target_x, target_y):
+            if x != target_x:
+                x += 1 if target_x > x else -1
+            elif y != target_y:
+                y += 1 if target_y > y else -1
             tiles[y][x] = Terrain.FLOOR
-            x -= direction[0]
-            y -= direction[1]
+        return port
+
+    def _carve_passage(self, tiles: list[list[Terrain]], x: int, y: int) -> None:
+        if 0 < x < self.width - 1 and 0 < y < self.height - 1 and tiles[y][x] == Terrain.WALL:
+            tiles[y][x] = Terrain.FLOOR
 
     def _reachable_positions(self, tiles: list[list[Terrain]], start: Position) -> set[Position]:
         seen = {start}

@@ -24,30 +24,16 @@ class GameStates(Enum):
     States:
         MENU: メインメニュー状態
         PLAYERS_TURN: プレイヤーのターン
-        ENEMY_TURN: 敵のターン
-        PLAYER_DEAD: プレイヤー死亡状態
         GAME_OVER: ゲームオーバー状態
         SHOW_INVENTORY: インベントリ表示状態
-        DROP_INVENTORY: アイテム破棄状態
-        TARGETING: ターゲット選択状態
-        LEVEL_UP: レベルアップ状態
-        CHARACTER_SCREEN: キャラクター情報状態
         EXIT: ゲーム終了状態
     """
 
     MENU = auto()  # メインメニュー表示中
     PLAYERS_TURN = auto()  # プレイヤーの入力待ち
-    ENEMY_TURN = auto()  # 敵の行動処理中
-    PLAYER_DEAD = auto()  # プレイヤー死亡時の処理
     GAME_OVER = auto()  # ゲームオーバー画面表示
     VICTORY = auto()  # ゲーム勝利画面表示
     SHOW_INVENTORY = auto()  # インベントリ一覧表示
-    DROP_INVENTORY = auto()  # アイテム破棄モード
-    SHOW_WAND_SELECTION = auto()  # ワンド選択画面表示
-    TARGETING = auto()  # ターゲット選択モード
-    LEVEL_UP = auto()  # レベルアップ時の選択
-    CHARACTER_SCREEN = auto()  # キャラクター情報表示
     HELP_MENU = auto()  # ヘルプメニュー表示
-    SYMBOL_EXPLANATION = auto()  # シンボル説明表示
     QUICK_GUIDE = auto()  # クイックガイド表示
     EXIT = auto()  # ゲーム終了シグナル
