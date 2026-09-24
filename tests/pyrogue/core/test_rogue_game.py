@@ -125,9 +125,8 @@ def test_dark_rooms_are_seeded_and_not_present_on_first_floor() -> None:
     generator = DungeonGenerator(rng=random.Random(4))  # noqa: S311
 
     assert not any(room.is_dark for room in generator.generate(1).rooms)
-    deep_floor = generator.generate(MAX_FLOOR)
-    assert any(room.is_dark for room in deep_floor.rooms)
-    assert any(room.is_maze for room in deep_floor.rooms)
+    assert any(room.is_dark for room in generator.generate(MAX_FLOOR).rooms)
+    assert any(room.is_maze for room in DungeonGenerator(rng=random.Random(1)).generate(MAX_FLOOR).rooms)  # noqa: S311
     assert generator.generate(7).rooms
 
 
@@ -150,13 +149,46 @@ def test_rooms_occupy_distinct_cells_and_doors_are_on_room_edges() -> None:
         )
         for x, y in doors
     )
+    for x, y in doors:
+        room = next(room for room in floor.rooms if room.contains(x, y))
+        dx, dy = (
+            (-1, 0) if x == room.x else (1, 0) if x == room.x + room.width - 1 else (0, -1) if y == room.y else (0, 1)
+        )
+        assert floor.tile_at((x - dx, y - dy)) != Terrain.WALL
+        assert floor.tile_at((x + dx, y + dy)) != Terrain.WALL
+
+
+def test_maze_room_keeps_a_connected_lattice_of_passages() -> None:
+    generator = DungeonGenerator(rng=random.Random(1))  # noqa: S311
+    floor = generator.generate(MAX_FLOOR)
+    maze_room = next(room for room in floor.rooms if room.is_maze)
+    passages = {
+        (x, y)
+        for y in range(maze_room.y + 1, maze_room.y + maze_room.height - 1)
+        for x in range(maze_room.x + 1, maze_room.x + maze_room.width - 1)
+        if floor.tile_at((x, y)) != Terrain.WALL
+    }
+
+    assert any(
+        floor.tile_at((x, y)) == Terrain.WALL
+        for y in range(maze_room.y + 1, maze_room.y + maze_room.height - 1)
+        for x in range(maze_room.x + 1, maze_room.x + maze_room.width - 1)
+    )
+    assert passages <= generator._reachable_positions(floor.tiles, next(iter(passages)))
+
+
+def _use_generated_dark_room(game: GameState) -> Room:
+    floor = DungeonGenerator(rng=random.Random(4)).generate(MAX_FLOOR)  # noqa: S311
+    room = next(room for room in floor.rooms if room.is_dark)
+    game.floor.tiles = floor.tiles
+    game.floor.rooms = floor.rooms
+    game.player.position = room.center
+    return room
 
 
 def test_visibility_is_limited_inside_a_dark_room() -> None:
     game = GameState(1234)
-    room = game.floor.rooms[0]
-    game.floor.rooms[0] = Room(room.x, room.y, room.width, room.height, is_dark=True)
-    game.player.position = room.center
+    room = _use_generated_dark_room(game)
 
     visible = game.visible_positions(update_explored=False)
 
@@ -165,9 +197,7 @@ def test_visibility_is_limited_inside_a_dark_room() -> None:
 
 def test_light_illuminates_a_dark_room_and_survives_saving() -> None:
     game = GameState(1234)
-    room = game.floor.rooms[0]
-    game.floor.rooms[0] = Room(room.x, room.y, room.width, room.height, is_dark=True)
-    game.player.position = room.center
+    room = _use_generated_dark_room(game)
     game.floor.monsters.clear()
     scroll = ItemState(1000, ItemKind.SCROLL, "light scroll", effect="light")
     game.player.inventory.append(scroll)

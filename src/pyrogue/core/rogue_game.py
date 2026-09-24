@@ -23,6 +23,7 @@ GAME_VERSION = "0.3.3"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
+# Retained for imports; canonical floors use occasional room mazes, not fixed maze levels.
 MAZE_FLOORS: frozenset[int] = frozenset()
 MAX_PACK = 23
 HUNGERTIME = 1300
@@ -744,6 +745,8 @@ class DungeonGenerator:
 
     def _carve_corridor(self, tiles: list[list[Terrain]], first: Position, second: Position) -> None:
         x, y = first
+        if 0 < x < self.width - 1 and 0 < y < self.height - 1:
+            tiles[y][x] = Terrain.FLOOR
         horizontal_first = self.rng.choice((True, False))
         bend = (second[0], first[1]) if horizontal_first else (first[0], second[1])
         points = (bend, second)
@@ -762,9 +765,10 @@ class DungeonGenerator:
         columns = rows = 3
         cell_width = self.width // columns
         cell_height = self.height // rows
-        gone = set(self.rng.sample(range(columns * rows), self.rng.randrange(4)))
+        missing_regions = set(self.rng.sample(range(columns * rows), self.rng.randrange(4)))
+        regions: dict[int, Room] = {}
         for index in range(columns * rows):
-            if index in gone:
+            if index in missing_regions:
                 continue
             column, row = index % columns, index // columns
             left, top = column * cell_width + 1, row * cell_height + 1
@@ -780,11 +784,12 @@ class DungeonGenerator:
                 x, y = left, top
                 room_width, room_height = right - left - 1, bottom - top - 1
             room = Room(x, y, room_width, room_height, dark and not maze, maze)
+            regions[index] = room
             rooms.append(room)
             self._carve_room(tiles, room)
 
-        # A randomized minimum spanning tree connects every present region.
-        parent = list(range(len(rooms)))
+        # Connect adjacent regions first, routing through missing regions.
+        parent = list(range(columns * rows))
 
         def root(index: int) -> int:
             while parent[index] != index:
@@ -793,28 +798,45 @@ class DungeonGenerator:
             return index
 
         edges = [
-            (
-                abs(first.center[0] - second.center[0]) + abs(first.center[1] - second.center[1]) + self.rng.random(),
-                a,
-                b,
-            )
-            for a, first in enumerate(rooms)
-            for b, second in enumerate(rooms[a + 1 :], a + 1)
-        ]
+            (self.rng.random(), index, index + 1) for index in range(columns * rows) if index % columns < columns - 1
+        ] + [(self.rng.random(), index, index + columns) for index in range(columns * (rows - 1))]
         for _, a, b in sorted(edges):
             if root(a) == root(b):
                 continue
             parent[root(a)] = root(b)
-            first, second = rooms[a], rooms[b]
-            first_door, second_door = self._room_doors(first, second)
-            self._carve_corridor(tiles, first.center, first_door)
-            self._carve_corridor(tiles, first_door, second_door)
-            self._carve_corridor(tiles, second_door, second.center)
-            tiles[first_door[1]][first_door[0]] = Terrain.DOOR_CLOSED
-            tiles[second_door[1]][second_door[0]] = Terrain.DOOR_CLOSED
+            first, second = regions.get(a), regions.get(b)
+            first_column, first_row = a % columns, a // columns
+            second_column, second_row = b % columns, b // columns
+            direction = (second_column - first_column, second_row - first_row)
+            first_center = self._region_center(a, cell_width, cell_height, columns)
+            second_center = self._region_center(b, cell_width, cell_height, columns)
+            first_target = second.center if second else second_center
+            second_target = first.center if first else first_center
+            first_port = first_center if first is None else self._room_door(first, direction, first_target)
+            second_port = (
+                second_center
+                if second is None
+                else self._room_door(second, (-direction[0], -direction[1]), second_target)
+            )
+            if first:
+                self._connect_room_door(tiles, first, first_port, direction)
+            if second:
+                self._connect_room_door(tiles, second, second_port, (-direction[0], -direction[1]))
+            first_exit = (first_port[0] + direction[0], first_port[1] + direction[1]) if first else first_center
+            second_exit = (second_port[0] - direction[0], second_port[1] - direction[1]) if second else second_center
+            self._carve_corridor(tiles, first_exit, second_exit)
+            if first:
+                tiles[first_port[1]][first_port[0]] = Terrain.DOOR_CLOSED
+            if second:
+                tiles[second_port[1]][second_port[0]] = Terrain.DOOR_CLOSED
 
-        start = next((x, y) for y, row in enumerate(tiles) for x, tile in enumerate(row) if tile == Terrain.FLOOR)
-        start_room = next(room for room in rooms if room.contains(*start))
+        start_room = rooms[0]
+        start = next(
+            (x, y)
+            for y in range(start_room.y, start_room.y + start_room.height)
+            for x in range(start_room.x, start_room.x + start_room.width)
+            if tiles[y][x] == Terrain.FLOOR
+        )
         end_room = max(
             rooms,
             key=lambda room: abs(room.center[0] - start_room.center[0]) + abs(room.center[1] - start_room.center[1]),
@@ -832,22 +854,30 @@ class DungeonGenerator:
             tiles[end[1]][end[0]] = Terrain.STAIRS_DOWN
         return FloorState(floor_number, self.width, self.height, tiles, rooms, up_stairs, down_stairs)
 
-    def _room_doors(self, first: Room, second: Room) -> tuple[Position, Position]:
-        """Return facing room-edge positions for a corridor connection."""
-        dx, dy = second.center[0] - first.center[0], second.center[1] - first.center[1]
-        if abs(dx) >= abs(dy):
-            y = min(max(second.center[1], first.y), first.y + first.height - 1)
-            other_y = min(max(first.center[1], second.y), second.y + second.height - 1)
-            return (
-                (first.x + first.width - 1, y) if dx >= 0 else (first.x, y),
-                (second.x, other_y) if dx >= 0 else (second.x + second.width - 1, other_y),
-            )
-        x = min(max(second.center[0], first.x), first.x + first.width - 1)
-        other_x = min(max(first.center[0], second.x), second.x + second.width - 1)
-        return (
-            (x, first.y + first.height - 1) if dy >= 0 else (x, first.y),
-            (other_x, second.y) if dy >= 0 else (other_x, second.y + second.height - 1),
-        )
+    def _region_center(self, index: int, cell_width: int, cell_height: int, columns: int) -> Position:
+        return (index % columns * cell_width + cell_width // 2, index // columns * cell_height + cell_height // 2)
+
+    def _room_door(self, room: Room, direction: Position, target: Position) -> Position:
+        dx, dy = direction
+        if dx:
+            y = min(max(target[1], room.y + 1), room.y + room.height - 2)
+            return (room.x + room.width - 1 if dx > 0 else room.x, y)
+        x = min(max(target[0], room.x + 1), room.x + room.width - 2)
+        return (x, room.y + room.height - 1 if dy > 0 else room.y)
+
+    def _connect_room_door(self, tiles: list[list[Terrain]], room: Room, door: Position, direction: Position) -> None:
+        inside = (door[0] - direction[0], door[1] - direction[1])
+        if not room.is_maze:
+            self._carve_corridor(tiles, room.center, inside)
+            return
+        passages = [
+            (x, y)
+            for y in range(room.y + 1, room.y + room.height - 1)
+            for x in range(room.x + 1, room.x + room.width - 1)
+            if tiles[y][x] == Terrain.FLOOR
+        ]
+        target = min(passages, key=lambda point: abs(point[0] - inside[0]) + abs(point[1] - inside[1]))
+        self._carve_corridor(tiles, inside, target)
 
     def _reachable_positions(self, tiles: list[list[Terrain]], start: Position) -> set[Position]:
         seen = {start}
