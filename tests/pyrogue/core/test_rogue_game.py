@@ -851,6 +851,20 @@ def test_death_is_terminal_and_reports_score() -> None:
 
 
 @pytest.mark.parametrize(
+    ("gold", "monsters_killed", "has_amulet"), [(0, 0, False), (37, 0, False), (37, 8, False), (37, 8, True)]
+)
+def test_score_is_the_gold_purse(gold: int, monsters_killed: int, has_amulet: bool) -> None:
+    game = GameState(1234)
+    game.player.gold = gold
+    game.player.monsters_killed = monsters_killed
+    game.player.has_amulet = has_amulet
+
+    assert game.score == gold
+    assert game.death_summary["score"] == gold
+    assert game.victory_summary["score"] == gold
+
+
+@pytest.mark.parametrize(
     ("effect", "initial_hp", "initial_strength", "expected_hp", "expected_strength"),
     [
         ("healing", 1, 16, 5, 16),

@@ -684,7 +684,7 @@ class PlayerState:
         )
 
     def score(self) -> int:
-        return self.gold + self.monsters_killed * 10 + (1000 if self.has_amulet else 0)
+        return self.gold
 
     def to_dict(self) -> dict[str, Any]:
         data = self.__dict__.copy()
