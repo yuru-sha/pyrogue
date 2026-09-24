@@ -28,6 +28,7 @@ ITEM_GLYPHS = {
     "ring": "=",
     "gold": "*",
     "amulet": ",",
+    "stairs": ">",
 }
 MONSTER_GLYPHS = {
     "aquator": "A",

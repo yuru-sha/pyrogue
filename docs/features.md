@@ -22,8 +22,11 @@
 
 ## モンスター
 
-主要なRogue系A-Zモンスターを、論理ID、名前、出現階、レベル、HP、攻撃、ACなどのゲームデータとして管理します。表示記号への変換は `pyrogue.presentation.display_renderer` が担当します。
-視界内ではプレイヤーを追跡し、隣接時に攻撃します。Rogue 5.4系にあるモンスターの攻撃時効果も処理します。視界外の情報は画面に出しません。
+Rogue 5.4のA-Z表にある論理ID、名前、レベル、AC、攻撃ダイス、経験値、carry率、能力を使います。階層と乱数から出現種を選び、生成時にHPと深層補正を決めます。表示記号への変換は `pyrogue.presentation.display_renderer` が担当します。
+
+睡眠中のモンスターは攻撃されるまで行動しません。mean種と貪欲なOrcはプレイヤーを認識すると追跡し、その他の種は隣接時または攻撃後に行動します。BatとPhantomは不規則に移動し、Bat、Griffin、Kestrelは距離があると追加で移動します。Phantomは発見されるまで見えず、Xerocは攻撃されるまでアイテムに化けます。
+
+Aquatorの防具劣化、Ice monsterの凍結、Venus flytrapの拘束、Rattlesnakeの毒、Leprechaunの金貨盗難、Nymphの魔法アイテム盗難、WraithとVampireの能力吸収、Medusaの視線、Dragonの火炎と耐火を処理します。視界外のモンスター情報は表示しません。
 
 ## アイテム
 

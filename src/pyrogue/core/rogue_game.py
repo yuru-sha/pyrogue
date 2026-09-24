@@ -57,6 +57,35 @@ EXPERIENCE_LEVELS = (
 )
 MONSTER_EXPERIENCE_X4_LEVEL = 7
 MONSTER_EXPERIENCE_X20_LEVEL = 10
+MONSTER_SPAWN_ORDER = (
+    "kestrel",
+    "emu",
+    "bat",
+    "snake",
+    "hobgoblin",
+    "ice_monster",
+    "rattlesnake",
+    "orc",
+    "zombie",
+    "leprechaun",
+    "centaur",
+    "quagga",
+    "aquator",
+    "nymph",
+    "yeti",
+    "venus_flytrap",
+    "troll",
+    "wraith",
+    "phantom",
+    "xeroc",
+    "ur_vile",
+    "medusa",
+    "vampire",
+    "griffin",
+    "jabberwock",
+    "dragon",
+)
+MONSTER_DISGUISES = ("potion", "scroll", "ring", "wand", "food", "weapon", "armor", "stairs", "gold", "amulet")
 SLEEP_TURNS = 5
 VS_POISON = 0
 VS_MAGIC = 3
@@ -65,6 +94,7 @@ HUH_DURATION = 20
 LAMP_DISTANCE = 3
 DRAGON_BREATH_RANGE = 6
 DRAGON_BREATH_CHANCE = 5
+MONSTER_FLY_MOVE_DISTANCE_SQUARED = 3
 MYSTERIOUS_TRAP_MESSAGES = (
     "You are suddenly in a parallel dimension.",
     "The light in here suddenly seems different.",
@@ -224,46 +254,44 @@ class MonsterDefinition:
 
     id: str
     name: str
-    min_floor: int
-    max_floor: int
     level: int
-    hp: int
     armor_class: int
-    hit_bonus: int
     damage_dice: tuple[tuple[int, int], ...]
-    damage_bonus: int
     exp: int
-    spawn_weight: int = 1
+    carry_chance: int = 0
+    abilities: frozenset[str] = frozenset()
 
 
-# The roster and the dice-shaped combat data follow Rogue's A-Z monster set.
+# Rogue 5.4's monsters[] stats and flags, in A-Z order.
 MONSTER_TYPES: tuple[MonsterDefinition, ...] = (
-    MonsterDefinition("aquator", "aquator", 8, 18, 5, 18, 2, 5, ((0, 0), (0, 0)), 0, 20, 4),
-    MonsterDefinition("bat", "bat", 1, 8, 1, 5, 3, 1, ((1, 2),), 0, 1, 8),
-    MonsterDefinition("centaur", "centaur", 4, 12, 4, 15, 4, 4, ((1, 2), (1, 5), (1, 5)), 0, 17, 5),
-    MonsterDefinition("dragon", "dragon", 17, 26, 10, 45, -1, 10, ((1, 8), (1, 8), (3, 10)), 0, 5000, 2),
-    MonsterDefinition("emu", "emu", 1, 7, 1, 6, 7, 1, ((1, 2),), 0, 2, 8),
-    MonsterDefinition("venus_flytrap", "venus flytrap", 12, 26, 8, 25, 3, 8, ((0, 0),), 0, 80, 3),
-    MonsterDefinition("griffin", "griffin", 15, 26, 13, 35, 2, 13, ((4, 3), (3, 5)), 0, 2000, 2),
-    MonsterDefinition("hobgoblin", "hobgoblin", 1, 10, 1, 10, 5, 1, ((1, 8),), 0, 3, 7),
-    MonsterDefinition("ice_monster", "ice monster", 1, 12, 1, 8, 9, 1, ((0, 0),), 0, 5, 7),
-    MonsterDefinition("jabberwock", "jabberwock", 21, 26, 15, 60, 6, 15, ((2, 12), (2, 4)), 0, 3000, 1),
-    MonsterDefinition("kestrel", "kestrel", 1, 4, 1, 5, 7, 1, ((1, 4),), 0, 1, 8),
-    MonsterDefinition("leprechaun", "leprechaun", 5, 17, 3, 12, 8, 3, ((1, 1),), 0, 10, 5),
-    MonsterDefinition("medusa", "medusa", 18, 26, 8, 25, 2, 8, ((3, 4), (3, 4), (2, 5)), 0, 200, 3),
-    MonsterDefinition("nymph", "nymph", 3, 12, 3, 10, 9, 3, ((0, 0),), 0, 37, 5),
-    MonsterDefinition("orc", "orc", 4, 15, 1, 14, 6, 1, ((1, 8),), 0, 5, 6),
-    MonsterDefinition("phantom", "phantom", 10, 22, 8, 28, 3, 8, ((4, 4),), 0, 120, 4),
-    MonsterDefinition("quagga", "quagga", 1, 9, 3, 12, 3, 3, ((1, 5), (1, 5)), 0, 15, 7),
-    MonsterDefinition("rattlesnake", "rattlesnake", 1, 12, 2, 7, 3, 2, ((1, 6),), 0, 9, 7),
-    MonsterDefinition("snake", "snake", 1, 6, 1, 6, 5, 1, ((1, 3),), 0, 2, 8),
-    MonsterDefinition("troll", "troll", 9, 20, 6, 22, 4, 6, ((1, 8), (1, 8), (2, 6)), 0, 120, 5),
-    MonsterDefinition("ur_vile", "ur-vile", 15, 26, 7, 28, -2, 7, ((1, 9), (1, 9), (2, 9)), 0, 190, 3),
-    MonsterDefinition("vampire", "vampire", 13, 26, 8, 30, 1, 8, ((1, 10),), 0, 350, 3),
-    MonsterDefinition("wraith", "wraith", 7, 18, 5, 20, 4, 5, ((1, 6),), 0, 55, 5),
-    MonsterDefinition("xeroc", "xeroc", 5, 20, 7, 25, 7, 7, ((4, 4),), 0, 100, 3),
-    MonsterDefinition("yeti", "yeti", 5, 15, 4, 18, 6, 4, ((1, 6), (1, 6)), 0, 50, 5),
-    MonsterDefinition("zombie", "zombie", 7, 20, 2, 18, 8, 2, ((1, 8),), 0, 6, 5),
+    MonsterDefinition("aquator", "aquator", 5, 2, ((0, 0), (0, 0)), 20, abilities=frozenset({"mean"})),
+    MonsterDefinition("bat", "bat", 1, 3, ((1, 2),), 1, abilities=frozenset({"fly"})),
+    MonsterDefinition("centaur", "centaur", 4, 4, ((1, 2), (1, 5), (1, 5)), 17, carry_chance=15),
+    MonsterDefinition("dragon", "dragon", 10, -1, ((1, 8), (1, 8), (3, 10)), 5000, 100, frozenset({"mean"})),
+    MonsterDefinition("emu", "emu", 1, 7, ((1, 2),), 2, abilities=frozenset({"mean"})),
+    MonsterDefinition("venus_flytrap", "venus flytrap", 8, 3, ((0, 0),), 80, abilities=frozenset({"mean"})),
+    MonsterDefinition(
+        "griffin", "griffin", 13, 2, ((4, 3), (3, 5)), 2000, 20, frozenset({"mean", "fly", "regenerate"})
+    ),
+    MonsterDefinition("hobgoblin", "hobgoblin", 1, 5, ((1, 8),), 3, abilities=frozenset({"mean"})),
+    MonsterDefinition("ice_monster", "ice monster", 1, 9, ((0, 0),), 5),
+    MonsterDefinition("jabberwock", "jabberwock", 15, 6, ((2, 12), (2, 4)), 3000, 70),
+    MonsterDefinition("kestrel", "kestrel", 1, 7, ((1, 4),), 1, abilities=frozenset({"mean", "fly"})),
+    MonsterDefinition("leprechaun", "leprechaun", 3, 8, ((1, 1),), 10),
+    MonsterDefinition("medusa", "medusa", 8, 2, ((3, 4), (3, 4), (2, 5)), 200, 40, frozenset({"mean"})),
+    MonsterDefinition("nymph", "nymph", 3, 9, ((0, 0),), 37, 100),
+    MonsterDefinition("orc", "orc", 1, 6, ((1, 8),), 5, 15, frozenset({"greed"})),
+    MonsterDefinition("phantom", "phantom", 8, 3, ((4, 4),), 120, abilities=frozenset({"invisible"})),
+    MonsterDefinition("quagga", "quagga", 3, 3, ((1, 5), (1, 5)), 15, abilities=frozenset({"mean"})),
+    MonsterDefinition("rattlesnake", "rattlesnake", 2, 3, ((1, 6),), 9, abilities=frozenset({"mean"})),
+    MonsterDefinition("snake", "snake", 1, 5, ((1, 3),), 2, abilities=frozenset({"mean"})),
+    MonsterDefinition("troll", "troll", 6, 4, ((1, 8), (1, 8), (2, 6)), 120, 50, frozenset({"mean", "regenerate"})),
+    MonsterDefinition("ur_vile", "black unicorn", 7, -2, ((1, 9), (1, 9), (2, 9)), 190, abilities=frozenset({"mean"})),
+    MonsterDefinition("vampire", "vampire", 8, 1, ((1, 10),), 350, 20, frozenset({"mean", "regenerate"})),
+    MonsterDefinition("wraith", "wraith", 5, 4, ((1, 6),), 55),
+    MonsterDefinition("xeroc", "xeroc", 7, 7, ((4, 4),), 100, 30),
+    MonsterDefinition("yeti", "yeti", 4, 6, ((1, 6), (1, 6)), 50, 30),
+    MonsterDefinition("zombie", "zombie", 2, 8, ((1, 8),), 6, abilities=frozenset({"mean"})),
 )
 MONSTER_BY_ID = {monster.id: monster for monster in MONSTER_TYPES}
 
@@ -282,10 +310,13 @@ class MonsterState:
     exp_value: int | None = None
     running: bool = False
     gaze_attempted: bool = False
+    level_bonus: int = 0
+    revealed: bool = False
+    disguise: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_hp is None:
-            self.max_hp = self.definition.hp
+            self.max_hp = self.hp
 
     @property
     def definition(self) -> MonsterDefinition:
@@ -300,17 +331,17 @@ class MonsterState:
     @property
     def level(self) -> int:
         """Return the monster level."""
-        return self.definition.level
+        return self.definition.level + self.level_bonus
 
     @property
     def attack(self) -> int:
         """Return the monster's attack bonus."""
-        return self.definition.hit_bonus
+        return self.level
 
     @property
     def defense(self) -> int:
         """Return the monster's armor class."""
-        return self.definition.armor_class
+        return self.definition.armor_class - self.level_bonus
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the monster to JSON-compatible values."""
@@ -325,6 +356,9 @@ class MonsterState:
             "exp_value": self.exp_value,
             "running": self.running,
             "gaze_attempted": self.gaze_attempted,
+            "level_bonus": self.level_bonus,
+            "revealed": self.revealed,
+            "disguise": self.disguise,
         }
 
     @classmethod
@@ -341,12 +375,22 @@ class MonsterState:
             exp_value=int(data["exp_value"]) if data.get("exp_value") is not None else None,
             running=bool(data.get("running", False)),
             gaze_attempted=bool(data.get("gaze_attempted", False)),
+            level_bonus=int(data.get("level_bonus", 0)),
+            revealed=bool(data.get("revealed", False)),
+            disguise=data.get("disguise"),
         )
 
     @property
     def experience_reward(self) -> int:
-        """Return the experience stored for this monster, or its base value."""
-        return self.definition.exp if self.exp_value is None else self.exp_value
+        """Return the stored experience or the Rogue 5.4 reward for this monster."""
+        if self.exp_value is not None:
+            return self.exp_value
+        hp_bonus = (self.max_hp or 0) // (8 if self.level == 1 else 6)
+        if self.level >= MONSTER_EXPERIENCE_X20_LEVEL:
+            hp_bonus *= 20
+        elif self.level >= MONSTER_EXPERIENCE_X4_LEVEL:
+            hp_bonus *= 4
+        return self.definition.exp + self.level_bonus * 10 + hp_bonus
 
 
 @dataclass
@@ -1135,31 +1179,33 @@ class GameState:
                 floor.items.append(item)
 
     def _spawn_monsters(self, floor: FloorState) -> None:
-        available = [monster for monster in MONSTER_TYPES if monster.min_floor <= floor.number <= monster.max_floor]
-        if not available:
-            available = [MONSTER_BY_ID["dragon"]]
         count = min(12, 3 + (floor.number - 1) // 3)
         stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         for _ in range(count):
-            definition = self.rng.choices(available, weights=[monster.spawn_weight for monster in available], k=1)[0]
+            index = floor.number + self.rng.randrange(10) - 5
+            if index < 0:
+                index = self.rng.randrange(5)
+            elif index >= len(MONSTER_SPAWN_ORDER):
+                index = self.rng.randrange(5) + len(MONSTER_SPAWN_ORDER) - 5
+            definition = MONSTER_BY_ID[MONSTER_SPAWN_ORDER[index]]
             position = self._free_position(floor, stairs)
             level_add = max(0, floor.number - MAX_FLOOR)
             level = definition.level + level_add
             max_hp = _roll(self.rng, (level, 8))
-            exp_add = max_hp // (8 if level == 1 else 6)
-            if level >= MONSTER_EXPERIENCE_X20_LEVEL:
-                exp_add *= 20
-            elif level >= MONSTER_EXPERIENCE_X4_LEVEL:
-                exp_add *= 4
-            exp_value = definition.exp + level_add * 10 + exp_add
             monster = MonsterState(
                 self._next_monster_id,
                 definition.id,
                 *position,
                 max_hp,
                 max_hp=max_hp,
-                exp_value=exp_value,
+                level_bonus=level_add,
+                disguise=(
+                    self.rng.choice(MONSTER_DISGUISES[: 10 if floor.number >= MAX_FLOOR else 9])
+                    if definition.id == "xeroc"
+                    else None
+                ),
             )
+            monster.exp_value = monster.experience_reward
             self._next_monster_id += 1
             floor.monsters.append(monster)
 
@@ -1233,9 +1279,7 @@ class GameState:
         """Return renderer-neutral display cells, optionally bypassing FOV for display only."""
         visible = self._calculate_visible_positions() if show_all else self.visible_positions()
         cells: dict[Position, DisplayCell] = {}
-        monster_positions = {
-            (monster.x, monster.y): monster.type_id for monster in self.floor.monsters if monster.hp > 0
-        }
+        monster_positions = {(monster.x, monster.y): monster for monster in self.floor.monsters if monster.hp > 0}
         item_positions = {item.position: item.kind.value for item in self.floor.items if item.position is not None}
         trap_positions = {(trap.x, trap.y): trap.kind.value for trap in self.floor.traps if show_all or trap.discovered}
         for y in range(self.height):
@@ -1251,9 +1295,15 @@ class GameState:
                 if is_displayed:
                     if position == self.player.position:
                         entity, priority = EntityKind.PLAYER, 100
-                    elif position in monster_positions:
-                        entity, priority = EntityKind.MONSTER, 90
-                        entity_variant = monster_positions[position]
+                    elif (monster := monster_positions.get(position)) is not None and (
+                        "invisible" not in monster.definition.abilities or monster.revealed
+                    ):
+                        if monster.disguise is not None:
+                            entity, priority = EntityKind.ITEM, 80
+                            entity_variant = monster.disguise
+                        else:
+                            entity, priority = EntityKind.MONSTER, 90
+                            entity_variant = monster.type_id
                     elif position in item_positions:
                         entity, priority = EntityKind.ITEM, 80
                         entity_variant = item_positions[position]
@@ -1299,7 +1349,7 @@ class GameState:
         elif old_food >= MORETIME > self.player.food_units:
             self._message("You are starting to feel weak.")
 
-    def _finish_turn(self) -> None:
+    def _finish_turn(self, *, process_monsters: bool = True) -> None:
         self.player.turns_played += 1
         self._consume_food()
         if self.player.frozen_turns > 0:
@@ -1315,7 +1365,8 @@ class GameState:
                 if (ring := self.player.item(ring_id)) is not None and ring.effect == "regeneration"
             )
             self.player.hp = min(self.player.max_hp, self.player.hp + regeneration)
-            self._process_monsters()
+            if process_monsters:
+                self._process_monsters()
         if getattr(self, "_update_explored", True):
             self.visible_positions()
 
@@ -1350,6 +1401,8 @@ class GameState:
         *,
         thrown: bool = False,
     ) -> CombatResult:
+        if isinstance(attacker, PlayerState) and isinstance(defender, MonsterState):
+            self._reveal_monster(defender)
         if isinstance(attacker, PlayerState):
             weapon = weapon or (attacker.item(attacker.equipped_weapon) if attacker.equipped_weapon else None)
             level = attacker.level
@@ -1371,17 +1424,15 @@ class GameState:
             attacker_name = "you"
         else:
             definition = attacker.definition
-            level = definition.level
+            level = attacker.level
             damage_dice = definition.damage_dice
             hit_bonus = 0
-            damage_bonus = definition.damage_bonus
+            damage_bonus = 0
             strength = 10
             attacker_name = definition.name
         hit_bonus += _strength_adjustment(STR_TO_HIT, strength)
         damage_bonus += _strength_adjustment(STR_TO_DAMAGE, strength)
-        defender_ac = (
-            defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.definition.armor_class
-        )
+        defender_ac = defender.effective_armor_class() if isinstance(defender, PlayerState) else defender.defense
         if isinstance(defender, PlayerState) or not defender.running:
             hit_bonus += 4
         need = 20 - level - defender_ac
@@ -1407,9 +1458,14 @@ class GameState:
         result = self._resolve_attack(self.player, monster, weapon, thrown=thrown)
         if result.target_defeated:
             self._defeat_monster(monster)
-        if monster.asleep:
+        else:
             monster.asleep = False
+            monster.running = True
         return result
+
+    def _reveal_monster(self, monster: MonsterState) -> None:
+        monster.revealed = True
+        monster.disguise = None
 
     def _defeat_monster(self, monster: MonsterState) -> None:
         self.player.monsters_killed += 1
@@ -1444,6 +1500,7 @@ class GameState:
         return self._result(False, "There is no monster there.")
 
     def _monster_attack(self, monster: MonsterState) -> None:
+        self._reveal_monster(monster)
         result = self._resolve_attack(monster, self.player)
         if result.target_defeated:
             self._die(f"the {monster.name}")
@@ -1457,8 +1514,8 @@ class GameState:
                 self._message(f"You are frozen by the {monster.name}.")
             elif monster.type_id == "venus_flytrap":
                 self.player.held = True
+                self.player.hp -= self.player.flytrap_hits
                 self.player.flytrap_hits += 1
-                self.player.hp -= 1
                 if self.player.hp <= 0:
                     self._die(monster.name)
             elif monster.type_id == "rattlesnake" and not self._saving_throw(VS_POISON):
@@ -1559,6 +1616,7 @@ class GameState:
                     if target.type_id == "dragon":
                         self._message("The flame bounces off the dragon.")
                     else:
+                        self._reveal_monster(target)
                         target.hp = max(0, target.hp - _roll(self.rng, (6, 6)))
                         self._message(f"The flame hits the {target.name}.")
                         if target.hp == 0:
@@ -1582,12 +1640,15 @@ class GameState:
                 continue
             if monster.asleep:
                 continue
-            visible = self._can_see((monster.x, monster.y), self.player.position, monster.definition.level + 4)
+            visible = self._can_see((monster.x, monster.y), self.player.position, monster.level + 4)
             distance = max(abs(monster.x - self.player.x), abs(monster.y - self.player.y))
             # ponytail: rooms have no darkness flag; add one if dark rooms are modeled.
             player_room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
             monster_room = next((room for room in self.floor.rooms if room.contains(monster.x, monster.y)), None)
             in_gaze_range = (player_room is not None and player_room == monster_room) or distance < LAMP_DISTANCE
+            abilities = monster.definition.abilities
+            if visible and not monster.running and ("mean" in abilities or "greed" in abilities):
+                monster.running = True
             if (
                 monster.type_id == "medusa"
                 and monster.running
@@ -1605,19 +1666,75 @@ class GameState:
             if distance <= 1:
                 self._monster_attack(monster)
                 continue
-            if not visible:
+            if not visible or (not monster.running and "mean" not in abilities):
                 continue
-            dx = (self.player.x > monster.x) - (self.player.x < monster.x)
-            dy = (self.player.y > monster.y) - (self.player.y < monster.y)
-            target = (monster.x + dx, monster.y + dy)
-            if target == self.player.position:
-                self._monster_attack(monster)
-                continue
-            if self.floor.is_walkable(target) and not any(
-                other.x == target[0] and other.y == target[1] for other in self.floor.monsters if other is not monster
-            ):
+            gold = (
+                next(
+                    (
+                        item
+                        for item in self.floor.items
+                        if item.kind == ItemKind.GOLD
+                        and item.position is not None
+                        and player_room is not None
+                        and player_room.contains(*item.position)
+                    ),
+                    None,
+                )
+                if "greed" in abilities
+                else None
+            )
+            if gold and (monster.x, monster.y) == gold.position:
+                self.floor.items.remove(gold)
+                gold = None
+            chase_target = gold.position if gold and gold.position is not None else self.player.position
+            for step in range(2 if "fly" in abilities else 1):
+                player_dx = self.player.x - monster.x
+                player_dy = self.player.y - monster.y
+                if step and player_dx * player_dx + player_dy * player_dy < MONSTER_FLY_MOVE_DISTANCE_SQUARED:
+                    break
+                dx = chase_target[0] - monster.x
+                dy = chase_target[1] - monster.y
+                random_move = (
+                    self.rng.randrange(2) == 0
+                    if monster.type_id == "bat"
+                    else monster.type_id == "phantom" and self.rng.randrange(5) == 0
+                )
+                if random_move:
+                    choices = [
+                        (monster.x + move_x, monster.y + move_y)
+                        for move_x in (-1, 0, 1)
+                        for move_y in (-1, 0, 1)
+                        if (move_x or move_y)
+                        and (
+                            (monster.x + move_x, monster.y + move_y) == self.player.position
+                            or self.floor.is_walkable((monster.x + move_x, monster.y + move_y))
+                        )
+                        and not any(
+                            other.x == monster.x + move_x and other.y == monster.y + move_y
+                            for other in self.floor.monsters
+                            if other is not monster
+                        )
+                    ]
+                    target = self.rng.choice(choices) if choices else (monster.x, monster.y)
+                else:
+                    target = (
+                        monster.x + (dx > 0) - (dx < 0),
+                        monster.y + (dy > 0) - (dy < 0),
+                    )
+                if target == self.player.position:
+                    self._monster_attack(monster)
+                    break
+                if not self.floor.is_walkable(target) or any(
+                    other.x == target[0] and other.y == target[1]
+                    for other in self.floor.monsters
+                    if other is not monster
+                ):
+                    break
                 monster.x, monster.y = target
                 monster.running = True
+                if gold and target == gold.position:
+                    self.floor.items.remove(gold)
+                    break
 
     def move(self, dx: int, dy: int) -> CommandResult:
         """Move one step, open a closed door, or attack an adjacent monster."""
@@ -1892,11 +2009,15 @@ class GameState:
             _, target = self._trace_projectile(direction)
         item.charges -= 1
         if target and item.effect in {"magic_missile", "lightning", "fire", "cold"}:
-            damage = _roll(self.rng, (1, 4) if item.effect == "magic_missile" else (6, 6))
-            target.hp = max(0, target.hp - damage)
-            message = f"The {item.display_name} hits the {target.name}."
-            if target.hp == 0:
-                self._defeat_monster(target)
+            if target.type_id == "dragon" and item.effect == "fire":
+                message = "The fire bounces off the dragon."
+            else:
+                damage = _roll(self.rng, (1, 4) if item.effect == "magic_missile" else (6, 6))
+                self._reveal_monster(target)
+                target.hp = max(0, target.hp - damage)
+                message = f"The {item.display_name} hits the {target.name}."
+                if target.hp == 0:
+                    self._defeat_monster(target)
         elif target and item.effect == "teleport_monster":
             target.x, target.y = self._free_position(self.floor, (self.player.position,))
             message = f"The {target.name} vanishes."
@@ -1994,7 +2115,7 @@ class GameState:
         target = self._ensure_floor(self.current_floor)
         self.player.position = target.down_stairs or target.up_stairs or self._first_floor_position(target)
         self._message(f"You ascend to level {self.current_floor}.")
-        self._finish_turn()
+        self._finish_turn(process_monsters=False)
         if old_floor != self.current_floor + 1:
             raise RuntimeError
         return self._result(True, "", True)
@@ -2007,7 +2128,7 @@ class GameState:
             return self._result(False, "You cannot go any deeper.")
         self._descend_to_next_floor()
         self._message(f"You descend to level {self.current_floor}.")
-        self._finish_turn()
+        self._finish_turn(process_monsters=False)
         return self._result(True, "", True)
 
     def status_text(self) -> str:
