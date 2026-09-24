@@ -1,78 +1,27 @@
-"""
-PyRogueゲームの設定定数。
-
-このモジュールは構造化されたゲーム設定を提供します。
-新しいコードでは pyrogue.constants を使用することを推奨しますが、
-グループ化された設定値が必要な場合はこのモジュールを使用してください。
-"""
+"""TCOD display dimensions."""
 
 from dataclasses import dataclass, field
-
-# 新しい定数モジュールから値をインポート
-from pyrogue.constants import (
-    CombatConstants,
-    GameConstants,
-    HungerConstants,
-    ItemConstants,
-    ProbabilityConstants,
-)
 
 
 @dataclass
 class DisplayConfig:
-    """表示およびレンダリングの設定。"""
+    """TCOD screen and map dimensions."""
 
-    SCREEN_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    SCREEN_HEIGHT: int = GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
-    MAP_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    MAP_HEIGHT: int = GameConstants.MAP_DISPLAY_HEIGHT
+    SCREEN_WIDTH: int = 80
+    SCREEN_HEIGHT: int = 52
+    MAP_WIDTH: int = 80
+    MAP_HEIGHT: int = 45
     FONT_WIDTH: int = 10
     FONT_HEIGHT: int = 10
-    MIN_SCREEN_WIDTH: int = GameConstants.DUNGEON_WIDTH
-    MIN_SCREEN_HEIGHT: int = GameConstants.DUNGEON_HEIGHT + GameConstants.STATUS_PANEL_HEIGHT
-
-
-@dataclass
-class PlayerConfig:
-    """プレイヤーキャラクターの設定。"""
-
-    INITIAL_HP: int = GameConstants.PLAYER_INITIAL_HP
-    INITIAL_ATTACK: int = 5
-    INITIAL_DEFENSE: int = 3
-    EXPERIENCE_MULTIPLIER: int = CombatConstants.EXP_PER_LEVEL_BASE
-    MAX_HUNGER: int = HungerConstants.MAX_HUNGER
-    LEVEL_UP_HP_BONUS: int = CombatConstants.HP_GAIN_PER_LEVEL
-    LEVEL_UP_ATTACK_BONUS: int = 3  # 2→3: モンスター強化に対応した攻撃力成長
-    LEVEL_UP_DEFENSE_BONUS: int = 2  # 1→2: モンスター攻撃力増加に対応した防御力成長
-
-
-@dataclass
-class MonsterConfig:
-    """モンスターの設定。"""
-
-    SPAWN_CHANCE: float = 0.8
-    MAX_MONSTERS_PER_ROOM: int = 3
-    MOVE_CHANCE: float = ProbabilityConstants.MONSTER_MOVE_CHANCE
-
-
-@dataclass
-class ItemConfig:
-    """アイテムの設定。"""
-
-    SPAWN_CHANCE: float = 0.7
-    MAX_ITEMS_PER_ROOM: int = 2
-    MAX_INVENTORY_SIZE: int = ItemConstants.MAX_INVENTORY_SIZE
+    MIN_SCREEN_WIDTH: int = 80
+    MIN_SCREEN_HEIGHT: int = 52
 
 
 @dataclass
 class GameConfig:
-    """メインゲーム設定。"""
+    """Application display settings."""
 
     display: DisplayConfig = field(default_factory=DisplayConfig)
-    player: PlayerConfig = field(default_factory=PlayerConfig)
-    monster: MonsterConfig = field(default_factory=MonsterConfig)
-    item: ItemConfig = field(default_factory=ItemConfig)
 
 
-# グローバル設定インスタンス
 CONFIG = GameConfig()

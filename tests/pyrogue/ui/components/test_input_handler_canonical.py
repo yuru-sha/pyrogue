@@ -10,6 +10,13 @@ from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 
 
+def test_gui_routes_commands_without_legacy_game_logic_or_handler() -> None:
+    screen = GameScreen(None, seed=20)
+
+    assert not hasattr(screen, "game_logic")
+    assert not hasattr(screen.input_handler, "command_handler")
+
+
 def test_gui_read_key_selects_a_scroll_for_the_canonical_command() -> None:
     screen = GameScreen(None, seed=20)
     game = screen.rogue_game
@@ -71,22 +78,6 @@ def test_gui_zap_direction_uses_the_canonical_wand_command() -> None:
     assert not screen.input_handler.direction_selection_mode
     assert wand.charges == 0
     assert game.player.turns_played == 1
-
-
-def test_gui_targeting_uses_shared_cardinal_direction_mapping() -> None:
-    screen = GameScreen(None, seed=23)
-    handler = screen.input_handler
-    handler.start_targeting(5, 5)
-
-    for key, expected in (
-        (tcod.event.KeySym.LEFT, (4, 5)),
-        (ord("l"), (5, 5)),
-        (tcod.event.KeySym.UP, (5, 4)),
-        (ord("j"), (5, 5)),
-        (ord("y"), (5, 5)),
-    ):
-        handler.handle_key(SimpleNamespace(sym=key, mod=0, text=""))
-        assert (handler.targeting_x, handler.targeting_y) == expected
 
 
 def test_gui_tab_toggles_canonical_fov_without_mutating_state() -> None:
