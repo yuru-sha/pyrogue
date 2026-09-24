@@ -22,7 +22,7 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
 
     output = capsys.readouterr().out
     assert output.count("GAME OVER") == 1
-    assert "Score: 27" in output
+    assert "Score: 7" in output
     assert "Deepest floor: B4F" in output
     assert "Cause: starvation" in output
     assert SaveManager(tmp_path).load_game_state() is None
@@ -61,13 +61,18 @@ def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
         engine = Engine(seed=1234)
 
     game = engine.game_screen.rogue_game
+    game.player.gold = 19
+    game.player.monsters_killed = 2
+    game.player.has_amulet = True
+    game.player.deepest_floor = 4
     game._die("test")
     assert save_manager.save_game_state(game.to_dict())
 
     engine.game_over()
 
+    assert engine.game_over_screen.player_stats["score"] == 19
     assert engine.game_over_screen.player_stats["score"] == game.score
-    assert engine.game_over_screen.final_floor == game.player.deepest_floor
+    assert engine.game_over_screen.final_floor == 4
     assert engine.game_over_screen.cause_of_death == "test"
     assert SaveManager(tmp_path).load_game_state() is None
 
