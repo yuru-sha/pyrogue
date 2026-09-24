@@ -812,11 +812,11 @@ class DungeonGenerator:
             second_center = self._region_center(b, cell_width, cell_height, columns)
             first_target = second.center if second else second_center
             second_target = first.center if first else first_center
-            first_port = first_center if first is None else self._room_door(first, direction, first_target)
+            first_port = first_center if first is None else self._room_door(tiles, first, direction, first_target)
             second_port = (
                 second_center
                 if second is None
-                else self._room_door(second, (-direction[0], -direction[1]), second_target)
+                else self._room_door(tiles, second, (-direction[0], -direction[1]), second_target)
             )
             if first:
                 self._connect_room_door(tiles, first, first_port, direction)
@@ -857,8 +857,28 @@ class DungeonGenerator:
     def _region_center(self, index: int, cell_width: int, cell_height: int, columns: int) -> Position:
         return (index % columns * cell_width + cell_width // 2, index // columns * cell_height + cell_height // 2)
 
-    def _room_door(self, room: Room, direction: Position, target: Position) -> Position:
+    def _room_door(self, tiles: list[list[Terrain]], room: Room, direction: Position, target: Position) -> Position:
         dx, dy = direction
+        if room.is_maze:
+            passages = [
+                (x, y)
+                for y in range(room.y + 1, room.y + room.height - 1)
+                for x in range(room.x + 1, room.x + room.width - 1)
+                if tiles[y][x] == Terrain.FLOOR
+            ]
+            if dx:
+                edge_x = room.x + room.width - 1 if dx > 0 else room.x
+                passage = min(
+                    passages,
+                    key=lambda point: (abs(point[0] - edge_x + dx), abs(point[1] - target[1])),
+                )
+                return edge_x, passage[1]
+            edge_y = room.y + room.height - 1 if dy > 0 else room.y
+            passage = min(
+                passages,
+                key=lambda point: (abs(point[1] - edge_y + dy), abs(point[0] - target[0])),
+            )
+            return passage[0], edge_y
         if dx:
             y = min(max(target[1], room.y + 1), room.y + room.height - 2)
             return (room.x + room.width - 1 if dx > 0 else room.x, y)
@@ -870,14 +890,11 @@ class DungeonGenerator:
         if not room.is_maze:
             self._carve_corridor(tiles, room.center, inside)
             return
-        passages = [
-            (x, y)
-            for y in range(room.y + 1, room.y + room.height - 1)
-            for x in range(room.x + 1, room.x + room.width - 1)
-            if tiles[y][x] == Terrain.FLOOR
-        ]
-        target = min(passages, key=lambda point: abs(point[0] - inside[0]) + abs(point[1] - inside[1]))
-        self._carve_corridor(tiles, inside, target)
+        x, y = inside
+        while room.contains(x, y) and tiles[y][x] == Terrain.WALL:
+            tiles[y][x] = Terrain.FLOOR
+            x -= direction[0]
+            y -= direction[1]
 
     def _reachable_positions(self, tiles: list[list[Terrain]], start: Position) -> set[Position]:
         seen = {start}

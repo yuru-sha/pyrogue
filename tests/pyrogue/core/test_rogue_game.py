@@ -175,6 +175,11 @@ def test_maze_room_keeps_a_connected_lattice_of_passages() -> None:
         for x in range(maze_room.x + 1, maze_room.x + maze_room.width - 1)
     )
     assert passages <= generator._reachable_positions(floor.tiles, next(iter(passages)))
+    assert all(
+        sum(floor.tile_at((x + dx, y + dy)) != Terrain.WALL for dx in range(2) for dy in range(2)) < 4
+        for y in range(maze_room.y + 1, maze_room.y + maze_room.height - 2)
+        for x in range(maze_room.x + 1, maze_room.x + maze_room.width - 2)
+    )
 
 
 def _use_generated_dark_room(game: GameState) -> Room:
