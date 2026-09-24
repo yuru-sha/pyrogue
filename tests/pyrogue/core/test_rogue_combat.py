@@ -219,6 +219,60 @@ def test_pursuer_does_not_cut_a_blocked_diagonal_corner() -> None:
     assert (monster.x, monster.y) == (7, 7)
 
 
+def test_running_pursuer_tracks_player_through_a_blocked_line_of_sight() -> None:
+    game = GameState(seed=130)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 5)
+    pursuer = MonsterState(907, "snake", 10, 5, 100, running=True)
+    game.floor.monsters.append(pursuer)
+    for x in range(5, 12):
+        for y in range(4, 7):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.floor.set_tile((8, 5), Terrain.WALL)
+    assert not game._can_see((pursuer.x, pursuer.y), game.player.position, pursuer.level + 4)
+
+    game.execute("wait")
+
+    assert pursuer.x < 10
+
+
+@pytest.mark.parametrize(("monster_type", "seed"), [("bat", 583), ("phantom", 43)])
+def test_random_movement_can_choose_to_stay(monster_type: str, seed: int) -> None:
+    game = GameState(seed=131)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 10)
+    monster = MonsterState(908, monster_type, 10, 10, 100, running=True)
+    game.floor.monsters.append(monster)
+    for x in range(5, 12):
+        for y in range(9, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.rng.seed(seed)
+    original_position = (monster.x, monster.y)
+
+    game.execute("wait")
+
+    assert (monster.x, monster.y) == original_position
+
+
+def test_flying_bat_gets_second_move_after_a_random_stay() -> None:
+    game = GameState(seed=132)
+    game.floor.monsters.clear()
+    game.floor.rooms.clear()
+    game.player.position = (5, 10)
+    bat = MonsterState(909, "bat", 10, 10, 100, running=True)
+    game.floor.monsters.append(bat)
+    for x in range(5, 12):
+        for y in range(9, 12):
+            game.floor.set_tile((x, y), Terrain.FLOOR)
+    game.rng.seed(39)
+
+    game.execute("wait")
+
+    assert (bat.x, bat.y) == (9, 10)
+
+
 def test_visible_greedy_orc_chases_gold_in_players_room() -> None:
     game = GameState(seed=129)
     game.floor.monsters.clear()
@@ -235,6 +289,190 @@ def test_visible_greedy_orc_chases_gold_in_players_room() -> None:
 
     assert (orc.x, orc.y) == (11, 7)
     assert gold in game.floor.items
+
+
+def test_unseen_monster_with_carry_chance_takes_an_item_from_its_room(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=133)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(910, "centaur", 15, 7, 100, running=True)
+    item = ItemState(911, ItemKind.POTION, "healing potion", position=(16, 7))
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 19):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+
+    assert (centaur.x, centaur.y) == (16, 7)
+    assert item not in game.floor.items
+    assert item in centaur.carried_items
+    assert item.position is None
+    assert centaur.running
+
+    game.execute("wait")
+
+    assert (centaur.x, centaur.y) == (15, 7)
+    assert centaur.running
+
+
+def test_carrying_monster_keeps_its_floor_item_target_across_turns(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=134)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(912, "centaur", 15, 7, 100, running=True)
+    item = ItemState(913, ItemKind.POTION, "healing potion", position=(18, 7))
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 19):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+    game.execute("wait")
+
+    assert (centaur.x, centaur.y) == (17, 7)
+    assert centaur.target_item_id == item.id
+
+
+def test_monster_searches_for_carry_items_once_per_room(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=136)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(918, "centaur", 15, 7, 100, running=True)
+    item = ItemState(919, ItemKind.POTION, "healing potion", position=(18, 7))
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 20):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+    carry_rolls = iter((99, 0))
+    carry_roll_count = 0
+
+    def count_carry_rolls(stop: int, *args: int) -> int:
+        nonlocal carry_roll_count
+        if stop == 100 and not args:
+            carry_roll_count += 1
+            return next(carry_rolls)
+        return randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", count_carry_rolls)
+
+    game.execute("wait")
+    game.execute("wait")
+
+    assert carry_roll_count == 1
+    assert centaur.target_item_id is None
+
+
+def test_monster_reselects_its_carry_destination_after_entering_a_room(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    game = GameState(seed=137)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 6, 5)]
+    game.player.position = (5, 7)
+    centaur = MonsterState(920, "centaur", 15, 7, 100, running=True)
+    item = ItemState(921, ItemKind.POTION, "healing potion", position=(18, 7))
+    centaur.target_item_id = item.id
+    centaur.carry_search_room_index = 0
+    game.floor.monsters.append(centaur)
+    game.floor.items.append(item)
+    for x in range(5, 20):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+    monkeypatch.setattr(
+        game.rng,
+        "randrange",
+        lambda stop, *args: 99 if stop == 100 and not args else randrange(stop, *args),
+    )
+
+    game.execute("wait")
+
+    assert centaur.target_item_id is None
+    assert centaur.carry_search_room_index == 1
+
+
+def test_monsters_do_not_target_the_same_floor_item(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=135)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 16, 5)]
+    game.player.position = (5, 7)
+    first = MonsterState(914, "centaur", 15, 7, 100, running=True)
+    second = MonsterState(915, "centaur", 20, 7, 100, running=True)
+    items = [
+        ItemState(916, ItemKind.POTION, "healing potion", position=(25, 7)),
+        ItemState(917, ItemKind.SCROLL, "identify scroll", position=(26, 7)),
+    ]
+    game.floor.monsters.extend((first, second))
+    game.floor.items.extend(items)
+    for x in range(5, 28):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+
+    assert first.target_item_id is not None
+    assert second.target_item_id is not None
+    assert first.target_item_id != second.target_item_id
+
+
+@pytest.mark.parametrize("first_item_x", [15, 16], ids=["already-on-item", "moves-onto-item"])
+def test_monster_claims_next_carry_item_immediately_after_pickup(
+    first_item_x: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    game = GameState(seed=138)
+    game.floor.monsters.clear()
+    game.floor.items.clear()
+    game.floor.rooms = [Room(5, 5, 5, 5), Room(14, 5, 10, 5)]
+    game.player.position = (5, 7)
+    first = MonsterState(922, "centaur", 15, 7, 100, running=True)
+    second = MonsterState(923, "centaur", 20, 7, 100, running=True)
+    first_item = ItemState(924, ItemKind.POTION, "healing potion", position=(first_item_x, 7))
+    next_item = ItemState(925, ItemKind.SCROLL, "identify scroll", position=(23, 7))
+    first.target_item_id = first_item.id
+    first.carry_search_room_index = 1
+    game.floor.monsters.extend((first, second))
+    game.floor.items.extend((first_item, next_item))
+    for x in range(5, 25):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+
+    game.execute("wait")
+
+    assert first_item in first.carried_items
+    assert (first.x, first.y) == (first_item_x, 7)
+    assert first.target_item_id == next_item.id
+    assert second.target_item_id is None
 
 
 def test_flying_monster_gets_rogue_second_move_when_far_from_player() -> None:
@@ -266,7 +504,7 @@ def test_bat_can_move_randomly_while_chasing() -> None:
 
     game.execute("wait")
 
-    assert (bat.x, bat.y) == (10, 9)
+    assert (bat.x, bat.y) == (9, 11)
 
 
 def test_phantom_is_hidden_until_the_player_discovers_it() -> None:
@@ -623,6 +861,8 @@ def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> 
     game, monster = game_with_adjacent_monster("nymph")
     ring = ItemState(910, ItemKind.RING, "ring of protection", effect="protection")
     game.player.inventory.append(ring)
+    carried_item = ItemState(914, ItemKind.POTION, "healing potion")
+    monster.carried_items.append(carried_item)
     game.player.armor_class = 100
     game.rng.seed(0)
 
@@ -631,6 +871,7 @@ def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> 
     assert result.success
     assert ring not in game.player.inventory
     assert monster not in game.floor.monsters
+    assert carried_item not in game.floor.items
     assert game.player.monsters_killed == 0
     assert game.player.exp == 0
 

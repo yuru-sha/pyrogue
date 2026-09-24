@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.2"
+GAME_VERSION = "0.3.3"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -294,6 +294,15 @@ MONSTER_TYPES: tuple[MonsterDefinition, ...] = (
     MonsterDefinition("zombie", "zombie", 2, 8, ((1, 8),), 6, abilities=frozenset({"mean"})),
 )
 MONSTER_BY_ID = {monster.id: monster for monster in MONSTER_TYPES}
+MONSTER_PACK_ITEM_THRESHOLDS: tuple[tuple[int, ItemKind], ...] = (
+    (26, ItemKind.POTION),
+    (62, ItemKind.SCROLL),
+    (78, ItemKind.FOOD),
+    (85, ItemKind.WEAPON),
+    (92, ItemKind.ARMOR),
+    (96, ItemKind.RING),
+    (100, ItemKind.WAND),
+)
 
 
 @dataclass
@@ -313,6 +322,9 @@ class MonsterState:
     level_bonus: int = 0
     revealed: bool = False
     disguise: str | None = None
+    carried_items: list[ItemState] = field(default_factory=list)
+    target_item_id: int | None = None
+    carry_search_room_index: int | None = None
 
     def __post_init__(self) -> None:
         if self.max_hp is None:
@@ -359,6 +371,9 @@ class MonsterState:
             "level_bonus": self.level_bonus,
             "revealed": self.revealed,
             "disguise": self.disguise,
+            "carried_items": [item.to_dict() for item in self.carried_items],
+            "target_item_id": self.target_item_id,
+            "carry_search_room_index": self.carry_search_room_index,
         }
 
     @classmethod
@@ -378,6 +393,11 @@ class MonsterState:
             level_bonus=int(data.get("level_bonus", 0)),
             revealed=bool(data.get("revealed", False)),
             disguise=data.get("disguise"),
+            carried_items=[ItemState.from_dict(item) for item in data.get("carried_items", [])],
+            target_item_id=int(data["target_item_id"]) if data.get("target_item_id") is not None else None,
+            carry_search_room_index=(
+                int(data["carry_search_room_index"]) if data.get("carry_search_room_index") is not None else None
+            ),
         )
 
     @property
@@ -1092,7 +1112,9 @@ class GameState:
         self.player.position = target.up_stairs or self._first_floor_position(target)
         self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
 
-    def _new_item(self, floor: FloorState, kind: ItemKind, name: str | None = None) -> ItemState:
+    def _new_item(
+        self, floor: FloorState, kind: ItemKind, name: str | None = None, *, on_floor: bool = True
+    ) -> ItemState:
         names = {
             ItemKind.WEAPON: tuple(WEAPON_DATA),
             ItemKind.ARMOR: tuple(ARMOR_DATA),
@@ -1105,7 +1127,8 @@ class GameState:
             ItemKind.AMULET: ("amulet of yendor",),
         }
         name = self.rng.choice(names[kind]) if name is None else name
-        item = ItemState(id=self._next_item_id, kind=kind, name=name, position=self._free_position(floor))
+        position = self._free_position(floor) if on_floor else None
+        item = ItemState(id=self._next_item_id, kind=kind, name=name, position=position)
         self._next_item_id += 1
         appearance_kind = kind in APPEARANCE_EFFECTS
         if appearance_kind:
@@ -1208,6 +1231,10 @@ class GameState:
             monster.exp_value = monster.experience_reward
             self._next_monster_id += 1
             floor.monsters.append(monster)
+            if floor.number >= self.player.deepest_floor and self.rng.randrange(100) < definition.carry_chance:
+                item_roll = self.rng.randrange(100)
+                item_kind = next(kind for threshold, kind in MONSTER_PACK_ITEM_THRESHOLDS if item_roll < threshold)
+                monster.carried_items.append(self._new_item(floor, item_kind, on_floor=False))
 
     def _spawn_traps(self, floor: FloorState) -> None:
         count = 1 + min(2, floor.number // 9)
@@ -1475,6 +1502,10 @@ class GameState:
         if monster.type_id == "venus_flytrap":
             self.player.held = False
             self.player.flytrap_hits = 0
+        for item in monster.carried_items:
+            item.position = (monster.x, monster.y)
+            self.floor.items.append(item)
+        monster.carried_items.clear()
         self.floor.monsters.remove(monster)
 
     def _player_attack(self, monster: MonsterState) -> CommandResult:
@@ -1656,6 +1687,40 @@ class GameState:
                 positions.append(position)
         return positions
 
+    def _monster_find_carry_item(
+        self,
+        monster: MonsterState,
+        room_index: int,
+        room: Room | None,
+        player_room: Room | None,
+        visible: bool,
+    ) -> ItemState | None:
+        monster.carry_search_room_index = room_index
+        if not monster.definition.carry_chance or room is None or room == player_room or visible:
+            return None
+        claimed = {other.target_item_id for other in self.floor.monsters if other is not monster}
+        for item in self.floor.items:
+            if (
+                item.position is not None
+                and room.contains(*item.position)
+                and item.id not in claimed
+                and not (item.kind == ItemKind.SCROLL and item.name.lower() == "scare monster scroll")
+                and self.rng.randrange(100) < monster.definition.carry_chance
+            ):
+                monster.target_item_id = item.id
+                return item
+        return None
+
+    def _monster_pick_up_item(self, monster: MonsterState, item: ItemState) -> bool:
+        self.floor.items.remove(item)
+        item.position = None
+        monster.carried_items.append(item)
+        was_target = item.id == monster.target_item_id
+        if was_target:
+            monster.target_item_id = None
+            monster.carry_search_room_index = None
+        return was_target
+
     def _process_monsters(self) -> None:
         for monster in list(self.floor.monsters):
             if monster.hp <= 0 or self.status != GameStatus.PLAYING:
@@ -1666,11 +1731,20 @@ class GameState:
             distance = max(abs(monster.x - self.player.x), abs(monster.y - self.player.y))
             # ponytail: rooms have no darkness flag; add one if dark rooms are modeled.
             player_room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
-            monster_room = next((room for room in self.floor.rooms if room.contains(monster.x, monster.y)), None)
+            monster_room_index = next(
+                (index for index, room in enumerate(self.floor.rooms) if room.contains(monster.x, monster.y)),
+                -1,
+            )
+            monster_room = self.floor.rooms[monster_room_index] if monster_room_index >= 0 else None
             in_gaze_range = (player_room is not None and player_room == monster_room) or distance < LAMP_DISTANCE
             abilities = monster.definition.abilities
+            if monster.carry_search_room_index is not None and monster.carry_search_room_index != monster_room_index:
+                monster.target_item_id = None
+                monster.carry_search_room_index = None
             if visible and not monster.running and ("mean" in abilities or "greed" in abilities):
                 monster.running = True
+            if visible and monster.running:
+                monster.carry_search_room_index = monster_room_index
             if (
                 monster.type_id == "medusa"
                 and monster.running
@@ -1689,8 +1763,15 @@ class GameState:
                 if self.player.position in self._monster_step_positions(monster):
                     self._monster_attack(monster)
                 continue
-            if not visible or (not monster.running and "mean" not in abilities):
+            if not monster.running and (not visible or "mean" not in abilities):
                 continue
+            target_item = next((item for item in self.floor.items if item.id == monster.target_item_id), None)
+            if target_item is None:
+                monster.target_item_id = None
+                if monster.carry_search_room_index != monster_room_index:
+                    target_item = self._monster_find_carry_item(
+                        monster, monster_room_index, monster_room, player_room, visible
+                    )
             gold = (
                 next(
                     (
@@ -1706,10 +1787,15 @@ class GameState:
                 if "greed" in abilities
                 else None
             )
-            if gold and (monster.x, monster.y) == gold.position:
-                self.floor.items.remove(gold)
-                gold = None
-            chase_target = gold.position if gold and gold.position is not None else self.player.position
+            target_item = gold or target_item
+            if target_item and (monster.x, monster.y) == target_item.position:
+                if self._monster_pick_up_item(monster, target_item):
+                    target_item = self._monster_find_carry_item(
+                        monster, monster_room_index, monster_room, player_room, visible
+                    )
+                    continue
+                target_item = None
+            chase_target = target_item.position if target_item and target_item.position else self.player.position
             for step in range(2 if "fly" in abilities else 1):
                 player_dx = self.player.x - monster.x
                 player_dy = self.player.y - monster.y
@@ -1722,34 +1808,31 @@ class GameState:
                 )
                 choices = self._monster_step_positions(monster)
                 if random_move:
-                    target = self.rng.choice(choices) if choices else (monster.x, monster.y)
+                    offset = self.rng.randrange(9)
+                    target = (monster.x + offset // 3 - 1, monster.y + offset % 3 - 1)
+                    if target != (monster.x, monster.y) and target not in choices:
+                        target = (monster.x, monster.y)
                 else:
-                    current_distance = max(abs(monster.x - chase_target[0]), abs(monster.y - chase_target[1]))
-                    closer = [
-                        position
-                        for position in choices
-                        if max(abs(position[0] - chase_target[0]), abs(position[1] - chase_target[1]))
-                        < current_distance
-                    ]
-                    direct_step = (
-                        monster.x + (chase_target[0] > monster.x) - (chase_target[0] < monster.x),
-                        monster.y + (chase_target[1] > monster.y) - (chase_target[1] < monster.y),
-                    )
-                    if direct_step in closer:
-                        target = direct_step
-                    elif closer:
-                        target = self.rng.choice(closer)
+                    current_distance = (monster.x - chase_target[0]) ** 2 + (monster.y - chase_target[1]) ** 2
+                    distances = [((x - chase_target[0]) ** 2 + (y - chase_target[1]) ** 2, (x, y)) for x, y in choices]
+                    closer = [(distance, position) for distance, position in distances if distance < current_distance]
+                    if closer:
+                        nearest_distance = min(distance for distance, _ in closer)
+                        target = self.rng.choice(
+                            [position for distance, position in closer if distance == nearest_distance]
+                        )
                     else:
                         target = (monster.x, monster.y)
                 if target == self.player.position:
                     self._monster_attack(monster)
                     break
                 if target == (monster.x, monster.y):
-                    break
+                    continue
                 monster.x, monster.y = target
                 monster.running = True
-                if gold and target == gold.position:
-                    self.floor.items.remove(gold)
+                if target_item and target == target_item.position:
+                    if self._monster_pick_up_item(monster, target_item):
+                        self._monster_find_carry_item(monster, monster_room_index, monster_room, player_room, visible)
                     break
 
     def move(self, dx: int, dy: int) -> CommandResult:
@@ -2128,10 +2211,11 @@ class GameState:
         self.floor.player_position = self.player.position
         old_floor = self.current_floor
         self.current_floor -= 1
+        new_floor = self.current_floor not in self.floors
         target = self._ensure_floor(self.current_floor)
         self.player.position = target.down_stairs or target.up_stairs or self._first_floor_position(target)
         self._message(f"You ascend to level {self.current_floor}.")
-        self._finish_turn(process_monsters=False)
+        self._finish_turn(process_monsters=not new_floor)
         if old_floor != self.current_floor + 1:
             raise RuntimeError
         return self._result(True, "", True)
@@ -2142,9 +2226,11 @@ class GameState:
             return self._result(False, "There are no stairs down here.")
         if self.current_floor >= MAX_FLOOR:
             return self._result(False, "You cannot go any deeper.")
+        next_floor = self.current_floor + 1
+        new_floor = next_floor not in self.floors
         self._descend_to_next_floor()
         self._message(f"You descend to level {self.current_floor}.")
-        self._finish_turn(process_monsters=False)
+        self._finish_turn(process_monsters=not new_floor)
         return self._result(True, "", True)
 
     def status_text(self) -> str:

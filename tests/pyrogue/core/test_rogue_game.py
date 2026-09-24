@@ -5,6 +5,7 @@ import pytest
 from pyrogue.core.rogue_game import (
     GAME_VERSION,
     MAX_FLOOR,
+    FloorState,
     GameState,
     GameStatus,
     ItemKind,
@@ -182,22 +183,121 @@ def test_unidentified_appearances_are_seeded_and_restored() -> None:
     )
 
 
-def test_destination_floor_monsters_wait_until_the_next_player_action() -> None:
+def test_new_destination_floor_monsters_wait_until_the_next_player_action(monkeypatch: pytest.MonkeyPatch) -> None:
     game = GameState(1234)
-    destination = game._ensure_floor(2)
-    destination.monsters.clear()
+    spawned: list[MonsterState] = []
+    spawn_positions: list[tuple[int, int]] = []
+
+    def spawn_arrival_monster(destination: FloorState) -> None:
+        arrival = destination.up_stairs
+        monster_position = (arrival[0] + 1, arrival[1])
+        destination.set_tile(monster_position, Terrain.FLOOR)
+        monster = MonsterState(900, "snake", *monster_position, 100)
+        destination.monsters.append(monster)
+        spawned.append(monster)
+        spawn_positions.append(monster_position)
+
+    monkeypatch.setattr(game, "_spawn_monsters", spawn_arrival_monster)
+    game.player.position = game.floor.down_stairs
+
+    result = game.descend()
+
+    monster = spawned[0]
+    assert result.turn_consumed
+    assert not monster.running
+    assert (monster.x, monster.y) == spawn_positions[0]
+
+
+def test_cached_destination_floor_monsters_act_on_arrival() -> None:
+    game = GameState(1235)
+    destination = game.generator.generate(2)
     arrival = destination.up_stairs
-    monster_position = (arrival[0] + 1, arrival[1])
-    destination.set_tile(monster_position, Terrain.FLOOR)
-    monster = MonsterState(900, "snake", *monster_position, 100)
+    width = len(destination.tiles[0])
+    dx = 1 if arrival[0] + 3 < width - 1 else -1
+    monster_position = (arrival[0] + 3 * dx, arrival[1])
+    for offset in range(4):
+        destination.set_tile((arrival[0] + offset * dx, arrival[1]), Terrain.FLOOR)
+    monster = MonsterState(901, "snake", *monster_position, 100, running=True)
     destination.monsters.append(monster)
+    game.floors[2] = destination
     game.player.position = game.floor.down_stairs
 
     result = game.descend()
 
     assert result.turn_consumed
-    assert not monster.running
-    assert (monster.x, monster.y) == monster_position
+    assert abs(monster.x - arrival[0]) < 3
+
+
+def test_monsters_get_carry_packs_at_the_current_deepest_floor(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(1236)
+    game.player.deepest_floor = MAX_FLOOR
+    game.rng.seed(2)
+    randrange = game.rng.randrange
+
+    def force_carry_roll(stop: int, *args: int) -> int:
+        return 0 if stop == 100 and not args else randrange(stop, *args)
+
+    monkeypatch.setattr("pyrogue.core.rogue_game.MONSTER_SPAWN_ORDER", ("centaur",) * 26)
+    monkeypatch.setattr(game.rng, "randrange", force_carry_roll)
+    deepest_floor = game.generator.generate(MAX_FLOOR)
+    previous_floor = game.generator.generate(2)
+
+    game._spawn_monsters(deepest_floor)
+    game._spawn_monsters(previous_floor)
+
+    assert all(monster.carried_items for monster in deepest_floor.monsters)
+    assert all(monster.carried_items[0].position is None for monster in deepest_floor.monsters)
+    assert all(not monster.carried_items for monster in previous_floor.monsters)
+
+
+@pytest.mark.parametrize(
+    ("item_roll", "expected_kind"),
+    [
+        (0, ItemKind.POTION),
+        (26, ItemKind.SCROLL),
+        (62, ItemKind.FOOD),
+        (78, ItemKind.WEAPON),
+        (85, ItemKind.ARMOR),
+        (92, ItemKind.RING),
+        (96, ItemKind.WAND),
+    ],
+)
+def test_monster_pack_item_kind_uses_rogue_54_probabilities(
+    monkeypatch: pytest.MonkeyPatch, item_roll: int, expected_kind: ItemKind
+) -> None:
+    game = GameState(1238)
+    floor = game.generator.generate(1)
+    monkeypatch.setattr("pyrogue.core.rogue_game.MONSTER_SPAWN_ORDER", ("centaur",) * 26)
+    randrange = game.rng.randrange
+    rolls = iter((0, item_roll, 99, 99, 99, 99))
+
+    def force_pack_rolls(stop: int, *args: int) -> int:
+        if stop == 100 and not args:
+            return next(rolls)
+        if stop in {5, 10} and not args:
+            return 0
+        return randrange(stop, *args)
+
+    monkeypatch.setattr(game.rng, "randrange", force_pack_rolls)
+
+    game._spawn_monsters(floor)
+
+    assert floor.monsters[0].carried_items[0].kind == expected_kind
+    assert all(not monster.carried_items for monster in floor.monsters[1:])
+
+
+def test_killing_monster_drops_its_carried_items() -> None:
+    game = GameState(1237)
+    game.floor.monsters.clear()
+    monster = MonsterState(902, "centaur", 10, 10, 1)
+    carried_item = ItemState(903, ItemKind.POTION, "healing potion")
+    monster.carried_items.append(carried_item)
+    game.floor.monsters.append(monster)
+
+    game._defeat_monster(monster)
+
+    assert carried_item.position == (monster.x, monster.y)
+    assert carried_item in game.floor.items
 
 
 def test_amulet_requires_returning_to_surface() -> None:
@@ -256,12 +356,12 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
 
 def test_old_save_version_is_rejected() -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.3.1"
+    game["spec_version"] = "0.3.2"
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.2"
+    assert GAME_VERSION == "0.3.3"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
