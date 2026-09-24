@@ -174,7 +174,6 @@ class GameLogic:
             return
 
         self.player.hp = self.player.max_hp
-        # self.player.mp = self.player.max_mp
         self.add_message("[Wizard] Fully healed!")
 
     def wizard_reveal_all(self) -> None:
@@ -191,15 +190,7 @@ class GameLogic:
         explored = self.get_explored_tiles()
         explored.fill(True)
 
-        # 全隠しドア・トラップを発見済みにする
-        for y in range(floor_data.tiles.shape[0]):
-            for x in range(floor_data.tiles.shape[1]):
-                from pyrogue.map.tile import SecretDoor
-
-                tile = floor_data.tiles[y, x]
-                if isinstance(tile, SecretDoor) and tile.door_state == "secret":
-                    tile.reveal()
-
+        # 全トラップを発見済みにする
         if hasattr(floor_data, "trap_spawner") and floor_data.trap_spawner:
             for trap in floor_data.trap_spawner.traps:
                 if trap.is_hidden:
@@ -623,38 +614,6 @@ class GameLogic:
         if self.game_screen and hasattr(self.game_screen, "fov_manager"):
             self.game_screen.fov_manager.update_fov()
 
-    def search_secret_door(self, x: int, y: int) -> bool:
-        """隠しドアを探索。"""
-        floor_data = self.get_current_floor_data()
-        if not floor_data:
-            return False
-
-        # 座標チェック
-        if x < 0 or y < 0 or y >= floor_data.tiles.shape[0] or x >= floor_data.tiles.shape[1]:
-            return False
-
-        tile = floor_data.tiles[y, x]
-
-        # 隠しドアかチェック
-        from pyrogue.map.tile import SecretDoor
-
-        if isinstance(tile, SecretDoor) and tile.door_state == "secret":
-            # 発見成功率はプレイヤーレベルに依存（基本30% + レベル*5%）
-            import random
-
-            success_rate = min(80, 30 + self.player.level * 5)
-
-            if random.randint(1, 100) <= success_rate:
-                tile.reveal()  # 隠しドアを発見
-                self.add_message("You found a secret door!")
-                # FOVを更新
-                self._update_fov()
-                return True
-            # 失敗してもメッセージは出さない（まとめて処理される）
-            return False
-
-        return False
-
     def search_trap(self, x: int, y: int) -> bool:
         """隠しトラップを探索。"""
         floor_data = self.get_current_floor_data()
@@ -751,10 +710,6 @@ class GameLogic:
     def handle_close_door(self) -> bool:
         """扉を閉じる処理。"""
         return self.floor_manager.handle_close_door()
-
-    def handle_search(self) -> bool:
-        """隠し扉の探索処理。"""
-        return self.floor_manager.handle_search()
 
     def handle_disarm_trap(self) -> bool:
         """トラップ解除の処理。"""
@@ -954,8 +909,6 @@ class GameLogic:
             "attack": player.attack,
             "defense": player.defense,
             "hunger": getattr(player, "hunger", 100),
-            # "mp": getattr(player, "mp", 0),
-            # "max_mp": getattr(player, "max_mp", 0),
             "has_amulet": getattr(player, "has_amulet", False),
             "monsters_killed": getattr(player, "monsters_killed", 0),
             "deepest_floor": getattr(player, "deepest_floor", 1),

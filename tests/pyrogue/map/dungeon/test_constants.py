@@ -49,35 +49,29 @@ class TestDoorConstants:
 
     def test_door_constants_exist(self):
         """ドア定数が存在することを確認。"""
-        assert hasattr(DoorConstants, "SECRET_DOOR_CHANCE")
         assert hasattr(DoorConstants, "OPEN_DOOR_CHANCE")
         assert hasattr(DoorConstants, "CLOSED_DOOR_CHANCE")
         assert hasattr(DoorConstants, "MIN_DOOR_DISTANCE")
         assert hasattr(DoorConstants, "MAX_DOORS_PER_ROOM")
-        assert hasattr(DoorConstants, "HIDDEN_DOOR_SEARCH_RANGE")
 
     def test_door_constants_values(self):
         """ドア定数の値が妥当であることを確認。"""
-        assert DoorConstants.SECRET_DOOR_CHANCE == 0.10
         assert DoorConstants.OPEN_DOOR_CHANCE == 0.30
-        assert DoorConstants.CLOSED_DOOR_CHANCE == 0.60
+        assert DoorConstants.CLOSED_DOOR_CHANCE == 0.70
         assert DoorConstants.MIN_DOOR_DISTANCE == 2
         assert DoorConstants.MAX_DOORS_PER_ROOM == 4
-        assert DoorConstants.HIDDEN_DOOR_SEARCH_RANGE == 2
 
     def test_door_probabilities_sum_to_one(self):
         """ドア確率の合計が1.0になることを確認。"""
-        total = DoorConstants.SECRET_DOOR_CHANCE + DoorConstants.OPEN_DOOR_CHANCE + DoorConstants.CLOSED_DOOR_CHANCE
+        total = DoorConstants.OPEN_DOOR_CHANCE + DoorConstants.CLOSED_DOOR_CHANCE
         assert abs(total - 1.0) < 0.001  # 浮動小数点の誤差を考慮
 
     def test_door_constants_types(self):
         """ドア定数の型が正しいことを確認。"""
-        assert isinstance(DoorConstants.SECRET_DOOR_CHANCE, float)
         assert isinstance(DoorConstants.OPEN_DOOR_CHANCE, float)
         assert isinstance(DoorConstants.CLOSED_DOOR_CHANCE, float)
         assert isinstance(DoorConstants.MIN_DOOR_DISTANCE, int)
         assert isinstance(DoorConstants.MAX_DOORS_PER_ROOM, int)
-        assert isinstance(DoorConstants.HIDDEN_DOOR_SEARCH_RANGE, int)
 
 
 class TestCorridorConstants:
@@ -158,7 +152,6 @@ class TestRoomConstants:
         assert hasattr(RoomConstants, "MAX_ROOM_HEIGHT")
         assert hasattr(RoomConstants, "MIN_ROOM_DISTANCE")
         assert hasattr(RoomConstants, "ROOM_PADDING")
-        assert hasattr(RoomConstants, "SPECIAL_ROOM_CHANCE")
 
     def test_room_constants_values(self):
         """部屋定数の値が妥当であることを確認。"""
@@ -168,7 +161,6 @@ class TestRoomConstants:
         assert RoomConstants.MAX_ROOM_HEIGHT == 15
         assert RoomConstants.MIN_ROOM_DISTANCE == 3
         assert RoomConstants.ROOM_PADDING == 1
-        assert RoomConstants.SPECIAL_ROOM_CHANCE == 0.15
 
     def test_room_size_relationships(self):
         """部屋サイズの関係が妥当であることを確認。"""
@@ -183,7 +175,6 @@ class TestRoomConstants:
         assert isinstance(RoomConstants.MAX_ROOM_HEIGHT, int)
         assert isinstance(RoomConstants.MIN_ROOM_DISTANCE, int)
         assert isinstance(RoomConstants.ROOM_PADDING, int)
-        assert isinstance(RoomConstants.SPECIAL_ROOM_CHANCE, float)
 
 
 class TestStairsConstants:

@@ -99,20 +99,6 @@ class DungeonOptimizer:
             "avoid_diagonal": True,
         }
 
-    def get_special_room_probability(self) -> float:
-        """
-        特別部屋の生成確率を取得。
-
-        Returns
-        -------
-            特別部屋の生成確率
-
-        """
-        # 階層が深いほど特別部屋の確率が高い
-        base_probability = 0.2
-        floor_bonus = (self.floor - 1) * 0.02
-        return min(0.8, base_probability + floor_bonus)
-
     def should_use_bsp_algorithm(self) -> bool:
         """
         BSPアルゴリズムを使用すべきかどうか判定。
@@ -138,7 +124,6 @@ class DungeonOptimizer:
             "dungeon_size": f"{self.width}x{self.height}",
             "floor": self.floor,
             "target_room_count": self.target_room_count,
-            "special_room_probability": self.get_special_room_probability(),
             "use_bsp_algorithm": self.should_use_bsp_algorithm(),
             "room_params": self.get_room_generation_params(),
             "corridor_params": self.get_corridor_generation_params(),

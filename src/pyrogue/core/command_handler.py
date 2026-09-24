@@ -70,7 +70,6 @@ class CommonCommandHandler:
         self.context = context
         self._save_load_handler = None
         self._debug_handler = None
-        self._auto_explore_handler = None
         self._info_handler = None
 
     def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
@@ -109,8 +108,6 @@ class CommonCommandHandler:
             return self._handle_open_door()
         if command in ["close", "c"]:
             return self._handle_close_door()
-        if command in ["search", "s"]:
-            return self._handle_search()
         if command in ["disarm", "d"]:
             return self._handle_disarm_trap()
         if command in ["examine", "x"]:
@@ -128,8 +125,6 @@ class CommonCommandHandler:
 
         if command in ["quaff", "q"]:
             return self._handle_quaff(args)
-        if command in ["auto_explore", "O"]:
-            return self._get_auto_explore_handler().handle_auto_explore()
 
         # 情報表示コマンド
         if command in ["status", "stat"]:
@@ -255,13 +250,6 @@ class CommonCommandHandler:
             return CommandResult(True, should_end_turn=True)
         return CommandResult(False, "No door to close nearby")
 
-    def _handle_search(self) -> CommandResult:
-        """隠し扉の探索処理。"""
-        success = self.context.game_logic.handle_search()
-        if success:
-            return CommandResult(True, should_end_turn=True)
-        return CommandResult(False, "Nothing found")
-
     def _handle_disarm_trap(self) -> CommandResult:
         """トラップ解除の処理。"""
         success = self.context.game_logic.handle_disarm_trap()
@@ -278,22 +266,20 @@ Available Commands:
     move <direction> - Move in specified direction
 
   Actions:
-    get/, - Pick up item
+    get/pickup/g - Pick up item
     use <item> - Use item from inventory
     attack/a - Attack nearby enemy
     stairs <up/down> - Use stairs
     open/o - Open door
     close/c - Close door
-    search/s - Search for hidden doors
     disarm/d - Disarm trap
     examine/x - Examine surroundings
     rest/. - Rest for one turn
     long_rest/R - Rest until fully healed
     throw/t <item> - Throw item
-    wear/w <item> - Wear/equip item
+    wear <item> - Wear/equip item
     zap/z <wand> <direction> - Zap wand in direction
     quaff/q <potion> - Drink potion
-    auto_explore/O - Auto-explore unexplored areas
 
   Information:
     status/stat - Show player status
@@ -304,13 +290,9 @@ Available Commands:
     character_details/@ - Show detailed character info
     last_message/ctrl_m - Show recent messages
 
-  Special Monsters:
-    Dream Eater (@) - Causes hallucinations, psychic attacks
-    Phantom Fungus (f) - Spore attacks, causes confusion
-
   System:
     help - Show this help
-    save/s - Save game
+    save - Save game
     load - Load game
     quit/exit - Quit game
 
@@ -578,14 +560,6 @@ Available Commands:
 
             self._debug_handler = DebugCommandHandler(self.context)
         return self._debug_handler
-
-    def _get_auto_explore_handler(self):
-        """自動探索ハンドラーを取得（遅延初期化）。"""
-        if self._auto_explore_handler is None:
-            from pyrogue.core.auto_explore_handler import AutoExploreHandler
-
-            self._auto_explore_handler = AutoExploreHandler(self.context)
-        return self._auto_explore_handler
 
     def _get_info_handler(self):
         """情報表示ハンドラーを取得（遅延初期化）。"""

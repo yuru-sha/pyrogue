@@ -162,7 +162,6 @@ class TestPlayer:
         player = Player(x=10, y=15)
 
         # 初期状態
-        assert not player.is_paralyzed()
         assert not player.is_confused()
         assert not player.is_poisoned()
         assert not player.has_status_effect("NonExistent")

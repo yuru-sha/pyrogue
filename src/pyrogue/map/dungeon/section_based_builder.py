@@ -14,7 +14,7 @@ import tcod.bsp
 from pyrogue.map.dungeon.constants import BSPConstants, DoorConstants
 from pyrogue.map.dungeon.line_drawer import LineDrawer
 from pyrogue.map.dungeon.room_builder import Room
-from pyrogue.map.tile import Door, Floor, SecretDoor
+from pyrogue.map.tile import Door, Floor
 from pyrogue.utils import game_logger
 
 if TYPE_CHECKING:
@@ -278,14 +278,11 @@ class BSPDungeonBuilder:
                 # 壁以外（床など）を通路で置き換え
                 tiles[y, x] = Floor()
 
-    def _create_random_door(self) -> Door | SecretDoor:
+    def _create_random_door(self) -> Door:
         """ランダムな状態のドアを作成（定数クラスの確率使用）。"""
-        rand = random.random()
-        if rand < DoorConstants.SECRET_DOOR_CHANCE:  # 10% 隠し扉
-            return SecretDoor()
-        if rand < DoorConstants.SECRET_DOOR_CHANCE + DoorConstants.OPEN_DOOR_CHANCE:  # 30% オープンドア
+        if random.random() < DoorConstants.OPEN_DOOR_CHANCE:
             return Door(state="open")
-        # 60% クローズドドア
+        # 残り70%はクローズドドア
         return Door(state="closed")
 
     def _place_boundary_door_tile(self, tiles: np.ndarray, x: int, y: int, allow_door: bool = True) -> None:

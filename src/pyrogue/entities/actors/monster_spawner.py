@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 
-from pyrogue.map.tile import Door, Floor, SecretDoor
+from pyrogue.map.tile import Door, Floor
 
 from .monster import Monster
 from .monster_types import FLOOR_MONSTERS, MONSTER_STATS
@@ -75,7 +75,7 @@ class MonsterSpawner:
             # 通常時: 部屋ベース配置
             for _ in range(monster_count):
                 # ランダムな部屋を選択（特別な部屋は除外）
-                available_rooms = [room for room in rooms if not room.is_special]
+                available_rooms = rooms
                 if not available_rooms:
                     break
 
@@ -212,8 +212,7 @@ class MonsterSpawner:
 
         for y in range(height):
             for x in range(width):
-                # Floor, Door, SecretDoorを歩行可能なタイルとしてカウント
-                if isinstance(dungeon_tiles[y, x], (Floor, Door, SecretDoor)):
+                if isinstance(dungeon_tiles[y, x], (Floor, Door)):
                     floor_count += 1
 
         return floor_count
@@ -234,7 +233,7 @@ class MonsterSpawner:
 
         for y in range(height):
             for x in range(width):
-                if isinstance(dungeon_tiles[y, x], (Floor, Door, SecretDoor)):
+                if isinstance(dungeon_tiles[y, x], (Floor, Door)):
                     walkable_positions.append((x, y))
 
         # 物理的制限: 歩行可能タイルの90%まで
@@ -355,7 +354,7 @@ class MonsterSpawner:
                 and (
                     isinstance(dungeon_tiles[new_y, new_x], Floor)
                     or (
-                        isinstance(dungeon_tiles[new_y, new_x], (Door, SecretDoor))
+                        isinstance(dungeon_tiles[new_y, new_x], Door)
                         and dungeon_tiles[new_y, new_x].door_state == "open"
                     )
                 )

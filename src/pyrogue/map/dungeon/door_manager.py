@@ -2,19 +2,16 @@
 ドア管理コンポーネント - ドア配置専用。
 
 このモジュールは、ダンジョンのドア配置に特化したマネージャーです。
-通常のドア、隠しドア、特別部屋用ドアの配置と種類決定を担当します。
+    通常のドアの配置と種類決定を担当します。
 """
 
 from __future__ import annotations
 
-import random
-
 import numpy as np
 
-from pyrogue.constants import ProbabilityConstants
 from pyrogue.map.dungeon.corridor_builder import Corridor
 from pyrogue.map.dungeon.room_builder import Room
-from pyrogue.map.tile import Door, SecretDoor
+from pyrogue.map.tile import Door
 from pyrogue.utils import game_logger
 
 
@@ -22,8 +19,7 @@ class DoorManager:
     """
     ドア配置専用のマネージャークラス。
 
-    通常のドア、隠しドア、特別部屋用ドアの配置、
-    ドア種類の決定、配置位置の検証を担当します。
+    通常のドアの配置、ドア種類の決定、配置位置の検証を担当します。
     """
 
     def __init__(self) -> None:
@@ -319,17 +315,9 @@ class DoorManager:
 
         Returns:
         -------
-            ドアクラス（Door または SecretDoor）
+            Door
 
         """
-        # 特別な部屋は通常のドア
-        if room.is_special:
-            return Door
-
-        # 隠しドアの確率判定
-        if random.random() < ProbabilityConstants.SECRET_DOOR_CHANCE:
-            return SecretDoor
-
         return Door
 
     def _place_door_at_position(self, x: int, y: int, door_type: type, room: Room, tiles: np.ndarray) -> None:
@@ -378,7 +366,7 @@ class DoorManager:
 
         # 既にドアが配置されているかチェック
         current_tile = tiles[y, x]
-        if isinstance(current_tile, (Door, SecretDoor)):
+        if isinstance(current_tile, Door):
             return False
 
         # 壁または床（通路）の位置でなければドアは配置できない
@@ -387,7 +375,7 @@ class DoorManager:
 
         return True
 
-    def get_door_at_position(self, x: int, y: int, tiles: np.ndarray) -> Door | SecretDoor | None:
+    def get_door_at_position(self, x: int, y: int, tiles: np.ndarray) -> Door | None:
         """
         指定位置のドアを取得。
 
@@ -404,7 +392,7 @@ class DoorManager:
         """
         if 0 <= x < tiles.shape[1] and 0 <= y < tiles.shape[0]:
             tile = tiles[y, x]
-            if isinstance(tile, (Door, SecretDoor)):
+            if isinstance(tile, Door):
                 return tile
         return None
 
@@ -433,5 +421,4 @@ class DoorManager:
         return {
             "total_doors": len(self.placed_doors),
             "door_types": door_counts,
-            "secret_door_ratio": door_counts.get("SecretDoor", 0) / max(1, len(self.placed_doors)),
         }

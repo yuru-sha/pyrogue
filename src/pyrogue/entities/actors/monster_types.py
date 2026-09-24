@@ -350,31 +350,6 @@ MONSTER_STATS: dict[str, tuple[str, str, int, int, int, int, int, int, tuple[int
         (128, 128, 128),
         "basic",
     ),  # アンデッド
-    # 幻覚系モンスター（オリジナル拡張）
-    "DREAM_EATER": (
-        "@",
-        "Dream Eater",
-        7,
-        15,
-        9,
-        3,
-        112,  # 7*10 + 15 + 9*2 + 3*3 = 112
-        6,
-        (255, 20, 147),
-        "psychic",
-    ),  # 精神攻撃
-    "PHANTOM_FUNGUS": (
-        "f",
-        "Phantom Fungus",
-        5,
-        10,
-        6,
-        2,
-        78,  # 5*10 + 10 + 6*2 + 2*3 = 78
-        4,
-        (138, 43, 226),
-        "hallucinogenic",
-    ),  # 胞子攻撃
 }
 
 # 階層ごとの出現モンスター定義
@@ -388,12 +363,12 @@ FLOOR_MONSTERS: dict[int, list[tuple[str, int]]] = {
     5: [("ICE_MONSTER", 25), ("QUAGGA", 25), ("ORC", 30), ("NYMPH", 20)],
     # 中盤（B6-10F）: 中堅モンスター登場
     6: [("ORC", 30), ("CENTAUR", 30), ("YETI", 25), ("NYMPH", 15)],
-    7: [("CENTAUR", 25), ("YETI", 25), ("WRAITH", 30), ("PHANTOM_FUNGUS", 20)],
-    8: [("WRAITH", 30), ("AQUATOR", 30), ("LEPRECHAUN", 20), ("PHANTOM_FUNGUS", 20)],
+    7: [("CENTAUR", 25), ("YETI", 25), ("WRAITH", 30), ("AQUATOR", 20)],
+    8: [("WRAITH", 30), ("AQUATOR", 30), ("LEPRECHAUN", 20), ("CENTAUR", 20)],
     9: [("AQUATOR", 30), ("LEPRECHAUN", 20), ("TROLL", 30), ("ZOMBIE", 20)],
-    10: [("TROLL", 30), ("ZOMBIE", 20), ("XEROC", 25), ("DREAM_EATER", 25)],
+    10: [("TROLL", 30), ("ZOMBIE", 20), ("XEROC", 25), ("UR_VILE", 25)],
     # 上位中盤（B11-15F）: 上位モンスター登場
-    11: [("XEROC", 30), ("DREAM_EATER", 20), ("MEDUSA", 30), ("UR_VILE", 20)],
+    11: [("XEROC", 30), ("WRAITH", 20), ("MEDUSA", 30), ("UR_VILE", 20)],
     12: [("MEDUSA", 30), ("UR_VILE", 20), ("VENUS_FLYTRAP", 30), ("PHANTOM", 20)],
     13: [("VENUS_FLYTRAP", 25), ("PHANTOM", 25), ("VAMPIRE", 50)],
     14: [("VAMPIRE", 100)],  # Vampire専用階層

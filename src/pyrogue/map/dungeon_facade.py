@@ -124,16 +124,7 @@ class DungeonGenerator:
     @property
     def corridors(self) -> list:
         """通路のリスト（後方互換性のため）。"""
-        return getattr(self.director.corridor_builder, "corridors", [])
-
-    # 後方互換性のためのメソッド
-    def _get_room_grid_position(self, room: Room) -> tuple[int, int]:
-        """部屋のグリッド位置を取得（後方互換性のため）。"""
-        return self.director.room_builder.get_room_grid_position(room)
-
-    def _find_room_at_grid(self, grid_x: int, grid_y: int) -> Room | None:
-        """グリッド位置の部屋を検索（後方互換性のため）。"""
-        return self.director.room_builder.find_room_at_grid(self.rooms, grid_x, grid_y)
+        return self.director.corridors
 
     def _can_create_corridor(self, start: tuple, end: tuple) -> bool:
         """通路作成可能性をチェック（後方互換性のため）。"""
@@ -160,18 +151,8 @@ class DungeonGenerator:
             "generation_stats": self.get_generation_statistics(),
         }
 
-        # 各ビルダーコンポーネントの統計情報
-        if hasattr(self.director.room_builder, "get_statistics"):
-            info["room_builder_stats"] = self.director.room_builder.get_statistics()
-
-        if hasattr(self.director.corridor_builder, "get_statistics"):
-            info["corridor_builder_stats"] = self.director.corridor_builder.get_statistics()
-
         if hasattr(self.director.door_manager, "get_statistics"):
             info["door_manager_stats"] = self.director.door_manager.get_statistics()
-
-        if hasattr(self.director.special_room_builder, "get_statistics"):
-            info["special_room_builder_stats"] = self.director.special_room_builder.get_statistics()
 
         if hasattr(self.director.stairs_manager, "get_statistics"):
             info["stairs_manager_stats"] = self.director.stairs_manager.get_statistics()

@@ -169,16 +169,9 @@ class GameRenderer:
         elif isinstance(tile, StairsUp):
             char = "<"
             color = (255, 255, 255) if visible else (128, 128, 128)
-        elif hasattr(tile, "char"):  # Door, SecretDoor等のタイル
-            from pyrogue.map.tile import SecretDoor
-
-            if isinstance(tile, SecretDoor) and wizard_mode and tile.door_state == "secret":
-                # ウィザードモード時の隠しドア表示（紫色で強調）
-                char = "S"  # Secret doorの頭文字
-                color = (255, 0, 255) if visible else (128, 0, 128)  # マゼンタ
-            else:
-                char = tile.char
-                color = tile.light if visible else tile.dark
+        elif hasattr(tile, "char"):
+            char = tile.char
+            color = tile.light if visible else tile.dark
         else:
             char = "?"
             color = (255, 0, 255) if visible else (128, 0, 128)

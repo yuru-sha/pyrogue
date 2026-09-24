@@ -229,13 +229,6 @@ class MonsterAIManager:
         if monster.hp <= 0:
             return False
 
-        # ステータス異常チェック
-        if hasattr(monster, "status_effect_manager"):
-            active_effects = monster.status_effect_manager.get_active_effects()
-            for effect in active_effects:
-                if effect.name == "Paralysis":
-                    return False
-
         return True
 
     def _can_monster_see_player_cached(self, monster: Monster, player, context: GameContext) -> bool:

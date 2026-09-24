@@ -267,7 +267,7 @@ class StairsManager:
             return None
 
         # 特別部屋とアミュレット部屋を除外
-        suitable_rooms = [room for room in rooms if not room.is_special or room.room_type != "amulet_chamber"]
+        suitable_rooms = rooms
 
         if not suitable_rooms:
             suitable_rooms = rooms

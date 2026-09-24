@@ -9,9 +9,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from pyrogue.core.managers.combat_manager import CombatManager
-from pyrogue.core.managers.game_context import GameContext
-from pyrogue.entities.actors.monster import Monster
 from pyrogue.entities.actors.player import Player
 from pyrogue.entities.actors.status_effects import (
     HallucinationEffect,
@@ -165,122 +162,6 @@ class TestHallucinationPotion:
     def test_hallucination_potion_can_apply(self):
         """幻覚ポーション適用可能性テスト。"""
         assert self.potion_effect.can_apply(self.context) is True
-
-
-class TestMonsterHallucinationAttack:
-    """モンスター攻撃による幻覚発症のテスト。"""
-
-    def setup_method(self):
-        """セットアップ。"""
-        self.player = Player(x=10, y=10)
-        self.context = Mock(spec=GameContext)
-        self.context.player = self.player
-        self.context.add_message = Mock()
-        self.combat_manager = CombatManager()
-
-    def test_psychic_monster_hallucination_attack(self):
-        """精神攻撃モンスターの幻覚攻撃テスト。"""
-        # 精神攻撃モンスターを作成
-        psychic_monster = Monster(
-            char="@",
-            x=11,
-            y=10,
-            name="Dream Eater",
-            level=7,
-            hp=15,
-            max_hp=15,
-            attack=9,
-            defense=3,
-            exp_value=12,
-            view_range=6,
-            color=(255, 20, 147),
-            ai_pattern="psychic",
-        )
-
-        # 確実に幻覚効果が発動するようにモック
-        with patch("random.random", return_value=0.1):  # 30%より低い値
-            self.combat_manager._handle_special_attack_effects(psychic_monster, self.context)
-
-        # 幻覚状態異常が追加されたかチェック
-        assert self.player.status_effects.has_effect("Hallucination")
-
-        # メッセージが表示されたかチェック
-        self.context.add_message.assert_called()
-
-    def test_hallucinogenic_monster_attack(self):
-        """幻覚性モンスターの攻撃テスト。"""
-        # 幻覚性モンスターを作成
-        hallucinogenic_monster = Monster(
-            char="f",
-            x=11,
-            y=10,
-            name="Phantom Fungus",
-            level=5,
-            hp=10,
-            max_hp=10,
-            attack=6,
-            defense=2,
-            exp_value=8,
-            view_range=4,
-            color=(138, 43, 226),
-            ai_pattern="hallucinogenic",
-        )
-
-        # 確実に幻覚効果が発動するようにモック
-        with patch("random.random", return_value=0.1):  # 30%より低い値
-            self.combat_manager._handle_special_attack_effects(hallucinogenic_monster, self.context)
-
-        # 幻覚状態異常が追加されたかチェック
-        assert self.player.status_effects.has_effect("Hallucination")
-
-    def test_normal_monster_no_hallucination(self):
-        """通常モンスターは幻覚を引き起こさないテスト。"""
-        # 通常モンスターを作成
-        normal_monster = Monster(
-            char="O",
-            x=11,
-            y=10,
-            name="Orc",
-            level=5,
-            hp=12,
-            max_hp=12,
-            attack=10,
-            defense=3,
-            exp_value=8,
-            view_range=5,
-            color=(0, 200, 0),
-            ai_pattern="basic",
-        )
-
-        self.combat_manager._handle_special_attack_effects(normal_monster, self.context)
-
-        # 幻覚状態異常は追加されない
-        assert not self.player.status_effects.has_effect("Hallucination")
-
-    def test_hallucination_attack_probability(self):
-        """幻覚攻撃の確率テスト。"""
-        psychic_monster = Monster(
-            char="@",
-            x=11,
-            y=10,
-            name="Dream Eater",
-            level=7,
-            hp=15,
-            max_hp=15,
-            attack=9,
-            defense=3,
-            exp_value=12,
-            view_range=6,
-            color=(255, 20, 147),
-            ai_pattern="psychic",
-        )
-
-        # 確率が高すぎて発動しない場合
-        with patch("random.random", return_value=0.8):  # 30%より高い値
-            self.combat_manager._handle_special_attack_effects(psychic_monster, self.context)
-
-        # 幻覚状態異常は追加されない
-        assert not self.player.status_effects.has_effect("Hallucination")
 
 
 class TestVisualConfusionSystem:

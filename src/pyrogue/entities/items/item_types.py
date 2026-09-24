@@ -124,7 +124,6 @@ POTIONS = [
     PotionType(305, "!", "Potion of Haste Self", 3, 26, 50, 100, "haste_self", (5, 10)),  # レアポーション化
     PotionType(306, "!", "Potion of See Invisible", 3, 26, 40, 100, "see_invisible", (0, 0)),  # レアポーション化
     PotionType(307, "!", "Potion of Poison", 1, 26, 70, 30, "poison", (3, 8)),  # 毒効果適正化
-    PotionType(308, "!", "Potion of Paralysis", 2, 26, 50, 40, "paralysis", (2, 4)),  # 麻痺効果適正化
     PotionType(309, "!", "Potion of Confusion", 1, 26, 60, 35, "confusion", (3, 6)),  # 混乱効果適正化
 ]
 
@@ -172,23 +171,3 @@ def get_item_spawn_count(floor: int) -> int:
 def get_available_items(floor: int, item_list: list[ItemType]) -> list[ItemType]:
     """Get list of items that can appear on the given floor."""
     return [i for i in item_list if i.min_floor <= floor <= i.max_floor]
-
-
-# Special room item generation - オリジナルRogue準拠の宝物部屋
-def get_treasure_room_items(floor: int) -> list[ItemType]:
-    """Get items to spawn in a treasure room."""
-    items = []
-    # Gold (3-5 piles) - 宝物部屋は金貨が豊富
-    gold_count = random.randint(3, 5)
-    for _ in range(gold_count):
-        gold_amount = get_gold_amount(floor) * 3  # 3倍の金貨量
-        items.append(("$", gold_amount))
-
-    # Valuable items (4-6 items) - 豪華なアイテム構成
-    item_count = random.randint(4, 6)
-    valuable_items = (
-        get_available_items(floor, WEAPONS) + get_available_items(floor, ARMORS) + get_available_items(floor, RINGS)
-    )
-    items.extend(random.choices(valuable_items, k=item_count))
-
-    return items

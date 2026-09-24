@@ -10,6 +10,7 @@ import pytest
 from pyrogue.entities.items.light_items import Lantern, LightRing, Torch
 from pyrogue.map.dungeon.dark_room_builder import DarkRoom, DarkRoomBuilder
 from pyrogue.map.dungeon.director import DungeonDirector
+from pyrogue.map.dungeon.room_builder import Room
 from pyrogue.map.tile import Floor
 
 
@@ -87,8 +88,6 @@ class TestDarkRoomIntegration:
         director = DungeonDirector(80, 45, floor=6)  # 6階は暗い部屋生成対象（迷路ではない）
 
         # BSPシステムを使用
-        director.use_section_based = True
-
         # ダンジョンを生成
         tiles, start_pos, end_pos = director.build_dungeon()
 
@@ -255,47 +254,30 @@ class TestDarkRoomIntegration:
         assert dark_stats["light_sources_count"] >= 0
         assert 0.0 <= dark_stats["average_darkness_level"] <= 1.0
 
-    def test_darkness_intensity_effects(self):
+    def test_darkness_intensity_effects(self, monkeypatch):
         """暗さ強度による効果のテスト。"""
         # 高い暗さ強度
         high_darkness_builder = DarkRoomBuilder(darkness_intensity=0.9)
 
         # 低い暗さ強度
-        low_darkness_builder = DarkRoomBuilder(darkness_intensity=0.2)
+        low_darkness_builder = DarkRoomBuilder(darkness_intensity=0.6)
 
         # 統計情報で暗さ強度が正しく設定されているかチェック
         high_stats = high_darkness_builder.get_statistics()
         low_stats = low_darkness_builder.get_statistics()
 
         assert high_stats["darkness_intensity"] == 0.9
-        assert low_stats["darkness_intensity"] == 0.2
+        assert low_stats["darkness_intensity"] == 0.6
 
         # 暗さ強度が部屋の変換に影響することを確認
         assert high_darkness_builder.darkness_intensity > low_darkness_builder.darkness_intensity
 
-    def test_special_room_exclusion_from_darkness(self):
-        """特別な部屋が暗くならないことの確認テスト。"""
-        from pyrogue.map.dungeon.room_builder import Room
-
-        builder = DarkRoomBuilder(darkness_intensity=1.0)
-
-        # 特別な部屋（アミュレット部屋）を作成
-        amulet_room = Room(10, 10, 8, 6)
-        amulet_room.is_special = True
-        amulet_room.room_type = "amulet_chamber"
-
-        # 通常の部屋を作成
-        normal_room = Room(25, 15, 6, 5)
-
-        rooms = [amulet_room, normal_room]
-
-        # 100%の確率で暗くしようとする
-        dark_rooms = builder.apply_darkness_to_rooms(rooms, darkness_probability=1.0)
-
-        # アミュレット部屋は除外され、通常の部屋のみが暗くなる
-        assert len(dark_rooms) == 1
-        dark_room_ids = [room.id for room in dark_rooms]
-        assert normal_room.id in dark_room_ids
+        monkeypatch.setattr("pyrogue.map.dungeon.dark_room_builder.random.uniform", lambda _low, _high: 0)
+        room = Room(10, 10, 8, 6, id=1)
+        high_dark_room = high_darkness_builder._convert_to_dark_room(room)
+        low_dark_room = low_darkness_builder._convert_to_dark_room(room)
+        assert high_dark_room.darkness_level == 0.9
+        assert low_dark_room.darkness_level == 0.6
 
 
 class TestLightItemsIntegration:

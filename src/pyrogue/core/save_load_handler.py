@@ -199,10 +199,6 @@ class SaveLoadHandler:
         # オプション属性の復元
         if "hunger" in player_data:
             player.hunger = player_data["hunger"]
-        # if "mp" in player_data:
-        #     player.mp = player_data["mp"]
-        # if "max_mp" in player_data:
-        #     player.max_mp = player_data["max_mp"]
         if "has_amulet" in player_data:
             player.has_amulet = player_data["has_amulet"]
 
@@ -246,8 +242,6 @@ class SaveLoadHandler:
             "attack": player.attack,
             "defense": player.defense,
             "hunger": getattr(player, "hunger", 100),
-            # "mp": getattr(player, "mp", 0),
-            # "max_mp": getattr(player, "max_mp", 0),
             "has_amulet": getattr(player, "has_amulet", False),
         }
 
@@ -387,7 +381,6 @@ class SaveLoadHandler:
             MagicMissileWandEffect,
             NothingWandEffect,
             NutritionEffect,
-            ParalysisPotionEffect,
             PoisonPotionEffect,
             RemoveCurseEffect,
             TeleportEffect,
@@ -406,8 +399,6 @@ class SaveLoadHandler:
                 return Potion(0, 0, "Potion of Extra Healing", HealingEffect(50))
             if name == "Potion of Poison":
                 return Potion(0, 0, "Potion of Poison", PoisonPotionEffect())
-            if name == "Potion of Paralysis":
-                return Potion(0, 0, "Potion of Paralysis", ParalysisPotionEffect())
             if name == "Potion of Confusion":
                 return Potion(0, 0, "Potion of Confusion", ConfusionPotionEffect())
             if name == "Potion of Hallucination":

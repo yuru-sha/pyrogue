@@ -682,10 +682,6 @@ class EnhancedItemSpawner:
             from .effects import PoisonPotionEffect
 
             return PoisonPotionEffect(duration=power, damage=2)
-        if effect_name == "paralysis":
-            from .effects import ParalysisPotionEffect
-
-            return ParalysisPotionEffect(duration=power)
         if effect_name == "confusion":
             from .effects import ConfusionPotionEffect
 
