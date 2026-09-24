@@ -1792,7 +1792,7 @@ class GameState:
     def _spawn_traps(self, floor: FloorState) -> None:
         if self.rng.randrange(10) >= floor.number:
             return
-        count = min(MAX_TRAPS, max(1, floor.number // 4))
+        count = min(MAX_TRAPS, self.rng.randrange(max(1, floor.number // 4)) + 1)
         kinds = list(TrapKind)
         stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         maze_rooms = [room for room in floor.rooms if room.is_maze]

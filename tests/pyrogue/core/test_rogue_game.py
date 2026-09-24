@@ -262,13 +262,17 @@ def test_monster_spawn_chance_depends_on_room_gold(
         assert room.contains(*spawned_at[0])
 
 
-def test_traps_spawn_probabilistically_by_depth_on_nonmaze_floor_cells(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(("count_roll", "expected_count"), [(0, 1), (2, 3)])
+def test_traps_spawn_probabilistically_by_depth_on_nonmaze_floor_cells(
+    monkeypatch: pytest.MonkeyPatch, count_roll: int, expected_count: int
+) -> None:
     class FixedRng:
-        def __init__(self, threshold_roll: int) -> None:
+        def __init__(self, threshold_roll: int, count_roll: int) -> None:
             self.threshold_roll = threshold_roll
+            self.count_roll = count_roll
 
         def randrange(self, stop: int) -> int:
-            return self.threshold_roll if stop == 10 else stop - 1
+            return self.threshold_roll if stop == 10 else self.count_roll
 
         def choice(self, population: list[tuple[int, int]]) -> tuple[int, int]:
             return population[0]
@@ -276,13 +280,13 @@ def test_traps_spawn_probabilistically_by_depth_on_nonmaze_floor_cells(monkeypat
     game = GameState(4325)
     shallow = game.generator.generate(1)
     deep = game.generator.generate(12)
-    monkeypatch.setattr(game, "rng", FixedRng(9))
+    monkeypatch.setattr(game, "rng", FixedRng(9, count_roll))
 
     game._spawn_traps(shallow)
 
     assert not shallow.traps
 
-    monkeypatch.setattr(game, "rng", FixedRng(0))
+    monkeypatch.setattr(game, "rng", FixedRng(0, count_roll))
     game._spawn_traps(deep)
 
     maze_cells = {
@@ -292,7 +296,7 @@ def test_traps_spawn_probabilistically_by_depth_on_nonmaze_floor_cells(monkeypat
         for y in range(room.y + 1, room.y + room.height - 1)
         for x in range(room.x + 1, room.x + room.width - 1)
     }
-    assert len(deep.traps) == 3
+    assert len(deep.traps) == expected_count
     assert all(deep.tile_at((trap.x, trap.y)) == Terrain.FLOOR for trap in deep.traps)
     assert all((trap.x, trap.y) not in maze_cells for trap in deep.traps)
     assert len({(trap.x, trap.y) for trap in deep.traps}) == len(deep.traps)
@@ -307,6 +311,9 @@ def test_seeded_floor_spawning_matches_expected_rates_across_seeds() -> None:
     assert 6 <= trap_floors <= 20
     assert 350 <= ordinary_items <= 510
     assert 400 <= monsters <= 700
+    deep_trap_counts = [len(GameState(seed)._ensure_floor(12).traps) for seed in range(128)]
+    assert all(1 <= count <= 3 for count in deep_trap_counts)
+    assert all(25 <= deep_trap_counts.count(count) <= 60 for count in (1, 2, 3))
 
 
 def test_unidentified_items_share_appearance_by_effect() -> None:
