@@ -13,7 +13,7 @@ def test_cli_death_shows_summary_and_deletes_save(tmp_path, capsys) -> None:
     game.player.gold = 7
     game.player.monsters_killed = 2
     game.player.deepest_floor = 4
-    game.player.food_units = -STARVETIME
+    game.player.food_units = -STARVETIME - 1
     save_manager = SaveManager(tmp_path)
     assert save_manager.save_game_state(game.to_dict())
 
