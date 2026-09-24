@@ -212,7 +212,7 @@ def test_headless_gui_shift_slash_opens_help_without_text_payload() -> None:
     assert game.player.turns_played == turns_before
 
 
-@pytest.mark.parametrize("key", ["w", "p", "r", "s", "q"])
+@pytest.mark.parametrize("key", ["w", "p", "s", "q"])
 def test_headless_gui_lowercase_commands_without_text_use_lowercase_key(monkeypatch, key: str) -> None:
     game_screen = GameScreen(None, seed=1234)
     calls = []
@@ -406,6 +406,93 @@ def test_inventory_hotkey_opens_and_renders_canonical_inventory() -> None:
     assert any("ring mail" in line for line in console.lines)
 
 
+def test_gui_identify_scroll_selects_a_matching_inventory_item() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    scroll = ItemState(1010, ItemKind.SCROLL, "identify potion scroll", effect="identify_potion")
+    potion = ItemState(1011, ItemKind.POTION, "red potion", effect="healing")
+    game.player.inventory = [scroll, potion]
+
+    assert game_screen.handle_key(key_event("r")) == GameStates.SHOW_INVENTORY
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+    inventory_screen.handle_input(key_event("a"))
+    assert game_screen.input_handler.item_selection_action == "identify_target"
+    assert inventory_screen._items() == [potion]
+
+    inventory_screen.handle_input(key_event("a"))
+
+    assert scroll not in game.player.inventory
+    assert potion.identified
+    assert game.player.turns_played == 1
+    assert game_screen.engine.state == GameStates.PLAYERS_TURN
+
+
+def test_gui_inventory_use_selects_a_matching_identify_target() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    scroll = ItemState(1015, ItemKind.SCROLL, "identify potion scroll", effect="identify_potion")
+    potion = ItemState(1016, ItemKind.POTION, "red potion", effect="healing")
+    game.player.inventory = [scroll, potion]
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+
+    inventory_screen.handle_input(key_event("u"))
+
+    assert game_screen.input_handler.item_selection_action == "identify_target"
+    assert inventory_screen._items() == [potion]
+    inventory_screen.handle_input(key_event("a"))
+
+    assert scroll not in game.player.inventory
+    assert potion.identified
+    assert game.player.turns_played == 1
+    assert game_screen.engine.state == GameStates.PLAYERS_TURN
+
+
+def test_gui_identify_scroll_without_targets_cancels_target_selection() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    scroll = ItemState(1012, ItemKind.SCROLL, "identify potion scroll", effect="identify_potion")
+    game_screen.player.inventory = [scroll]
+
+    assert game_screen.handle_key(key_event("r")) == GameStates.SHOW_INVENTORY
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+    inventory_screen.handle_input(key_event("a"))
+
+    assert game_screen.input_handler.item_selection_action is None
+    assert scroll in game_screen.player.inventory
+    assert game_screen.player.turns_played == 0
+    assert game_screen.engine.state == GameStates.PLAYERS_TURN
+    assert any("nothing to identify" in message.lower() for message in game_screen.rogue_game.messages)
+
+
+def test_gui_drain_life_wand_needs_no_direction() -> None:
+    game_screen, inventory_screen = game_and_inventory()
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    room = next(room for room in game.floor.rooms if room.contains(*game.player.position))
+    position = next(
+        (x, y)
+        for y in range(room.y + 1, room.y + room.height - 1)
+        for x in range(room.x + 1, room.x + room.width - 1)
+        if game.floor.is_walkable((x, y)) and max(abs(x - game.player.x), abs(y - game.player.y)) >= 3
+    )
+    monster = MonsterState(1013, "bat", *position, 100)
+    wand = ItemState(1014, ItemKind.WAND, "wand of drain life", effect="drain_life", charges=1)
+    game.floor.monsters.append(monster)
+    game.player.inventory = [wand]
+    game.player.hp = 20
+
+    assert game_screen.handle_key(key_event("z")) == GameStates.SHOW_INVENTORY
+    game_screen.engine.state = GameStates.SHOW_INVENTORY
+    inventory_screen.handle_input(key_event("a"))
+
+    assert game.player.hp == 10
+    assert monster.hp == 90
+    assert wand.charges == 0
+    assert game.player.turns_played == 1
+    assert game_screen.engine.state == GameStates.PLAYERS_TURN
+
+
 def test_inventory_equips_item_through_canonical_game_state() -> None:
     game_screen, inventory_screen = game_and_inventory()
     weapon = ItemState(id=1000, kind=ItemKind.WEAPON, name="test sword", identified=True)
@@ -471,7 +558,7 @@ def test_inventory_use_with_fov_override_applies_effect_without_exploring() -> N
 
     assert not game_screen.fov_manager.fov_enabled
     assert potion not in game.player.inventory
-    assert game.player.hp == game.player.max_hp
+    assert game.player.hp > 4
     assert game.player.turns_played == turns_before + 1
     assert game.floor.explored == explored_before
 

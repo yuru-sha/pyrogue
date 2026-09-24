@@ -456,6 +456,8 @@ class InputHandler:
             command = ""
         if not command:
             return None
+        if command == "r":
+            return self._start_item_selection("read")
         if command == "S":
             self.game_screen.save_game()
             return None
@@ -478,8 +480,13 @@ class InputHandler:
         items = self.game_screen.player.inventory
         if action == "zap":
             items = [item for item in items if item.kind == ItemKind.WAND]
+        elif action == "read":
+            items = [item for item in items if item.kind == ItemKind.SCROLL]
         if not items:
-            message = "You have no wands to zap." if action == "zap" else "You have nothing to throw."
+            message = {
+                "zap": "You have no wands to zap.",
+                "read": "You have no scrolls to read.",
+            }.get(action, "You have nothing to throw.")
             self.game_screen.add_message(message)
             return None
         self.item_selection_action = action

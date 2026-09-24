@@ -9,7 +9,7 @@ import tcod.event
 from tcod.console import Console
 
 from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import ItemKind, ItemState
+from pyrogue.core.rogue_game import ItemKind, ItemState, SCROLL_IDENTIFY_TARGETS
 from pyrogue.ui.screens.screen import Screen
 
 if TYPE_CHECKING:
@@ -30,8 +30,15 @@ class InventoryScreen(Screen):
     def _items(self) -> list[ItemState]:
         """Return the current inventory, filtered for a pending action."""
         items = self.game_screen.player.inventory
-        if self.game_screen.input_handler.item_selection_action == "zap":
+        action = self.game_screen.input_handler.item_selection_action
+        if action == "zap":
             return [item for item in items if item.kind == ItemKind.WAND]
+        if action == "read":
+            return [item for item in items if item.kind == ItemKind.SCROLL]
+        if action == "identify_target":
+            scroll = self.game_screen.player.item(self.game_screen.input_handler.selected_item_id or -1)
+            kinds = SCROLL_IDENTIFY_TARGETS.get(scroll.effect, frozenset()) if scroll else frozenset()
+            return [item for item in items if item.id != (scroll.id if scroll else None) and item.kind in kinds]
         return items
 
     def _clamp_selection(self, items: list[ItemState]) -> None:
@@ -111,7 +118,7 @@ class InventoryScreen(Screen):
             return
 
         if event.sym == tcod.event.KeySym.ESCAPE:
-            self.game_screen.input_handler.item_selection_action = None
+            self.game_screen.input_handler.reset_selection()
             if self.game_screen.engine:
                 self.game_screen.engine.state = GameStates.PLAYERS_TURN
             return
@@ -178,12 +185,16 @@ class InventoryScreen(Screen):
                 self.game_screen.add_message(f"You cannot equip the {item.display_name}.")
         elif event.sym == ord("u"):
             if item.kind == ItemKind.WAND:
-                if item.effect == "light":
-                    self._use_light_wand(item)
+                if item.effect in {"light", "drain_life"}:
+                    self._use_directionless_wand(item)
                 else:
                     self.game_screen.input_handler.begin_direction_selection("zap", item.id)
             elif item.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
-                self.game_screen.execute("use", [item.id])
+                if item.kind == ItemKind.SCROLL and item.effect in SCROLL_IDENTIFY_TARGETS:
+                    self.game_screen.input_handler.item_selection_action = "read"
+                    self._begin_pending_action(item)
+                else:
+                    self.game_screen.execute("use", [item.id])
             else:
                 self.game_screen.add_message(f"You cannot use the {item.display_name}.")
         elif event.sym == ord("d"):
@@ -195,18 +206,49 @@ class InventoryScreen(Screen):
     def _begin_pending_action(self, item: ItemState) -> None:
         """Start the selected canonical item action."""
         action = self.game_screen.input_handler.item_selection_action
+        if action == "read":
+            if item.effect in SCROLL_IDENTIFY_TARGETS:
+                target_kinds = SCROLL_IDENTIFY_TARGETS[item.effect]
+                if not any(
+                    target.id != item.id and target.kind in target_kinds for target in self.game_screen.player.inventory
+                ):
+                    self.game_screen.input_handler.reset_selection()
+                    self.game_screen.add_message("You have nothing to identify.")
+                    if self.game_screen.engine:
+                        self.game_screen.engine.state = GameStates.PLAYERS_TURN
+                    return
+                self.game_screen.input_handler.item_selection_action = "identify_target"
+                self.game_screen.input_handler.selected_item_id = item.id
+                self.selected_index = 0
+                self.game_screen.add_message("Select an item to identify.")
+                return
+            self.game_screen.input_handler.reset_selection()
+            self._execute_item_command("read", [item.id])
+            return
+        if action == "identify_target":
+            scroll_id = self.game_screen.input_handler.selected_item_id
+            self.game_screen.input_handler.reset_selection()
+            if scroll_id is not None:
+                self._execute_item_command("read", [scroll_id, item.id])
+            elif self.game_screen.engine:
+                self.game_screen.engine.state = GameStates.PLAYERS_TURN
+            return
         if action == "zap" and item.kind != ItemKind.WAND:
             self.game_screen.add_message("You can only zap a wand.")
             return
-        if action == "zap" and item.effect == "light":
-            self._use_light_wand(item)
+        if action == "zap" and item.effect in {"light", "drain_life"}:
+            self._use_directionless_wand(item)
             return
         self.game_screen.input_handler.begin_direction_selection(action or "throw", item.id)
 
-    def _use_light_wand(self, item: ItemState) -> None:
-        """Use a light wand through the canonical command without a direction."""
+    def _use_directionless_wand(self, item: ItemState) -> None:
+        """Use a directionless wand and leave the modal inventory state."""
         self.game_screen.input_handler.reset_selection()
-        result = self.game_screen.execute("zap", [item.id])
+        self._execute_item_command("zap", [item.id])
+
+    def _execute_item_command(self, command: str, args: list[int]) -> None:
+        """Run a completed inventory action and leave the modal state."""
+        result = self.game_screen.execute(command, args)
         if self.game_screen.engine:
             if result.state.value == "dead":
                 self.game_screen.engine.game_over()

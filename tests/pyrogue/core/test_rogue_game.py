@@ -5,7 +5,13 @@ import pytest
 
 from pyrogue.core.rogue_game import (
     GAME_VERSION,
+    ITEM_KIND_WEIGHTS,
+    ITEM_NAME_WEIGHTS,
     MAX_FLOOR,
+    MAX_SCROLL_TITLE_LENGTH,
+    MAX_TREASURE_ITEMS,
+    MIN_TREASURE_ITEMS,
+    TREASURE_ROOM_CHANCE,
     DungeonGenerator,
     FloorState,
     GameState,
@@ -23,42 +29,195 @@ from pyrogue.core.save_manager import SaveManager
 
 UNIDENTIFIED_ITEM_NAMES = {
     ItemKind.POTION: (
-        "healing potion",
-        "extra healing potion",
+        "confusion potion",
+        "hallucination potion",
+        "poison potion",
         "strength potion",
+        "see invisible potion",
+        "healing potion",
+        "monster detection potion",
+        "magic detection potion",
+        "raise level potion",
+        "extra healing potion",
+        "haste self potion",
         "restore strength potion",
+        "blindness potion",
+        "levitation potion",
     ),
     ItemKind.SCROLL: (
-        "identify scroll",
-        "light scroll",
-        "remove curse scroll",
-        "enchant weapon scroll",
-        "enchant armor scroll",
-        "teleportation scroll",
+        "monster confusion scroll",
         "magic mapping scroll",
+        "hold monster scroll",
+        "sleep scroll",
+        "enchant armor scroll",
+        "identify potion scroll",
+        "identify scroll",
+        "identify weapon scroll",
+        "identify armor scroll",
+        "identify ring, wand or staff scroll",
+        "scare monster scroll",
+        "food detection scroll",
+        "teleportation scroll",
+        "enchant weapon scroll",
+        "create monster scroll",
+        "remove curse scroll",
+        "aggravate monsters scroll",
+        "protect armor scroll",
     ),
     ItemKind.RING: (
         "ring of protection",
         "ring of add strength",
-        "ring of dexterity",
         "ring of sustain strength",
         "ring of searching",
+        "ring of see invisible",
+        "ring of adornment",
+        "ring of aggravate monster",
+        "ring of add hit",
+        "ring of add damage",
         "ring of regeneration",
-        "ring of increase damage",
+        "ring of slow digestion",
+        "ring of teleportation",
+        "ring of stealth",
+        "ring of maintain armor",
     ),
     ItemKind.WAND: (
-        "wand of magic missile",
         "wand of light",
+        "wand of invisibility",
         "wand of lightning",
         "wand of fire",
         "wand of cold",
-        "wand of teleport monster",
+        "wand of polymorph",
+        "wand of magic missile",
+        "wand of haste monster",
+        "wand of slow monster",
+        "wand of drain life",
+        "wand of nothing",
+        "wand of teleport away",
+        "wand of teleport to",
+        "wand of cancellation",
     ),
 }
 
 
 def test_seed_reproduces_initial_state() -> None:
     assert GameState(1234).to_dict() == GameState(1234).to_dict()
+
+
+def test_starting_equipment_matches_rogue_54() -> None:
+    game = GameState(1234)
+    items = {item.name: item for item in game.player.inventory}
+
+    assert set(items) == {"food ration", "ring mail", "mace", "short bow", "arrow"}
+    assert game.player.equipped_weapon == items["mace"].id
+    assert game.player.equipped_armor == items["ring mail"].id
+    assert game.player.effective_armor_class() == 6
+    assert (items["mace"].damage_dice, items["mace"].hit_bonus, items["mace"].damage_bonus) == ((2, 4), 1, 1)
+    assert items["short bow"].hit_bonus == 1
+    assert 25 <= items["arrow"].quantity <= 39
+    assert items["food ration"].nutrition == 150
+
+
+@pytest.mark.parametrize("seed", [5, 6, 28, 31, 33, 54, 62])
+def test_starting_food_is_always_a_food_ration(seed: int) -> None:
+    food = next(item for item in GameState(seed).player.inventory if item.kind == ItemKind.FOOD)
+
+    assert food.name == "food ration"
+
+
+def test_item_generation_weights_match_rogue_54() -> None:
+    assert ITEM_KIND_WEIGHTS == (
+        (ItemKind.POTION, 26),
+        (ItemKind.SCROLL, 36),
+        (ItemKind.FOOD, 16),
+        (ItemKind.WEAPON, 7),
+        (ItemKind.ARMOR, 7),
+        (ItemKind.RING, 4),
+        (ItemKind.WAND, 4),
+    )
+    expected = {
+        ItemKind.WEAPON: (11, 11, 12, 12, 8, 10, 12, 12, 12),
+        ItemKind.ARMOR: (20, 15, 15, 13, 12, 10, 10, 5),
+        ItemKind.FOOD: (90, 10),
+        ItemKind.POTION: (7, 8, 8, 13, 3, 13, 6, 6, 2, 5, 5, 13, 5, 6),
+        ItemKind.SCROLL: (7, 4, 2, 3, 7, 10, 10, 6, 7, 10, 3, 2, 5, 8, 4, 7, 3, 2),
+        ItemKind.RING: (9, 9, 5, 10, 10, 1, 10, 8, 8, 4, 9, 5, 7, 5),
+        ItemKind.WAND: (12, 6, 3, 3, 3, 15, 10, 10, 11, 9, 1, 6, 6, 5),
+    }
+    expected_names = {
+        ItemKind.WEAPON: (
+            "mace",
+            "long sword",
+            "short bow",
+            "arrow",
+            "dagger",
+            "two handed sword",
+            "dart",
+            "shuriken",
+            "spear",
+        ),
+        ItemKind.ARMOR: (
+            "leather armor",
+            "ring mail",
+            "studded leather armor",
+            "scale mail",
+            "chain mail",
+            "splint mail",
+            "banded mail",
+            "plate mail",
+        ),
+        ItemKind.FOOD: ("food ration", "slime mold"),
+        ItemKind.POTION: UNIDENTIFIED_ITEM_NAMES[ItemKind.POTION],
+        ItemKind.SCROLL: UNIDENTIFIED_ITEM_NAMES[ItemKind.SCROLL],
+        ItemKind.RING: UNIDENTIFIED_ITEM_NAMES[ItemKind.RING],
+        ItemKind.WAND: UNIDENTIFIED_ITEM_NAMES[ItemKind.WAND],
+    }
+
+    assert {kind: tuple(weights) for kind, weights in ITEM_NAME_WEIGHTS.items() if kind in expected_names} == (
+        expected_names
+    )
+    assert {
+        kind: tuple(weights.values())
+        for kind, weights in ITEM_NAME_WEIGHTS.items()
+        if kind not in {ItemKind.GOLD, ItemKind.AMULET}
+    } == expected
+
+
+def test_treasure_room_generation_adds_a_pile_of_items_and_monsters() -> None:
+    game = GameState(4323)
+    floor = game.generator.generate(2)
+    game.rng.seed(2)
+
+    game._spawn_treasure_room(floor)
+
+    assert TREASURE_ROOM_CHANCE == 20
+    assert MIN_TREASURE_ITEMS == 2
+    assert MAX_TREASURE_ITEMS == 10
+    assert MIN_TREASURE_ITEMS <= len(floor.items) < MAX_TREASURE_ITEMS
+    assert len(floor.monsters) >= len(floor.items) + 2
+    assert all(monster.mean_override for monster in floor.monsters)
+
+
+def test_floor_item_generation_keeps_every_successful_spawn(monkeypatch: pytest.MonkeyPatch) -> None:
+    class GuaranteedItemRng:
+        def randrange(self, stop: int) -> int:
+            return 1 if stop in {2, 10, 20} else 0
+
+        def randint(self, start: int, stop: int) -> int:
+            return start
+
+        def choices(self, population: tuple[ItemKind, ...], *, weights: list[int], k: int) -> list[ItemKind]:
+            return [population[0]] * k
+
+        def choice(self, population: list[tuple[int, int]]) -> tuple[int, int]:
+            return population[0]
+
+    game = GameState(4323)
+    floor = game.generator.generate(2)
+    monkeypatch.setattr(game, "rng", GuaranteedItemRng())
+
+    game._spawn_items(floor)
+
+    assert len(floor.items) == 9
 
 
 def test_unidentified_items_share_appearance_by_effect() -> None:
@@ -75,12 +234,66 @@ def test_unidentified_items_share_appearance_by_effect() -> None:
     assert first.display_name == first.name
 
 
+def test_unidentified_appearances_match_rogue_54_item_forms() -> None:
+    appearances = GameState(1234)._appearance_names
+    scroll_titles = [
+        value.removeprefix("scroll titled '").removesuffix("'") for value in appearances[ItemKind.SCROLL].values()
+    ]
+
+    assert all(value.endswith(" potion") for value in appearances[ItemKind.POTION].values())
+    assert all(2 <= len(title.split()) <= 4 for title in scroll_titles)
+    assert all(value.endswith(" ring") for value in appearances[ItemKind.RING].values())
+    assert all(value.endswith((" wand", " staff")) for value in appearances[ItemKind.WAND].values())
+
+
+def test_scroll_appearance_titles_respect_rogue_54_length_limit() -> None:
+    titles = GameState(25)._appearance_names[ItemKind.SCROLL].values()
+
+    assert all(
+        len(title.removeprefix("scroll titled '").removesuffix("'")) <= MAX_SCROLL_TITLE_LENGTH for title in titles
+    )
+
+
+def test_identifying_an_item_remembers_its_type_for_future_items() -> None:
+    game = GameState(1235)
+    potion = game._new_item(game.floor, ItemKind.POTION, "healing potion")
+    game.player.inventory.append(potion)
+
+    assert game.quaff(potion.id).success
+
+    future_potion = game._new_item(game.floor, ItemKind.POTION, "healing potion")
+    assert future_potion.identified
+    assert future_potion.display_name == "healing potion"
+
+
 @pytest.mark.parametrize(("kind", "names"), tuple(UNIDENTIFIED_ITEM_NAMES.items()))
 def test_different_unidentified_effects_have_unique_appearances(kind: ItemKind, names: tuple[str, ...]) -> None:
     game = GameState(1234)
     items = [game._new_item(game.floor, kind, name) for name in names]
 
     assert len({item.appearance for item in items}) == len(names)
+
+
+@pytest.mark.parametrize(
+    ("name", "minimum", "maximum"),
+    [("wand of light", 10, 19), ("wand of magic missile", 3, 7)],
+)
+def test_wand_charges_match_rogue_54(name: str, minimum: int, maximum: int) -> None:
+    game = GameState(4321)
+
+    charges = [game._new_item(game.floor, ItemKind.WAND, name).charges for _ in range(100)]
+
+    assert min(charges) >= minimum
+    assert max(charges) <= maximum
+
+
+@pytest.mark.parametrize("name", ["ring of aggravate monster", "ring of teleportation"])
+def test_source_cursed_rings_are_always_cursed(name: str) -> None:
+    game = GameState(4322)
+
+    ring = game._new_item(game.floor, ItemKind.RING, name)
+
+    assert ring.cursed
 
 
 def test_appearance_mapping_survives_json_round_trip() -> None:
@@ -506,12 +719,12 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
 
 def test_old_save_version_is_rejected() -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.3.2"
+    game["spec_version"] = "0.3.3"
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.3"
+    assert GAME_VERSION == "0.3.4"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
@@ -537,8 +750,8 @@ def test_death_is_terminal_and_reports_score() -> None:
 @pytest.mark.parametrize(
     ("effect", "initial_hp", "initial_strength", "expected_hp", "expected_strength"),
     [
-        ("healing", 1, 16, 9, 16),
-        ("extra_healing", 1, 16, 12, 16),
+        ("healing", 1, 16, 5, 16),
+        ("extra_healing", 1, 16, 9, 16),
         ("strength", 12, 10, 12, 11),
         ("restore_strength", 12, 10, 12, 16),
     ],
@@ -554,6 +767,7 @@ def test_potion_effects_change_canonical_player_state(
     game.floor.monsters.clear()
     game.player.hp = initial_hp
     game.player.strength = initial_strength
+    game.rng.seed(1234)
     potion = ItemState(1000, ItemKind.POTION, "test potion", effect=effect, position=None)
     game.player.inventory.append(potion)
 
@@ -604,20 +818,42 @@ def test_remove_curse_scroll_clears_curses() -> None:
     assert cursed_ring.cursed is False
 
 
-@pytest.mark.parametrize("effect", ["enchant_weapon", "enchant_armor"])
-def test_enchant_scroll_changes_equipped_item(effect: str) -> None:
+def test_enchant_armor_scroll_changes_equipped_item() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
-    item = game.player.equipped(ItemKind.WEAPON if effect == "enchant_weapon" else ItemKind.ARMOR)
+    item = game.player.equipped(ItemKind.ARMOR)
     assert item is not None
     before = item.enchantment
-    scroll = ItemState(1000, ItemKind.SCROLL, f"{effect} scroll", effect=effect)
+    scroll = ItemState(1000, ItemKind.SCROLL, "enchant armor scroll", effect="enchant_armor")
     game.player.inventory.append(scroll)
 
     result = game.execute("read", [scroll.id])
 
     assert result.success
     assert item.enchantment == before + 1
+
+
+@pytest.mark.parametrize(("roll", "bonus"), [(0, "hit_bonus"), (1, "damage_bonus")])
+def test_enchant_weapon_scroll_adds_to_one_bonus_only(monkeypatch, roll: int, bonus: str) -> None:
+    game = GameState(1234)
+    game.floor.monsters.clear()
+    weapon = game.player.equipped(ItemKind.WEAPON)
+    assert weapon is not None
+    before = weapon.hit_bonus, weapon.damage_bonus
+    scroll = ItemState(1000, ItemKind.SCROLL, "enchant weapon scroll", effect="enchant_weapon")
+    game.player.inventory.append(scroll)
+    original_randrange = game.rng.randrange
+
+    def choose_enchantment(stop: int) -> int:
+        return roll if stop == 2 else original_randrange(stop)
+
+    monkeypatch.setattr(game.rng, "randrange", choose_enchantment)
+
+    result = game.execute("read", [scroll.id])
+
+    assert result.success
+    assert weapon.hit_bonus == before[0] + (bonus == "hit_bonus")
+    assert weapon.damage_bonus == before[1] + (bonus == "damage_bonus")
 
 
 def test_magic_mapping_scroll_reveals_the_floor() -> None:
