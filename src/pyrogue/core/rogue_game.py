@@ -26,6 +26,7 @@ MAX_FLOOR = 26
 # Retained for imports; canonical floors use occasional room mazes, not fixed maze levels.
 MAZE_FLOORS: frozenset[int] = frozenset()
 MAX_PACK = 23
+MAX_TRAPS = 10
 HUNGERTIME = 1300
 STOMACHSIZE = 2000
 MORETIME = 150
@@ -1526,8 +1527,9 @@ class GameState:
         if number in self.floors:
             return self.floors[number]
         floor = self.generator.generate(number)
-        self._spawn_items(floor)
+        self._spawn_room_gold(floor)
         self._spawn_monsters(floor)
+        self._spawn_items(floor)
         self._spawn_traps(floor)
         self.floors[number] = floor
         return floor
@@ -1545,6 +1547,16 @@ class GameState:
             | {item.position for item in floor.items if item.position is not None}
             | {(trap.x, trap.y) for trap in floor.traps}
         )
+
+    def _room_floor_positions(self, floor: FloorState, room: Room) -> list[Position]:
+        stairs = {position for position in (floor.up_stairs, floor.down_stairs) if position is not None}
+        occupied = self._occupied(floor) | stairs
+        return [
+            (x, y)
+            for y in range(room.y + 1, room.y + room.height - 1)
+            for x in range(room.x + 1, room.x + room.width - 1)
+            if floor.tile_at((x, y)) == Terrain.FLOOR and (x, y) not in occupied
+        ]
 
     def _free_position(self, floor: FloorState, extra_avoid: Iterable[Position] = ()) -> Position:
         avoid = self._occupied(floor) | set(extra_avoid)
@@ -1674,39 +1686,29 @@ class GameState:
             item = self._new_item(floor, kind)
             if item.position not in {floor.up_stairs, floor.down_stairs}:
                 floor.items.append(item)
-        for room in floor.rooms:
-            if self.rng.randrange(2) != 0:
-                continue
-            candidates = [
-                (x, y)
-                for y in range(room.y + 1, room.y + room.height - 1)
-                for x in range(room.x + 1, room.x + room.width - 1)
-                if floor.is_walkable((x, y))
-                and (x, y) not in self._occupied(floor)
-                and (x, y) not in {floor.up_stairs, floor.down_stairs}
-            ]
-            if candidates:
-                gold = self._new_item(floor, ItemKind.GOLD, on_floor=False)
-                gold.position = self.rng.choice(candidates)
-                floor.items.append(gold)
         if floor.number == MAX_FLOOR:
             amulet = self._new_item(floor, ItemKind.AMULET, on_floor=False)
             amulet.position = self._free_position(floor)
             floor.items.append(amulet)
+
+    def _spawn_room_gold(self, floor: FloorState) -> None:
+        if self.player.has_amulet and floor.number < self.player.deepest_floor:
+            return
+        for room in floor.rooms:
+            if self.rng.randrange(2) != 0:
+                continue
+            candidates = self._room_floor_positions(floor, room)
+            if candidates:
+                gold = self._new_item(floor, ItemKind.GOLD, on_floor=False)
+                gold.position = self.rng.choice(candidates)
+                floor.items.append(gold)
 
     def _spawn_treasure_room(self, floor: FloorState) -> None:
         rooms = floor.rooms
         if not rooms:
             return
         room = self.rng.choice(rooms)
-        stairs = {position for position in (floor.up_stairs, floor.down_stairs) if position is not None}
-        occupied = self._occupied(floor) | stairs
-        positions = [
-            (x, y)
-            for y in range(room.y + 1, room.y + room.height - 1)
-            for x in range(room.x + 1, room.x + room.width - 1)
-            if floor.is_walkable((x, y)) and (x, y) not in occupied
-        ]
+        positions = self._room_floor_positions(floor, room)
         if len(positions) < MIN_TREASURE_ITEMS:
             return
         spots = min(MAX_TREASURE_ITEMS - MIN_TREASURE_ITEMS, len(positions) - MIN_TREASURE_ITEMS)
@@ -1729,10 +1731,17 @@ class GameState:
             self._new_monster(floor, position, level_offset=1, mean_override=True)
 
     def _spawn_monsters(self, floor: FloorState) -> None:
-        count = min(12, 3 + (floor.number - 1) // 3)
-        stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
-        for _ in range(count):
-            self._new_monster(floor, avoid=stairs)
+        for room in floor.rooms:
+            has_gold = any(
+                item.kind == ItemKind.GOLD and item.position is not None and room.contains(*item.position)
+                for item in floor.items
+            )
+            chance = 80 if has_gold else 25
+            if self.rng.randrange(100) < chance:
+                positions = self._room_floor_positions(floor, room)
+                if not positions:
+                    continue
+                self._new_monster(floor, self.rng.choice(positions))
 
     def _new_monster(
         self,
@@ -1781,11 +1790,25 @@ class GameState:
         return monster
 
     def _spawn_traps(self, floor: FloorState) -> None:
-        count = 1 + min(2, floor.number // 9)
+        if self.rng.randrange(10) >= floor.number:
+            return
+        count = min(MAX_TRAPS, max(1, floor.number // 4))
         kinds = list(TrapKind)
         stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
+        maze_rooms = [room for room in floor.rooms if room.is_maze]
         for _ in range(count):
-            position = self._free_position(floor, stairs)
+            occupied = self._occupied(floor) | set(stairs)
+            candidates = [
+                (x, y)
+                for y, row in enumerate(floor.tiles)
+                for x, terrain in enumerate(row)
+                if terrain == Terrain.FLOOR
+                and (x, y) not in occupied
+                and not any(room.contains(x, y) for room in maze_rooms)
+            ]
+            if not candidates:
+                break
+            position = self.rng.choice(candidates)
             floor.traps.append(TrapState(self._next_trap_id, self.rng.choice(kinds), *position))
             self._next_trap_id += 1
 

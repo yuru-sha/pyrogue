@@ -219,6 +219,94 @@ def test_floor_item_generation_keeps_every_successful_spawn(monkeypatch: pytest.
     game._spawn_items(floor)
 
     assert len(floor.items) == 9
+    assert all(item.position is not None for item in floor.items)
+    assert all(floor.tile_at(item.position) == Terrain.FLOOR for item in floor.items if item.position is not None)
+    assert all(item.position not in {floor.up_stairs, floor.down_stairs} for item in floor.items)
+
+
+@pytest.mark.parametrize(
+    ("has_gold", "roll", "expected_count"),
+    [(True, 79, 1), (True, 80, 0), (False, 24, 1), (False, 25, 0)],
+)
+def test_monster_spawn_chance_depends_on_room_gold(
+    monkeypatch: pytest.MonkeyPatch, has_gold: bool, roll: int, expected_count: int
+) -> None:
+    class FixedRng:
+        def randrange(self, stop: int) -> int:
+            assert stop == 100
+            return roll
+
+        def choice(self, population: list[tuple[int, int]]) -> tuple[int, int]:
+            return population[0]
+
+    game = GameState(4324)
+    floor = game.generator.generate(1)
+    room = floor.rooms[0]
+    floor.rooms = [room]
+    if has_gold:
+        floor.items.append(ItemState(900, ItemKind.GOLD, "gold", position=room.center))
+    spawned_at: list[tuple[int, int] | None] = []
+
+    def record_monster(destination: FloorState, position: tuple[int, int] | None = None, **_: object) -> None:
+        assert destination is floor
+        spawned_at.append(position)
+
+    monkeypatch.setattr(game, "rng", FixedRng())
+    monkeypatch.setattr(game, "_new_monster", record_monster)
+
+    game._spawn_monsters(floor)
+
+    assert len(spawned_at) == expected_count
+    if spawned_at:
+        assert spawned_at[0] is not None
+        assert room.contains(*spawned_at[0])
+
+
+def test_traps_spawn_probabilistically_by_depth_on_nonmaze_floor_cells(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FixedRng:
+        def __init__(self, threshold_roll: int) -> None:
+            self.threshold_roll = threshold_roll
+
+        def randrange(self, stop: int) -> int:
+            return self.threshold_roll if stop == 10 else stop - 1
+
+        def choice(self, population: list[tuple[int, int]]) -> tuple[int, int]:
+            return population[0]
+
+    game = GameState(4325)
+    shallow = game.generator.generate(1)
+    deep = game.generator.generate(12)
+    monkeypatch.setattr(game, "rng", FixedRng(9))
+
+    game._spawn_traps(shallow)
+
+    assert not shallow.traps
+
+    monkeypatch.setattr(game, "rng", FixedRng(0))
+    game._spawn_traps(deep)
+
+    maze_cells = {
+        (x, y)
+        for room in deep.rooms
+        if room.is_maze
+        for y in range(room.y + 1, room.y + room.height - 1)
+        for x in range(room.x + 1, room.x + room.width - 1)
+    }
+    assert len(deep.traps) == 3
+    assert all(deep.tile_at((trap.x, trap.y)) == Terrain.FLOOR for trap in deep.traps)
+    assert all((trap.x, trap.y) not in maze_cells for trap in deep.traps)
+    assert len({(trap.x, trap.y) for trap in deep.traps}) == len(deep.traps)
+
+
+def test_seeded_floor_spawning_matches_expected_rates_across_seeds() -> None:
+    floors = [GameState(seed).floor for seed in range(128)]
+    trap_floors = sum(bool(floor.traps) for floor in floors)
+    ordinary_items = sum(item.kind not in {ItemKind.GOLD, ItemKind.AMULET} for floor in floors for item in floor.items)
+    monsters = sum(len(floor.monsters) for floor in floors)
+
+    assert 6 <= trap_floors <= 20
+    assert 350 <= ordinary_items <= 510
+    assert 400 <= monsters <= 700
 
 
 def test_unidentified_items_share_appearance_by_effect() -> None:
@@ -314,13 +402,19 @@ def test_appearance_mapping_survives_json_round_trip() -> None:
 
 def test_every_floor_has_reachable_stairs() -> None:
     for seed in (1234, 5678, 9012):
-        generator = GameState(seed).generator
+        game = GameState(seed)
+        generator = game.generator
         for floor_number in range(1, MAX_FLOOR + 1):
             floor = generator.generate(floor_number)
             assert floor.up_stairs is not None
             if floor_number < MAX_FLOOR:
                 assert floor.down_stairs is not None
                 assert generator._path_exists(floor, floor.up_stairs, floor.down_stairs)
+        deepest = game._ensure_floor(MAX_FLOOR)
+        amulets = [item for item in deepest.items if item.kind == ItemKind.AMULET]
+        assert len(amulets) == 1
+        assert amulets[0].position is not None
+        assert generator._path_exists(deepest, deepest.up_stairs, amulets[0].position)
 
 
 def test_room_layout_uses_nine_regions_and_varies_by_seed() -> None:
@@ -609,6 +703,7 @@ def test_monsters_get_carry_packs_at_the_current_deepest_floor(monkeypatch: pyte
     game._spawn_monsters(deepest_floor)
     game._spawn_monsters(previous_floor)
 
+    assert len(deepest_floor.monsters) == len(deepest_floor.rooms)
     assert all(monster.carried_items for monster in deepest_floor.monsters)
     assert all(monster.carried_items[0].position is None for monster in deepest_floor.monsters)
     assert all(not monster.carried_items for monster in previous_floor.monsters)
@@ -633,7 +728,7 @@ def test_monster_pack_item_kind_uses_rogue_54_probabilities(
     floor = game.generator.generate(1)
     monkeypatch.setattr("pyrogue.core.rogue_game.MONSTER_SPAWN_ORDER", ("centaur",) * 26)
     randrange = game.rng.randrange
-    rolls = iter((0, item_roll, 99, 99, 99, 99))
+    rolls = iter((0, 0, item_roll, *([99] * 20)))
 
     def force_pack_rolls(stop: int, *args: int) -> int:
         if stop == 100 and not args:
