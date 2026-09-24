@@ -18,6 +18,7 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game = GameState(1234)
     game.player.gold = 42
     game.player.blind_turns = 4
+    game.player.faint_turns = 3
     game.player.monster_confusion_ready = True
     game.player.identified_item_names.append("healing potion")
     game.player.max_strength = 21
@@ -50,6 +51,7 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     assert restored.to_dict() == expected
     assert restored.floor.monsters[0].carry_search_room_index == 0
     assert restored.player.blind_turns == 4
+    assert restored.player.faint_turns == 3
     assert restored.player.monster_confusion_ready
     assert restored.player.max_strength == 21
     assert restored.floor.monsters[0].mean_override
@@ -92,7 +94,7 @@ def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:
     assert manager.save_game_state(GameState(1234).to_dict())
     manager.checksum_file.unlink()
     payload = json.loads(manager.save_file.read_text(encoding="utf-8"))
-    payload["spec_version"] = "0.3.2"
+    payload["spec_version"] = "0.3.4"
     manager.save_file.write_text(json.dumps(payload), encoding="utf-8")
 
     assert manager.load_game_state() is None

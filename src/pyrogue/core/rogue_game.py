@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.4"
+GAME_VERSION = "0.3.5"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -586,6 +586,7 @@ class PlayerState:
     turns_played: int = 0
     sleep_turns: int = 0
     frozen_turns: int = 0
+    faint_turns: int = 0
     confused_turns: int = 0
     hallucination_turns: int = 0
     blind_turns: int = 0
@@ -1140,6 +1141,19 @@ RING_EFFECTS = {
     "ring of stealth": "stealth",
     "ring of maintain armor": "maintain_armor",
 }
+RING_FOOD_USAGE = {
+    "protection": 1,
+    "strength": 1,
+    "sustain": 1,
+    "search": -3,
+    "see_invisible": -5,
+    "dexterity": -3,
+    "increase_damage": -3,
+    "regeneration": 2,
+    "slow_digestion": -2,
+    "stealth": 1,
+    "maintain_armor": 1,
+}
 RING_WEIGHTS = {
     "ring of protection": 9,
     "ring of add strength": 9,
@@ -1589,7 +1603,7 @@ class GameState:
             elif roll < ARMOR_ENCHANT_ROLL_THRESHOLD:
                 item.enchantment = self.rng.randrange(3) + 1
         elif kind == ItemKind.FOOD:
-            item.nutrition = MORETIME
+            item.nutrition = HUNGERTIME - 200
             self._floors_without_food = 0
         elif kind == ItemKind.POTION:
             item.effect = POTION_EFFECTS[name]
@@ -1917,16 +1931,29 @@ class GameState:
             self._message(f"You have attained level {self.player.level}.")
 
     def _consume_food(self) -> None:
-        if self.player.has_ring_effect("slow_digestion") and self.rng.randrange(2) == 0:
-            return
         old_food = self.player.food_units
-        self.player.food_units -= 1
-        if self.player.food_units <= 0:
-            if self.player.food_units < -STARVETIME:
+        if old_food <= 0:
+            self.player.food_units -= 1
+            if old_food < -STARVETIME:
                 self._die("starvation")
-            elif self.rng.randrange(5) == 0:
+            elif self.player.faint_turns == 0 and self.rng.randrange(5) == 0:
+                self.player.faint_turns = self.rng.randrange(8) + 4
                 self._message("You faint from lack of food.")
-        elif old_food >= 2 * MORETIME > self.player.food_units:
+            return
+
+        food_drain = 1 - int(self.player.has_amulet)
+        for ring_id in self.player.equipped_rings:
+            ring = self.player.item(ring_id)
+            if ring is None:
+                continue
+            usage = RING_FOOD_USAGE.get(ring.effect, 0)
+            if usage < 0:
+                usage = int(self.rng.randrange(-usage) == 0)
+            if ring.effect == "slow_digestion":
+                usage = -usage
+            food_drain += usage
+        self.player.food_units -= food_drain
+        if old_food >= 2 * MORETIME > self.player.food_units:
             self._message("You are starting to get hungry.")
         elif old_food >= MORETIME > self.player.food_units:
             self._message("You are starting to feel weak.")
@@ -2579,7 +2606,8 @@ class GameState:
         if not item or item.kind != ItemKind.FOOD:
             return self._result(False, "You have no food to eat.")
         self._remove_inventory_item(item)
-        self.player.food_units = min(self.player.max_food_units, self.player.food_units + item.nutrition)
+        food_gain = item.nutrition + self.rng.randrange(400)
+        self.player.food_units = min(self.player.max_food_units, self.player.food_units + food_gain)
         self._finish_turn()
         return self._result(True, "You eat the food.", True)
 
@@ -3141,6 +3169,10 @@ class GameState:
         if self.player.frozen_turns > 0:
             self._finish_turn()
             return self._result(True, "You are frozen.", True)
+        if self.player.faint_turns > 0:
+            self._finish_turn()
+            self.player.faint_turns -= 1
+            return self._result(True, "You are too weak to act.", True)
         command, key_value = self._normalize_command(command)
         if command == "move" and key_value is not None:
             return self.move(*key_value)

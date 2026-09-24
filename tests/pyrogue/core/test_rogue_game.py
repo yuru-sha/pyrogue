@@ -5,6 +5,7 @@ import pytest
 
 from pyrogue.core.rogue_game import (
     GAME_VERSION,
+    HUNGERTIME,
     ITEM_KIND_WEIGHTS,
     ITEM_NAME_WEIGHTS,
     MAX_FLOOR,
@@ -114,7 +115,7 @@ def test_starting_equipment_matches_rogue_54() -> None:
     assert (items["mace"].damage_dice, items["mace"].hit_bonus, items["mace"].damage_bonus) == ((2, 4), 1, 1)
     assert items["short bow"].hit_bonus == 1
     assert 25 <= items["arrow"].quantity <= 39
-    assert items["food ration"].nutrition == 150
+    assert items["food ration"].nutrition == HUNGERTIME - 200
 
 
 @pytest.mark.parametrize("seed", [5, 6, 28, 31, 33, 54, 62])
@@ -719,12 +720,12 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
 
 def test_old_save_version_is_rejected() -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.3.3"
+    game["spec_version"] = "0.3.4"
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.4"
+    assert GAME_VERSION == "0.3.5"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
