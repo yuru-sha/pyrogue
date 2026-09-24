@@ -624,8 +624,6 @@ class DungeonManager:
 
         for room in rooms:
             # 特別な部屋にはトラップを配置しない
-            if room.is_special:
-                continue
 
             # 部屋ごとのトラップ数を決定
             num_traps = random.randint(0, max_traps_per_room)

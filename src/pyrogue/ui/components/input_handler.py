@@ -267,7 +267,7 @@ class InputHandler:
             return None
 
         if key == ord("s") and not (mod & tcod.event.Modifier.CTRL):
-            # 隠しドア探索 - s (Ctrl+Sではない場合のみ)
+            # トラップ探索 - s (Ctrl+Sではない場合のみ)
             self._handle_search_action()
             return None
 
@@ -599,31 +599,17 @@ class InputHandler:
         self.game_screen.game_logic.add_message(f"No door to {action} nearby.")
 
     def _handle_search_action(self) -> None:
-        """
-        隠しドア・トラップ探索処理。
-        """
+        """Search nearby cells for hidden traps."""
         player = self.game_screen.player
         if not player:
             return
 
-        found_secret = False
-        found_trap = False
-
-        # プレイヤーの周囲8方向をチェック
-        for dy in [-1, 0, 1]:
-            for dx in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
-
-                x, y = player.x + dx, player.y + dy
-                # 隠しドア探索
-                if self.game_screen.game_logic.search_secret_door(x, y):
-                    found_secret = True
-                # トラップ探索
-                if self.game_screen.game_logic.search_trap(x, y):
-                    found_trap = True
-
-        if not found_secret and not found_trap:
+        found = False
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dx or dy:
+                    found = self.game_screen.game_logic.search_trap(player.x + dx, player.y + dy) or found
+        if not found:
             self.game_screen.game_logic.add_message("You search but find nothing.")
 
     def _handle_disarm_action(self) -> None:
@@ -788,51 +774,6 @@ class InputHandler:
         # ターン消費
         self.game_screen.game_logic.handle_turn_end()
 
-    def _handle_auto_explore_action(self) -> None:
-        """
-        自動探索コマンド処理。
-
-        未探索エリアを自動的に探索し、敵発見時は停止します。
-        """
-        player = self.game_screen.game_logic.player
-        dungeon = self.game_screen.game_logic.dungeon
-
-        # 敵が近くにいるかチェック
-        for monster in dungeon.monsters:
-            dx = abs(monster.x - player.x)
-            dy = abs(monster.y - player.y)
-            if dx <= 3 and dy <= 3:  # 3マス以内に敵がいる
-                self.game_screen.game_logic.add_message("You sense danger nearby. Auto-explore stopped.")
-                return
-
-        # 未探索エリアを探索（簡単な実装）
-        # 8方向をチェックして、最初の歩ける場所に移動
-        directions = [
-            (-1, -1),
-            (0, -1),
-            (1, -1),  # 左上、上、右上
-            (-1, 0),
-            (1, 0),  # 左、右
-            (-1, 1),
-            (0, 1),
-            (1, 1),  # 左下、下、右下
-        ]
-
-        for dx, dy in directions:
-            new_x = player.x + dx
-            new_y = player.y + dy
-
-            # 境界チェック
-            if 0 <= new_x < dungeon.width and 0 <= new_y < dungeon.height:
-                tile = dungeon.tiles[new_y][new_x]
-                if tile.walkable:
-                    # 移動可能な場所を発見
-                    self.game_screen.game_logic.handle_player_move(dx, dy)
-                    return
-
-        # 移動できる場所がない
-        self.game_screen.game_logic.add_message("No unexplored areas found nearby.")
-
     def _handle_look_action(self) -> None:
         """
         足元・周囲調査コマンド処理。
@@ -977,9 +918,6 @@ Monsters (A-Z):
   K  - Kestrel          X  - Xeroc
   L  - Leprechaun       Y  - Yeti
   M  - Medusa           Z  - Zombie
-
-Special Monsters:
-  f  - Phantom Fungus (hallucination inducer)
 
 Press any key to continue...
         """
@@ -1537,7 +1475,6 @@ Press any key to continue...
             TileType.WALL: "wall",
             TileType.DOOR_OPEN: "open door",
             TileType.DOOR_CLOSED: "closed door",
-            TileType.DOOR_SECRET: "secret door" if tile.discovered else "wall",
             TileType.STAIRS_UP: "stairs up",
             TileType.STAIRS_DOWN: "stairs down",
             TileType.STAIRS_EXIT: "exit stairs",
@@ -1727,7 +1664,7 @@ Press any key to continue...
         if tile:
             from pyrogue.map.tile import TileType
 
-            if tile.tile_type in (TileType.DOOR_CLOSED, TileType.DOOR_SECRET):
+            if tile.tile_type == TileType.DOOR_CLOSED:
                 return False
 
         return True

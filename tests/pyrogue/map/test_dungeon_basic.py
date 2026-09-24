@@ -58,18 +58,6 @@ def test_boundary_walls():
         assert isinstance(tiles[y, 79], Wall), f"Right boundary at (79, {y}) is not wall"
 
 
-def test_special_room_generation():
-    """特別な部屋の生成テスト"""
-    director = DungeonDirector(80, 50, floor=5)  # 特別な部屋が生成される階
-    tiles, up_pos, down_pos = director.build_dungeon()
-
-    # 特別な部屋が生成されているか
-    special_rooms = [room for room in director.rooms if getattr(room, "is_special", False)]
-
-    # 特別な部屋の数をチェック（現在の実装では複数の特別な部屋が生成される）
-    assert len(special_rooms) >= 0, f"Special rooms should be non-negative: {len(special_rooms)}"
-
-
 def test_stairs_in_different_rooms():
     """階段が異なる部屋にあることのテスト（2階でテスト：上り階段と下り階段の両方が存在）"""
     director = DungeonDirector(80, 50, floor=2)

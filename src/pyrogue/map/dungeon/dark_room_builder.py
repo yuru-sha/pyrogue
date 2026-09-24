@@ -89,9 +89,6 @@ class DarkRoomBuilder:
 
         for room in rooms:
             # 特別な部屋や重要な部屋は暗くしない
-            if room.is_special and room.room_type in ["amulet_chamber", "treasure"]:
-                continue
-
             # 確率に基づいて暗い部屋に変換
             if random.random() < darkness_probability:
                 dark_room = self._convert_to_dark_room(room)
@@ -124,11 +121,8 @@ class DarkRoomBuilder:
         dark_room.id = room.id
         dark_room.connected_rooms = room.connected_rooms.copy()
         dark_room.doors = room.doors.copy()
-        dark_room.is_special = room.is_special
 
         # 暗い部屋特有の属性を設定
-        if room.room_type and room.room_type != "dark":
-            dark_room.room_type = f"dark_{room.room_type}"
 
         return dark_room
 

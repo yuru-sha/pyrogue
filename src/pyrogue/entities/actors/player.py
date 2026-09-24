@@ -258,10 +258,6 @@ class Player(Actor):
         """
         return self.status_effects.has_effect(name)
 
-    def is_paralyzed(self) -> bool:
-        """麻痺状態かどうかを判定。"""
-        return self.has_status_effect("Paralysis")
-
     def is_confused(self) -> bool:
         """混乱状態かどうかを判定。"""
         return self.has_status_effect("Confusion")

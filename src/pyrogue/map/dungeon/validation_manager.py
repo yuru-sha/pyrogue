@@ -86,7 +86,6 @@ class ValidationManager:
             self._validate_stairs_placement(start_pos, end_pos, tiles)
 
             # 特別部屋ルールの検証
-            self._validate_special_room_rules(rooms)
 
             # アクセス可能性の検証
             self._validate_accessibility(rooms, start_pos, end_pos, tiles)
@@ -314,29 +313,6 @@ class ValidationManager:
             self._add_result("stairs_placement", False, "; ".join(issues))
         else:
             self._add_result("stairs_placement", True, "Stairs placed correctly")
-
-    def _validate_special_room_rules(self, rooms: list[Room]) -> None:
-        """
-        特別部屋ルールを検証。
-
-        Args:
-        ----
-            rooms: 部屋のリスト
-
-        """
-        special_rooms = [room for room in rooms if room.is_special]
-        total_rooms = len(rooms)
-        special_ratio = len(special_rooms) / total_rooms if total_rooms > 0 else 0
-
-        # 特別部屋の割合チェック（10%～50%の範囲）
-        if special_ratio > 0.5:
-            self._add_result(
-                "special_room_rules",
-                False,
-                f"Too many special rooms: {special_ratio:.2%}",
-            )
-        else:
-            self._add_result("special_room_rules", True, f"Special room ratio: {special_ratio:.2%}")
 
     def _validate_accessibility(
         self,

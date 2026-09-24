@@ -177,8 +177,6 @@ class SaveManager:
                             return None
                         if not self._check_permadeath(game_data):
                             return None
-                        # 後方互換性: 古いセーブファイルからMP関連属性を削除
-                        self._remove_legacy_mp_attributes(game_data)
                         game_logger.info("Game loaded from backup file after checksum failure")
                         return game_data
                     except Exception as backup_error:
@@ -195,9 +193,6 @@ class SaveManager:
             if not self._check_permadeath(game_data):
                 return None
 
-            # 後方互換性: 古いセーブファイルからMP関連属性を削除
-            self._remove_legacy_mp_attributes(game_data)
-
             game_logger.info(f"Game loaded successfully from {self.save_file}")
             return game_data
 
@@ -213,8 +208,6 @@ class SaveManager:
                         return None
                     if not self._check_permadeath(game_data):
                         return None
-                    # 後方互換性: 古いセーブファイルからMP関連属性を削除
-                    self._remove_legacy_mp_attributes(game_data)
                     game_logger.info("Game loaded from backup file")
                     return game_data
                 except Exception as backup_error:
@@ -280,28 +273,6 @@ class SaveManager:
                 self.last_error = SaveError(f"Save field must be a JSON object: {field}")
                 return False
         return True
-
-    def _remove_legacy_mp_attributes(self, game_data: dict[str, Any]) -> None:
-        """
-        古いセーブファイルからMP関連の属性を削除。
-
-        Args:
-        ----
-            game_data: ゲームデータ辞書
-
-        """
-        try:
-            # プレイヤーオブジェクトからMP関連属性を削除
-            if "player" in game_data:
-                game_data["player"]
-                # if hasattr(player, "mp"):
-                #     delattr(player, "mp")
-                #     game_logger.debug("Removed legacy 'mp' attribute from player")
-                # if hasattr(player, "max_mp"):
-                #     delattr(player, "max_mp")
-                #     game_logger.debug("Removed legacy 'max_mp' attribute from player")
-        except Exception as e:
-            game_logger.warning(f"Failed to remove legacy MP attributes: {e}")
 
     def _trigger_permadeath(self) -> None:
         """

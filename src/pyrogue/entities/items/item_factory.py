@@ -14,7 +14,6 @@ from pyrogue.entities.items.effects import (
     MagicMissileWandEffect,
     NothingWandEffect,
     NutritionEffect,
-    ParalysisPotionEffect,
     PoisonPotionEffect,
     RemoveCurseEffect,
     TeleportEffect,
@@ -87,8 +86,6 @@ class ItemFactory:
             item = Potion(x, y, "Potion of See Invisible", HealingEffect(0))  # TODO: SeeInvisibleEffect
         elif item_id == 307:  # Potion of Poison
             item = Potion(x, y, "Potion of Poison", PoisonPotionEffect())
-        elif item_id == 308:  # Potion of Paralysis
-            item = Potion(x, y, "Potion of Paralysis", ParalysisPotionEffect())
         elif item_id == 309:  # Potion of Confusion
             item = Potion(x, y, "Potion of Confusion", ConfusionPotionEffect())
 
@@ -198,7 +195,6 @@ class ItemFactory:
             "Potion of Haste Self": 305,
             "Potion of See Invisible": 306,
             "Potion of Poison": 307,
-            "Potion of Paralysis": 308,
             "Potion of Confusion": 309,
             # 巻物
             "Scroll of Identify": 401,

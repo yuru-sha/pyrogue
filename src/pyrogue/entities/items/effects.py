@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 from pyrogue.entities.actors.status_effects import (
     ConfusionEffect,
     HallucinationEffect,
-    ParalysisEffect,
     PoisonEffect,
 )
 
@@ -342,18 +341,6 @@ class PoisonPotionEffect(StatusEffectApplication):
         )
 
 
-class ParalysisPotionEffect(StatusEffectApplication):
-    """Paralyzes the player."""
-
-    def __init__(self, duration: int = 3) -> None:
-        super().__init__(
-            status_effect_class=ParalysisEffect,
-            name="Paralysis",
-            description=f"Paralyzes you for {duration} turns",
-            duration=duration,
-        )
-
-
 class ConfusionPotionEffect(StatusEffectApplication):
     """Confuses the player."""
 
@@ -537,7 +524,6 @@ FOOD_RATION = NutritionEffect(200)
 FOOD_BREAD = NutritionEffect(100)
 FOOD_APPLE = NutritionEffect(50)
 POISON_POTION = PoisonPotionEffect()
-PARALYSIS_POTION = ParalysisPotionEffect()
 CONFUSION_POTION = ConfusionPotionEffect()
 HALLUCINATION_POTION = HallucinationPotionEffect()
 

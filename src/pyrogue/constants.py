@@ -44,9 +44,6 @@ class ProbabilityConstants:
 
     # ダンジョン生成確率
     GONE_ROOM_CHANCE: float = 0.25  # "gone room"（通路のみ）の確率
-    SECRET_DOOR_CHANCE: float = 0.15  # 隠し扉の確率
-    SPECIAL_ROOM_CHANCE: float = 0.33  # 特別な部屋の確率
-    DEAD_END_SECRET_DOOR_CHANCE: float = 0.25  # 行き止まりの隠し扉確率
 
     # モンスター関連
     MONSTER_MOVE_CHANCE: float = 0.7  # モンスターが移動する確率
@@ -69,7 +66,6 @@ class ProbabilityConstants:
 
     # ステータス異常関連
     POISON_RECOVERY_CHANCE: float = 0.1  # 毒からの自然回復確率
-    PARALYSIS_RECOVERY_CHANCE: float = 0.2  # 麻痺からの自然回復確率
     CONFUSION_RECOVERY_CHANCE: float = 0.15  # 混乱からの自然回復確率
 
 
@@ -86,7 +82,6 @@ class CombatConstants:
     ADJACENT_DISTANCE_THRESHOLD: float = 1.5  # 隣接とみなす距離の閾値
 
     # 戦闘効果
-    HALLUCINATION_EFFECT_CHANCE: float = 0.3  # 幻覚効果発動確率
     GOLD_DROP_CHANCE: float = 0.3  # 金貨ドロップ確率
 
     # レベルアップ（モンスター強化に対応した成長バランス調整）

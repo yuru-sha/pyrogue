@@ -87,29 +87,6 @@ class TestDarkRoomBuilder:
             assert dark_room.is_dark
             assert dark_room.darkness_level > 0.0
 
-    def test_special_rooms_not_darkened(self):
-        """特別な部屋が暗くならないテスト。"""
-        builder = DarkRoomBuilder(darkness_intensity=0.8)
-
-        # 特別な部屋を作成
-        special_room = Room(10, 10, 8, 6)
-        special_room.id = "special_room"
-        special_room.is_special = True
-        special_room.room_type = "amulet_chamber"
-
-        # 通常の部屋を作成
-        normal_room = Room(25, 15, 6, 5)
-        normal_room.id = "normal_room"
-
-        rooms = [special_room, normal_room]
-
-        # 100%の確率で暗くしようとする
-        dark_rooms = builder.apply_darkness_to_rooms(rooms, darkness_probability=1.0)
-
-        # 特別な部屋は除外され、通常の部屋のみが暗くなる
-        assert len(dark_rooms) == 1
-        assert dark_rooms[0].id == "normal_room"
-
     def test_light_source_placement(self):
         """光源配置のテスト。"""
         builder = DarkRoomBuilder()

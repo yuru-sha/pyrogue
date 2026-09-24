@@ -48,7 +48,6 @@ class MockCommandContext(CommandContext):
         self.game_logic.handle_stairs_down = Mock(return_value=True)
         self.game_logic.handle_open_door = Mock(return_value=True)
         self.game_logic.handle_close_door = Mock(return_value=True)
-        self.game_logic.handle_search = Mock(return_value=True)
         self.game_logic.handle_disarm_trap = Mock(return_value=True)
 
         # インベントリ設定
@@ -233,14 +232,10 @@ class TestCommonCommandHandler:
         assert result.success is True
         assert result.should_end_turn is True
 
-    def test_search_command(self):
-        """探索コマンドのテスト。"""
+    def test_search_is_not_a_supported_legacy_command(self):
         result = self.handler.handle_command("search")
-        assert result.success is True
-        assert result.should_end_turn is True
-
-        result = self.handler.handle_command("s")
-        assert result.success is True
+        assert not result.success
+        assert result.message == "Unknown command: search"
 
     def test_disarm_command(self):
         """トラップ解除コマンドのテスト。"""
@@ -333,46 +328,24 @@ class TestCommonCommandHandler:
         result = self.handler.handle_command("zap")
         assert result.success is False
 
-    def test_auto_explore_command(self):
-        """自動探索コマンドのテスト。"""
-        # 未探索エリアがある場合
-        floor_data = self.context.game_logic.get_current_floor_data()
-        floor_data.explored[2, 2] = False  # 未探索エリアを作成
-
+    def test_auto_explore_is_not_a_supported_legacy_command(self):
         result = self.handler.handle_command("auto_explore")
-        assert result.success is True
-        assert result.should_end_turn is True
 
-        result = self.handler.handle_command("O")
-        assert result.success is True
+        assert not result.success
+        assert result.message == "Unknown command: auto_explore"
+        self.context.game_logic.handle_player_move.assert_not_called()
 
-    def test_auto_explore_with_enemies(self):
-        """敵がいる場合の自動探索テスト。"""
-        # 近くに敵を配置
-        floor_data = self.context.game_logic.get_current_floor_data()
-        enemy = Monster(
-            x=6,
-            y=6,
-            name="Goblin",
-            char="g",
-            hp=10,
-            max_hp=10,
-            attack=5,
-            defense=2,
-            level=1,
-            exp_value=50,
-            view_range=3,
-            color=(255, 0, 0),
-        )
-        floor_data.monster_spawner.monsters.append(enemy)
+    def test_legacy_help_omits_removed_features(self):
+        result = self.handler.handle_command("help")
 
-        result = self.handler.handle_command("auto_explore")
-        assert result.success is False
-        # メッセージが空の場合、contextのメッセージを確認
-        if not result.message:
-            assert any("nearby" in msg.lower() for msg in self.context.messages)
-        else:
-            assert "nearby" in result.message.lower()
+        assert result.success
+        assert "auto_explore" not in self.context.messages[-1]
+        assert "search/s" not in self.context.messages[-1]
+        assert "save/s" not in self.context.messages[-1]
+        assert "get/," not in self.context.messages[-1]
+        assert "wear/w" not in self.context.messages[-1]
+        assert "hidden doors" not in self.context.messages[-1]
+        assert "Dream Eater" not in self.context.messages[-1]
 
     # ===== 情報表示コマンドのテスト =====
 
@@ -619,8 +592,6 @@ class TestCommonCommandHandler:
         assert "attack" in player_data
         assert "defense" in player_data
         assert "hunger" in player_data
-        # assert "mp" in player_data
-        # assert "max_mp" in player_data
 
         # インベントリデータの検証
         assert "inventory" in save_data

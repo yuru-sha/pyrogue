@@ -146,46 +146,6 @@ class PoisonEffect(StatusEffect):
         return self.update_duration()
 
 
-class ParalysisEffect(StatusEffect):
-    """
-    麻痺状態効果。
-
-    行動を阻害する状態異常です。
-    移動や攻撃を制限します。
-
-    """
-
-    def __init__(self, duration: int = 3) -> None:
-        """
-        麻痺状態効果を初期化。
-
-        Args:
-        ----
-            duration: 継続ターン数
-
-        """
-        super().__init__(name="Paralysis", description="麻痺状態：行動不能", duration=duration)
-
-    def apply_per_turn(self, context: EffectContext) -> bool:
-        """
-        麻痺の効果を適用。
-
-        Args:
-        ----
-            context: 効果適用のためのコンテキスト
-
-        Returns:
-        -------
-            麻痺状態が継続する場合はTrue、終了した場合はFalse
-
-        """
-        # 麻痺状態のメッセージを表示
-        context.add_message("麻痺して動けない！")
-
-        # 継続ターン数を更新
-        return self.update_duration()
-
-
 class ConfusionEffect(StatusEffect):
     """
     混乱状態効果。

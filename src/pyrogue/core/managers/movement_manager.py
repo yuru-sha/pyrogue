@@ -52,11 +52,6 @@ class MovementManager:
         """
         player = self.context.player
 
-        # ターン管理から行動可能かチェック
-        if not self.context.turn_manager.can_act(player):
-            self.context.add_message("You are paralyzed and cannot move!")
-            return False
-
         # 混乱状態のチェック
         if self.context.turn_manager.is_confused(player):
             # ランダムな方向に移動

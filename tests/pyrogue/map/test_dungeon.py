@@ -102,21 +102,6 @@ def test_stairs_placement():
     assert start_room != end_room, "Stairs are in the same room"
 
 
-def test_special_room_generation():
-    """特別な部屋の生成ルールをテスト"""
-    # 特別な部屋が生成される階でテスト
-    special_floor_levels = [1, 5, 10, 15, 20, 25]
-    for floor in special_floor_levels:
-        director = DungeonDirector(80, 50, floor=floor)
-        tiles, up_pos, down_pos = director.build_dungeon()
-
-        # 特別な部屋を探す
-        special_rooms = [room for room in director.rooms if getattr(room, "is_special", False)]
-
-        # 特別な部屋が存在することを確認（現在の実装では複数の特別な部屋が生成される）
-        assert len(special_rooms) >= 0, f"Floor {floor} should have some special rooms"
-
-
 def test_map_boundary():
     """マップの境界が壁で囲まれていることをテスト"""
     director = DungeonDirector(80, 50, floor=1)

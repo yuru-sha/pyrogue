@@ -102,11 +102,6 @@ class TurnManager:
 
                     return
 
-            elif effect.name == "Paralysis":
-                # 麻痺状態の表示（移動処理で制限）
-                if self.turn_count % 5 == 0:  # 5ターンごとにメッセージ
-                    context.add_message("You are paralyzed!")
-
             elif effect.name == "Confusion":
                 # 混乱状態の表示（移動処理で方向ランダム化）
                 if self.turn_count % 3 == 0:  # 3ターンごとにメッセージ
@@ -363,12 +358,6 @@ class TurnManager:
         """
         if not hasattr(entity, "status_effect_manager"):
             return True
-
-        # 麻痺状態のチェック
-        active_effects = entity.status_effect_manager.get_active_effects()
-        for effect in active_effects:
-            if effect.name == "Paralysis":
-                return False
 
         return True
 

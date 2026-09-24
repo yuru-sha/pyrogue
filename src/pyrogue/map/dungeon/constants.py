@@ -27,16 +27,12 @@ class DoorConstants:
     """ドア生成の定数。"""
 
     # ドア状態の確率（パーセンテージ）
-    SECRET_DOOR_CHANCE = 0.10  # 10% 隠し扉
     OPEN_DOOR_CHANCE = 0.30  # 30% オープンドア
-    CLOSED_DOOR_CHANCE = 0.60  # 60% クローズドドア
+    CLOSED_DOOR_CHANCE = 0.70  # 残り70%はクローズドドア
 
     # ドア配置の制限
     MIN_DOOR_DISTANCE = 2  # ドア間の最小距離
     MAX_DOORS_PER_ROOM = 4  # 部屋あたりの最大ドア数
-
-    # 隠し扉探索の設定
-    HIDDEN_DOOR_SEARCH_RANGE = 2  # 隠し扉探索範囲
 
 
 # 通路生成関連定数
@@ -86,9 +82,6 @@ class RoomConstants:
     # 部屋間の距離設定
     MIN_ROOM_DISTANCE = 3  # 部屋間の最小距離
     ROOM_PADDING = 1  # 部屋周囲の余白
-
-    # 特殊部屋の設定
-    SPECIAL_ROOM_CHANCE = 0.15  # 15% 特殊部屋生成確率
 
 
 # 階段配置関連定数

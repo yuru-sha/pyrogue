@@ -300,7 +300,6 @@ class TestMonster:
         )
 
         # 初期状態
-        assert not monster.is_paralyzed()
         assert not monster.is_confused()
         assert not monster.is_poisoned()
         assert not monster.has_status_effect("NonExistent")
