@@ -58,6 +58,13 @@ EXPERIENCE_LEVELS = (
 MONSTER_EXPERIENCE_X4_LEVEL = 7
 MONSTER_EXPERIENCE_X20_LEVEL = 10
 SLEEP_TURNS = 5
+VS_POISON = 0
+VS_MAGIC = 3
+RUSTABLE_ARMOR_CLASS = 9
+HUH_DURATION = 20
+LAMP_DISTANCE = 3
+DRAGON_BREATH_RANGE = 6
+DRAGON_BREATH_CHANCE = 5
 MYSTERIOUS_TRAP_MESSAGES = (
     "You are suddenly in a parallel dimension.",
     "The light in here suddenly seems different.",
@@ -274,6 +281,7 @@ class MonsterState:
     max_hp: int | None = None
     exp_value: int | None = None
     running: bool = False
+    gaze_attempted: bool = False
 
     def __post_init__(self) -> None:
         if self.max_hp is None:
@@ -316,6 +324,7 @@ class MonsterState:
             "max_hp": self.max_hp,
             "exp_value": self.exp_value,
             "running": self.running,
+            "gaze_attempted": self.gaze_attempted,
         }
 
     @classmethod
@@ -331,6 +340,7 @@ class MonsterState:
             max_hp=int(data["max_hp"]) if data.get("max_hp") is not None else None,
             exp_value=int(data["exp_value"]) if data.get("exp_value") is not None else None,
             running=bool(data.get("running", False)),
+            gaze_attempted=bool(data.get("gaze_attempted", False)),
         )
 
     @property
@@ -464,6 +474,10 @@ class PlayerState:
     has_amulet: bool = False
     turns_played: int = 0
     sleep_turns: int = 0
+    frozen_turns: int = 0
+    confused_turns: int = 0
+    held: bool = False
+    flytrap_hits: int = 0
     deepest_floor: int = 1
     monsters_killed: int = 0
     dead: bool = False
@@ -1288,6 +1302,10 @@ class GameState:
     def _finish_turn(self) -> None:
         self.player.turns_played += 1
         self._consume_food()
+        if self.player.frozen_turns > 0:
+            self.player.frozen_turns -= 1
+        if self.player.confused_turns > 0:
+            self.player.confused_turns -= 1
         if self.status == GameStatus.PLAYING:
             if self.player.has_ring_effect("search"):
                 self._reveal_nearby_traps()
@@ -1300,6 +1318,22 @@ class GameState:
             self._process_monsters()
         if getattr(self, "_update_explored", True):
             self.visible_positions()
+
+    def _rust_armor(self) -> bool:
+        armor = self.player.equipped(ItemKind.ARMOR)
+        if (
+            armor is None
+            or armor.name.lower() == "leather armor"
+            or self.player.effective_armor_class() >= RUSTABLE_ARMOR_CLASS
+        ):
+            return False
+        armor.enchantment -= 1
+        return True
+
+    def _saving_throw(self, effect: int) -> bool:
+        protection = self.player.ring_bonus("protection") if effect == VS_MAGIC else 0
+        need = 14 + effect - protection - self.player.level // 2
+        return self.rng.randint(1, 20) >= need
 
     def _die(self, cause: str) -> None:
         self.player.hp = 0
@@ -1372,14 +1406,20 @@ class GameState:
     ) -> CombatResult:
         result = self._resolve_attack(self.player, monster, weapon, thrown=thrown)
         if result.target_defeated:
-            self.player.monsters_killed += 1
-            self.player.exp += monster.experience_reward
-            self._message(f"You defeated the {monster.name}.")
-            self._level_up_if_needed()
-            self.floor.monsters.remove(monster)
+            self._defeat_monster(monster)
         if monster.asleep:
             monster.asleep = False
         return result
+
+    def _defeat_monster(self, monster: MonsterState) -> None:
+        self.player.monsters_killed += 1
+        self.player.exp += monster.experience_reward
+        self._message(f"You defeated the {monster.name}.")
+        self._level_up_if_needed()
+        if monster.type_id == "venus_flytrap":
+            self.player.held = False
+            self.player.flytrap_hits = 0
+        self.floor.monsters.remove(monster)
 
     def _player_attack(self, monster: MonsterState) -> CommandResult:
         result = self._apply_player_attack(monster)
@@ -1405,15 +1445,136 @@ class GameState:
 
     def _monster_attack(self, monster: MonsterState) -> None:
         result = self._resolve_attack(monster, self.player)
-        if result.hit:
-            self._message(f"The {monster.name} hits you for {result.damage} damage.")
-            if monster.type_id == "rattlesnake" and not self.player.has_ring_effect("sustain"):
-                self.player.strength = max(1, self.player.strength - 1)
-                self._message("The rattlesnake's bite weakens you.")
-        else:
-            self._message(f"The {monster.name} misses you.")
         if result.target_defeated:
             self._die(f"the {monster.name}")
+            return
+        if result.hit:
+            self._message(f"The {monster.name} hits you for {result.damage} damage.")
+            if monster.type_id == "aquator" and self._rust_armor():
+                self._message("The aquator's touch weakens your armor.")
+            elif monster.type_id == "ice_monster":
+                self.player.frozen_turns += self.rng.randrange(2) + 2
+                self._message(f"You are frozen by the {monster.name}.")
+            elif monster.type_id == "venus_flytrap":
+                self.player.held = True
+                self.player.flytrap_hits += 1
+                self.player.hp -= 1
+                if self.player.hp <= 0:
+                    self._die(monster.name)
+            elif monster.type_id == "rattlesnake" and not self._saving_throw(VS_POISON):
+                if not self.player.has_ring_effect("sustain"):
+                    self.player.strength = max(1, self.player.strength - 1)
+                    self._message("The rattlesnake's bite weakens you.")
+            elif monster.type_id in {"wraith", "vampire"}:
+                drain_chance = 15 if monster.type_id == "wraith" else 30
+                if self.rng.randrange(100) < drain_chance:
+                    if monster.type_id == "wraith":
+                        if self.player.exp == 0:
+                            self._die(monster.name)
+                            return
+                        self.player.level -= 1
+                        if self.player.level == 0:
+                            self.player.level = 1
+                            self.player.exp = 0
+                        else:
+                            self.player.exp = EXPERIENCE_LEVELS[self.player.level - 1] + 1
+                    drain = _roll(self.rng, (1, 10) if monster.type_id == "wraith" else (1, 3))
+                    self.player.hp -= drain
+                    self.player.max_hp -= drain
+                    if self.player.hp <= 0:
+                        self.player.hp = 1
+                    self._message("You suddenly feel weaker.")
+                    if self.player.max_hp <= 0:
+                        self._die(monster.name)
+            elif monster.type_id == "leprechaun":
+                gold_roll = 50 + 10 * self.current_floor
+                stolen = self.rng.randrange(gold_roll) + 2
+                if not self._saving_throw(VS_MAGIC):
+                    stolen += sum(self.rng.randrange(gold_roll) + 2 for _ in range(4))
+                self.player.gold = max(0, self.player.gold - stolen)
+                self.floor.monsters.remove(monster)
+            elif monster.type_id == "nymph":
+                magic_items = [
+                    item
+                    for item in self.player.inventory
+                    if item.id not in self.player.equipped_item_ids
+                    and (
+                        item.kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.WAND, ItemKind.RING}
+                        or (item.kind == ItemKind.WEAPON and (item.enchantment or item.hit_bonus or item.damage_bonus))
+                        or (item.kind == ItemKind.ARMOR and item.enchantment)
+                    )
+                ]
+                if magic_items:
+                    self._remove_inventory_item(self.rng.choice(magic_items))
+                    self.floor.monsters.remove(monster)
+        else:
+            self._message(f"The {monster.name} misses you.")
+            if monster.type_id == "venus_flytrap":
+                self.player.hp -= self.player.flytrap_hits
+                if self.player.hp <= 0:
+                    self._die(monster.name)
+
+    def _try_dragon_breath(self, monster: MonsterState) -> bool:
+        monster_x, monster_y = monster.x, monster.y
+        player_x, player_y = self.player.position
+        dx, dy = abs(monster_x - player_x), abs(monster_y - player_y)
+        path = self._line((monster_x, monster_y), self.player.position)
+        monster_room = next((room for room in self.floor.rooms if room.contains(monster_x, monster_y)), None)
+        player_room = next((room for room in self.floor.rooms if room.contains(player_x, player_y)), None)
+        same_region = monster_room is player_room and monster_room is not None
+        if monster_room is None and player_room is None:
+            # ponytail: a clear corridor ray is one passage until passage IDs exist.
+            same_region = not any(any(room.contains(*position) for room in self.floor.rooms) for position in path[1:-1])
+        aligned = dx == 0 or dy in (0, dx)
+        in_range = dx * dx + dy * dy <= DRAGON_BREATH_RANGE * DRAGON_BREATH_RANGE
+        if not same_region or not aligned or not in_range or self.rng.randrange(DRAGON_BREATH_CHANCE) != 0:
+            return False
+        self._message("The dragon breathes fire at you.")
+        x, y = monster_x, monster_y
+        step_x = (player_x > monster_x) - (player_x < monster_x)
+        step_y = (player_y > monster_y) - (player_y < monster_y)
+        targets_player = True
+        changed_target = False
+        for _ in range(DRAGON_BREATH_RANGE):
+            x += step_x
+            y += step_y
+            position = (x, y)
+            target = next(
+                (other for other in self.floor.monsters if other is not monster and (other.x, other.y) == position),
+                None,
+            )
+            if (
+                target is None
+                and position != self.player.position
+                and self.floor.tile_at(position) in {Terrain.WALL, Terrain.DOOR_CLOSED}
+            ):
+                if not changed_target:
+                    targets_player = not targets_player
+                changed_target = False
+                step_x, step_y = -step_x, -step_y
+                self._message("The dragon's fire bounces.")
+                continue
+            if not targets_player and target:
+                if self.rng.randint(1, 20) < 14 + VS_MAGIC - target.level // 2:
+                    if target.type_id == "dragon":
+                        self._message("The flame bounces off the dragon.")
+                    else:
+                        target.hp = max(0, target.hp - _roll(self.rng, (6, 6)))
+                        self._message(f"The flame hits the {target.name}.")
+                        if target.hp == 0:
+                            self._defeat_monster(target)
+                    return True
+                continue
+            if targets_player and position == self.player.position:
+                targets_player = False
+                changed_target = not changed_target
+                if not self._saving_throw(VS_MAGIC):
+                    self.player.hp = max(0, self.player.hp - _roll(self.rng, (6, 6)))
+                    self._message("The dragon's fire hits you.")
+                    if self.player.hp == 0:
+                        self._die(monster.name)
+                    return True
+        return True
 
     def _process_monsters(self) -> None:
         for monster in list(self.floor.monsters):
@@ -1421,11 +1582,30 @@ class GameState:
                 continue
             if monster.asleep:
                 continue
+            visible = self._can_see((monster.x, monster.y), self.player.position, monster.definition.level + 4)
             distance = max(abs(monster.x - self.player.x), abs(monster.y - self.player.y))
+            # ponytail: rooms have no darkness flag; add one if dark rooms are modeled.
+            player_room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
+            monster_room = next((room for room in self.floor.rooms if room.contains(monster.x, monster.y)), None)
+            in_gaze_range = (player_room is not None and player_room == monster_room) or distance < LAMP_DISTANCE
+            if (
+                monster.type_id == "medusa"
+                and monster.running
+                and not monster.gaze_attempted
+                and visible
+                and in_gaze_range
+            ):
+                monster.gaze_attempted = True
+                if not self._saving_throw(VS_MAGIC):
+                    confused_turns = HUH_DURATION - HUH_DURATION // 20 + self.rng.randrange(HUH_DURATION // 10)
+                    self.player.confused_turns += confused_turns
+                    self._message("The medusa's gaze confuses you.")
+            if monster.type_id == "dragon" and monster.running and self._try_dragon_breath(monster):
+                continue
             if distance <= 1:
                 self._monster_attack(monster)
                 continue
-            if not self._can_see((monster.x, monster.y), self.player.position, monster.definition.level + 4):
+            if not visible:
                 continue
             dx = (self.player.x > monster.x) - (self.player.x < monster.x)
             dy = (self.player.y > monster.y) - (self.player.y < monster.y)
@@ -1445,18 +1625,23 @@ class GameState:
             return self._result(False, "The game is over.")
         if dx not in {-1, 0, 1} or dy not in {-1, 0, 1} or (dx == 0 and dy == 0):
             return self._result(False, "Invalid movement.")
+        if self.player.confused_turns > 0 and self.rng.randrange(5) == 0:
+            dx = dy = 0
+            while (dx, dy) == (0, 0):
+                dx, dy = self.rng.randrange(3) - 1, self.rng.randrange(3) - 1
         target = (self.player.x + dx, self.player.y + dy)
         monster = next((monster for monster in self.floor.monsters if (monster.x, monster.y) == target), None)
-        if monster:
+        if monster and (not self.player.held or monster.type_id == "venus_flytrap"):
             return self._player_attack(monster)
         terrain = self.floor.tile_at(target)
-        if terrain == Terrain.DOOR_CLOSED:
+        if terrain == Terrain.DOOR_CLOSED and not self.player.held:
             self.floor.set_tile(target, Terrain.DOOR_OPEN)
             self._message("You open the door.")
             self._finish_turn()
             return self._result(True, "", True)
-        if not self.floor.is_walkable(target):
-            return self._result(False, "You cannot move there.")
+        if self.player.held or not self.floor.is_walkable(target):
+            message = "You are held by the venus flytrap." if self.player.held else "You cannot move there."
+            return self._result(False, message)
         self.player.position = target
         trap = next((trap for trap in self.floor.traps if (trap.x, trap.y) == target), None)
         trap_message = self._trigger_trap(trap) if trap else ""
@@ -1711,8 +1896,7 @@ class GameState:
             target.hp = max(0, target.hp - damage)
             message = f"The {item.display_name} hits the {target.name}."
             if target.hp == 0:
-                self.floor.monsters.remove(target)
-                self.player.monsters_killed += 1
+                self._defeat_monster(target)
         elif target and item.effect == "teleport_monster":
             target.x, target.y = self._free_position(self.floor, (self.player.position,))
             message = f"The {target.name} vanishes."
@@ -1751,12 +1935,7 @@ class GameState:
         elif trap.kind == TrapKind.MYSTERIOUS:
             message = self.rng.choice(MYSTERIOUS_TRAP_MESSAGES)
         elif trap.kind == TrapKind.RUST:
-            armor = self.player.equipped(ItemKind.ARMOR)
-            if armor and armor.name.lower() != "leather armor":
-                armor.enchantment -= 1
-                message = "Your armor is weakened by rust."
-            else:
-                message = "The rust vanishes from your armor."
+            message = "Your armor is weakened by rust." if self._rust_armor() else "The rust vanishes from your armor."
         else:
             message = "Your armor is covered with rust."
         if self.player.hp == 0:
@@ -1874,6 +2053,9 @@ class GameState:
             self.player.sleep_turns -= 1
             self._finish_turn()
             return self._result(True, "You are still asleep.", True)
+        if self.player.frozen_turns > 0:
+            self._finish_turn()
+            return self._result(True, "You are frozen.", True)
         command, key_value = self._normalize_command(command)
         if command == "move" and key_value is not None:
             return self.move(*key_value)
