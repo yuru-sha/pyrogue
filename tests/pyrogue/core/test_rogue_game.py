@@ -28,6 +28,91 @@ from pyrogue.core.rogue_game import (
 )
 from pyrogue.core.save_manager import SaveManager
 
+
+def test_search_reveals_adjacent_secret_door_on_successful_seeded_roll() -> None:
+    game = GameState(seed=1)
+    game.floor.monsters.clear()
+    game.floor.tiles[game.player.y][game.player.x + 1] = Terrain.SECRET_DOOR
+    game.rng.seed(2)
+
+    result = game.execute("s")
+
+    assert result.success
+    assert game.floor.tile_at((game.player.x + 1, game.player.y)) == Terrain.DOOR_CLOSED
+
+
+def test_hidden_floor_features_are_saved_and_restored() -> None:
+    game = GameState(seed=12)
+    position = (game.player.x + 1, game.player.y)
+    game.floor.set_tile(position, Terrain.HIDDEN_PASSAGE)
+
+    restored = GameState.from_dict(game.to_dict())
+
+    assert restored.floor.tile_at(position) == Terrain.HIDDEN_PASSAGE
+
+
+def test_hidden_door_blocks_visibility_until_discovered() -> None:
+    game = GameState(seed=17)
+    game.floor.rooms.clear()
+    x, y = game.player.position
+    for column in range(x, x + 4):
+        game.floor.set_tile((column, y), Terrain.FLOOR)
+    game.floor.set_tile((x + 1, y), Terrain.SECRET_DOOR)
+    game.floor.explored.clear()
+    game.visible_positions()
+
+    assert (x + 2, y) not in game.floor.explored
+
+    game.floor.set_tile((x + 1, y), Terrain.DOOR_CLOSED)
+    game.floor.explored.clear()
+    game.visible_positions()
+
+    assert (x + 2, y) not in game.floor.explored
+
+
+@pytest.mark.parametrize(
+    ("blind_turns", "hallucination_turns", "discovered"),
+    [(0, 0, True), (2, 0, False), (0, 2, False), (2, 2, False)],
+)
+def test_search_probability_uses_blindness_and_hallucination_modifiers(
+    blind_turns: int,
+    hallucination_turns: int,
+    discovered: bool,
+) -> None:
+    game = GameState(seed=18)
+    game.floor.monsters.clear()
+    position = (game.player.x + 1, game.player.y)
+    game.floor.set_tile(position, Terrain.SECRET_DOOR)
+    game.player.blind_turns = blind_turns
+    game.player.hallucination_turns = hallucination_turns
+    game.rng.seed(42)
+
+    game.execute("s")
+
+    assert (game.floor.tile_at(position) == Terrain.DOOR_CLOSED) is discovered
+
+
+def test_seeded_generator_places_hidden_passages_on_deep_floors() -> None:
+    floor = DungeonGenerator(rng=random.Random(2)).generate(MAX_FLOOR)  # noqa: S311
+
+    assert any(Terrain.HIDDEN_PASSAGE in row for row in floor.tiles)
+
+
+def test_searching_ring_automatically_searches_adjacent_features() -> None:
+    game = GameState(seed=19)
+    game.floor.monsters.clear()
+    position = (game.player.x + 1, game.player.y)
+    game.floor.set_tile(position, Terrain.SECRET_DOOR)
+    ring = ItemState(900, ItemKind.RING, "ring of searching", effect="search")
+    game.player.inventory.append(ring)
+    game.player.equipped_rings.append(ring.id)
+    game.rng.seed(2)
+
+    game.execute("wait")
+
+    assert game.floor.tile_at(position) == Terrain.DOOR_CLOSED
+
+
 UNIDENTIFIED_ITEM_NAMES = {
     ItemKind.POTION: (
         "confusion potion",
@@ -849,7 +934,7 @@ def test_old_save_version_is_rejected() -> None:
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.5"
+    assert GAME_VERSION == "0.3.6"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:

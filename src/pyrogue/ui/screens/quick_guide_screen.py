@@ -96,7 +96,7 @@ class QuickGuideScreen:
             "i                  - Open inventory",
             "?                  - Show help",
             "o / c              - Open / Close doors",
-            "s                  - Search for secrets",
+            "s                  - Search for secret doors, passages, and traps",
             "Ctrl+S / Ctrl+L    - Save / Load game",
         ]
 

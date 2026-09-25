@@ -17,6 +17,8 @@ TERRAIN_GLYPHS = {
     Terrain.DOOR_OPEN: "/",
     Terrain.STAIRS_UP: "<",
     Terrain.STAIRS_DOWN: ">",
+    Terrain.SECRET_DOOR: "#",
+    Terrain.HIDDEN_PASSAGE: " ",
 }
 ITEM_GLYPHS = {
     "weapon": ")",
