@@ -4,10 +4,107 @@ from types import SimpleNamespace
 import tcod.event
 
 from pyrogue.core.game_states import GameStates
-from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState
+from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState, MonsterState, Terrain
 from pyrogue.core.save_manager import SaveManager
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
+from pyrogue.ui.screens.options_screen import OptionsScreen
+
+
+def test_gui_fight_key_prompts_for_direction_and_attacks_that_monster() -> None:
+    screen = GameScreen(None, seed=108)
+    game = screen.rogue_game
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    north = MonsterState(1081, "bat", x, y - 1, 1)
+    east = MonsterState(1082, "bat", x + 1, y, 1)
+    game.floor.monsters.extend((north, east))
+
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=ord("f"), mod=0, text="f")) is None
+    assert screen.input_handler.direction_selection_mode
+    screen.input_handler.handle_key(SimpleNamespace(sym=ord("l"), mod=0, text="l"))
+
+    assert east.hp < 1
+    assert north.hp == 1
+    assert game.player.turns_played == 1
+
+
+def test_cancelled_fight_direction_does_not_consume_a_turn() -> None:
+    screen = GameScreen(None, seed=108)
+    turns_before = screen.player.turns_played
+
+    screen.input_handler.handle_key(SimpleNamespace(sym=ord("f"), mod=0, text="f"))
+    screen.input_handler.handle_key(SimpleNamespace(sym=tcod.event.KeySym.ESCAPE, mod=0, text=""))
+
+    assert not screen.input_handler.direction_selection_mode
+    assert screen.player.turns_played == turns_before
+
+
+def test_gui_numeric_prefix_repeats_the_canonical_command() -> None:
+    screen = GameScreen(None, seed=108)
+    game = screen.rogue_game
+    game.floor.monsters.clear()
+    screen.input_handler.handle_key(SimpleNamespace(sym=ord("3"), mod=0, text="3"))
+    screen.input_handler.handle_key(SimpleNamespace(sym=ord("."), mod=0, text="."))
+
+    assert game.player.turns_played == 3
+
+
+def test_gui_uppercase_direction_runs_through_a_corridor() -> None:
+    screen = GameScreen(None, seed=108)
+    game = screen.rogue_game
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    for row in range(y - 1, y + 2):
+        for column in range(x - 1, x + 4):
+            game.floor.set_tile((column, row), Terrain.WALL)
+    for column in range(x, x + 3):
+        game.floor.set_tile((column, y), Terrain.FLOOR)
+
+    screen.input_handler.handle_key(SimpleNamespace(sym=ord("L"), mod=0, text="L"))
+
+    assert game.player.position == (x + 2, y)
+    assert game.player.turns_played == 2
+
+
+def test_gui_options_key_opens_options_without_consuming_a_turn() -> None:
+    screen = GameScreen(None, seed=108)
+    turns_before = screen.player.turns_played
+
+    state = screen.input_handler.handle_key(SimpleNamespace(sym=ord("o"), mod=0, text="o"))
+
+    assert state == GameStates.OPTIONS_MENU
+    assert screen.player.turns_played == turns_before
+
+
+def test_gui_call_item_uses_canonical_command_without_consuming_a_turn() -> None:
+    screen = GameScreen(None, seed=108)
+    game = screen.rogue_game
+    item = ItemState(1084, ItemKind.POTION, "healing potion", appearance="red potion", identified=False)
+    game.player.inventory.append(item)
+    inventory = InventoryScreen(screen)
+    inventory.selected_index = game.player.inventory.index(item)
+
+    assert screen.input_handler.handle_key(SimpleNamespace(sym=ord("c"), mod=0, text="c")) == GameStates.SHOW_INVENTORY
+    inventory.handle_input(SimpleNamespace(sym=tcod.event.KeySym.RETURN, mod=0, text=""))
+    for char in "emergency":
+        inventory.handle_input(SimpleNamespace(sym=ord(char), mod=0, text=char))
+    inventory.handle_input(SimpleNamespace(sym=tcod.event.KeySym.RETURN, mod=0, text=""))
+
+    assert item.display_name == "red potion called emergency"
+    assert game.player.turns_played == 0
+
+
+def test_options_screen_changes_display_only_state_and_returns_to_game() -> None:
+    game_screen = GameScreen(None, seed=108)
+    options = OptionsScreen(SimpleNamespace(game_screen=game_screen, console=None))
+    enabled_before = game_screen.fov_manager.fov_enabled
+    turns_before = game_screen.player.turns_played
+
+    assert options.handle_input(SimpleNamespace(sym=tcod.event.KeySym.TAB)) is None
+    assert game_screen.fov_manager.fov_enabled is not enabled_before
+    assert options.handle_input(SimpleNamespace(sym=tcod.event.KeySym.ESCAPE)) == GameStates.PLAYERS_TURN
+    assert game_screen.player.turns_played == turns_before
 
 
 def test_gui_routes_commands_without_legacy_game_logic_or_handler() -> None:

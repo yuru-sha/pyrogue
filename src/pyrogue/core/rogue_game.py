@@ -18,14 +18,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
-
-GAME_VERSION = "0.3.6"
+GAME_VERSION = "0.3.7"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
 # Retained for imports; canonical floors use occasional room mazes, not fixed maze levels.
 MAZE_FLOORS: frozenset[int] = frozenset()
 MAX_PACK = 23
+CALL_COMMAND_ARGUMENTS = 2
 MAX_TRAPS = 10
 HUNGERTIME = 1300
 STOMACHSIZE = 2000
@@ -234,6 +234,7 @@ class ItemState:
     damage_bonus: int = 0
     armor_bonus: int = 0
     effect: str = ""
+    called_name: str | None = None
     armor_protected: bool = False
 
     @property
@@ -255,8 +256,12 @@ class ItemState:
             ItemKind.GOLD,
             ItemKind.AMULET,
         }:
-            return name
-        return self.appearance or f"unknown {self.kind.value}"
+            visible_name = name
+        else:
+            visible_name = self.appearance or f"unknown {self.kind.value}"
+        if self.called_name:
+            return f"{visible_name} called {self.called_name}"
+        return visible_name
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the item to JSON-compatible values."""
@@ -1460,6 +1465,7 @@ USE_ACTIONS = {
 class GameState:
     """Complete deterministic game state and the shared command API."""
 
+    COUNTABLE_COMMANDS: ClassVar[frozenset[str]] = frozenset("hjkl" + "yubn" + "HJKLYUBN" + ".qrstz")
     COMMAND_KEYS: ClassVar[dict[str, tuple[str, Any]]] = {
         "h": ("move", (-1, 0)),
         "j": ("move", (0, 1)),
@@ -1469,8 +1475,16 @@ class GameState:
         "u": ("move", (1, -1)),
         "b": ("move", (-1, 1)),
         "n": ("move", (1, 1)),
-        "a": ("attack", None),
-        "f": ("attack", None),
+        "a": ("again", None),
+        "f": ("attack_direction", None),
+        "H": ("run", (-1, 0)),
+        "J": ("run", (0, 1)),
+        "K": ("run", (0, -1)),
+        "L": ("run", (1, 0)),
+        "Y": ("run", (-1, -1)),
+        "U": ("run", (1, -1)),
+        "B": ("run", (-1, 1)),
+        "N": ("run", (1, 1)),
         ".": ("wait", None),
         ",": ("pickup", None),
         "d": ("drop", None),
@@ -1494,6 +1508,8 @@ class GameState:
         "/": ("identify_item", None),
         "S": ("save", None),
         "Q": ("quit", None),
+        "c": ("call_item", None),
+        "o": ("options", None),
     }
 
     def __init__(self, seed: int | None = None, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT) -> None:
@@ -1511,6 +1527,7 @@ class GameState:
         self._next_monster_id = 1
         self._next_trap_id = 1
         self._floors_without_food = 0
+        self._last_command: tuple[str, list[Any]] | None = None
         self._appearance_names = self._make_appearances()
         self._ensure_floor(1)
         self._setup_initial_inventory(self.floor)
@@ -2591,6 +2608,33 @@ class GameState:
         self._finish_turn()
         return self._result(True, trap_message, True)
 
+    def run_direction(self, dx: int, dy: int) -> CommandResult:
+        """Run a corridor, stopping at obstacles, monsters, or branches; use normal movement effects."""
+        previous: Position | None = None
+        last_result: CommandResult | None = None
+        for _ in range(255):
+            target = (self.player.x + dx, self.player.y + dy)
+            if (
+                not self.floor.is_walkable(target)
+                or self.floor.tile_at(target) == Terrain.DOOR_CLOSED
+                or any((monster.x, monster.y) == target for monster in self.floor.monsters)
+            ):
+                return last_result or self._result(False, "You cannot continue running there.")
+            previous = self.player.position
+            last_result = self.move(dx, dy)
+            if not last_result.success or not last_result.turn_consumed:
+                return last_result
+            current = self.player.position
+            exits = [
+                (current[0] + step_x, current[1] + step_y)
+                for step_x, step_y in set(DIRECTIONS.values())
+                if self.floor.is_walkable((current[0] + step_x, current[1] + step_y))
+                and (current[0] + step_x, current[1] + step_y) != previous
+            ]
+            if len(exits) != 1:
+                return last_result
+        return last_result or self._result(False, "You cannot continue running there.")
+
     def wait(self) -> CommandResult:
         """Consume one turn without moving."""
         if self.status != GameStatus.PLAYING:
@@ -3246,8 +3290,31 @@ class GameState:
         """Execute one command, optionally omitting automatic visibility recording for display-only callers."""
         previous_update = getattr(self, "_update_explored", True)
         self._update_explored = update_explored
+        command_args = list(args)
         try:
-            return self._execute(command, args)
+            count = 1
+            digits = 0
+            while digits < len(command) and command[digits].isdigit():
+                digits += 1
+            if digits:
+                count = min(255, int(command[:digits]))
+                command = command[digits:]
+                if count == 0 or command not in self.COUNTABLE_COMMANDS:
+                    return self._result(False, "That command cannot be repeated.")
+            result: CommandResult | None = None
+            for _ in range(count):
+                current = self._execute(command, command_args)
+                if current.state != GameStatus.PLAYING:
+                    result = current
+                    break
+                if not current.success or not current.turn_consumed:
+                    if result is None:
+                        result = current
+                    break
+                result = current
+                if command not in {"a", "again"}:
+                    self._last_command = (command, command_args)
+            return result or self._result(False, "No command was executed.")
         finally:
             self._update_explored = previous_update
 
@@ -3279,8 +3346,31 @@ class GameState:
                 return self._result(False, "Usage: move <north|south|east|west>")
             direction = DIRECTIONS.get(str(args[0]).lower())
             return self.move(*direction) if direction is not None else self._result(False, "Invalid direction.")
+        if command == "run" and key_value is not None:
+            return self.run_direction(*key_value)
         if command == "wait":
             return self.wait()
+        if command == "options":
+            return self._result(True, "Options are available.", False, {"options": True})
+        if command == "call_item":
+            if len(args) < CALL_COMMAND_ARGUMENTS:
+                return self._result(False, "Usage: call <item> <name>")
+            item = self._find_item(args[0])
+            called_name = " ".join(str(value) for value in args[1:]).strip()
+            if item is None or not called_name:
+                return self._result(False, "Choose an item and a non-empty name.")
+            visible_name = item.display_name
+            item.called_name = called_name
+            return self._result(True, f'You call the {visible_name} "{called_name}".', False, item)
+        if command == "attack_direction":
+            if not args:
+                return self._result(False, "Usage: fight <direction>")
+            return self.attack(self._direction(args[0]))
+        if command == "again":
+            if self._last_command is None:
+                return self._result(False, "You have no previous command to repeat.")
+            previous, previous_args = self._last_command
+            return self._execute(previous, previous_args)
         if command == "attack":
             return self.attack(self._direction(args[0]) if args else None)
         if command == "pickup":
@@ -3336,7 +3426,7 @@ class GameState:
         if command == "help":
             return self._result(
                 True,
-                "hjkl yubn move, , pickup, d drop, e eat, q quaff, r read <scroll> [item], w/W equip, t throw, z zap, s search, ^ trap, / identify, </> stairs, ? help",
+                "hjkl yubn move, HJKLYUBN run, f fight <direction>, a repeat, c call <item> <name>, o options, 1-255 repeat eligible commands, , pickup, d drop, e eat, q quaff, r read, s search, ^ trap, / identify, </> stairs, ? help",
             )
         if command == "save":
             return self._result(True, "Game state ready to save.", False, self.to_dict())

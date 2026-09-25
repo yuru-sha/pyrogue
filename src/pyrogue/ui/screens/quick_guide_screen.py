@@ -93,9 +93,14 @@ class QuickGuideScreen:
         commands = [
             "hjkl / Arrow Keys  - Move around",
             ", (comma)          - Pick up items",
+            "HJKLYUBN           - Run in a direction",
+            "1-255 + command    - Repeat eligible commands",
+            "f                  - Fight in a chosen direction",
+            "a                  - Repeat previous command",
+            "o                  - Open options",
+            "c                  - Call (rename) an item",
             "i                  - Open inventory",
             "?                  - Show help",
-            "o / c              - Open / Close doors",
             "s                  - Search for secret doors, passages, and traps",
             "Ctrl+S / Ctrl+L    - Save / Load game",
         ]

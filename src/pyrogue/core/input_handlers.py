@@ -28,6 +28,7 @@ class StateManager:
             GameStates.QUICK_GUIDE,
             GameStates.GAME_OVER,
             GameStates.VICTORY,
+            GameStates.OPTIONS_MENU,
         }:
             new_state = context.handle_input(event)
         else:
