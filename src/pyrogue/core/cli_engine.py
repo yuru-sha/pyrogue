@@ -35,7 +35,7 @@ class CLIEngine:
             return True
 
         raw_command = parts[0]
-        game_command = raw_command if len(raw_command) == 1 else raw_command.lower()
+        game_command = raw_command if len(raw_command) == 1 or raw_command[0].isdigit() else raw_command.lower()
         args = parts[1:]
 
         if game_command.lower() == "load":

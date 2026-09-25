@@ -41,6 +41,7 @@ GUIは各フレームを表示してからTCODイベントを待ちます。同�
 - `pyrogue.ui.screens.game_screen`: GUIライフサイクルとcanonical状態の保持。
 - `pyrogue.ui.components.input_handler`: TCODイベントを同じコマンドへ変換。
 - `pyrogue.ui.components.game_renderer`: `DisplayCell` を画面へ描画。
+- `pyrogue.ui.screens.options_screen`: Rogue操作のオプション表示。表示専用の変更はターン進行から分離します。
 - `pyrogue.core.save_manager`: JSONセーブ、チェックサム、バージョン拒否、パーマデス検査。死亡時は `finalize_death` をCLI/GUIで共有する。
 
 旧GameLogic、独自コマンドハンドラー、旧エンティティ、旧ダンジョン生成器は削除しました。
@@ -73,8 +74,8 @@ lightやmagic mappingなど明示的なゲーム効果は引き続き適用し�
 
 セーブはJSONです。仕様バージョン、seed、全階層、プレイヤー、エンティティ、メッセージ、
 IDカウンタ、RNG状態、死亡・勝利・パーマデス状態を保存します。`spec_version` が現在の
-`0.3.6` と一致しないファイルは自動移行せず、互換性エラーとして拒否します。階層内の
-未発見の隠し扉・通路も地形状態として保存されます。アイテム識別と一時効果、
+`0.3.7` と一致しないファイルは自動移行せず、互換性エラーとして拒否します。階層内の
+未発見の隠し扉・通路も地形状態として保存されます。アイテム識別・呼称、一時効果、
 モンスターの行動状態、食料生成間隔、失神残りターンも保存し、`current_floor` は
 現在位置、`player.deepest_floor` は到達記録であり、勝利・死亡サマリーは後者を表示します。
 現在の`spec_version`を持つ場合も、必須フィールド（`seed`、`player`、`floors`、`rng_state`）を欠く旧形式は、

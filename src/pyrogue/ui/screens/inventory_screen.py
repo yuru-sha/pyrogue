@@ -26,6 +26,8 @@ class InventoryScreen(Screen):
         self.show_help = False
         self.unequip_mode = False
         self.equipped_items: list[tuple[str, ItemState]] = []
+        self.call_item_id: int | None = None
+        self.call_buffer = ""
 
     def _items(self) -> list[ItemState]:
         """Return the current inventory, filtered for a pending action."""
@@ -70,6 +72,8 @@ class InventoryScreen(Screen):
                 suffix += f" ({slot.replace('_', ' ').upper()})"
             fg = (255, 255, 0) if index == self.selected_index else (255, 255, 255)
             console.print(2, 3 + index, f"{chr(ord('a') + index)}) {item.display_name}{suffix}", fg)
+        if self.call_item_id is not None:
+            console.print(2, console.height - 2, f"Call item: {self.call_buffer}_", (127, 255, 127))
 
         console.print(40, 3, "Equipment:", (255, 255, 0))
         player = self.game_screen.player
@@ -113,11 +117,15 @@ class InventoryScreen(Screen):
 
     def handle_input(self, event: tcod.event.KeyDown) -> None:
         """Handle inventory navigation and canonical item commands."""
+        if self.call_item_id is not None:
+            self._handle_call_name_input(event)
+            return
         if self.unequip_mode:
             self._handle_unequip_selection(event)
             return
 
         if event.sym == tcod.event.KeySym.ESCAPE:
+            self.game_screen.input_handler.pending_count = ""
             self.game_screen.input_handler.reset_selection()
             if self.game_screen.engine:
                 self.game_screen.engine.state = GameStates.PLAYERS_TURN
@@ -206,6 +214,12 @@ class InventoryScreen(Screen):
     def _begin_pending_action(self, item: ItemState) -> None:
         """Start the selected canonical item action."""
         action = self.game_screen.input_handler.item_selection_action
+        if action == "call":
+            self.call_item_id = item.id
+            self.call_buffer = ""
+            self.game_screen.input_handler.reset_selection()
+            self.game_screen.add_message(f"What do you want to call {item.display_name}?")
+            return
         if action == "read":
             if item.effect in SCROLL_IDENTIFY_TARGETS:
                 target_kinds = SCROLL_IDENTIFY_TARGETS[item.effect]
@@ -241,6 +255,32 @@ class InventoryScreen(Screen):
             return
         self.game_screen.input_handler.begin_direction_selection(action or "throw", item.id)
 
+    def _handle_call_name_input(self, event: tcod.event.KeyDown) -> None:
+        """Collect the call name and apply it through GameState.execute."""
+        if event.sym == tcod.event.KeySym.ESCAPE:
+            self.call_item_id = None
+            self.call_buffer = ""
+            if self.game_screen.engine:
+                self.game_screen.engine.state = GameStates.PLAYERS_TURN
+            return
+        if event.sym == tcod.event.KeySym.BACKSPACE:
+            self.call_buffer = self.call_buffer[:-1]
+            return
+        if event.sym == tcod.event.KeySym.RETURN:
+            item_id, name = self.call_item_id, self.call_buffer.strip()
+            self.call_item_id = None
+            self.call_buffer = ""
+            if item_id is not None:
+                result = self.game_screen.execute("c", [item_id, name])
+                if result.message:
+                    self.game_screen.add_message(result.message)
+            if self.game_screen.engine:
+                self.game_screen.engine.state = GameStates.PLAYERS_TURN
+            return
+        text = getattr(event, "text", "")
+        if len(text) == 1 and text.isprintable() and not text.isspace():
+            self.call_buffer += text
+
     def _use_directionless_wand(self, item: ItemState) -> None:
         """Use a directionless wand and leave the modal inventory state."""
         self.game_screen.input_handler.reset_selection()
@@ -248,6 +288,11 @@ class InventoryScreen(Screen):
 
     def _execute_item_command(self, command: str, args: list[int]) -> None:
         """Run a completed inventory action and leave the modal state."""
+        input_handler = self.game_screen.input_handler
+        key = {"read": "r", "zap": "z", "throw": "t"}.get(command)
+        if input_handler.pending_count and key is not None and key in self.game_screen.rogue_game.COUNTABLE_COMMANDS:
+            command = input_handler.pending_count + key
+        input_handler.pending_count = ""
         result = self.game_screen.execute(command, args)
         if self.game_screen.engine:
             if result.state.value == "dead":

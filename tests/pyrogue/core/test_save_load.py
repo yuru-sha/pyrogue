@@ -22,6 +22,7 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game.player.monster_confusion_ready = True
     game.player.identified_item_names.append("healing potion")
     game.player.max_strength = 21
+    game.player.inventory[0].called_name = "last resort"
     game._floors_without_food = 3
     monster = game.floor.monsters[0]
     monster.hp -= 1
@@ -56,6 +57,7 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     assert restored.player.max_strength == 21
     assert restored.floor.monsters[0].mean_override
     assert restored._floors_without_food == 3
+    assert restored.player.inventory[0].called_name == "last resort"
 
 
 def test_load_defaults_new_monster_fields_for_older_saves() -> None:

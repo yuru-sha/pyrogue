@@ -29,6 +29,139 @@ from pyrogue.core.rogue_game import (
 from pyrogue.core.save_manager import SaveManager
 
 
+def test_fight_uses_requested_direction_and_missing_target_spends_no_turn() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    north = MonsterState(1081, "bat", x, y - 1, 1)
+    east = MonsterState(1082, "bat", x + 1, y, 100)
+    game.floor.monsters.extend((north, east))
+
+    miss = game.execute("f", ["w"])
+
+    assert not miss.success
+    assert not miss.turn_consumed
+    assert game.player.turns_played == 0
+    assert north.hp == 1
+    assert east.hp == 100
+
+    result = game.execute("f", ["e"])
+
+    assert result.success
+    assert result.turn_consumed
+    assert north.hp == 1
+    assert east.hp < 100
+
+
+def test_again_repeats_previous_turn_consuming_command() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+    game.execute(".")
+
+    result = game.execute("a")
+
+    assert result.success
+    assert result.turn_consumed
+    assert game.player.turns_played == 2
+
+
+def test_again_without_previous_eligible_command_does_not_spend_turn() -> None:
+    game = GameState(seed=108)
+
+    result = game.execute("a")
+
+    assert not result.success
+    assert not result.turn_consumed
+    assert game.player.turns_played == 0
+
+
+def test_numeric_prefix_repeats_supported_command_up_to_count() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+
+    result = game.execute("3.")
+
+    assert result.success
+    assert result.turn_consumed
+    assert game.player.turns_played == 3
+
+
+def test_numeric_prefix_is_capped_at_255_and_zero_is_rejected() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+
+    result = game.execute("256.")
+
+    assert result.success
+    assert game.player.turns_played == 255
+    game = GameState(seed=108)
+    result = game.execute("0.")
+
+    assert not result.success
+    assert game.player.turns_played == 0
+
+
+def test_uppercase_direction_runs_through_corridor_until_blocked() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    for row in range(y - 1, y + 2):
+        for column in range(x - 1, x + 4):
+            game.floor.set_tile((column, row), Terrain.WALL)
+    for column in range(x, x + 3):
+        game.floor.set_tile((column, y), Terrain.FLOOR)
+
+    result = game.execute("L")
+
+    assert result.success
+    assert result.turn_consumed
+    assert game.player.position == (x + 2, y)
+    assert game.player.turns_played == 2
+
+
+def test_uppercase_run_uses_normal_trap_processing() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    for row in range(y - 1, y + 2):
+        for column in range(x - 1, x + 4):
+            game.floor.set_tile((column, row), Terrain.WALL)
+    for column in range(x, x + 3):
+        game.floor.set_tile((column, y), Terrain.FLOOR)
+    trap = TrapState(1084, TrapKind.BEAR, x + 1, y)
+    game.floor.traps = [trap]
+    hp_before = game.player.hp
+
+    game.execute("L")
+
+    assert trap.discovered
+    assert game.player.hp == hp_before - 2
+
+
+def test_call_renames_an_item_without_consuming_a_turn() -> None:
+    game = GameState(seed=108)
+    item = ItemState(1083, ItemKind.POTION, "healing potion", appearance="red potion", identified=False)
+    game.player.inventory.append(item)
+
+    result = game.execute("c", [item.id, "emergency"])
+
+    assert result.success
+    assert not result.turn_consumed
+    assert item.display_name == "red potion called emergency"
+    assert result.message == 'You call the red potion "emergency".'
+
+
+def test_options_command_is_non_turn_consuming() -> None:
+    game = GameState(seed=108)
+
+    result = game.execute("o")
+
+    assert result.success
+    assert not result.turn_consumed
+    assert result.data == {"options": True}
+    assert game.player.turns_played == 0
+
+
 def test_search_reveals_adjacent_secret_door_on_successful_seeded_roll() -> None:
     game = GameState(seed=1)
     game.floor.monsters.clear()
@@ -934,7 +1067,7 @@ def test_old_save_version_is_rejected() -> None:
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.6"
+    assert GAME_VERSION == "0.3.7"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:

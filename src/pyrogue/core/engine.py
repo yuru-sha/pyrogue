@@ -35,6 +35,7 @@ from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.help_menu_screen import HelpMenuScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
 from pyrogue.ui.screens.menu_screen import MenuScreen
+from pyrogue.ui.screens.options_screen import OptionsScreen
 from pyrogue.ui.screens.quick_guide_screen import QuickGuideScreen
 from pyrogue.ui.screens.victory_screen import VictoryScreen
 from pyrogue.utils import game_logger
@@ -97,6 +98,7 @@ class Engine:
         self.inventory_screen = InventoryScreen(self.game_screen)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
+        self.options_screen = OptionsScreen(self)
         self._screens_by_state = {
             GameStates.MENU: self.menu_screen,
             GameStates.HELP_MENU: self.help_menu_screen,
@@ -105,6 +107,7 @@ class Engine:
             GameStates.SHOW_INVENTORY: self.inventory_screen,
             GameStates.GAME_OVER: self.game_over_screen,
             GameStates.VICTORY: self.victory_screen,
+            GameStates.OPTIONS_MENU: self.options_screen,
         }
 
         # 前の状態を記録する変数

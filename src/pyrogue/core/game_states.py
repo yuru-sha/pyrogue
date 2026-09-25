@@ -37,3 +37,4 @@ class GameStates(Enum):
     HELP_MENU = auto()  # ヘルプメニュー表示
     QUICK_GUIDE = auto()  # クイックガイド表示
     EXIT = auto()  # ゲーム終了シグナル
+    OPTIONS_MENU = auto()  # Rogue command options
