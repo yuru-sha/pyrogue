@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
-GAME_VERSION = "0.3.7"
+GAME_VERSION = "0.3.8"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -31,7 +31,6 @@ HUNGERTIME = 1300
 STOMACHSIZE = 2000
 MORETIME = 150
 STARVETIME = 850
-BEAR_TRAP_DAMAGE = 2
 MAX_EQUIPPED_RINGS = 2
 EXPERIENCE_LEVELS = (
     10,
@@ -87,6 +86,7 @@ MONSTER_SPAWN_ORDER = (
 )
 MONSTER_DISGUISES = ("potion", "scroll", "ring", "wand", "food", "weapon", "armor", "stairs", "gold", "amulet")
 SLEEP_TURNS = 5
+BEAR_TRAP_TURNS = 3
 HALLUCINATION_TURNS = 850
 BLINDNESS_TURNS = 850
 LEVITATION_TURNS = 30
@@ -595,6 +595,7 @@ class PlayerState:
     equipped_rings: list[int] = field(default_factory=list)
     has_amulet: bool = False
     turns_played: int = 0
+    bear_trap_turns: int = 0
     sleep_turns: int = 0
     frozen_turns: int = 0
     faint_turns: int = 0
@@ -2581,10 +2582,13 @@ class GameState:
 
     def move(self, dx: int, dy: int) -> CommandResult:
         """Move one step, open a closed door, or attack an adjacent monster."""
-        if self.status != GameStatus.PLAYING:
-            return self._result(False, "The game is over.")
-        if dx not in {-1, 0, 1} or dy not in {-1, 0, 1} or (dx == 0 and dy == 0):
-            return self._result(False, "Invalid movement.")
+        if self.status != GameStatus.PLAYING or dx not in {-1, 0, 1} or dy not in {-1, 0, 1} or (dx == 0 and dy == 0):
+            message = "The game is over." if self.status != GameStatus.PLAYING else "Invalid movement."
+            return self._result(False, message)
+        if self.player.bear_trap_turns > 0:
+            self.player.bear_trap_turns -= 1
+            self._finish_turn()
+            return self._result(True, "You are still caught in the bear trap.", True)
         if self.player.confused_turns > 0 and self.rng.randrange(5) == 0:
             dx = dy = 0
             while (dx, dy) == (0, 0):
@@ -2620,9 +2624,13 @@ class GameState:
                 or any((monster.x, monster.y) == target for monster in self.floor.monsters)
             ):
                 return last_result or self._result(False, "You cannot continue running there.")
+            trap = next((trap for trap in self.floor.traps if (trap.x, trap.y) == target), None)
+            levitating = self.player.levitation_turns > 0
             previous = self.player.position
             last_result = self.move(dx, dy)
             if not last_result.success or not last_result.turn_consumed:
+                return last_result
+            if trap is not None and not levitating:
                 return last_result
             current = self.player.position
             exits = [
@@ -3144,6 +3152,16 @@ class GameState:
         self._finish_turn()
         return self._result(True, message, True)
 
+    def _trap_hit(self, attacker_level: int) -> bool:
+        """Resolve Rogue 5.4's trap missile hit check."""
+        roll = self.rng.randrange(20)
+        return roll + 1 >= 20 - attacker_level - self.player.effective_armor_class()
+
+    def _spread(self, duration: int) -> int:
+        """Return Rogue 5.4's spread duration."""
+        random_range = duration // 10
+        return duration - duration // 20 + (self.rng.randrange(random_range) if random_range else 0)
+
     def _trigger_trap(self, trap: TrapState) -> str:
         trap.discovered = True
         if trap.kind == TrapKind.TRAP_DOOR:
@@ -3151,21 +3169,45 @@ class GameState:
             if self.current_floor < MAX_FLOOR:
                 self._descend_to_next_floor()
         elif trap.kind == TrapKind.BEAR:
-            self.player.hp = max(0, self.player.hp - BEAR_TRAP_DAMAGE)
+            self.player.bear_trap_turns += self._spread(BEAR_TRAP_TURNS)
             message = "You are caught in a bear trap."
         elif trap.kind == TrapKind.POISON_DART:
-            self.player.hp = max(0, self.player.hp - _roll(self.rng, (1, 4)))
-            if not self.player.has_ring_effect("sustain"):
-                self.player.strength = max(1, self.player.strength - 1)
-            message = "A poisoned dart hits you."
+            if self._trap_hit(self.player.level + 1):
+                self.player.hp = max(0, self.player.hp - _roll(self.rng, (1, 4)))
+                if (
+                    self.player.hp > 0
+                    and not self.player.has_ring_effect("sustain")
+                    and not self._saving_throw(VS_POISON)
+                ):
+                    self.player.strength = max(1, self.player.strength - 1)
+                message = "A poisoned dart hits you."
+                if self.player.hp == 0:
+                    self._die("d")
+            else:
+                message = "A poisoned dart misses you."
         elif trap.kind == TrapKind.ARROW:
-            self.player.hp = max(0, self.player.hp - 3)
-            message = "An arrow shoots out at you."
+            if self._trap_hit(self.player.level - 1):
+                self.player.hp = max(0, self.player.hp - _roll(self.rng, (1, 6)))
+                message = "An arrow shoots out at you."
+                if self.player.hp == 0:
+                    self._die("a")
+            else:
+                message = "An arrow shoots past you."
+                arrow = ItemState(
+                    id=self._next_item_id,
+                    kind=ItemKind.WEAPON,
+                    name="arrow",
+                    position=self.player.position,
+                    quantity=1,
+                    damage_dice=(1, 1),
+                )
+                self._next_item_id += 1
+                self.floor.items.append(arrow)
         elif trap.kind == TrapKind.TELEPORT:
             self.player.position = self._free_position(self.floor, (self.player.position,))
             message = "You are suddenly teleported."
         elif trap.kind == TrapKind.SLEEPING_GAS:
-            self.player.sleep_turns = max(self.player.sleep_turns, SLEEP_TURNS)
+            self.player.sleep_turns = max(self.player.sleep_turns, self._spread(SLEEP_TURNS))
             message = "A strange gas surrounds you and you fall asleep."
         elif trap.kind == TrapKind.MYSTERIOUS:
             message = self.rng.choice(MYSTERIOUS_TRAP_MESSAGES)
@@ -3173,8 +3215,6 @@ class GameState:
             message = "Your armor is weakened by rust." if self._rust_armor() else "The rust vanishes from your armor."
         else:
             message = "Your armor is covered with rust."
-        if self.player.hp == 0:
-            self._die(trap.kind.value)
         return message
 
     def _search_adjacent_hidden_features(self) -> bool:
