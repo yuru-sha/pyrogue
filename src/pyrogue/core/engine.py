@@ -201,12 +201,7 @@ class Engine:
 
         try:
             while self.running:
-                self.console.clear()
-
-                # 現在のゲーム状態に応じた画面を描画
-                self._render_current_screen()
-
-                self.context.present(self.console)
+                self._present_current_screen()
 
                 for event in tcod.event.wait():
                     if event.type == "QUIT":
@@ -222,6 +217,7 @@ class Engine:
                             break
                         if new_state:
                             self._transition_to(new_state)
+                        self._present_current_screen()
 
         except Exception as e:
             game_logger.error(
@@ -291,6 +287,12 @@ class Engine:
             screen.render(self.console)
         else:
             screen.render()
+
+    def _present_current_screen(self) -> None:
+        """Clear, render, and present the screen for the current state."""
+        self.console.clear()
+        self._render_current_screen()
+        self.context.present(self.console)
 
     def cleanup(self) -> None:
         """

@@ -37,4 +37,36 @@ def test_engine_passes_deepest_floor_to_victory_screen(monkeypatch) -> None:
 
     call = engine.victory_screen.set_victory_data.call_args
     assert call.args[1:] == (26, 1000)
-    engine.victory_screen.render.assert_called_once_with()
+    engine.victory_screen.render.assert_called()
+
+
+def test_engine_presents_each_key_event_before_processing_the_next(monkeypatch) -> None:
+    engine = Engine(seed=1234)
+    engine.context = Mock()
+    events = iter(
+        [
+            [
+                SimpleNamespace(type="KEYDOWN", key="first"),
+                SimpleNamespace(type="KEYDOWN", key="second"),
+                SimpleNamespace(type="QUIT"),
+            ]
+        ]
+    )
+    monkeypatch.setattr(tcod.event, "wait", lambda: next(events))
+
+    sequence: list[str] = []
+    engine._render_current_screen = Mock(side_effect=lambda: sequence.append("render"))
+    engine.context.present.side_effect = lambda console: sequence.append("present")
+
+    def handle_input(event):
+        sequence.append(event.key)
+        return True, None
+
+    engine._handle_input = Mock(side_effect=handle_input)
+
+    engine.run()
+
+    assert sequence.index("present") < sequence.index("first")
+    assert sequence.index("first") < sequence.index("second")
+    assert sequence.index("render", sequence.index("first")) < sequence.index("second")
+    assert sequence.index("present", sequence.index("first")) < sequence.index("second")
