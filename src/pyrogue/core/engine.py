@@ -97,6 +97,15 @@ class Engine:
         self.inventory_screen = InventoryScreen(self.game_screen)
         self.game_over_screen = GameOverScreen(self.console, self)
         self.victory_screen = VictoryScreen(self.console, self)
+        self._screens_by_state = {
+            GameStates.MENU: self.menu_screen,
+            GameStates.HELP_MENU: self.help_menu_screen,
+            GameStates.QUICK_GUIDE: self.quick_guide_screen,
+            GameStates.PLAYERS_TURN: self.game_screen,
+            GameStates.SHOW_INVENTORY: self.inventory_screen,
+            GameStates.GAME_OVER: self.game_over_screen,
+            GameStates.VICTORY: self.victory_screen,
+        }
 
         # 前の状態を記録する変数
         self.previous_state = None
@@ -195,20 +204,7 @@ class Engine:
                 self.console.clear()
 
                 # 現在のゲーム状態に応じた画面を描画
-                if self.state == GameStates.MENU:
-                    self.menu_screen.render()
-                elif self.state == GameStates.HELP_MENU:
-                    self.help_menu_screen.render()
-                elif self.state == GameStates.QUICK_GUIDE:
-                    self.quick_guide_screen.render()
-                elif self.state == GameStates.PLAYERS_TURN:
-                    self.game_screen.render(self.console)
-                elif self.state == GameStates.SHOW_INVENTORY:
-                    self.inventory_screen.render(self.console)
-                elif self.state == GameStates.GAME_OVER:
-                    self.game_over_screen.render()
-                elif self.state == GameStates.VICTORY:
-                    self.victory_screen.render()
+                self._render_current_screen()
 
                 self.context.present(self.console)
 
@@ -225,20 +221,7 @@ class Engine:
                             self.running = False
                             break
                         if new_state:
-                            if new_state == GameStates.GAME_OVER:
-                                self.game_over()
-                            elif new_state == GameStates.VICTORY:
-                                game = self.game_screen.rogue_game
-                                stats = self._canonical_player_stats(game)
-                                summary = game.victory_summary
-                                self.victory_screen.set_victory_data(
-                                    stats,
-                                    summary["deepest_floor"],
-                                    summary["score"],
-                                )
-                            # 状態遷移時に前の状態を記録
-                            self.previous_state = self.state
-                            self.state = new_state
+                            self._transition_to(new_state)
 
         except Exception as e:
             game_logger.error(
@@ -248,6 +231,22 @@ class Engine:
             raise
         finally:
             self.cleanup()
+
+    def _transition_to(self, new_state: GameStates) -> None:
+        """Prepare terminal screens and record a completed state transition."""
+        previous_state = self.state
+        if new_state == GameStates.GAME_OVER:
+            self.game_over()
+        elif new_state == GameStates.VICTORY:
+            game = self.game_screen.rogue_game
+            summary = game.victory_summary
+            self.victory_screen.set_victory_data(
+                self._canonical_player_stats(game),
+                summary["deepest_floor"],
+                summary["score"],
+            )
+        self.previous_state = previous_state
+        self.state = new_state
 
     def _handle_input(self, event: tcod.event.KeyDown) -> tuple[bool, GameStates | None]:
         """
@@ -280,22 +279,18 @@ class Engine:
             return True, None
 
     def _get_current_screen(self):
-        """Get the current screen instance based on state."""
-        if self.state == GameStates.MENU:
-            return self.menu_screen
-        if self.state == GameStates.HELP_MENU:
-            return self.help_menu_screen
-        if self.state == GameStates.QUICK_GUIDE:
-            return self.quick_guide_screen
-        if self.state == GameStates.PLAYERS_TURN:
-            return self.game_screen
-        if self.state == GameStates.SHOW_INVENTORY:
-            return self.inventory_screen
-        if self.state == GameStates.GAME_OVER:
-            return self.game_over_screen
-        if self.state == GameStates.VICTORY:
-            return self.victory_screen
-        return None
+        """Get the screen registered for the current state."""
+        return self._screens_by_state.get(self.state)
+
+    def _render_current_screen(self) -> None:
+        """Render the screen selected for the current game state."""
+        screen = self._get_current_screen()
+        if screen is None:
+            return
+        if self.state in {GameStates.PLAYERS_TURN, GameStates.SHOW_INVENTORY}:
+            screen.render(self.console)
+        else:
+            screen.render()
 
     def cleanup(self) -> None:
         """
