@@ -29,6 +29,7 @@ CALL_COMMAND_ARGUMENTS = 2
 MAX_TRAPS = 10
 HUNGERTIME = 1300
 STOMACHSIZE = 2000
+FOOD_BAD_TASTE_ROLL_THRESHOLD = 70
 MORETIME = 150
 STARVETIME = 850
 MAX_EQUIPPED_RINGS = 2
@@ -2734,15 +2735,26 @@ class GameState:
         return self._result(True, f"You drop the {item.display_name}.", True)
 
     def eat(self, value: Any = None) -> CommandResult:
-        """Consume a food ration and restore food units."""
+        """Consume food using Rogue's nutrition and taste rules."""
         item = self._find_item(value, kind=ItemKind.FOOD)
         if not item or item.kind != ItemKind.FOOD:
             return self._result(False, "You have no food to eat.")
+
         self._remove_inventory_item(item)
-        food_gain = item.nutrition + self.rng.randrange(400)
-        self.player.food_units = min(self.player.max_food_units, self.player.food_units + food_gain)
+        food_gain = HUNGERTIME - 200 + self.rng.randrange(400)
+        self.player.food_units = min(STOMACHSIZE, max(0, self.player.food_units) + food_gain)
+
+        if item.name == "slime mold":
+            message = "My, that was a yummy slime mold."
+        elif self.rng.randrange(1, 101) > FOOD_BAD_TASTE_ROLL_THRESHOLD:
+            self.player.exp += 1
+            message = "This food tastes awful."
+            self._level_up_if_needed()
+        else:
+            message = "That tasted good."
+
         self._finish_turn()
-        return self._result(True, "You eat the food.", True)
+        return self._result(True, message, True)
 
     def _use_potion(self, item: ItemState) -> str:
         effect = item.effect

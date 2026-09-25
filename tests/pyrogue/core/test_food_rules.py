@@ -1,4 +1,4 @@
-from pyrogue.core.rogue_game import HUNGERTIME, STARVETIME, GameState, ItemKind, ItemState
+from pyrogue.core.rogue_game import HUNGERTIME, STARVETIME, STOMACHSIZE, GameState, ItemKind, ItemState
 
 
 def test_food_restores_random_rogue_amount_and_caps_at_stomach_size() -> None:
@@ -13,7 +13,7 @@ def test_food_restores_random_rogue_amount_and_caps_at_stomach_size() -> None:
 
     assert game.execute("eat", [food.id]).success
 
-    assert game.player.food_units == min(game.player.max_food_units, 500 + HUNGERTIME - 200 + amount) - 1
+    assert game.player.food_units == min(STOMACHSIZE, 500 + HUNGERTIME - 200 + amount) - 1
 
 
 def test_eating_while_full_caps_food_and_consumes_the_food() -> None:
@@ -21,12 +21,79 @@ def test_eating_while_full_caps_food_and_consumes_the_food() -> None:
     game.floor.monsters.clear()
     food = ItemState(9001, ItemKind.FOOD, "food ration", nutrition=HUNGERTIME - 200)
     game.player.inventory.append(food)
-    game.player.food_units = game.player.max_food_units
+    game.player.food_units = STOMACHSIZE
 
     assert game.execute("eat", [food.id]).success
 
     assert food not in game.player.inventory
-    assert game.player.food_units == game.player.max_food_units - 1
+    assert game.player.food_units == STOMACHSIZE - 1
+
+
+def test_eating_resets_negative_hunger_before_adding_original_nutrition() -> None:
+    game = GameState(seed=31)
+    game.floor.monsters.clear()
+    food = ItemState(9002, ItemKind.FOOD, "food ration")
+    game.player.inventory.append(food)
+    game.player.food_units = -100
+    game.rng.seed(31)
+    expected_food_gain = HUNGERTIME - 200 + game.rng.randrange(400)
+    game.rng.seed(31)
+
+    assert game.execute("eat", [food.id]).success
+
+    assert game.player.food_units == expected_food_gain - 1
+
+
+def test_bad_tasting_food_grants_experience_and_levels_up() -> None:
+    game = GameState(seed=2)
+    game.floor.monsters.clear()
+    food = ItemState(9003, ItemKind.FOOD, "food ration")
+    game.player.inventory.append(food)
+    game.player.exp = 9
+    game.rng.seed(0)
+    game.rng.randrange(400)
+    assert game.rng.randrange(1, 101) > 70
+    game.rng.seed(0)
+
+    assert game.execute("eat", [food.id]).success
+
+    assert game.player.exp == 10
+    assert game.player.level == 2
+    assert any("food tastes awful" in message for message in game.messages)
+
+
+def test_good_tasting_food_does_not_grant_experience() -> None:
+    game = GameState(seed=1)
+    game.floor.monsters.clear()
+    food = ItemState(9004, ItemKind.FOOD, "food ration")
+    game.player.inventory.append(food)
+    game.rng.seed(4)
+    game.rng.randrange(400)
+    assert game.rng.randrange(1, 101) <= 70
+    game.rng.seed(4)
+
+    game.execute("eat", [food.id])
+
+    assert game.player.exp == 0
+    assert game.player.level == 1
+    assert any("tasted good" in message for message in game.messages)
+
+
+def test_fruit_skips_bad_taste_roll_and_experience() -> None:
+    game = GameState(seed=2)
+    game.floor.monsters.clear()
+    fruit = ItemState(9005, ItemKind.FOOD, "slime mold")
+    game.player.inventory.append(fruit)
+    game.rng.seed(0)
+    game.rng.randrange(400)
+    expected_next = game.rng.getstate()
+    game.rng.seed(0)
+
+    game.execute("eat", [fruit.id])
+
+    assert game.player.exp == 0
+    assert game.rng.getstate() == expected_next
+    assert any("yummy" in message for message in game.messages)
 
 
 def test_hunger_messages_trigger_when_crossing_original_thresholds() -> None:
