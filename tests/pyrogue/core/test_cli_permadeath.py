@@ -1,4 +1,7 @@
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
+
+import tcod.event
 
 from pyrogue.core.cli_engine import CLIEngine
 from pyrogue.core.engine import Engine
@@ -55,7 +58,7 @@ def test_permadeath_only_deletes_dead_canonical_state(tmp_path) -> None:
     assert SaveManager(tmp_path / "blocked").load_game_state() is None
 
 
-def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
+def test_gui_game_over_uses_shared_death_finalizer(tmp_path, monkeypatch) -> None:
     save_manager = SaveManager(tmp_path)
     with patch("pyrogue.core.engine.SaveManager", return_value=save_manager):
         engine = Engine(seed=1234)
@@ -68,7 +71,15 @@ def test_gui_game_over_uses_shared_death_finalizer(tmp_path) -> None:
     game._die("test")
     assert save_manager.save_game_state(game.to_dict())
 
-    engine.game_over()
+    engine.state = GameStates.PLAYERS_TURN
+    engine.context = Mock()
+    engine.game_screen.render = Mock()
+    engine.game_over_screen.render = Mock()
+    engine._handle_input = Mock(return_value=(True, GameStates.GAME_OVER))
+    events = iter([[SimpleNamespace(type="KEYDOWN")], [SimpleNamespace(type="QUIT")]])
+    monkeypatch.setattr(tcod.event, "wait", lambda: next(events))
+    engine.run()
+    assert engine.previous_state == GameStates.PLAYERS_TURN
 
     assert engine.game_over_screen.player_stats["score"] == 19
     assert engine.game_over_screen.player_stats["score"] == game.score

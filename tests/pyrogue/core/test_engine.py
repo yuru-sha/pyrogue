@@ -33,6 +33,8 @@ def test_engine_passes_deepest_floor_to_victory_screen(monkeypatch) -> None:
     monkeypatch.setattr(tcod.event, "wait", lambda: next(events))
 
     engine.run()
+    engine.game_screen.render.assert_called_once_with(engine.console)
 
     call = engine.victory_screen.set_victory_data.call_args
     assert call.args[1:] == (26, 1000)
+    engine.victory_screen.render.assert_called_once_with()
