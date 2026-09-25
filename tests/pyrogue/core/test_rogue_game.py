@@ -119,23 +119,159 @@ def test_uppercase_direction_runs_through_corridor_until_blocked() -> None:
     assert game.player.turns_played == 2
 
 
-def test_uppercase_run_uses_normal_trap_processing() -> None:
+def test_bear_trap_restrains_without_damage_and_persists(monkeypatch: pytest.MonkeyPatch) -> None:
     game = GameState(seed=108)
     game.floor.monsters.clear()
     x, y = game.player.position
     for row in range(y - 1, y + 2):
-        for column in range(x - 1, x + 4):
+        for column in range(x - 1, x + 3):
             game.floor.set_tile((column, row), Terrain.WALL)
-    for column in range(x, x + 3):
+    for column in range(x, x + 2):
         game.floor.set_tile((column, y), Terrain.FLOOR)
     trap = TrapState(1084, TrapKind.BEAR, x + 1, y)
     game.floor.traps = [trap]
     hp_before = game.player.hp
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: stop - 1)
 
     game.execute("L")
 
     assert trap.discovered
-    assert game.player.hp == hp_before - 2
+    assert game.player.hp == hp_before
+    restored_while_held = GameState.from_dict(game.to_dict())
+    assert restored_while_held.player.bear_trap_turns == game.player.bear_trap_turns
+    assert game.player.bear_trap_turns == 3
+    position = game.player.position
+    turns_before_wait = game.player.turns_played
+    assert game.execute("wait").turn_consumed
+    assert game.player.bear_trap_turns == 3
+    assert game.player.turns_played == turns_before_wait + 1
+    turns_before_move = game.player.turns_played
+    for _ in range(game.player.bear_trap_turns):
+        result = game.move(1, 0)
+        assert result.success
+        assert result.turn_consumed
+        assert game.player.turns_played == turns_before_move + 1
+        turns_before_move = game.player.turns_played
+        assert game.player.position == position
+    assert game.player.bear_trap_turns == 0
+    restored = GameState.from_dict(game.to_dict())
+    assert restored.floor.traps[0].discovered
+
+
+def test_poison_dart_hit_uses_rogue_damage_and_saving_throw(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=109)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    target = (x + 1, y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    trap = TrapState(1085, TrapKind.POISON_DART, *target)
+    game.floor.traps = [trap]
+    strength = game.player.strength
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: stop - 1)
+    rolls = iter((4, 1))
+    monkeypatch.setattr(game.rng, "randint", lambda low, high: next(rolls))
+
+    game.move(1, 0)
+
+    assert game.player.hp == game.player.max_hp - 4
+    assert game.player.strength == strength - 1
+    assert trap.discovered
+    assert trap in game.floor.traps
+
+
+def test_poison_dart_successful_save_prevents_strength_loss(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=114)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    target = (x + 1, y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    game.floor.traps = [TrapState(1090, TrapKind.POISON_DART, *target)]
+    strength = game.player.strength
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: stop - 1)
+    rolls = iter((4, 20))
+    monkeypatch.setattr(game.rng, "randint", lambda low, high: next(rolls))
+
+    game.move(1, 0)
+
+    assert game.player.hp == game.player.max_hp - 4
+    assert game.player.strength == strength
+
+
+def test_poison_dart_miss_has_no_poison_or_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=112)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    target = (x + 1, y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    trap = TrapState(1088, TrapKind.POISON_DART, *target)
+    game.floor.traps = [trap]
+    hp_before = game.player.hp
+    strength_before = game.player.strength
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: 0)
+
+    game.move(1, 0)
+
+    assert game.player.hp == hp_before
+    assert game.player.strength == strength_before
+    assert not any(item.name == "dart" for item in game.floor.items)
+
+
+def test_arrow_hit_rolls_one_to_six_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=113)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    target = (x + 1, y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    game.floor.traps = [TrapState(1089, TrapKind.ARROW, *target)]
+    hp_before = game.player.hp
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: stop - 1)
+    monkeypatch.setattr(game.rng, "randint", lambda low, high: high)
+
+    game.move(1, 0)
+
+    assert game.player.hp == hp_before - 6
+
+
+def test_arrow_trap_can_miss_without_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=110)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    target = (x + 1, y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    trap = TrapState(1086, TrapKind.ARROW, *target)
+    game.floor.traps = [trap]
+    game.player.level = 1
+    game.player.armor_class = -10
+    hp_before = game.player.hp
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: 0)
+
+    game.move(1, 0)
+
+    assert game.player.hp == hp_before
+    assert trap.discovered
+    dropped = next(item for item in game.floor.items if item.name == "arrow")
+    assert dropped.position == game.player.position
+
+
+def test_sleeping_gas_blocks_commands_for_rogue_spread_duration() -> None:
+    game = GameState(seed=111)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    target = (x + 1, y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    game.floor.traps = [TrapState(1087, TrapKind.SLEEPING_GAS, *target)]
+
+    game.move(1, 0)
+    position = game.player.position
+    sleep_turns = game.player.sleep_turns
+    assert sleep_turns == 5
+    restored = GameState.from_dict(game.to_dict())
+    assert restored.player.sleep_turns == 5
+    results = [game.execute("wait") for _ in range(sleep_turns)]
+
+    assert all(result.message == "You are still asleep." for result in results)
+    assert game.player.position == position
+    assert game.player.sleep_turns == 0
 
 
 def test_call_renames_an_item_without_consuming_a_turn() -> None:
@@ -1067,7 +1203,7 @@ def test_old_save_version_is_rejected() -> None:
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.7"
+    assert GAME_VERSION == "0.3.8"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
@@ -1312,44 +1448,6 @@ def test_cursed_ring_cannot_be_removed() -> None:
 
     assert not result.success
     assert ring.id in game.player.equipped_rings
-
-
-@pytest.mark.parametrize(
-    ("kind", "expected_hp"),
-    [
-        (TrapKind.BEAR, 10),
-        (TrapKind.ARROW, 9),
-    ],
-)
-def test_damage_traps_reveal_and_damage_the_player(kind: TrapKind, expected_hp: int) -> None:
-    game = GameState(1234)
-    game.floor.monsters.clear()
-    direction, position = _walkable_direction(game)
-    trap = TrapState(1000, kind, *position)
-    game.floor.traps = [trap]
-
-    result = game.execute("move", [direction])
-
-    assert result.success
-    assert trap.discovered
-    assert game.player.hp == expected_hp
-    assert game.current_floor == 1
-
-
-def test_poison_dart_trap_deals_randomized_damage_and_weakens_the_player() -> None:
-    game = GameState(1234)
-    game.floor.monsters.clear()
-    direction, position = _walkable_direction(game)
-    trap = TrapState(1000, TrapKind.POISON_DART, *position)
-    game.floor.traps = [trap]
-
-    result = game.execute("move", [direction])
-
-    assert result.success
-    assert trap.discovered
-    assert 8 <= game.player.hp <= 11
-    assert game.player.strength == 15
-    assert game.current_floor == 1
 
 
 def test_teleport_trap_reveals_and_moves_the_player() -> None:

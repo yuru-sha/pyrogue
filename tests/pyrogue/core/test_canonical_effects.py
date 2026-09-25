@@ -851,7 +851,7 @@ def test_regeneration_ring_heals_one_hp_per_turn() -> None:
     assert game.player.hp == 6
 
 
-def test_sustain_ring_prevents_poison_dart_strength_loss() -> None:
+def test_sustain_ring_prevents_poison_dart_strength_loss(monkeypatch: pytest.MonkeyPatch) -> None:
     def adjacent_target(game: GameState) -> tuple[int, int, int, int]:
         px, py = game.player.position
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
@@ -863,6 +863,8 @@ def test_sustain_ring_prevents_poison_dart_strength_loss() -> None:
     without_ring.floor.monsters.clear()
     tx, ty, dx, dy = adjacent_target(without_ring)
     without_ring.floor.traps.append(TrapState(907, TrapKind.POISON_DART, tx, ty))
+    without_ring.player.armor_class = 30
+    monkeypatch.setattr(without_ring.rng, "randint", lambda low, high: low)
     without_ring.move(dx, dy)
 
     with_ring = GameState(seed=6)
@@ -872,6 +874,8 @@ def test_sustain_ring_prevents_poison_dart_strength_loss() -> None:
     assert with_ring.equip(ring.id, ItemKind.RING).success
     tx, ty, dx, dy = adjacent_target(with_ring)
     with_ring.floor.traps.append(TrapState(909, TrapKind.POISON_DART, tx, ty))
+    with_ring.player.armor_class = 30
+    monkeypatch.setattr(with_ring.rng, "randint", lambda low, high: low)
     with_ring.move(dx, dy)
 
     assert without_ring.player.strength == 15

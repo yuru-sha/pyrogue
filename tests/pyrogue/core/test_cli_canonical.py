@@ -30,8 +30,9 @@ def test_cli_death_prints_summary_and_removes_save(tmp_path, monkeypatch, capsys
     game = cli.game_state
     game.floor.monsters.clear()
     game.player.hp = 1
+    game.player.armor_class = 30
     direction, position = _walkable_step(game)
-    game.floor.traps = [TrapState(999, TrapKind.BEAR, *position)]
+    game.floor.traps = [TrapState(999, TrapKind.ARROW, *position)]
 
     assert cli.process_command(f"move {direction}") is True
 
