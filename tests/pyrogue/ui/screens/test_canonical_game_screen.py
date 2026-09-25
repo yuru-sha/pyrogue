@@ -310,10 +310,10 @@ def test_headless_gui_tab_changes_canonical_render_visibility() -> None:
     game.floor.traps.append(TrapState(5002, TrapKind.TRAP_DOOR, *trap_position))
     explored_before = set(game.floor.explored)
     map_positions = {
-        "terrain": (terrain_position[0], terrain_position[1] + 2),
-        "monster": (monster_position[0], monster_position[1] + 2),
-        "item": (item_position[0], item_position[1] + 2),
-        "trap": (trap_position[0], trap_position[1] + 2),
+        "terrain": (terrain_position[0], terrain_position[1] + 1),
+        "monster": (monster_position[0], monster_position[1] + 1),
+        "item": (item_position[0], item_position[1] + 1),
+        "trap": (trap_position[0], trap_position[1] + 1),
     }
 
     game_screen.render(console)

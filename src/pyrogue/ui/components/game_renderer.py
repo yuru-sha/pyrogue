@@ -26,14 +26,12 @@ class GameRenderer:
             if cell.terrain is None:
                 continue
             x, y = cell.position
-            if 0 <= x < console.width and 0 <= y + 2 < console.height:
+            if 0 <= x < console.width and 0 <= y + 1 < console.height - 1:
                 color = (255, 255, 255) if cell.visible else (80, 80, 80)
-                console.print(x, y + 2, cell_glyph(cell), fg=color)
+                console.print(x, y + 1, cell_glyph(cell), fg=color)
 
         if console.width:
-            console.print(1, 0, game.status_text()[: max(0, console.width - 2)], fg=(255, 255, 255))
-            console.print(1, 1, f"B{game.current_floor}F", fg=(255, 255, 255))
-            for offset, message in enumerate(game.messages[-7:]):
-                y = game.height + 2 + offset
-                if y < console.height:
-                    console.print(0, y, str(message)[: console.width], fg=(255, 255, 255))
+            message = game.messages[-1] if game.messages else ""
+            status = f"B{game.current_floor}F  {game.status_text()}"
+            console.print(0, 0, str(message)[: console.width], fg=(255, 255, 255))
+            console.print(0, console.height - 1, status[: console.width], fg=(255, 255, 255))
