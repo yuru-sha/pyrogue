@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 Position = tuple[int, int]
 
-GAME_VERSION = "0.3.5"
+GAME_VERSION = "0.3.6"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -133,6 +133,8 @@ class Terrain(str, Enum):
     DOOR_OPEN = "door_open"
     STAIRS_UP = "stairs_up"
     STAIRS_DOWN = "stairs_down"
+    SECRET_DOOR = "secret_door"  # noqa: S105
+    HIDDEN_PASSAGE = "hidden_passage"
 
 
 TileKind = Terrain
@@ -526,9 +528,12 @@ class FloorState:
     def is_walkable(self, position: Position, doors_open: bool = False) -> bool:
         """Return whether the player can enter a position."""
         terrain = self.tile_at(position)
-        return terrain in {Terrain.FLOOR, Terrain.DOOR_OPEN, Terrain.STAIRS_UP, Terrain.STAIRS_DOWN} or (
-            doors_open and terrain == Terrain.DOOR_CLOSED
-        )
+        return terrain in {
+            Terrain.FLOOR,
+            Terrain.DOOR_OPEN,
+            Terrain.STAIRS_UP,
+            Terrain.STAIRS_DOWN,
+        } or (doors_open and terrain == Terrain.DOOR_CLOSED)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the floor to JSON-compatible values."""
@@ -763,9 +768,11 @@ class DungeonGenerator:
         self.width = width
         self.height = height
         self.rng = rng or random.Random()  # noqa: S311 - game randomness is not cryptographic
+        self._floor_number = 1
 
     def generate(self, floor_number: int) -> FloorState:
         """Generate one deterministic floor."""
+        self._floor_number = floor_number
         floor = self._generate_rooms(floor_number)
         if floor.up_stairs and floor.down_stairs and not self._path_exists(floor, floor.up_stairs, floor.down_stairs):
             raise RuntimeError
@@ -952,11 +959,17 @@ class DungeonGenerator:
 
         turn_spot = self.rng.randrange(primary_distance - 1) + 1 if primary_distance > 1 else 1
         if first:
-            tiles[start[1]][start[0]] = Terrain.FLOOR if first.is_maze else Terrain.DOOR_CLOSED
+            if first.is_maze:
+                tiles[start[1]][start[0]] = Terrain.FLOOR
+            else:
+                tiles[start[1]][start[0]] = self._door_terrain()
         else:
             self._carve_passage(tiles, *start)
         if second:
-            tiles[end[1]][end[0]] = Terrain.FLOOR if second.is_maze else Terrain.DOOR_CLOSED
+            if second.is_maze:
+                tiles[end[1]][end[0]] = Terrain.FLOOR
+            else:
+                tiles[end[1]][end[0]] = self._door_terrain()
         else:
             self._carve_passage(tiles, *end)
 
@@ -971,6 +984,12 @@ class DungeonGenerator:
                     x += turn_delta[0]
                     y += turn_delta[1]
             self._carve_passage(tiles, x, y)
+
+    def _door_terrain(self) -> Terrain:
+        """Return a Rogue-style hidden or visible room exit."""
+        if self.rng.randrange(10) + 1 < self._floor_number and self.rng.randrange(5) == 0:
+            return Terrain.SECRET_DOOR
+        return Terrain.DOOR_CLOSED
 
     def _maze_port(
         self,
@@ -1000,7 +1019,8 @@ class DungeonGenerator:
 
     def _carve_passage(self, tiles: list[list[Terrain]], x: int, y: int) -> None:
         if 0 < x < self.width - 1 and 0 < y < self.height - 1 and tiles[y][x] == Terrain.WALL:
-            tiles[y][x] = Terrain.FLOOR
+            hidden = self.rng.randrange(10) + 1 < self._floor_number and self.rng.randrange(40) == 0
+            tiles[y][x] = Terrain.HIDDEN_PASSAGE if hidden else Terrain.FLOOR
 
     def _reachable_positions(self, tiles: list[list[Terrain]], start: Position) -> set[Position]:
         seen = {start}
@@ -1872,7 +1892,11 @@ class GameState:
         if max(abs(start[0] - end[0]), abs(start[1] - end[1])) > radius:
             return False
         points = self._line(start, end)
-        return all(self.floor.tile_at(point) not in {Terrain.WALL, Terrain.DOOR_CLOSED} for point in points[1:-1])
+        return all(
+            self.floor.tile_at(point)
+            not in {Terrain.WALL, Terrain.DOOR_CLOSED, Terrain.SECRET_DOOR, Terrain.HIDDEN_PASSAGE}
+            for point in points[1:-1]
+        )
 
     def _calculate_visible_positions(self) -> set[Position]:
         """Calculate the cells visible from the player without changing state."""
@@ -2036,7 +2060,7 @@ class GameState:
                 setattr(self.player, state, value - 1)
         if self.status == GameStatus.PLAYING:
             if self.player.has_ring_effect("search"):
-                self._reveal_nearby_traps()
+                self._search_adjacent_hidden_features()
             regeneration = sum(
                 1
                 for ring_id in self.player.equipped_rings
@@ -3109,19 +3133,32 @@ class GameState:
             self._die(trap.kind.value)
         return message
 
-    def _reveal_nearby_traps(self) -> bool:
+    def _search_adjacent_hidden_features(self) -> bool:
+        """Search neighboring cells using Rogue 5.4's probability modifiers."""
         found = False
-        for trap in self.floor.traps:
-            if max(abs(trap.x - self.player.x), abs(trap.y - self.player.y)) <= 1:
-                trap.discovered = True
-                found = True
+        probability_modifier = (3 if self.player.hallucination_turns else 0) + (2 if self.player.blind_turns else 0)
+        for y in range(self.player.y - 1, self.player.y + 2):
+            for x in range(self.player.x - 1, self.player.x + 2):
+                if (x, y) == self.player.position:
+                    continue
+                terrain = self.floor.tile_at((x, y))
+                if terrain == Terrain.SECRET_DOOR and self.rng.randrange(5 + probability_modifier) == 0:
+                    self.floor.set_tile((x, y), Terrain.DOOR_CLOSED)
+                    found = True
+                elif terrain == Terrain.HIDDEN_PASSAGE and self.rng.randrange(3 + probability_modifier) == 0:
+                    self.floor.set_tile((x, y), Terrain.FLOOR)
+                    found = True
+                trap = next((trap for trap in self.floor.traps if (trap.x, trap.y) == (x, y)), None)
+                if trap is not None and not trap.discovered and self.rng.randrange(2 + probability_modifier) == 0:
+                    trap.discovered = True
+                    found = True
         return found
 
     def search(self) -> CommandResult:
-        """Search adjacent cells for undiscovered traps."""
-        found = self._reveal_nearby_traps()
+        """Search adjacent cells for hidden doors, passages, and traps."""
+        found = self._search_adjacent_hidden_features()
         self._finish_turn()
-        return self._result(True, "You found a trap." if found else "You find nothing.", True)
+        return self._result(True, "You found something." if found else "You find nothing.", True)
 
     def identify_trap(self, direction: Position = (0, -1)) -> CommandResult:
         """Identify a trap in an adjacent cell without consuming a turn."""

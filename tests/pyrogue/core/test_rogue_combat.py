@@ -196,6 +196,7 @@ def test_pursuer_routes_around_a_blocking_monster() -> None:
             game.floor.set_tile((x, y), Terrain.FLOOR)
     blocker = MonsterState(900, "centaur", 9, 5, 100)
     pursuer = MonsterState(901, "snake", 10, 5, 100)
+    pursuer.running = True
     game.floor.monsters.extend((blocker, pursuer))
 
     game.execute("wait")
@@ -276,9 +277,11 @@ def test_flying_bat_gets_second_move_after_a_random_stay() -> None:
 def test_visible_greedy_orc_chases_gold_in_players_room() -> None:
     game = GameState(seed=129)
     game.floor.monsters.clear()
+    game.floor.items.clear()
     game.floor.rooms = [Room(5, 5, 15, 5)]
     game.player.position = (5, 7)
     orc = MonsterState(905, "orc", 10, 7, 100)
+    orc.running = True
     gold = ItemState(906, ItemKind.GOLD, "gold", position=(12, 7))
     game.floor.monsters.append(orc)
     game.floor.items.append(gold)

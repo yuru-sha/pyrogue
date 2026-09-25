@@ -183,7 +183,7 @@ class HelpMenuScreen:
                     "  ?          - Show help (in-game)",
                     "  o          - Open doors",
                     "  c          - Close doors",
-                    "  s          - Search for traps",
+                    "  s          - Search for secret doors, passages, and traps",
                     "",
                     "System Commands:",
                     "  Ctrl+S     - Save game",
