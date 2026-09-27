@@ -261,7 +261,7 @@ class SaveManager:
             self.last_error = SaveError("Unsupported legacy save format")
             return False
 
-        required_keys = ("seed", "player", "floors", "rng_state")
+        required_keys = ("seed", "player", "floors", "rng_state", "wander_turns", "wander_checks")
         object_fields = ("player", "floors")
 
         missing_keys = [key for key in required_keys if key not in game_data]

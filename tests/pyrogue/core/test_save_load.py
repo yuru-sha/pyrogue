@@ -24,6 +24,8 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game.player.max_strength = 21
     game.player.inventory[0].called_name = "last resort"
     game._floors_without_food = 3
+    game._wander_turns = 41
+    game._wander_checks = 2
     monster = game.floor.monsters[0]
     monster.hp -= 1
     monster.running = True
@@ -31,6 +33,7 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     monster.invisible = True
     monster.hasted = True
     monster.slowed = True
+    monster.slow_turn = False
     monster.confused_turns = 5
     monster.cancelled = True
     monster.mean_override = True
@@ -71,7 +74,7 @@ def test_load_defaults_new_monster_fields_for_older_saves() -> None:
     old_monster.pop("carry_search_room_index")
     old_monster.pop("mean_override")
     old_state["player"].pop("max_strength")
-    for field in ("held", "invisible", "hasted", "slowed", "confused_turns", "cancelled"):
+    for field in ("held", "invisible", "hasted", "slowed", "slow_turn", "confused_turns", "cancelled"):
         old_monster.pop(field)
 
     monster = GameState.from_dict(old_state).floor.monsters[0]
@@ -89,6 +92,37 @@ def test_load_defaults_new_monster_fields_for_older_saves() -> None:
     assert monster.confused_turns == 0
     assert not monster.cancelled
     assert not monster.mean_override
+    assert monster.slow_turn
+
+
+def test_save_load_preserves_wandering_and_slow_turn_continuity() -> None:
+    data = GameState(4321).to_dict()
+    data["wander_turns"] = 2
+    data["wander_checks"] = 3
+    monster = data["floors"]["1"]["monsters"][0]
+    monster["slowed"] = True
+    monster["slow_turn"] = True
+    uninterrupted = GameState.from_dict(data)
+    restored = GameState.from_dict(json.loads(json.dumps(uninterrupted.to_dict())))
+
+    for _ in range(4):
+        uninterrupted.execute("wait")
+        restored.execute("wait")
+
+    assert restored.to_dict() == uninterrupted.to_dict()
+
+
+@pytest.mark.parametrize("missing_field", ["wander_turns", "wander_checks"])
+def test_save_manager_rejects_missing_wandering_state(tmp_path, missing_field: str) -> None:
+    manager = SaveManager(tmp_path)
+    payload = GameState(4321).to_dict()
+    del payload[missing_field]
+
+    assert not manager.save_game_state(payload)
+    assert manager.last_error is not None
+    assert missing_field in str(manager.last_error)
+    with pytest.raises(SaveCompatibilityError):
+        GameState.from_dict(payload)
 
 
 def test_save_manager_rejects_unsupported_spec_version(tmp_path) -> None:

@@ -1203,7 +1203,7 @@ def test_old_save_version_is_rejected() -> None:
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.9"
+    assert GAME_VERSION == "0.3.10"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:

@@ -696,7 +696,8 @@ def test_zap_light_wand_preserves_game_over_state_after_enemy_turn() -> None:
     game.floor.monsters.clear()
     _, monster_position = _walkable_direction(game)
     game.player.hp = 1
-    game.floor.monsters.append(MonsterState(1003, "dragon", *monster_position, hp=45))
+    game.floor.monsters.append(MonsterState(1003, "troll", *monster_position, hp=45))
+    game.player.armor_class = 100
     wand = ItemState(id=1004, kind=ItemKind.WAND, name="light", charges=1, effect="light")
     game.player.inventory = [wand]
     game_over_called = False
