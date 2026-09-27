@@ -164,6 +164,21 @@ def test_identification_scroll_without_target_is_free_and_preserved() -> None:
     assert game.player.turns_played == 0
 
 
+def test_identification_scroll_rejects_known_target_without_consuming_turn() -> None:
+    game = GameState(seed=237)
+    scroll = ItemState(995, ItemKind.SCROLL, "identify scroll", identified=False, effect="identify")
+    potion = ItemState(996, ItemKind.POTION, "healing potion", identified=True, effect="healing")
+    game.player.inventory.extend((scroll, potion))
+
+    result = game.read(scroll.id, potion.id)
+
+    assert not result.success
+    assert not result.turn_consumed
+    assert scroll in game.player.inventory
+    assert potion.identified
+    assert game.player.turns_played == 0
+
+
 def test_remove_curse_only_uncurses_equipped_items() -> None:
     game = GameState(seed=232)
     game.floor.monsters.clear()

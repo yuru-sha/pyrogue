@@ -434,7 +434,8 @@ def test_gui_generic_identification_scroll_selects_one_item() -> None:
     game.floor.monsters.clear()
     scroll = ItemState(1020, ItemKind.SCROLL, "identify scroll", identified=False, effect="identify")
     potion = ItemState(1021, ItemKind.POTION, "red potion", identified=False, effect="healing")
-    game.player.inventory = [scroll, potion]
+    known_ring = ItemState(1022, ItemKind.RING, "ring of protection", identified=True, effect="protection")
+    game.player.inventory = [scroll, potion, known_ring]
 
     assert game_screen.handle_key(key_event("r")) == GameStates.SHOW_INVENTORY
     game_screen.engine.state = GameStates.SHOW_INVENTORY

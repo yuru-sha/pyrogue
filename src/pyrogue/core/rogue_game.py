@@ -2893,12 +2893,12 @@ class GameState:
         identify_effect = effect in {"identify", *SCROLL_IDENTIFY_TARGETS}
         if identify_effect:
             target = self._find_item(target_value) if target_value is not None else None
-            eligible = target is not None and target is not item
+            eligible = target is not None and target is not item and not target.identified
             matching_kind = effect == "identify" or (
                 target is not None and target.kind in SCROLL_IDENTIFY_TARGETS[effect]
             )
             if not eligible or not matching_kind:
-                return self._result(False, "Choose an item of the matching type to identify.")
+                return self._result(False, "Choose an unidentified item of the matching type to identify.")
         learned = effect in {
             "identify",
             "identify_potion",

@@ -42,9 +42,9 @@ class InventoryScreen(Screen):
             if scroll is None:
                 return []
             if scroll.effect == "identify":
-                return [item for item in items if item.id != scroll.id]
+                return [item for item in items if item.id != scroll.id and not item.identified]
             kinds = SCROLL_IDENTIFY_TARGETS.get(scroll.effect, frozenset())
-            return [item for item in items if item.id != scroll.id and item.kind in kinds]
+            return [item for item in items if item.id != scroll.id and item.kind in kinds and not item.identified]
         return items
 
     def _clamp_selection(self, items: list[ItemState]) -> None:
@@ -230,7 +230,9 @@ class InventoryScreen(Screen):
             if item.effect == "identify" or item.effect in SCROLL_IDENTIFY_TARGETS:
                 target_kinds = SCROLL_IDENTIFY_TARGETS.get(item.effect, frozenset())
                 if not any(
-                    target.id != item.id and (item.effect == "identify" or target.kind in target_kinds)
+                    target.id != item.id
+                    and not target.identified
+                    and (item.effect == "identify" or target.kind in target_kinds)
                     for target in self.game_screen.player.inventory
                 ):
                     self.game_screen.input_handler.reset_selection()
