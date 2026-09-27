@@ -2756,10 +2756,17 @@ class GameState:
         self._finish_turn()
         return self._result(True, message, True)
 
+    def _extend_potion_duration(self, remaining: int, duration: int) -> int:
+        """Apply Rogue's spread duration, extending an already-active potion effect."""
+        rolled = self._spread(duration)
+        return remaining + rolled if remaining else rolled
+
     def _use_potion(self, item: ItemState) -> str:
         effect = item.effect
         if effect == "hallucination":
-            self.player.hallucination_turns = HALLUCINATION_TURNS
+            self.player.hallucination_turns = self._extend_potion_duration(
+                self.player.hallucination_turns, HALLUCINATION_TURNS
+            )
             message = "Oh, wow! Everything seems so cosmic!"
         elif effect == "poison":
             if self.player.has_ring_effect("sustain"):
@@ -2768,16 +2775,18 @@ class GameState:
                 self.player.strength = max(1, self.player.strength - self.rng.randrange(3) - 1)
                 message = "You feel very sick."
         elif effect == "confusion":
-            self.player.confused_turns = max(self.player.confused_turns, HUH_DURATION)
+            self.player.confused_turns = self._extend_potion_duration(self.player.confused_turns, HUH_DURATION)
             message = "You feel confused."
         elif effect == "see_invisible":
-            self.player.see_invisible_turns = max(self.player.see_invisible_turns, HALLUCINATION_TURNS)
+            self.player.see_invisible_turns = self._extend_potion_duration(
+                self.player.see_invisible_turns, HALLUCINATION_TURNS
+            )
             message = "You can see invisible things."
         elif effect == "blindness":
-            self.player.blind_turns = max(self.player.blind_turns, BLINDNESS_TURNS)
+            self.player.blind_turns = self._extend_potion_duration(self.player.blind_turns, BLINDNESS_TURNS)
             message = "A cloak of darkness falls around you."
         elif effect == "levitation":
-            self.player.levitation_turns = max(self.player.levitation_turns, LEVITATION_TURNS)
+            self.player.levitation_turns = self._extend_potion_duration(self.player.levitation_turns, LEVITATION_TURNS)
             message = "You start to float in the air."
         elif effect == "haste_self":
             if self.player.haste_turns > 0:
@@ -2842,9 +2851,31 @@ class GameState:
         item = self._find_item(value, kind=ItemKind.POTION)
         if not item or item.kind != ItemKind.POTION:
             return self._result(False, "You have no potion to drink.")
+        effect = item.effect
+        was_hallucinating = self.player.hallucination_turns > 0
         message = self._use_potion(item)
-        self._identify_item(item)
+        learned = effect in {
+            "poison",
+            "strength",
+            "healing",
+            "raise_level",
+            "extra_healing",
+            "haste_self",
+            "blindness",
+            "hallucination",
+            "levitation",
+        }
+        if effect == "confusion":
+            learned = not was_hallucinating
+        elif effect == "magic_detection":
+            learned = message.startswith("You sense magic at ")
+        if learned:
+            self._identify_item(item)
         self._remove_inventory_item(item)
+        if effect == "haste_self":
+            if getattr(self, "_update_explored", True):
+                self.visible_positions()
+            return self._result(True, message, False)
         self._finish_turn()
         return self._result(True, message, True)
 
@@ -2859,24 +2890,35 @@ class GameState:
             if self.player.equipped(kind) is None:
                 return self._result(False, f"You have no {kind.value} to enchant.")
         target: ItemState | None = None
-        if effect in SCROLL_IDENTIFY_TARGETS:
+        identify_effect = effect in {"identify", *SCROLL_IDENTIFY_TARGETS}
+        if identify_effect:
             target = self._find_item(target_value) if target_value is not None else None
-            if target is None or target.kind not in SCROLL_IDENTIFY_TARGETS[effect]:
-                return self._result(False, "Choose an item of the matching type to identify.")
-        self._identify_item(item)
-        if effect in {"identify", "identify_potion", "identify_weapon", "identify_armor", "identify_ring_wand"}:
-            if effect == "identify":
-                for other in self.player.inventory:
-                    if other.kind in {ItemKind.POTION, ItemKind.SCROLL, ItemKind.RING, ItemKind.WAND}:
-                        self._identify_item(other)
-                message = "You identify the objects in your pack."
-            else:
-                target = cast("ItemState", target)
-                self._identify_item(target)
-                message = f"You identify the {target.name}."
+            eligible = target is not None and target is not item and not target.identified
+            matching_kind = effect == "identify" or (
+                target is not None and target.kind in SCROLL_IDENTIFY_TARGETS[effect]
+            )
+            if not eligible or not matching_kind:
+                return self._result(False, "Choose an unidentified item of the matching type to identify.")
+        learned = effect in {
+            "identify",
+            "identify_potion",
+            "identify_weapon",
+            "identify_armor",
+            "identify_ring_wand",
+            "sleep",
+            "magic_mapping",
+        }
+        if identify_effect:
+            target = cast("ItemState", target)
+            target.identified = True
+            if target.name not in self.player.identified_item_names:
+                self.player.identified_item_names.append(target.name)
+            message = f"You identify the {target.name}."
         elif effect == "remove_curse":
-            for other in self.player.inventory:
-                other.cursed = False
+            for item_id in self.player.equipped_item_ids:
+                equipped = self.player.item(item_id)
+                if equipped:
+                    equipped.cursed = False
             message = "You feel as if somebody is watching over you."
         elif effect == "enchant_weapon":
             weapon = cast("ItemState", self.player.equipped(ItemKind.WEAPON))
@@ -2911,6 +2953,7 @@ class GameState:
             for monster in monsters:
                 monster.held = True
                 monster.running = False
+            learned = bool(monsters)
             message = "The monsters around you freeze." if monsters else "You feel a strange sense of loss."
         elif effect == "sleep":
             self.player.sleep_turns = max(self.player.sleep_turns, self.rng.randrange(SLEEP_TURNS) + 4)
@@ -2918,11 +2961,9 @@ class GameState:
         elif effect == "scare_monster":
             message = "You hear maniacal laughter in the distance."
         elif effect == "food_detection":
-            positions = ", ".join(
-                str(food.position)
-                for food in self.floor.items
-                if food.kind == ItemKind.FOOD and food.position is not None
-            )
+            foods = [food for food in self.floor.items if food.kind == ItemKind.FOOD and food.position is not None]
+            positions = ", ".join(str(food.position) for food in foods)
+            learned = bool(foods)
             message = f"You smell food at {positions}." if positions else "Your nose tingles."
         elif effect == "create_monster":
             adjacent = [
@@ -2945,13 +2986,18 @@ class GameState:
             self._illuminate_current_area()
             message = "The room is lit."
         elif effect == "teleport":
+            old_room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
             old_position, new_position = self._teleport_player()
+            new_room = next((room for room in self.floor.rooms if room.contains(*new_position)), None)
+            learned = old_room is not new_room
             message = f"You teleport from {old_position} to {new_position}."
         elif effect == "magic_mapping":
             self.floor.explored.update((x, y) for y in range(self.height) for x in range(self.width))
             message = "You feel more familiar with the dungeon."
         else:
             message = "The scroll disappears in a flash of light."
+        if learned:
+            self._identify_item(item)
         self._remove_inventory_item(item)
         self._finish_turn()
         return self._result(True, message, True)
@@ -3059,6 +3105,7 @@ class GameState:
             if direction is None or direction not in DIRECTIONS.values():
                 return self._result(False, "You need to choose a direction.")
             _, target = self._trace_projectile(direction)
+        learned = item.effect in {"light", "magic_missile", "lightning", "fire", "cold"}
         item.charges -= 1
         if (
             target
@@ -3160,7 +3207,18 @@ class GameState:
             message = "Nothing happens."
         else:
             message = "The wand has no visible effect."
-        self._identify_item(item)
+        if item.effect == "polymorph" and target:
+            visible = self.visible_positions(update_explored=False)
+            learned = (target.x, target.y) in visible and (
+                target.cancelled
+                or not (target.invisible or "invisible" in target.definition.abilities)
+                or target.revealed
+                or self.player.see_invisible_turns > 0
+                or self.player.has_ring_effect("see_invisible")
+                or self.player.monster_detection_turns > 0
+            )
+        if learned:
+            self._identify_item(item)
         self._finish_turn()
         return self._result(True, message, True)
 
