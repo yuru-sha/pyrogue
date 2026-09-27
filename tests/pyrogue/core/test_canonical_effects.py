@@ -605,7 +605,7 @@ def test_haste_and_slow_wands_change_monster_speed(effect: str, state: str) -> N
     game = GameState(seed=272)
     game.floor.monsters.clear()
     direction, position = _walkable_direction(game)
-    monster = MonsterState(960, "bat", *position, 20)
+    monster = MonsterState(960, "bat", *position, 20, slow_turn=False)
     wand = ItemState(961, ItemKind.WAND, f"{effect} wand", effect=effect, charges=1)
     game.floor.monsters.append(monster)
     game.player.inventory.append(wand)
@@ -615,6 +615,8 @@ def test_haste_and_slow_wands_change_monster_speed(effect: str, state: str) -> N
     assert result.success
     assert getattr(monster, state)
     assert wand.charges == 0
+    if effect == "slow_monster":
+        assert not monster.slow_turn
 
 
 def test_polymorph_wand_replaces_target_monster_stats() -> None:
@@ -622,7 +624,7 @@ def test_polymorph_wand_replaces_target_monster_stats() -> None:
     game.floor.monsters.clear()
     game.floor.explored.clear()
     direction, position = _walkable_direction(game)
-    monster = MonsterState(962, "bat", *position, 100)
+    monster = MonsterState(962, "bat", *position, 100, slow_turn=False)
     wand = ItemState(963, ItemKind.WAND, "wand of polymorph", identified=False, effect="polymorph", charges=1)
     game.floor.monsters.append(monster)
     game.player.inventory.append(wand)
@@ -634,6 +636,7 @@ def test_polymorph_wand_replaces_target_monster_stats() -> None:
     assert not game.floor.explored
     assert monster.max_hp < 100
     assert monster.hp == monster.max_hp
+    assert monster.slow_turn
 
 
 def test_polymorph_into_invisible_monster_does_not_learn_wand(monkeypatch) -> None:
@@ -993,7 +996,7 @@ def test_slow_digestion_ring_can_skip_food_consumption() -> None:
     assert game.player.food_units == 1000
 
 
-def test_searching_ring_reveals_adjacent_traps_after_a_turn() -> None:
+def test_searching_ring_reveals_adjacent_traps_after_a_turn(monkeypatch: pytest.MonkeyPatch) -> None:
     game = GameState(seed=4)
     game.floor.monsters.clear()
     ring = ItemState(id=905, kind=ItemKind.RING, name="ring of searching", effect="search")
@@ -1007,6 +1010,7 @@ def test_searching_ring_reveals_adjacent_traps_after_a_turn() -> None:
     )
     trap = TrapState(904, TrapKind.BEAR, *trap_position)
     game.floor.traps.append(trap)
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: 0)
 
     result = game.wait()
 

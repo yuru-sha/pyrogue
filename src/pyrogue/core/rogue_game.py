@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
-GAME_VERSION = "0.3.9"
+GAME_VERSION = "0.3.10"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -88,11 +88,21 @@ MONSTER_SPAWN_ORDER = (
     "jabberwock",
     "dragon",
 )
+WANDERING_MONSTER_ORDER = tuple(
+    monster_id
+    for monster_id in MONSTER_SPAWN_ORDER
+    if monster_id not in {"ice_monster", "leprechaun", "nymph", "venus_flytrap", "xeroc", "dragon"}
+)
 MONSTER_DISGUISES = ("potion", "scroll", "ring", "wand", "food", "weapon", "armor", "stairs", "gold", "amulet")
 SLEEP_TURNS = 5
 BEAR_TRAP_TURNS = 3
 HALLUCINATION_TURNS = 850
 BLINDNESS_TURNS = 850
+WANDER_DELAY = 70
+WANDER_CHECK_INTERVAL = 4
+WANDER_SPAWN_ROLL_RANGE = 6
+WANDER_SPAWN_ROLL_SUCCESS = 3
+MIN_ROOM_DIMENSION = 3
 LEVITATION_TURNS = 30
 TREASURE_ROOM_CHANCE = 20
 MIN_TREASURE_ITEMS = 2
@@ -367,6 +377,7 @@ class MonsterState:
     invisible: bool = False
     hasted: bool = False
     slowed: bool = False
+    slow_turn: bool = True
     confused_turns: int = 0
     cancelled: bool = False
     mean_override: bool = False
@@ -416,6 +427,7 @@ class MonsterState:
             "confused_turns": self.confused_turns,
             "cancelled": self.cancelled,
             "mean_override": self.mean_override,
+            "slow_turn": self.slow_turn,
             "max_hp": self.max_hp,
             "exp_value": self.exp_value,
             "running": self.running,
@@ -444,6 +456,7 @@ class MonsterState:
             slowed=bool(data.get("slowed", False)),
             confused_turns=int(data.get("confused_turns", 0)),
             cancelled=bool(data.get("cancelled", False)),
+            slow_turn=bool(data.get("slow_turn", True)),
             mean_override=bool(data.get("mean_override", False)),
             max_hp=int(data["max_hp"]) if data.get("max_hp") is not None else None,
             exp_value=int(data["exp_value"]) if data.get("exp_value") is not None else None,
@@ -1534,11 +1547,14 @@ class GameState:
         self._next_trap_id = 1
         self._floors_without_food = 0
         self._last_command: tuple[str, list[Any]] | None = None
+        self._wander_turns = 0
+        self._wander_checks = 0
         self._appearance_names = self._make_appearances()
         self._ensure_floor(1)
         self._setup_initial_inventory(self.floor)
         self.player.position = self.floor.up_stairs or self._first_floor_position(self.floor)
         self.visible_positions()
+        self._wander_turns = self._spread_turns(WANDER_DELAY)
         self._message("You enter the Dungeons of Doom.")
 
     @property
@@ -1828,15 +1844,19 @@ class GameState:
         avoid: Iterable[Position] = (),
         level_offset: int = 0,
         mean_override: bool = False,
+        type_id: str | None = None,
+        carry_item: bool = True,
     ) -> MonsterState:
         """Create one level-appropriate monster and its possible carried item."""
         level = floor.number + level_offset
-        index = level + self.rng.randrange(10) - 6
-        if index < 0:
-            index = self.rng.randrange(5)
-        elif index >= len(MONSTER_SPAWN_ORDER):
-            index = self.rng.randrange(5) + len(MONSTER_SPAWN_ORDER) - 5
-        definition = MONSTER_BY_ID[MONSTER_SPAWN_ORDER[index]]
+        if type_id is None:
+            index = level + self.rng.randrange(10) - 6
+            if index < 0:
+                index = self.rng.randrange(5)
+            elif index >= len(MONSTER_SPAWN_ORDER):
+                index = self.rng.randrange(5) + len(MONSTER_SPAWN_ORDER) - 5
+            type_id = MONSTER_SPAWN_ORDER[index]
+        definition = MONSTER_BY_ID[type_id]
         position = position or self._free_position(floor, avoid)
         level_add = max(0, level - MAX_FLOOR)
         monster_level = definition.level + level_add
@@ -1860,11 +1880,70 @@ class GameState:
         floor.monsters.append(monster)
         if self.player.has_ring_effect("aggravate"):
             monster.running = True
-        if floor.number >= self.player.deepest_floor and self.rng.randrange(100) < definition.carry_chance:
+        if (
+            carry_item
+            and floor.number >= self.player.deepest_floor
+            and self.rng.randrange(100) < definition.carry_chance
+        ):
             item_roll = self.rng.randrange(100)
             item_kind = next(kind for threshold, kind in MONSTER_PACK_ITEM_THRESHOLDS if item_roll < threshold)
             monster.carried_items.append(self._new_item(floor, item_kind, on_floor=False))
         return monster
+
+    def _spread_turns(self, duration: int) -> int:
+        """Return Rogue's spread(duration) using the game's seeded RNG."""
+        return duration - duration // 20 + self.rng.randrange(duration // 10)
+
+    def _wanderer_type(self) -> str:
+        """Choose the Rogue 5.4.4 wandering-only monster for this floor."""
+        while True:
+            index = self.current_floor + self.rng.randrange(10) - 6
+            if index < 0:
+                index = self.rng.randrange(5)
+            elif index >= len(MONSTER_SPAWN_ORDER):
+                index = self.rng.randrange(5) + len(MONSTER_SPAWN_ORDER) - 5
+            monster_id = MONSTER_SPAWN_ORDER[index]
+            if monster_id in WANDERING_MONSTER_ORDER:
+                return monster_id
+
+    def _spawn_wandering_monster(self) -> bool:
+        """Spawn a pursuing monster on an unoccupied room tile outside the player's room."""
+        player_room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
+        room_positions = [
+            (room, set(self._room_floor_positions(self.floor, room)))
+            for room in self.floor.rooms
+            if room.width >= MIN_ROOM_DIMENSION and room.height >= MIN_ROOM_DIMENSION
+        ]
+        if not any(room != player_room and positions for room, positions in room_positions):
+            return False
+        while True:
+            room, positions = self.rng.choice(room_positions)
+            candidate = (
+                room.x + 1 + self.rng.randrange(room.width - 2),
+                room.y + 1 + self.rng.randrange(room.height - 2),
+            )
+            if room != player_room and candidate != self.player.position and candidate in positions:
+                position = candidate
+                break
+        monster = self._new_monster(self.floor, position, type_id=self._wanderer_type(), carry_item=False)
+        monster.running = True
+        return True
+
+    def _process_wandering_monsters(self) -> None:
+        """Advance the source-timed wandering-monster daemon."""
+        if self._wander_turns:
+            self._wander_turns -= 1
+            return
+        self._wander_checks += 1
+        if self._wander_checks < WANDER_CHECK_INTERVAL:
+            return
+        self._wander_checks = 0
+        if (
+            self.rng.randrange(WANDER_SPAWN_ROLL_RANGE) != WANDER_SPAWN_ROLL_SUCCESS
+            or not self._spawn_wandering_monster()
+        ):
+            return
+        self._wander_turns = self._spread_turns(WANDER_DELAY)
 
     def _spawn_traps(self, floor: FloorState) -> None:
         if self.rng.randrange(10) >= floor.number:
@@ -2106,6 +2185,7 @@ class GameState:
                 self._search_adjacent_hidden_features()
             if self.player.has_ring_effect("teleportation") and self.rng.randrange(50) == 0:
                 self._teleport_player()
+            self._process_wandering_monsters()
             if process_monsters and not (self.player.haste_turns and self.player.turns_played % 2):
                 self._process_monsters()
             if self.status == GameStatus.PLAYING:
@@ -2459,10 +2539,19 @@ class GameState:
         for monster in list(self.floor.monsters):
             if monster.hp <= 0 or self.status != GameStatus.PLAYING:
                 continue
+            if (
+                not monster.cancelled
+                and "regenerate" in monster.definition.abilities
+                and monster.hp < (monster.max_hp or monster.hp)
+            ):
+                monster.hp += 1
             if monster.asleep or monster.held:
                 continue
-            if monster.slowed and self.player.turns_played % 2:
-                continue
+            if monster.slowed:
+                if not monster.slow_turn:
+                    monster.slow_turn = True
+                    continue
+                monster.slow_turn = False
             if monster.confused_turns > 0:
                 monster.confused_turns -= 1
                 choices = self._monster_step_positions(monster)
@@ -3190,6 +3279,7 @@ class GameState:
             target.exp_value = None
             target.exp_value = target.experience_reward
             target.held = target.invisible = target.hasted = target.slowed = target.cancelled = False
+            target.slow_turn = True
             target.confused_turns = 0
             target.mean_override = False
             message = "The monster changes."
@@ -3200,6 +3290,7 @@ class GameState:
         elif target and item.effect == "slow_monster":
             target.hasted = False
             target.slowed = True
+            target.slow_turn = True
             message = f"The {target.name} moves more slowly."
         elif item.effect == "drain_life":
             room = next((room for room in self.floor.rooms if room.contains(*self.player.position)), None)
@@ -3609,6 +3700,8 @@ class GameState:
                 kind.value: [values[effect] for effect in APPEARANCE_EFFECTS[kind]]
                 for kind, values in self._appearance_names.items()
             },
+            "wander_turns": self._wander_turns,
+            "wander_checks": self._wander_checks,
         }
 
     @classmethod
@@ -3617,6 +3710,10 @@ class GameState:
         version = data.get("spec_version")
         if version != GAME_VERSION:
             raise SaveCompatibilityError(version)
+        required_fields = ("wander_turns", "wander_checks")
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            raise SaveCompatibilityError
         game = cls.__new__(cls)
         game.seed = int(data["seed"])
         game.width = int(data.get("width", DEFAULT_WIDTH))
@@ -3632,6 +3729,8 @@ class GameState:
         game._next_monster_id = int(data.get("next_ids", {}).get("monster", 1))  # noqa: SLF001
         game._next_trap_id = int(data.get("next_ids", {}).get("trap", 1))  # noqa: SLF001
         game._floors_without_food = int(data.get("floors_without_food", 0))  # noqa: SLF001
+        game._wander_turns = int(data["wander_turns"])  # noqa: SLF001
+        game._wander_checks = int(data["wander_checks"])  # noqa: SLF001
         game._appearance_names = game._make_appearances()  # noqa: SLF001
         for raw_kind, values in data.get("appearances", {}).items():
             kind = ItemKind(raw_kind)

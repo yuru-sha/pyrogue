@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock
 
 import pytest
@@ -47,6 +48,188 @@ def test_player_attack_also_interrupts_quiet_healing() -> None:
     assert result.data.hit
     assert result.data.damage > 0
     assert game.player.quiet_turns <= 1
+
+
+def test_regenerating_monster_heals_once_after_its_action() -> None:
+    game = GameState(seed=91)
+    game.floor.monsters.clear()
+    monster = MonsterState(900, "troll", 30, 20, 2, max_hp=5)
+    game.floor.monsters.append(monster)
+
+    game.execute("wait")
+
+    assert monster.hp == 3
+
+
+@pytest.mark.parametrize(("hp", "max_hp", "cancelled"), [(5, 5, False), (2, 5, True)])
+def test_regeneration_stops_at_max_hp_and_after_cancellation(hp: int, max_hp: int, cancelled: bool) -> None:
+    game = GameState(seed=95)
+    game.floor.monsters.clear()
+    monster = MonsterState(900, "troll", 30, 20, hp, max_hp=max_hp, cancelled=cancelled)
+    game.floor.monsters.append(monster)
+
+    game.execute("wait")
+
+    assert monster.hp == hp
+
+
+def test_slow_monsters_keep_independent_turn_phases() -> None:
+    game = GameState(seed=92)
+    game.floor.monsters.clear()
+    x, y = game.player.position
+    skipped = MonsterState(900, "bat", x + 1, y, 5, slowed=True, running=True, slow_turn=False)
+    acted = MonsterState(901, "bat", x - 1, y, 5, slowed=True, running=True, slow_turn=True)
+    game.floor.monsters.extend((skipped, acted))
+    hp = game.player.hp
+
+    game.execute("wait")
+
+    assert game.player.hp < hp
+    assert skipped.slow_turn
+    assert not acted.slow_turn
+
+
+def test_wandering_monster_checks_every_four_turns_then_restarts_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=93)
+    game.floor.monsters.clear()
+    delay = game.to_dict()["wander_turns"]
+
+    def roll(*args: int) -> int:
+        if len(args) == 2:
+            return args[0]
+        return {6: 3, 10: 5, 7: 4}.get(args[0], 0)
+
+    monkeypatch.setattr(game.rng, "randrange", roll)
+
+    for _ in range(delay + 3):
+        game.execute("wait")
+    assert game.to_dict()["wander_checks"] == 3
+    assert game.floor.monsters == []
+
+    game.execute("wait")
+
+    assert len(game.floor.monsters) == 1
+    monster = game.floor.monsters[0]
+    player_room = next(room for room in game.floor.rooms if room.contains(*game.player.position))
+    assert monster.type_id == "kestrel"
+    assert monster.running
+    assert not player_room.contains(monster.x, monster.y)
+    assert game.to_dict()["wander_checks"] == 0
+    assert game.to_dict()["wander_turns"] == 71
+
+
+def test_wandering_monster_spawns_in_room_and_acts_on_spawn_turn(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=96)
+    floor = game.floor
+    floor.monsters.clear()
+    floor.rooms = [Room(9, 5, 3, 3)]
+    floor.up_stairs = floor.down_stairs = None
+    floor.tiles = [[Terrain.WALL for _ in range(floor.width)] for _ in range(floor.height)]
+    for position in ((7, 6), (8, 6), (9, 6), (10, 6)):
+        floor.set_tile(position, Terrain.FLOOR)
+    game.player.position = (7, 6)
+    game._wander_turns = 0
+    game._wander_checks = 3
+
+    def randrange(stop: int, *args: int) -> int:
+        if args:
+            return stop
+        return {6: 3, 10: 5}.get(stop, 0)
+
+    def choose(choices):
+        return choices[0]
+
+    monkeypatch.setattr(game.rng, "randrange", randrange)
+    monkeypatch.setattr(game.rng, "randint", lambda start, stop: start)
+    monkeypatch.setattr(game.rng, "choice", choose)
+
+    game.execute("wait")
+
+    assert len(floor.monsters) == 1
+    assert (floor.monsters[0].x, floor.monsters[0].y) == (8, 6)
+
+
+def test_wandering_sampling_retries_random_rooms_before_selecting_free_spot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    game = GameState(seed=97)
+    floor = game.floor
+    floor.monsters.clear()
+    floor.items.clear()
+    floor.traps.clear()
+    player_room = Room(1, 1, 3, 3)
+    blocked_room = Room(8, 1, 3, 3)
+    free_room = Room(14, 1, 5, 5)
+    floor.rooms = [player_room, blocked_room, free_room]
+    floor.up_stairs = floor.down_stairs = None
+    floor.tiles = [[Terrain.WALL for _ in range(floor.width)] for _ in range(floor.height)]
+    floor.set_tile((2, 2), Terrain.FLOOR)
+    floor.set_tile((9, 2), Terrain.FLOOR)
+    for x in range(15, 18):
+        for y in range(2, 5):
+            floor.set_tile((x, y), Terrain.FLOOR)
+    floor.items.append(ItemState(970, ItemKind.FOOD, "food ration", position=(9, 2)))
+    game.player.position = (2, 2)
+    game._wander_turns = 0
+    game._wander_checks = 3
+    rooms_sampled: list[Room] = []
+
+    def randrange(stop: int, *args: int) -> int:
+        if args:
+            return stop
+        return {6: 3, 10: 5}.get(stop, 0)
+
+    def choose(choices):
+        assert [room for room, _ in choices] == floor.rooms
+        room = blocked_room if not rooms_sampled else free_room
+        rooms_sampled.append(room)
+        return next(candidate for candidate in choices if candidate[0] == room)
+
+    monkeypatch.setattr(game.rng, "randrange", randrange)
+    monkeypatch.setattr(game.rng, "randint", lambda start, stop: start)
+    monkeypatch.setattr(game.rng, "choice", choose)
+
+    game.execute("wait")
+
+    assert rooms_sampled == [blocked_room, free_room]
+    assert len(floor.monsters) == 1
+    assert free_room.contains(floor.monsters[0].x, floor.monsters[0].y)
+
+
+@pytest.mark.parametrize(
+    ("depth", "candidate_rolls", "expected_type"),
+    [(15, (0, 1), "centaur"), (26, (9, 3), "griffin")],
+)
+def test_wandering_selection_skips_excluded_types_and_clamps_depth(
+    monkeypatch: pytest.MonkeyPatch,
+    depth: int,
+    candidate_rolls: tuple[int, ...],
+    expected_type: str,
+) -> None:
+    payload = GameState(seed=94).to_dict()
+    floor = json.loads(json.dumps(payload["floors"]["1"]))
+    floor["number"] = depth
+    floor["monsters"] = []
+    payload["floors"][str(depth)] = floor
+    payload["current_floor"] = depth
+    payload["wander_turns"] = 0
+    payload["wander_checks"] = 3
+    game = GameState.from_dict(payload)
+    candidates = iter(candidate_rolls)
+
+    def roll(*args: int) -> int:
+        if len(args) == 2:
+            return args[0]
+        if args[0] == 10:
+            return next(candidates)
+        return {5: 4, 6: 3, 7: 4}.get(args[0], 0)
+
+    monkeypatch.setattr(game.rng, "randrange", roll)
+
+    game.execute("wait")
+
+    assert len(game.floor.monsters) == 1
+    assert game.floor.monsters[0].type_id == expected_type
 
 
 def test_dragon_breath_save_avoids_player_damage(monkeypatch: pytest.MonkeyPatch) -> None:
