@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
-GAME_VERSION = "0.3.8"
+GAME_VERSION = "0.3.9"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -33,6 +33,9 @@ FOOD_BAD_TASTE_ROLL_THRESHOLD = 70
 MORETIME = 150
 STARVETIME = 850
 MAX_EQUIPPED_RINGS = 2
+QUIET_HEAL_LEVEL_THRESHOLD = 8
+QUIET_HEAL_THRESHOLD = 20
+QUIET_HEAL_HIGH_LEVEL_CADENCE = 3
 EXPERIENCE_LEVELS = (
     10,
     20,
@@ -596,6 +599,7 @@ class PlayerState:
     equipped_rings: list[int] = field(default_factory=list)
     has_amulet: bool = False
     turns_played: int = 0
+    quiet_turns: int = 0
     bear_trap_turns: int = 0
     sleep_turns: int = 0
     frozen_turns: int = 0
@@ -2058,6 +2062,26 @@ class GameState:
         elif old_food >= MORETIME > self.player.food_units:
             self._message("You are starting to feel weak.")
 
+    def _apply_quiet_turn_healing(self) -> None:
+        """Restore HP from quiet time and regeneration rings, capped at max HP."""
+        self.player.quiet_turns += 1
+        quiet_healing = 0
+        if self.player.level < QUIET_HEAL_LEVEL_THRESHOLD:
+            if self.player.quiet_turns + (self.player.level << 1) > QUIET_HEAL_THRESHOLD:
+                quiet_healing = 1
+        elif self.player.quiet_turns >= QUIET_HEAL_HIGH_LEVEL_CADENCE:
+            quiet_healing = self.rng.randrange(self.player.level - 7) + 1
+        regeneration = sum(
+            1
+            for ring_id in self.player.equipped_rings
+            if (ring := self.player.item(ring_id)) is not None and ring.effect == "regeneration"
+        )
+        old_hp = self.player.hp
+        healed_hp = old_hp + quiet_healing + regeneration
+        if healed_hp != old_hp:
+            self.player.quiet_turns = 0
+        self.player.hp = min(self.player.max_hp, healed_hp)
+
     def _finish_turn(self, *, process_monsters: bool = True) -> None:
         self.player.turns_played += 1
         self._consume_food()
@@ -2080,16 +2104,12 @@ class GameState:
         if self.status == GameStatus.PLAYING:
             if self.player.has_ring_effect("search"):
                 self._search_adjacent_hidden_features()
-            regeneration = sum(
-                1
-                for ring_id in self.player.equipped_rings
-                if (ring := self.player.item(ring_id)) is not None and ring.effect == "regeneration"
-            )
-            self.player.hp = min(self.player.max_hp, self.player.hp + regeneration)
             if self.player.has_ring_effect("teleportation") and self.rng.randrange(50) == 0:
                 self._teleport_player()
             if process_monsters and not (self.player.haste_turns and self.player.turns_played % 2):
                 self._process_monsters()
+            if self.status == GameStatus.PLAYING:
+                self._apply_quiet_turn_healing()
         if getattr(self, "_update_explored", True):
             self.visible_positions()
 
@@ -2118,6 +2138,10 @@ class GameState:
         self.status = GameStatus.DEAD
         self._message(f"You died ({cause}).")
 
+    def _reset_quiet_turns(self) -> None:
+        """Interrupt passive healing after the player takes or deals damage."""
+        self.player.quiet_turns = 0
+
     def _resolve_attack(
         self,
         attacker: PlayerState | MonsterState,
@@ -2126,6 +2150,8 @@ class GameState:
         *,
         thrown: bool = False,
     ) -> CombatResult:
+        if isinstance(attacker, PlayerState) or isinstance(defender, PlayerState):
+            self._reset_quiet_turns()
         if isinstance(attacker, PlayerState) and isinstance(defender, MonsterState):
             self._reveal_monster(defender)
         if isinstance(attacker, PlayerState):
@@ -2319,6 +2345,7 @@ class GameState:
         in_range = dx * dx + dy * dy <= DRAGON_BREATH_RANGE * DRAGON_BREATH_RANGE
         if not same_region or not aligned or not in_range or self.rng.randrange(DRAGON_BREATH_CHANCE) != 0:
             return False
+        self._reset_quiet_turns()
         self._message("The dragon breathes fire at you.")
         x, y = monster_x, monster_y
         step_x = (player_x > monster_x) - (player_x < monster_x)
@@ -2360,7 +2387,10 @@ class GameState:
                 targets_player = False
                 changed_target = not changed_target
                 if not self._saving_throw(VS_MAGIC):
-                    self.player.hp = max(0, self.player.hp - _roll(self.rng, (6, 6)))
+                    old_hp = self.player.hp
+                    self.player.hp = max(0, old_hp - _roll(self.rng, (6, 6)))
+                    if self.player.hp < old_hp:
+                        self._reset_quiet_turns()
                     self._message("The dragon's fire hits you.")
                     if self.player.hp == 0:
                         self._die(monster.name)
@@ -3120,6 +3150,8 @@ class GameState:
             else:
                 damage = _roll(self.rng, (1, 4) if item.effect == "magic_missile" else (6, 6))
                 self._reveal_monster(target)
+                if damage > 0:
+                    self._reset_quiet_turns()
                 target.hp = max(0, target.hp - damage)
                 message = f"The {item.display_name} hits the {target.name}."
                 if target.hp == 0:
@@ -3180,8 +3212,11 @@ class GameState:
                     if max(abs(monster.x - self.player.x), abs(monster.y - self.player.y)) <= LAMP_DISTANCE
                 ]
             if targets:
+                old_hp = self.player.hp
                 self.player.hp //= 2
                 damage = self.player.hp // len(targets)
+                if self.player.hp < old_hp or damage > 0:
+                    self._reset_quiet_turns()
                 for monster in targets:
                     monster.hp = max(0, monster.hp - damage)
                     if monster.hp == 0:
@@ -3243,7 +3278,10 @@ class GameState:
             message = "You are caught in a bear trap."
         elif trap.kind == TrapKind.POISON_DART:
             if self._trap_hit(self.player.level + 1):
-                self.player.hp = max(0, self.player.hp - _roll(self.rng, (1, 4)))
+                old_hp = self.player.hp
+                self.player.hp = max(0, old_hp - _roll(self.rng, (1, 4)))
+                if self.player.hp < old_hp:
+                    self._reset_quiet_turns()
                 if (
                     self.player.hp > 0
                     and not self.player.has_ring_effect("sustain")
@@ -3257,7 +3295,10 @@ class GameState:
                 message = "A poisoned dart misses you."
         elif trap.kind == TrapKind.ARROW:
             if self._trap_hit(self.player.level - 1):
-                self.player.hp = max(0, self.player.hp - _roll(self.rng, (1, 6)))
+                old_hp = self.player.hp
+                self.player.hp = max(0, old_hp - _roll(self.rng, (1, 6)))
+                if self.player.hp < old_hp:
+                    self._reset_quiet_turns()
                 message = "An arrow shoots out at you."
                 if self.player.hp == 0:
                     self._die("a")

@@ -57,6 +57,7 @@ CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します�
 - 死亡後は `SaveManager.finalize_death` を共有し、canonical状態のサマリーを表示して死亡セーブを削除する。勝利時は削除しない。
 - UIへTCODのConsole、色、画像、タイル型をゲーム状態から持ち込まない。
 - 保存形式を変更するときは `GAME_VERSION` と互換性検査を同時に更新する。
+- 静穏回復の進行状態は `PlayerState` に保持し、`GameState` のseed付き乱数とJSONセーブで再現する。攻撃開始またはその他の実ダメージでリセットする。
 - 勝利・死亡サマリーには `player.deepest_floor` を使い、`current_floor` と混同しない。
 - 死亡・勝利は終端状態として扱い、死亡セーブをロードしない。
 - GUIのTabによるFOV切替は表示専用とし、FOV無効化中も探索済み状態を更新しない。
