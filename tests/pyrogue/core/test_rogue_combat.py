@@ -646,6 +646,36 @@ def test_execute_attack_matches_rogue_hit_boundary(seed: int, running: bool, exp
     assert result.data.hit is expected_hit
 
 
+def test_missed_attack_resets_quiet_progress(monkeypatch: pytest.MonkeyPatch) -> None:
+    game, monster = game_with_adjacent_monster("centaur")
+    game.player.quiet_turns = 11
+    monster.running = True
+    game.rng.seed(16)
+    monkeypatch.setattr(game, "_finish_turn", lambda: None)
+
+    result = game.execute("attack", ["east"])
+
+    assert not result.data.hit
+    assert game.player.quiet_turns == 0
+
+
+def test_zero_damage_hit_resets_quiet_progress(monkeypatch: pytest.MonkeyPatch) -> None:
+    game, monster = game_with_adjacent_monster("bat")
+    weapon = ItemState(919, ItemKind.WEAPON, "test weapon", damage_dice=(1, 1), hit_bonus=100)
+    game.player.inventory.append(weapon)
+    game.player.equipped_weapon = weapon.id
+    game.player.strength = 0
+    game.player.quiet_turns = 11
+    monkeypatch.setattr(game, "_finish_turn", lambda: None)
+
+    result = game.execute("attack", ["east"])
+
+    assert result.data.hit
+    assert result.data.damage == 0
+    assert monster.hp == 100
+    assert game.player.quiet_turns == 0
+
+
 def test_execute_attack_applies_strength_and_ring_damage_modifiers() -> None:
     game, _ = game_with_adjacent_monster("kestrel")
     weapon = ItemState(901, ItemKind.WEAPON, "test weapon", damage_dice=(2, 4), damage_bonus=1)
