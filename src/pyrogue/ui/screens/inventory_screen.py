@@ -39,8 +39,12 @@ class InventoryScreen(Screen):
             return [item for item in items if item.kind == ItemKind.SCROLL]
         if action == "identify_target":
             scroll = self.game_screen.player.item(self.game_screen.input_handler.selected_item_id or -1)
-            kinds = SCROLL_IDENTIFY_TARGETS.get(scroll.effect, frozenset()) if scroll else frozenset()
-            return [item for item in items if item.id != (scroll.id if scroll else None) and item.kind in kinds]
+            if scroll is None:
+                return []
+            if scroll.effect == "identify":
+                return [item for item in items if item.id != scroll.id]
+            kinds = SCROLL_IDENTIFY_TARGETS.get(scroll.effect, frozenset())
+            return [item for item in items if item.id != scroll.id and item.kind in kinds]
         return items
 
     def _clamp_selection(self, items: list[ItemState]) -> None:
@@ -198,7 +202,9 @@ class InventoryScreen(Screen):
                 else:
                     self.game_screen.input_handler.begin_direction_selection("zap", item.id)
             elif item.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
-                if item.kind == ItemKind.SCROLL and item.effect in SCROLL_IDENTIFY_TARGETS:
+                if item.kind == ItemKind.SCROLL and (
+                    item.effect == "identify" or item.effect in SCROLL_IDENTIFY_TARGETS
+                ):
                     self.game_screen.input_handler.item_selection_action = "read"
                     self._begin_pending_action(item)
                 else:
@@ -221,10 +227,11 @@ class InventoryScreen(Screen):
             self.game_screen.add_message(f"What do you want to call {item.display_name}?")
             return
         if action == "read":
-            if item.effect in SCROLL_IDENTIFY_TARGETS:
-                target_kinds = SCROLL_IDENTIFY_TARGETS[item.effect]
+            if item.effect == "identify" or item.effect in SCROLL_IDENTIFY_TARGETS:
+                target_kinds = SCROLL_IDENTIFY_TARGETS.get(item.effect, frozenset())
                 if not any(
-                    target.id != item.id and target.kind in target_kinds for target in self.game_screen.player.inventory
+                    target.id != item.id and (item.effect == "identify" or target.kind in target_kinds)
+                    for target in self.game_screen.player.inventory
                 ):
                     self.game_screen.input_handler.reset_selection()
                     self.game_screen.add_message("You have nothing to identify.")

@@ -77,7 +77,7 @@ def test_quaffing_hallucination_potion_starts_the_rogue_duration() -> None:
 
     assert result.success
     assert result.turn_consumed
-    assert game.player.hallucination_turns == 849
+    assert 807 <= game.player.hallucination_turns <= 891
     assert potion not in game.player.inventory
 
 
@@ -113,6 +113,143 @@ def test_poison_potion_reduces_strength_unless_sustain_ring_is_worn() -> None:
     assert poison not in with_ring.player.inventory
 
 
+def test_potion_is_identified_only_when_rogue_learns_its_effect() -> None:
+    game = GameState(seed=230)
+    game.floor.monsters.clear()
+    restore = ItemState(980, ItemKind.POTION, "restore strength potion", identified=False, effect="restore_strength")
+    healing = ItemState(981, ItemKind.POTION, "healing potion", identified=False, effect="healing")
+    game.player.inventory.extend((restore, healing))
+
+    game.quaff(restore.id)
+
+    assert not restore.identified
+    assert not healing.identified
+
+    game.player.hp = 1
+    game.quaff(healing.id)
+
+    assert healing.identified
+
+
+def test_generic_identification_scroll_identifies_only_the_selected_item() -> None:
+    game = GameState(seed=231)
+    game.floor.monsters.clear()
+    scroll = ItemState(982, ItemKind.SCROLL, "identify scroll", identified=False, effect="identify")
+    potion = ItemState(983, ItemKind.POTION, "healing potion", identified=False, effect="healing")
+    ring = ItemState(984, ItemKind.RING, "ring of protection", identified=False, effect="protection")
+    sibling = ItemState(989, ItemKind.POTION, "healing potion", identified=False, effect="healing")
+    game.player.inventory.extend((scroll, potion, ring, sibling))
+
+    result = game.read(scroll.id, potion.id)
+
+    assert result.success
+    assert potion.identified
+    assert potion.name in game.player.identified_item_names
+    assert not sibling.identified
+    assert not ring.identified
+
+
+def test_identification_scroll_without_target_is_free_and_preserved() -> None:
+    game = GameState(seed=236)
+    scroll = ItemState(993, ItemKind.SCROLL, "identify scroll", identified=False, effect="identify")
+    potion = ItemState(994, ItemKind.POTION, "healing potion", identified=False, effect="healing")
+    game.player.inventory.extend((scroll, potion))
+
+    result = game.read(scroll.id)
+
+    assert not result.success
+    assert not result.turn_consumed
+    assert scroll in game.player.inventory
+    assert not potion.identified
+    assert game.player.turns_played == 0
+
+
+def test_remove_curse_only_uncurses_equipped_items() -> None:
+    game = GameState(seed=232)
+    game.floor.monsters.clear()
+    scroll = ItemState(985, ItemKind.SCROLL, "remove curse scroll", identified=False, effect="remove_curse")
+    weapon = ItemState(986, ItemKind.WEAPON, "mace", cursed=True)
+    armor = ItemState(987, ItemKind.ARMOR, "leather armor", cursed=True)
+    game.player.inventory.extend((scroll, weapon, armor))
+    game.player.equipped_weapon = weapon.id
+
+    result = game.read(scroll.id)
+
+    assert result.success
+    assert not weapon.cursed
+    assert armor.cursed
+    assert not scroll.identified
+
+
+def test_wand_without_a_learned_effect_remains_unidentified() -> None:
+    game = GameState(seed=234)
+    game.floor.monsters.clear()
+    wand = ItemState(990, ItemKind.WAND, "wand of invisibility", identified=False, effect="invisibility", charges=1)
+    game.player.inventory.append(wand)
+
+    result = game.zap(wand.id, (1, 0))
+
+    assert result.turn_consumed
+    assert wand.charges == 0
+    assert not wand.identified
+
+
+def test_haste_potion_consumes_no_game_turn_before_following_action() -> None:
+    game = GameState(seed=233)
+    game.floor.monsters.clear()
+    potion = ItemState(988, ItemKind.POTION, "haste self potion", identified=False, effect="haste_self")
+    ring = ItemState(991, ItemKind.RING, "ring of regeneration", effect="regeneration")
+    game.player.inventory.extend((potion, ring))
+    game.player.equipped_rings.append(ring.id)
+    game.player.food_units = 123
+    game.player.confused_turns = 8
+    game.player.hp = 5
+    turns = game.player.turns_played
+
+    class HasteRng:
+        @staticmethod
+        def randrange(stop: int) -> int:
+            return min(3, stop - 1)
+
+    game.rng = HasteRng()
+    result = game.quaff(potion.id)
+
+    assert result.success
+    assert not result.turn_consumed
+    assert game.player.turns_played == turns
+    assert game.player.haste_turns == 7
+    assert game.player.food_units == 123
+    assert game.player.confused_turns == 8
+    assert game.player.hp == 5
+
+    game.wait()
+
+    assert game.player.turns_played == turns + 1
+    assert game.player.haste_turns == 6
+    assert game.player.food_units == 120
+    assert game.player.confused_turns == 7
+    assert game.player.hp == 6
+
+
+def test_requaffing_timed_potion_adds_the_spread_duration() -> None:
+    game = GameState(seed=235)
+    game.floor.monsters.clear()
+    potion = ItemState(992, ItemKind.POTION, "confusion potion", effect="confusion")
+    game.player.inventory.append(potion)
+    game.player.confused_turns = 10
+
+    class DurationRng:
+        @staticmethod
+        def randrange(stop: int) -> int:
+            return stop - 1
+
+    game.rng = DurationRng()
+    assert game.quaff(potion.id).success
+
+    # spread(20) is 19 + rnd(2); the action then advances one normal turn.
+    assert game.player.confused_turns == 29
+
+
 @pytest.mark.parametrize(
     ("name", "effect", "state"),
     [
@@ -132,18 +269,21 @@ def test_rogue_potions_apply_their_status_effects(name: str, effect: str, state:
     result = game.quaff(potion.id)
 
     assert result.success
-    assert result.turn_consumed
+    assert result.turn_consumed is (effect != "haste_self")
     assert getattr(game.player, state) > 0
 
 
 def test_detection_and_raise_level_potions_change_game_state() -> None:
     game = GameState(seed=241)
     game.floor.monsters.clear()
-    detection = ItemState(945, ItemKind.POTION, "monster detection potion", effect="monster_detection")
+    detection = ItemState(
+        945, ItemKind.POTION, "monster detection potion", identified=False, effect="monster_detection"
+    )
     game.player.inventory.append(detection)
 
     assert game.quaff(detection.id).success
     assert game.player.monster_detection_turns > 0
+    assert not detection.identified
 
     raise_level = ItemState(946, ItemKind.POTION, "raise level potion", effect="raise_level")
     game.player.inventory.append(raise_level)
@@ -205,7 +345,7 @@ def test_haste_self_uses_a_source_duration_and_requaff_causes_exhaustion() -> No
     game.rng = HasteRng(3)
 
     assert game.quaff(potion.id).success
-    assert game.player.haste_turns == 6
+    assert game.player.haste_turns == 7
 
     repeat = ItemState(953, ItemKind.POTION, "haste self potion", effect="haste_self")
     game.player.inventory.append(repeat)
@@ -347,13 +487,14 @@ def test_hold_and_aggravate_scrolls_change_monster_state() -> None:
     monster = game.floor.monsters[0]
     monster.x, monster.y = game.player.x + 1, game.player.y
     monster.running = True
-    hold = ItemState(934, ItemKind.SCROLL, "hold monster scroll", effect="hold_monster")
+    hold = ItemState(934, ItemKind.SCROLL, "hold monster scroll", identified=False, effect="hold_monster")
     game.player.inventory.append(hold)
 
     result = game.read(hold.id)
 
     assert result.success
     assert monster.held
+    assert hold.identified
 
     aggravate = ItemState(935, ItemKind.SCROLL, "aggravate monsters scroll", effect="aggravate_monsters")
     game.player.inventory.append(aggravate)
@@ -464,17 +605,42 @@ def test_haste_and_slow_wands_change_monster_speed(effect: str, state: str) -> N
 def test_polymorph_wand_replaces_target_monster_stats() -> None:
     game = GameState(seed=273)
     game.floor.monsters.clear()
+    game.floor.explored.clear()
     direction, position = _walkable_direction(game)
     monster = MonsterState(962, "bat", *position, 100)
-    wand = ItemState(963, ItemKind.WAND, "wand of polymorph", effect="polymorph", charges=1)
+    wand = ItemState(963, ItemKind.WAND, "wand of polymorph", identified=False, effect="polymorph", charges=1)
     game.floor.monsters.append(monster)
     game.player.inventory.append(wand)
 
-    result = game.execute("zap", [wand.id, direction])
+    result = game.execute("zap", [wand.id, direction], update_explored=False)
 
     assert result.success
+    assert wand.identified
+    assert not game.floor.explored
     assert monster.max_hp < 100
     assert monster.hp == monster.max_hp
+
+
+def test_polymorph_into_invisible_monster_does_not_learn_wand(monkeypatch) -> None:
+    game = GameState(seed=2731)
+    game.floor.monsters.clear()
+    game.floor.explored.clear()
+    game._finish_turn = lambda: None
+    direction, position = _walkable_direction(game)
+    monster = MonsterState(965, "bat", *position, 100)
+    wand = ItemState(966, ItemKind.WAND, "wand of polymorph", identified=False, effect="polymorph", charges=1)
+    game.floor.monsters.append(monster)
+    game.player.inventory.append(wand)
+    monkeypatch.setattr(
+        type(game.rng), "choice", lambda _rng, choices: next(choice for choice in choices if choice.id == "phantom")
+    )
+
+    result = game.execute("zap", [wand.id, direction], update_explored=False)
+
+    assert result.success
+    assert monster.type_id == "phantom"
+    assert not wand.identified
+    assert not game.floor.explored
 
 
 def test_polymorph_resets_monster_state_and_preserves_carried_items(monkeypatch) -> None:

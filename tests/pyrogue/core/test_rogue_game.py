@@ -1274,7 +1274,7 @@ def test_potion_effects_change_canonical_player_state(
     assert potion not in game.player.inventory
 
 
-def test_identify_scroll_identifies_unknown_pack_items() -> None:
+def test_identify_scroll_identifies_only_the_selected_pack_item() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
     scroll = ItemState(1000, ItemKind.SCROLL, "identify scroll", identified=False, effect="identify")
@@ -1292,23 +1292,28 @@ def test_identify_scroll_identifies_unknown_pack_items() -> None:
     )
     game.player.inventory.extend((scroll, potion, ring, wand))
 
-    result = game.execute("read", [scroll.id])
+    result = game.execute("read", [scroll.id, potion.id])
 
     assert result.success
-    assert all(item.identified for item in (scroll, potion, ring, wand))
+    assert potion.identified
+    assert not ring.identified
+    assert not wand.identified
 
 
-def test_remove_curse_scroll_clears_curses() -> None:
+def test_remove_curse_scroll_clears_equipped_curses_only() -> None:
     game = GameState(1234)
     game.floor.monsters.clear()
     scroll = ItemState(1000, ItemKind.SCROLL, "remove curse scroll", effect="remove_curse")
     cursed_ring = ItemState(1001, ItemKind.RING, "ring of protection", cursed=True, effect="protection")
-    game.player.inventory.extend((scroll, cursed_ring))
+    cursed_armor = ItemState(1002, ItemKind.ARMOR, "leather armor", cursed=True)
+    game.player.inventory.extend((scroll, cursed_ring, cursed_armor))
+    game.player.equipped_rings.append(cursed_ring.id)
 
     result = game.execute("read", [scroll.id])
 
     assert result.success
-    assert cursed_ring.cursed is False
+    assert not cursed_ring.cursed
+    assert cursed_armor.cursed
 
 
 def test_enchant_armor_scroll_changes_equipped_item() -> None:

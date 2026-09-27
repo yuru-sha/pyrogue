@@ -92,7 +92,7 @@ PyRogue を、Rogue 5.4 系のゲーム体験に近い、文字表示のロー�
 - 金貨
 - イェンダーのアミュレット
 
-各アイテムは、配置、取得、所持、使用、装備、解除、投擲、効果、識別状態を持つ。未識別アイテムは種類ごとの不確定な名称で表示し、使用または識別によって正体を確定する。
+各アイテムは、配置、取得、所持、使用、装備、解除、投擲、効果、識別状態を持つ。未識別アイテムは種類ごとの不確定な名称で表示する。識別は効果を知る条件または明示的な識別によって行う。
 
 呪われた装備は解除を制限する。識別、呪い、アイテム効果、生成確率は Rogue 5.4 系の資料を基準にする。
 種類別の名前と出現重みも原作に合わせる。カテゴリ重みは薬26、巻物36、食料16、武器7、防具7、指輪4、杖4とする。
@@ -103,9 +103,9 @@ canonical `GameState` が適用する主な効果は次のとおりとする。
 
 | 種別 | 効果 | 状態変化 |
 | --- | --- | --- |
-| 巻物 | identify | 所持中の薬、巻物、指輪、杖を識別する |
-| 巻物 | identify potion / weapon / armor / ring, wand or staff | 選択した該当カテゴリのアイテム1個を識別する |
-| 巻物 | remove curse | 所持品の呪いを解除する |
+| 巻物 | identify | 使用時に識別済みとなり、対象選択を経て適格な所持品1個だけを識別する |
+| 巻物 | identify potion / weapon / armor / ring, wand or staff | 使用時に識別済みとなり、選択した該当カテゴリの所持品1個を識別する |
+| 巻物 | remove curse | 装備中の武器・防具・指輪の呪いだけを解除する |
 | 巻物 | enchant weapon / armor | 装備中の武器は命中またはダメージ補正の一方を +1、防具は保護値を +1 し、呪いを解除する |
 | 巻物 | light | 現在の部屋（通路では可視範囲）を探索済みにする |
 | 巻物 | teleportation | 同じ階の空いた歩行可能セルへ移動する |
@@ -118,16 +118,20 @@ canonical `GameState` が適用する主な効果は次のとおりとする。
 | 杖 | invisibility / polymorph / haste / slow / drain life / cancellation | 対象モンスターの状態またはHPに原作系効果を適用する |
 | 杖 | teleport away / teleport to / nothing | 対象を移動する、または効果なしとする |
 | 薬 | poison / strength / restore strength / raise level | 強さまたはプレイヤーレベルを変化させる |
-| 薬 | confusion / hallucination / blindness / see invisible / levitation / haste | 対応する一時状態を付与する |
+| 薬 | confusion / hallucination / blindness / see invisible / levitation / haste | 対応する一時状態を付与する。持続時間は Rogue 5.4.4 の `spread()` または個別規則に従う |
 | 薬 | healing / extra healing / monster detection / magic detection | HPを回復する、または該当するアイテム・モンスターを示す |
 | 指輪 | protection / add strength / dexterity / increase damage | 防御値 / 強さ由来の命中・ダメージ / 装備中の武器の命中・ダメージに補正値を反映する |
 | 指輪 | sustain strength | 毒矢と rattlesnake による強さ低下を防ぐ |
 | 指輪 | searching | 各ターンに隣接する罠を自動発見する |
 | 指輪 | regeneration | 装備中の指輪1個につき、ターンごとにHPを1回復する |
 | 指輪 | see invisible / stealth / slow digestion / teleportation / aggravate / maintain armor | 原作に対応する視認、飢え、移動、覚醒、防具保護を適用する。stealth は mean モンスターの覚醒を2/3の確率で抑える |
-| 薬 | levitation | 30ターン浮遊し、罠を無効化し、mean モンスターの覚醒を2/3の確率で抑える |
+| 薬 | levitation | `spread(HEALTIME)` ターン浮遊し、罠を無効化し、mean モンスターの覚醒を2/3の確率で抑える |
 
 杖・薬・巻物・指輪の未識別表示は種類ごとに一意な見た目を割り当て、効果を知ると同じ効果のアイテムを識別する。杖は光のみ10〜19チャージ、その他は3〜7チャージで生成する。武器・防具・指輪の呪いと補正も原作の確率に従う。従来の「light scroll」は互換用の効果名として受け付けるが、生成対象には含めない。
+
+消耗品の識別は効果を学んだときだけ行う。薬は原作で `oi_know` を立てる効果時のみ識別し、混乱・幻覚・失明・浮遊などの持続効果は原作の時間処理に従う。効果がすでに有効な場合、再度飲むと `spread()` の結果を残り時間へ加算する。杖は原作の効果学習条件を満たした場合だけ識別する。巻物も効果別の学習条件（例: hold は追跡中の対象あり、food detection は食料あり、teleport は部屋移動あり）で識別し、無条件に使用品を識別しない。identify は選択した識別可能な所持品1個を対象とする。
+
+薬のconfusion・hallucination・see invisible・blindness は `spread(duration)`、levitation は `spread(HEALTIME)` とする。`spread(d)` は `d - d // 20 + rnd(d // 10)`（乱数範囲が0なら加算なし）。効果が有効な間に同じ薬を再度飲むと、新しい `spread()` を残り時間へ加算する。haste potion は Rogue の `after = FALSE` に従う無料行動であり、`turns_played`、空腹、時限状態、リング効果、モンスター行動を進めない。次のターン消費行動は通常どおり処理する。
 
 アイテムの使用は、失敗した対象指定を除き1ターンを消費する。巻物は使用後に
 インベントリから消費し、杖は有効な方向指定でチャージを1消費する。乱数を伴う効果は
@@ -261,11 +265,13 @@ GameState
 - 可視性、探索済み地形、表示優先順位を検証できる
 - seed付き生成で通常階に隠し扉・隠し通路が配置され、探索前は見えず、探索成功後に地形・通行・視界へ反映される。
 - 隣接する隠し扉・通路・罠、および盲目・幻覚による確率修正が、ゲームのseed付きRNGを使いセーブ後も維持される。
-- 新旧セーブ形式の扱いを検証できる
-- GUI と CLI が同じコマンド処理・ゲームルールを利用する
 - トラップの矢・毒矢命中/ミス、ダメージ・毒セーブ、bear restraint、sleeping gas の原作持続時間、発見/残存/矢回収状態をseed付きで検証する。
 - 通常食料を負の空腹値、異なる栄養乱数値、満腹上限で食べたとき、空腹値の0への補正・原作栄養値・`STOMACHSIZE` 上限・食事後の空腹解除を検証する。
 - 通常食料の悪い味（30%）と良い味（70%）をseed付きで検証し、悪い味時の経験値+1とレベルアップ判定、および果物が悪い味判定を受けないことを検証する。
+- 消耗品は Rogue 5.4.4 の効果学習条件を満たした場合だけ識別する。identify 系は選択した適格な所持品1個だけを識別する。
+- remove curse は装備中の武器、防具、指輪だけを解除し、未装備品の呪いは残す。
+- haste potion は Rogue の `after = FALSE` に従う無料行動であり、ターン進行や空腹・時限状態・リング効果・モンスター行動を発生させない。次のターン消費行動は通常どおり処理する。
+- 時限薬の効果がすでに有効なときに再度飲むと、seed付き `spread(duration)` の値を残り時間に加算する。
 
 ## 12. ドキュメント整備
 
