@@ -26,6 +26,50 @@ def game_with_adjacent_monster(type_id: str, hp: int = 100) -> tuple[GameState, 
     return game, monster
 
 
+def test_monster_attack_resets_passive_healing_progress() -> None:
+    game, _ = game_with_adjacent_monster("bat")
+    game.player.quiet_turns = 7
+
+    result = game.execute("wait")
+
+    assert result.turn_consumed
+    assert game.player.hp < 100
+    assert game.player.quiet_turns == 1
+
+
+def test_player_attack_also_interrupts_quiet_healing() -> None:
+    game, _ = game_with_adjacent_monster("bat")
+    game.player.quiet_turns = 18
+    game.player.strength = 31
+
+    result = game.execute("attack", ["east"])
+
+    assert result.data.hit
+    assert result.data.damage > 0
+    assert game.player.quiet_turns <= 1
+
+
+def test_dragon_breath_save_avoids_player_damage(monkeypatch: pytest.MonkeyPatch) -> None:
+    game = GameState(seed=1)
+    game.floor.monsters.clear()
+    game.floor.rooms = [Room(5, 5, 15, 5)]
+    game.player.position = (11, 7)
+    game.player.hp = game.player.max_hp = 100
+    game.player.quiet_turns = 11
+    for x in range(7, 12):
+        game.floor.set_tile((x, 7), Terrain.FLOOR)
+    dragon = MonsterState(900, "dragon", 7, 7, 100, running=True)
+    game.floor.monsters.append(dragon)
+    monkeypatch.setattr(game.rng, "randrange", lambda stop: 0)
+    monkeypatch.setattr(game, "_saving_throw", lambda effect: True)
+
+    result = game.execute("wait")
+
+    assert result.turn_consumed
+    assert game.player.hp == 100
+    assert game.player.quiet_turns == 1
+
+
 def test_monster_definitions_match_rogue_54_source_table() -> None:
     expected = {
         "aquator": (5, 2, ((0, 0), (0, 0)), 20, 0, {"mean"}),

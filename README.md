@@ -26,6 +26,7 @@ seed, and command sequence produces the same game state.
 - Rogue-style A-Z monsters, original traps, hunger, food, equipment, potions, scrolls, wands, rings, gold, and the Amulet.
 - The Amulet is carried back to the surface; merely reaching floor 26 does not win.
 - A dead game cannot be resumed. The final screen records score, deepest floor, and death cause.
+- Quiet turns restore HP at a level-dependent cadence; combat resets rest progress, and regeneration rings add to healing up to max HP.
 - `current_floor` is the player's current position; victory and death summaries use the separately saved `player.deepest_floor` progress value.
 - CLI and GUI use the same death cleanup; the active save is removed on death, but not on victory.
 

@@ -795,11 +795,13 @@ def test_drain_life_wand_transfers_half_current_hp_to_room_monsters(monkeypatch)
     game.player.inventory.append(wand)
     game.player.hp = 20
     monkeypatch.setattr(game, "_finish_turn", lambda: None)
+    game.player.quiet_turns = 18
 
     result = game.execute("zap", [wand.id])
 
     assert result.success
     assert game.player.hp == 10
+    assert game.player.quiet_turns == 0
     assert [monster.hp for monster in monsters] == [95, 95]
     assert all(monster.running for monster in monsters)
 
@@ -1032,6 +1034,78 @@ def test_regeneration_ring_heals_one_hp_per_turn() -> None:
     assert game.player.hp == 6
 
 
+def test_passive_healing_uses_level_dependent_quiet_cadence() -> None:
+    game = GameState(seed=50)
+    game.floor.monsters.clear()
+    game.player.hp = 1
+
+    for _ in range(18):
+        game.wait()
+    assert game.player.hp == 1
+
+    game.wait()
+    assert game.player.hp == 2
+    assert game.player.quiet_turns == 0
+
+    game.player.level = 10
+    game.player.hp = 1
+    game.rng.seed(0)
+    for _ in range(2):
+        game.wait()
+    assert game.player.hp == 1
+
+    game.wait()
+    assert game.player.hp == 3
+
+
+def test_passive_healing_composes_with_ring_and_quiet_state_round_trips() -> None:
+    game = GameState(seed=51)
+    game.floor.monsters.clear()
+    game.player.hp = game.player.max_hp
+
+    for _ in range(18):
+        game.wait()
+    assert game.player.quiet_turns == 18
+
+    ring = ItemState(907, ItemKind.RING, "ring of regeneration", effect="regeneration")
+    game.player.inventory.append(ring)
+    game.player.equipped_rings.append(ring.id)
+    game.player.hp = 1
+    restored = GameState.from_dict(game.to_dict())
+    game.wait()
+    restored.wait()
+
+    assert game.player.hp == 3
+    assert restored.to_dict() == game.to_dict()
+
+
+def test_passive_and_ring_healing_stop_at_maximum_hp() -> None:
+    game = GameState(seed=52)
+    game.floor.monsters.clear()
+    ring = ItemState(908, ItemKind.RING, "ring of regeneration", effect="regeneration")
+    game.player.inventory.append(ring)
+    game.player.equipped_rings.append(ring.id)
+    game.player.hp = game.player.max_hp
+
+    game.wait()
+
+    assert game.player.hp == game.player.max_hp
+    assert game.player.quiet_turns == 0
+
+
+def test_healing_at_max_hp_resets_quiet_cadence() -> None:
+    game = GameState(seed=53)
+    game.floor.monsters.clear()
+    game.player.level = 10
+    game.player.quiet_turns = 2
+    game.rng.seed(0)
+
+    game.wait()
+
+    assert game.player.hp == game.player.max_hp
+    assert game.player.quiet_turns == 0
+
+
 def test_sustain_ring_prevents_poison_dart_strength_loss(monkeypatch: pytest.MonkeyPatch) -> None:
     def adjacent_target(game: GameState) -> tuple[int, int, int, int]:
         px, py = game.player.position
@@ -1106,7 +1180,7 @@ def test_teleport_monster_wand_moves_the_first_target_in_line() -> None:
     assert (target.x, target.y) != game.player.position
 
 
-def test_damage_wand_hits_and_removes_a_monster_in_line() -> None:
+def test_damage_wand_interrupts_quiet_healing() -> None:
     game = GameState(seed=9)
     game.floor.monsters.clear()
     px, py = game.player.position
@@ -1117,13 +1191,17 @@ def test_damage_wand_hits_and_removes_a_monster_in_line() -> None:
     )
     target = MonsterState(913, "bat", *target_position, hp=1)
     game.floor.monsters.append(target)
-    wand = ItemState(id=914, kind=ItemKind.WAND, name="wand of magic missile", effect="magic_missile", charges=1)
+    wand = ItemState(914, ItemKind.WAND, "wand of magic missile", effect="magic_missile", charges=1)
     game.player.inventory.append(wand)
+    game.player.hp = 1
+    game.player.quiet_turns = 18
 
     result = game.zap(wand.id, (target.x - px, target.y - py))
 
     assert result.success
     assert target not in game.floor.monsters
+    assert game.player.hp == 1
+    assert game.player.quiet_turns == 1
     assert game.player.monsters_killed == 1
     assert "hits" in result.message.lower()
 
