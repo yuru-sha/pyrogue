@@ -266,6 +266,7 @@ def test_headless_gui_zap_key_matches_cli_item_and_direction_selection() -> None
     for game in (cli.game_state, gui.rogue_game):
         game.floor.monsters.clear()
         position = (game.player.x + 1, game.player.y)
+        game.floor.set_tile(position, Terrain.FLOOR)
         assert game.floor.is_walkable(position)
         game.player.inventory = []
         game.player.equipped_weapon = None

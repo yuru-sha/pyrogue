@@ -142,7 +142,7 @@ main() {
     run_test "インベントリ表示" "inventory\nquit" "mace"
     run_test "待機コマンド" "wait\nquit" "You wait\."
     run_test "不正な移動方向" "move invalid\nquit" "Invalid direction\."
-    run_test "アミュレットなしの脱出拒否" "stairs up\nquit" "need the Amulet of Yendor"
+    run_test "階段外での上り拒否" "stairs up\nquit" "There are no stairs up here"
     run_determinism_test
 
     echo ""

@@ -12,7 +12,7 @@ from pyrogue.ui.screens.options_screen import OptionsScreen
 
 
 def test_gui_fight_key_prompts_for_direction_and_attacks_that_monster() -> None:
-    screen = GameScreen(None, seed=108)
+    screen = GameScreen(None, seed=1)
     game = screen.rogue_game
     game.floor.monsters.clear()
     x, y = game.player.position

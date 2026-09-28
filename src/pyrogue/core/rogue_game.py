@@ -796,46 +796,93 @@ class DungeonGenerator:
         self.rng = rng or random.Random()  # noqa: S311 - game randomness is not cryptographic
         self._floor_number = 1
 
-    def generate(self, floor_number: int) -> FloorState:
-        """Generate one deterministic floor."""
+    def generate(self, floor_number: int, *, defer_stairs: bool = False) -> FloorState:
+        """Generate one deterministic floor, optionally leaving placement until contents exist."""
         self._floor_number = floor_number
         floor = self._generate_rooms(floor_number)
+        if not defer_stairs:
+            self.place_stairs(floor)
         if floor.up_stairs and floor.down_stairs and not self._path_exists(floor, floor.up_stairs, floor.down_stairs):
             raise RuntimeError
         return floor
+
+    def place_stairs(self, floor: FloorState, occupied: set[Position] | None = None) -> None:
+        """Place stairs after floor contents, rejecting occupied cells."""
+        self._floor_number = floor.number
+        unavailable = set(occupied or ())
+        down_stairs = (
+            self._random_room_floor(floor.tiles, floor.rooms, unavailable) if floor.number < MAX_FLOOR else None
+        )
+        if down_stairs is not None:
+            floor.down_stairs = down_stairs
+            floor.set_tile(down_stairs, Terrain.STAIRS_DOWN)
+            unavailable.add(down_stairs)
+        up_stairs = self._random_room_floor(floor.tiles, floor.rooms, unavailable)
+        floor.up_stairs = up_stairs
+        floor.set_tile(up_stairs, Terrain.STAIRS_UP)
+        if down_stairs is not None and not self._path_exists(floor, up_stairs, down_stairs):
+            raise RuntimeError
+
+    def place_hero(self, floor: FloorState, occupied: set[Position] | None = None) -> None:
+        """Sample the starting position after room contents and stairs are placed."""
+        unavailable = set(occupied or ())
+        unavailable.update(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
+        floor.player_position = self._random_room_floor(floor.tiles, floor.rooms, unavailable)
+
+    def random_room_floor(
+        self, floor: FloorState, excluded: set[Position] | None = None, rng: random.Random | None = None
+    ) -> Position:
+        """Choose a usable floor cell by Rogue's uniform-room rejection sampling."""
+        self._floor_number = floor.number
+        return self._random_room_floor(floor.tiles, floor.rooms, excluded, rng)
 
     def _blank(self) -> list[list[Terrain]]:
         return [[Terrain.WALL for _ in range(self.width)] for _ in range(self.height)]
 
     def _carve_room(self, tiles: list[list[Terrain]], room: Room) -> None:
         if room.is_maze:
-            start = (
-                room.x + self.rng.randrange(room.width) // 2 * 2,
-                room.y + self.rng.randrange(room.height) // 2 * 2,
-            )
-            stack = [start]
-            tiles[start[1]][start[0]] = Terrain.FLOOR
-            while stack:
-                x, y = stack[-1]
-                candidates = [
-                    (x + dx * 2, y + dy * 2, dx, dy)
-                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                    if room.x <= x + dx * 2 < room.x + room.width
-                    and room.y <= y + dy * 2 < room.y + room.height
-                    and tiles[y + dy * 2][x + dx * 2] == Terrain.WALL
-                ]
-                if not candidates:
-                    stack.pop()
-                    continue
-                nx, ny, dx, dy = self.rng.choice(candidates)
-                tiles[y + dy][x + dx] = Terrain.FLOOR
-                tiles[ny][nx] = Terrain.FLOOR
-                stack.append((nx, ny))
+            self._carve_maze(tiles, room)
             return
         for y in range(room.y + 1, room.y + room.height - 1):
             for x in range(room.x + 1, room.x + room.width - 1):
                 if 0 < x < self.width - 1 and 0 < y < self.height - 1:
                     tiles[y][x] = Terrain.FLOOR
+
+    def _carve_maze(self, tiles: list[list[Terrain]], room: Room) -> None:
+        start_y = self.rng.randrange(room.height) // 2 * 2
+        start_x = self.rng.randrange(room.width) // 2 * 2
+        self._set_maze_passage(tiles, room.x + start_x, room.y + start_y)
+        stack = [(start_x, start_y)]
+        directions = ((2, 0), (-2, 0), (0, 2), (0, -2))
+        while stack:
+            x, y = stack[-1]
+            selected: tuple[int, int] | None = None
+            candidate_count = 0
+            for dx, dy in directions:
+                next_x, next_y = x + dx, y + dy
+                if not (0 <= next_x <= room.width and 0 <= next_y <= room.height):
+                    continue
+                absolute_x, absolute_y = room.x + next_x, room.y + next_y
+                if not (0 <= absolute_x < self.width and 0 <= absolute_y < self.height):
+                    continue
+                if tiles[absolute_y][absolute_x] != Terrain.WALL:
+                    continue
+                candidate_count += 1
+                if self.rng.randrange(candidate_count) == 0:
+                    selected = (next_x, next_y)
+            if selected is None:
+                stack.pop()
+                continue
+            next_x, next_y = selected
+            middle_x = room.x + (x + next_x) // 2
+            middle_y = room.y + (y + next_y) // 2
+            self._set_maze_passage(tiles, middle_x, middle_y)
+            self._set_maze_passage(tiles, room.x + next_x, room.y + next_y)
+            stack.append(selected)
+
+    def _set_maze_passage(self, tiles: list[list[Terrain]], x: int, y: int) -> None:
+        hidden = self.rng.randrange(10) + 1 < self._floor_number and self.rng.randrange(40) == 0
+        tiles[y][x] = Terrain.HIDDEN_PASSAGE if hidden else Terrain.FLOOR
 
     def _generate_rooms(self, floor_number: int) -> FloorState:
         tiles = self._blank()
@@ -844,7 +891,11 @@ class DungeonGenerator:
         cell_width = self.width // columns
         cell_height = self.height // rows
         missing_count = self.rng.randrange(4)
-        missing_regions = set(self.rng.sample(range(columns * rows), missing_count))
+        missing_regions: set[int] = set()
+        while len(missing_regions) < missing_count:
+            region = self.rng.randrange(self.REGION_COUNT)
+            if region not in missing_regions:
+                missing_regions.add(region)
         regions: list[Room | None] = [None] * (columns * rows)
         region_points: list[Position] = [(0, 0)] * (columns * rows)
         for index in range(columns * rows):
@@ -858,8 +909,10 @@ class DungeonGenerator:
             dark = self.rng.randrange(10) < floor_number - 1
             maze = dark and self.rng.randrange(15) == 0
             if maze:
-                x, y = left + 1, top + 1
-                room_width, room_height = cell_width - 2, cell_height - 2
+                x = left - 1 if left == 1 else left
+                y = top + 1 if top == 0 else top
+                room_width = cell_width - 1
+                room_height = cell_height - 2 if top == 0 else cell_height - 1
             else:
                 while True:
                     room_width = self.rng.randrange(cell_width - 4) + 4
@@ -874,50 +927,76 @@ class DungeonGenerator:
             rooms.append(room)
             self._carve_room(tiles, room)
 
+        self._connect_passages(tiles, regions, region_points)
+        return FloorState(floor_number, self.width, self.height, tiles, rooms)
+
+    def _connect_passages(
+        self, tiles: list[list[Terrain]], regions: list[Room | None], region_points: list[Position]
+    ) -> None:
+        """Build Rogue's randomized spanning tree and attempt additional adjacent edges."""
         connections = [[False] * self.REGION_COUNT for _ in range(self.REGION_COUNT)]
-        graph = {self.rng.randrange(self.REGION_COUNT)}
-        while len(graph) < self.REGION_COUNT:
-            region_index = self.rng.choice(tuple(graph))
-            adjacent = [other for other in self._adjacent_regions(region_index) if other not in graph]
-            if not adjacent:
+        graph = [False] * self.REGION_COUNT
+        first_index = self.rng.randrange(self.REGION_COUNT)
+        graph[first_index] = True
+        room_count = 1
+        while room_count < self.REGION_COUNT:
+            adjacent = self._adjacent_regions(first_index)
+            selected = self._reservoir_choice(candidate for candidate in adjacent if not graph[candidate])
+            if selected is None:
+                while True:
+                    first_index = self.rng.randrange(self.REGION_COUNT)
+                    if graph[first_index]:
+                        break
                 continue
-            neighbor = self.rng.choice(adjacent)
-            self._connect_regions(tiles, regions, region_points, region_index, neighbor)
-            graph.add(neighbor)
-            connections[region_index][neighbor] = connections[neighbor][region_index] = True
+            self._connect_regions(tiles, regions, region_points, first_index, selected)
+            graph[selected] = True
+            room_count += 1
+            connections[first_index][selected] = connections[selected][first_index] = True
 
         for _ in range(self.rng.randrange(5)):
-            region_index = self.rng.randrange(self.REGION_COUNT)
-            adjacent = [other for other in self._adjacent_regions(region_index) if not connections[region_index][other]]
-            if not adjacent:
-                continue
-            neighbor = self.rng.choice(adjacent)
-            self._connect_regions(tiles, regions, region_points, region_index, neighbor)
-            connections[region_index][neighbor] = connections[neighbor][region_index] = True
+            first_index = self.rng.randrange(self.REGION_COUNT)
+            adjacent = self._adjacent_regions(first_index)
+            selected = self._reservoir_choice(
+                candidate for candidate in adjacent if not connections[first_index][candidate]
+            )
+            if selected is not None:
+                self._connect_regions(tiles, regions, region_points, first_index, selected)
+                connections[first_index][selected] = connections[selected][first_index] = True
 
-        start_room = rooms[0]
-        start = next(
-            (x, y)
-            for y in range(start_room.y, start_room.y + start_room.height)
-            for x in range(start_room.x, start_room.x + start_room.width)
-            if tiles[y][x] == Terrain.FLOOR
-        )
-        end_room = max(
-            rooms,
-            key=lambda room: abs(room.center[0] - start_room.center[0]) + abs(room.center[1] - start_room.center[1]),
-        )
-        end = next(
-            (x, y)
-            for y in range(end_room.y, end_room.y + end_room.height)
-            for x in range(end_room.x, end_room.x + end_room.width)
-            if tiles[y][x] == Terrain.FLOOR
-        )
-        up_stairs = start
-        down_stairs = end if floor_number < MAX_FLOOR else None
-        tiles[start[1]][start[0]] = Terrain.STAIRS_UP
-        if down_stairs:
-            tiles[end[1]][end[0]] = Terrain.STAIRS_DOWN
-        return FloorState(floor_number, self.width, self.height, tiles, rooms, up_stairs, down_stairs)
+    def _random_room_floor(
+        self,
+        tiles: list[list[Terrain]],
+        rooms: list[Room],
+        excluded: set[Position] | None = None,
+        rng: random.Random | None = None,
+    ) -> Position:
+        """Sample an available interior floor cell from a uniformly selected room."""
+        excluded = excluded or set()
+        rng = rng or self.rng
+        if not any(
+            (x, y) not in excluded and tiles[y][x] == Terrain.FLOOR
+            for room in rooms
+            for y in range(room.y + 1, room.y + room.height - 1)
+            for x in range(room.x + 1, room.x + room.width - 1)
+        ):
+            raise RuntimeError
+        while True:
+            room = rooms[rng.randrange(len(rooms))]
+            position = (
+                room.x + 1 + rng.randrange(room.width - 2),
+                room.y + 1 + rng.randrange(room.height - 2),
+            )
+            x, y = position
+            if position not in excluded and tiles[y][x] == Terrain.FLOOR:
+                return position
+
+    def _reservoir_choice(self, candidates: Iterable[int]) -> int | None:
+        """Choose a candidate with Rogue's sequential 1-in-n replacement rule."""
+        selected = None
+        for seen, candidate in enumerate(candidates, 1):
+            if self.rng.randrange(seen) == 0:
+                selected = candidate
+        return selected
 
     @staticmethod
     def _adjacent_regions(index: int) -> list[int]:
@@ -953,48 +1032,32 @@ class DungeonGenerator:
         if direction[0]:
             if first:
                 candidates = [(first.x + first.width - 1, y) for y in range(first.y + 1, first.y + first.height - 1)]
-                if first.is_maze:
-                    start = list(self._maze_port(tiles, first, candidates, (-1, 0)))
-                else:
-                    start = list(self.rng.choice(candidates))
+                start = list(self._maze_port(tiles, candidates)) if first.is_maze else list(self.rng.choice(candidates))
             if second:
                 candidates = [(second.x, y) for y in range(second.y + 1, second.y + second.height - 1)]
-                if second.is_maze:
-                    end = list(self._maze_port(tiles, second, candidates, (1, 0)))
-                else:
-                    end = list(self.rng.choice(candidates))
+                end = list(self._maze_port(tiles, candidates)) if second.is_maze else list(self.rng.choice(candidates))
             primary_distance = abs(start[0] - end[0]) - 1
             turn_distance = abs(start[1] - end[1])
             turn_delta = (0, 1 if start[1] < end[1] else -1)
         else:
             if first:
                 candidates = [(x, first.y + first.height - 1) for x in range(first.x + 1, first.x + first.width - 1)]
-                if first.is_maze:
-                    start = list(self._maze_port(tiles, first, candidates, (0, -1)))
-                else:
-                    start = list(self.rng.choice(candidates))
+                start = list(self._maze_port(tiles, candidates)) if first.is_maze else list(self.rng.choice(candidates))
             if second:
                 candidates = [(x, second.y) for x in range(second.x + 1, second.x + second.width - 1)]
-                if second.is_maze:
-                    end = list(self._maze_port(tiles, second, candidates, (0, 1)))
-                else:
-                    end = list(self.rng.choice(candidates))
+                end = list(self._maze_port(tiles, candidates)) if second.is_maze else list(self.rng.choice(candidates))
             primary_distance = abs(start[1] - end[1]) - 1
             turn_distance = abs(start[0] - end[0])
             turn_delta = (1 if start[0] < end[0] else -1, 0)
 
         turn_spot = self.rng.randrange(primary_distance - 1) + 1 if primary_distance > 1 else 1
         if first:
-            if first.is_maze:
-                tiles[start[1]][start[0]] = Terrain.FLOOR
-            else:
+            if not first.is_maze:
                 tiles[start[1]][start[0]] = self._door_terrain()
         else:
             self._carve_passage(tiles, *start)
         if second:
-            if second.is_maze:
-                tiles[end[1]][end[0]] = Terrain.FLOOR
-            else:
+            if not second.is_maze:
                 tiles[end[1]][end[0]] = self._door_terrain()
         else:
             self._carve_passage(tiles, *end)
@@ -1017,31 +1080,12 @@ class DungeonGenerator:
             return Terrain.SECRET_DOOR
         return Terrain.DOOR_CLOSED
 
-    def _maze_port(
-        self,
-        tiles: list[list[Terrain]],
-        room: Room,
-        candidates: list[Position],
-        inward: Position,
-    ) -> Position:
-        port = self.rng.choice(candidates)
-        x, y = port
-        dx, dy = inward
-        inside = [
-            (px, py)
-            for py in range(room.y + 1, room.y + room.height - 1)
-            for px in range(room.x + 1, room.x + room.width - 1)
-            if tiles[py][px] == Terrain.FLOOR
-        ]
-        target_x, target_y = min(inside, key=lambda point: abs(point[0] - x) + abs(point[1] - y))
-        tiles[y][x] = Terrain.FLOOR
-        while (x, y) != (target_x, target_y):
-            if x != target_x:
-                x += 1 if target_x > x else -1
-            elif y != target_y:
-                y += 1 if target_y > y else -1
-            tiles[y][x] = Terrain.FLOOR
-        return port
+    def _maze_port(self, tiles: list[list[Terrain]], candidates: list[Position]) -> Position:
+        """Select an existing maze passage on the room boundary."""
+        while True:
+            port = self.rng.choice(candidates)
+            if tiles[port[1]][port[0]] in {Terrain.FLOOR, Terrain.HIDDEN_PASSAGE}:
+                return port
 
     def _carve_passage(self, tiles: list[list[Terrain]], x: int, y: int) -> None:
         if 0 < x < self.width - 1 and 0 < y < self.height - 1 and tiles[y][x] == Terrain.WALL:
@@ -1554,7 +1598,9 @@ class GameState:
         self._appearance_names = self._make_appearances()
         self._ensure_floor(1)
         self._setup_initial_inventory(self.floor)
-        self.player.position = self.floor.up_stairs or self._first_floor_position(self.floor)
+        self.player.position = (
+            self.floor.player_position or self.floor.up_stairs or self._first_floor_position(self.floor)
+        )
         self.visible_positions()
         self._wander_turns = self._spread_turns(WANDER_DELAY)
         self._message("You enter the Dungeons of Doom.")
@@ -1621,11 +1667,12 @@ class GameState:
     def _ensure_floor(self, number: int) -> FloorState:
         if number in self.floors:
             return self.floors[number]
-        floor = self.generator.generate(number)
-        self._spawn_room_gold(floor)
-        self._spawn_monsters(floor)
+        floor = self.generator.generate(number, defer_stairs=True)
+        self._spawn_room_contents(floor)
         self._spawn_items(floor)
         self._spawn_traps(floor)
+        self.generator.place_stairs(floor, self._occupied(floor))
+        self.generator.place_hero(floor, self._occupied(floor))
         self.floors[number] = floor
         return floor
 
@@ -1677,7 +1724,7 @@ class GameState:
         self.current_floor += 1
         self.player.deepest_floor = max(self.player.deepest_floor, self.current_floor)
         target = self._ensure_floor(self.current_floor)
-        self.player.position = target.up_stairs or self._first_floor_position(target)
+        self.player.position = target.player_position or target.up_stairs or self._first_floor_position(target)
 
     def _new_item(
         self, floor: FloorState, kind: ItemKind, name: str | None = None, *, on_floor: bool = True
@@ -1780,25 +1827,33 @@ class GameState:
                     k=1,
                 )[0]
             )
-            item = self._new_item(floor, kind)
-            if item.position not in {floor.up_stairs, floor.down_stairs}:
-                floor.items.append(item)
+            item = self._new_item(floor, kind, on_floor=False)
+            item.position = self.generator.random_room_floor(floor, self._occupied(floor), self.rng)
+            floor.items.append(item)
         if floor.number == MAX_FLOOR:
             amulet = self._new_item(floor, ItemKind.AMULET, on_floor=False)
-            amulet.position = self._free_position(floor)
+            amulet.position = self.generator.random_room_floor(floor, self._occupied(floor), self.rng)
             floor.items.append(amulet)
 
+    def _spawn_room_contents(self, floor: FloorState) -> None:
+        for room in floor.rooms:
+            self._spawn_room_gold_in_room(floor, room)
+            self._spawn_monster_in_room(floor, room)
+
     def _spawn_room_gold(self, floor: FloorState) -> None:
+        for room in floor.rooms:
+            self._spawn_room_gold_in_room(floor, room)
+
+    def _spawn_room_gold_in_room(self, floor: FloorState, room: Room) -> None:
         if self.player.has_amulet and floor.number < self.player.deepest_floor:
             return
-        for room in floor.rooms:
-            if self.rng.randrange(2) != 0:
-                continue
-            candidates = self._room_floor_positions(floor, room)
-            if candidates:
-                gold = self._new_item(floor, ItemKind.GOLD, on_floor=False)
-                gold.position = self.rng.choice(candidates)
-                floor.items.append(gold)
+        if self.rng.randrange(2) != 0:
+            return
+        candidates = self._room_floor_positions(floor, room)
+        if candidates:
+            gold = self._new_item(floor, ItemKind.GOLD, on_floor=False)
+            gold.position = self.rng.choice(candidates)
+            floor.items.append(gold)
 
     def _spawn_treasure_room(self, floor: FloorState) -> None:
         rooms = floor.rooms
@@ -1829,15 +1884,17 @@ class GameState:
 
     def _spawn_monsters(self, floor: FloorState) -> None:
         for room in floor.rooms:
-            has_gold = any(
-                item.kind == ItemKind.GOLD and item.position is not None and room.contains(*item.position)
-                for item in floor.items
-            )
-            chance = 80 if has_gold else 25
-            if self.rng.randrange(100) < chance:
-                positions = self._room_floor_positions(floor, room)
-                if not positions:
-                    continue
+            self._spawn_monster_in_room(floor, room)
+
+    def _spawn_monster_in_room(self, floor: FloorState, room: Room) -> None:
+        has_gold = any(
+            item.kind == ItemKind.GOLD and item.position is not None and room.contains(*item.position)
+            for item in floor.items
+        )
+        chance = 80 if has_gold else 25
+        if self.rng.randrange(100) < chance:
+            positions = self._room_floor_positions(floor, room)
+            if positions:
                 self._new_monster(floor, self.rng.choice(positions))
 
     def _new_monster(
@@ -3554,7 +3611,9 @@ class GameState:
         self.current_floor -= 1
         new_floor = self.current_floor not in self.floors
         target = self._ensure_floor(self.current_floor)
-        self.player.position = target.down_stairs or target.up_stairs or self._first_floor_position(target)
+        self.player.position = (
+            target.player_position or target.down_stairs or target.up_stairs or self._first_floor_position(target)
+        )
         self._message(f"You ascend to level {self.current_floor}.")
         self._finish_turn(process_monsters=not new_floor)
         if old_floor != self.current_floor + 1:

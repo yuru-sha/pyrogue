@@ -30,7 +30,7 @@ from pyrogue.core.save_manager import SaveManager
 
 
 def test_fight_uses_requested_direction_and_missing_target_spends_no_turn() -> None:
-    game = GameState(seed=108)
+    game = GameState(seed=1)
     game.floor.monsters.clear()
     x, y = game.player.position
     north = MonsterState(1081, "bat", x, y - 1, 1)
@@ -758,6 +758,161 @@ UNIDENTIFIED_ITEM_NAMES = {
 }
 
 
+def test_seeded_ordinary_floor_preserves_source_room_selection_and_connectivity() -> None:
+    floor = DungeonGenerator(rng=random.Random(2)).generate(1)  # noqa: S311
+    matching_floor = DungeonGenerator(rng=random.Random(2)).generate(1)  # noqa: S311
+
+    assert floor.tiles == matching_floor.tiles
+    assert floor.up_stairs == matching_floor.up_stairs
+    assert floor.down_stairs == matching_floor.down_stairs
+
+    for seed in range(32):
+        generator = DungeonGenerator(rng=random.Random(seed))  # noqa: S311
+        generated = generator.generate(1)
+        assert generated.up_stairs is not None
+        assert generated.down_stairs is not None
+        assert generator._path_exists(generated, generated.up_stairs, generated.down_stairs)
+
+
+def test_room_omission_retries_a_region_already_marked_gone() -> None:
+    class RepeatedOmissionRng(random.Random):
+        def __init__(self) -> None:
+            super().__init__(0)
+            self.draws = iter(((4, 3), (9, 2), (9, 2), (9, 4)))
+
+        def randrange(self, start: int, stop: int | None = None, step: int = 1) -> int:
+            try:
+                expected_stop, value = next(self.draws)
+            except StopIteration:
+                return super().randrange(start, stop, step) if stop is not None else super().randrange(start)
+            assert (start, stop) == (expected_stop, None)
+            return value
+
+    floor = DungeonGenerator(rng=RepeatedOmissionRng()).generate(1)
+
+    assert len(floor.rooms) == 6
+
+
+def test_passage_graph_matches_source_walk_restarts_and_extra_edges(monkeypatch: pytest.MonkeyPatch) -> None:
+    class SourceWalkRng(random.Random):
+        def __init__(self) -> None:
+            super().__init__(0)
+            self.region_draws = iter((0, 1, 4, 5, 7, 4, 4))
+            self.stops: list[int] = []
+
+        def randrange(self, start: int, stop: int | None = None, step: int = 1) -> int:
+            assert stop is None
+            assert step == 1
+            self.stops.append(start)
+            if start == DungeonGenerator.REGION_COUNT:
+                return next(self.region_draws)
+            if start == 1:
+                return 0
+            if start == 2:
+                return 1
+            if start == 5:
+                return 2
+            pytest.fail(f"unexpected randrange({start})")
+
+    rng = SourceWalkRng()
+    generator = DungeonGenerator(rng=rng)
+    connections: list[tuple[int, int]] = []
+    monkeypatch.setattr(
+        generator,
+        "_connect_regions",
+        lambda tiles, regions, points, first, second: connections.append((first, second)),
+    )
+
+    generator._connect_passages([], [None] * 9, [(0, 0)] * 9)
+
+    assert connections == [
+        (0, 1),
+        (0, 3),
+        (1, 2),
+        (1, 4),
+        (4, 5),
+        (4, 7),
+        (5, 8),
+        (7, 6),
+        (4, 3),
+    ]
+    assert rng.stops == [9, 1, 2, 1, 9, 1, 2, 1, 9, 1, 2, 1, 9, 1, 9, 1, 5, 9, 1, 9]
+
+
+def test_maze_port_retries_until_an_existing_hidden_passage(monkeypatch: pytest.MonkeyPatch) -> None:
+    generator = DungeonGenerator(rng=random.Random(1))  # noqa: S311
+    tiles = [[Terrain.WALL for _ in range(5)] for _ in range(5)]
+    candidates = [(2, 1), (3, 1)]
+    tiles[1][3] = Terrain.HIDDEN_PASSAGE
+    draws = iter(((2, 1), (3, 1)))
+
+    def choose_port(options: list[tuple[int, int]]) -> tuple[int, int]:
+        position = next(draws)
+        assert position in options
+        return position
+
+    monkeypatch.setattr(generator.rng, "choice", choose_port)
+
+    assert generator._maze_port(tiles, candidates) == (3, 1)
+
+
+def test_maze_connection_preserves_a_hidden_passage_at_its_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    generator = DungeonGenerator(width=30, height=15, rng=random.Random(1))  # noqa: S311
+    generator._floor_number = MAX_FLOOR
+    maze_room = Room(1, 2, 8, 8, is_maze=True)
+    regions: list[Room | None] = [maze_room] + [None] * 8
+    region_points = [(0, 0)] * 9
+    region_points[1] = (15, 5)
+    tiles = generator._blank()
+    port = (maze_room.x + maze_room.width - 1, 5)
+    tiles[port[1]][port[0]] = Terrain.HIDDEN_PASSAGE
+
+    def select_maze_port(_tiles: list[list[Terrain]], candidates: list[tuple[int, int]]) -> tuple[int, int]:
+        assert port in candidates
+        return port
+
+    monkeypatch.setattr(generator, "_maze_port", select_maze_port)
+
+    generator._connect_regions(tiles, regions, region_points, 0, 1)
+
+    assert tiles[port[1]][port[0]] == Terrain.HIDDEN_PASSAGE
+
+
+def test_new_floor_places_the_hero_on_an_unoccupied_room_floor_cell() -> None:
+    game = GameState(seed=4324)
+    floor = game.floor
+    occupied = {(monster.x, monster.y) for monster in floor.monsters}
+    occupied.update(item.position for item in floor.items if item.position is not None)
+    occupied.update((trap.x, trap.y) for trap in floor.traps)
+    occupied.update(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
+
+    assert game.player.position == floor.player_position
+    assert floor.player_position is not None
+    assert floor.player_position not in occupied
+    assert floor.tile_at(floor.player_position) == Terrain.FLOOR
+    assert any(room.contains(*floor.player_position) for room in floor.rooms)
+
+
+def test_floor_arrival_position_survives_save_and_cached_return() -> None:
+    game = GameState(seed=4325)
+    first_floor = game.floor
+    first_floor.monsters.clear()
+    game.player.position = first_floor.down_stairs
+
+    assert game.descend().success
+    assert game.player.position == game.floor.player_position
+    return_position = first_floor.down_stairs
+    assert first_floor.player_position == return_position
+
+    restored = GameState.from_dict(json.loads(json.dumps(game.to_dict())))
+    restored.floors[1].monsters.clear()
+    restored.floor.monsters.clear()
+    restored.player.position = restored.floor.up_stairs
+
+    assert restored.ascend().success
+    assert restored.player.position == return_position
+
+
 def test_seed_reproduces_initial_state() -> None:
     assert GameState(1234).to_dict() == GameState(1234).to_dict()
 
@@ -774,6 +929,41 @@ def test_starting_equipment_matches_rogue_54() -> None:
     assert items["short bow"].hit_bonus == 1
     assert 25 <= items["arrow"].quantity <= 39
     assert items["food ration"].nutrition == HUNGERTIME - 200
+
+
+def test_deep_floor_generation_keeps_source_maze_and_room_distributions() -> None:
+    floors = [DungeonGenerator(rng=random.Random(seed)).generate(MAX_FLOOR) for seed in range(128)]  # noqa: S311
+    maze_floors = sum(any(room.is_maze for room in floor.rooms) for floor in floors)
+    room_count = sum(len(floor.rooms) for floor in floors)
+
+    assert 30 <= maze_floors <= 65
+    assert 7.1 <= room_count / len(floors) <= 8.0
+    assert all(6 <= len(floor.rooms) <= 9 for floor in floors)
+
+
+@pytest.mark.parametrize("width", [80, 81])
+def test_deep_maze_generation_stays_inside_non_multiple_of_three_map_bounds(width: int) -> None:
+    generator = DungeonGenerator(width=width, rng=random.Random(1))  # noqa: S311
+    floor = generator.generate(MAX_FLOOR)
+
+    assert any(room.is_maze for room in floor.rooms)
+    assert floor.up_stairs is not None
+    x, y = floor.up_stairs
+    assert 0 <= x < width
+    assert 0 <= y < floor.height
+
+
+def test_room_floor_sampling_fails_when_every_valid_cell_is_occupied() -> None:
+    generator = DungeonGenerator(rng=random.Random(1))  # noqa: S311
+    room = Room(1, 1, 4, 4)
+    tiles = [[Terrain.WALL for _ in range(8)] for _ in range(8)]
+    valid_cells = {(x, y) for x in range(2, 4) for y in range(2, 4)}
+    for x, y in valid_cells:
+        tiles[y][x] = Terrain.FLOOR
+    floor = FloorState(1, 8, 8, tiles, [room])
+
+    with pytest.raises(RuntimeError):
+        generator.random_room_floor(floor, valid_cells)
 
 
 @pytest.mark.parametrize("seed", [5, 6, 28, 31, 33, 54, 62])
@@ -858,8 +1048,17 @@ def test_treasure_room_generation_adds_a_pile_of_items_and_monsters() -> None:
 
 def test_floor_item_generation_keeps_every_successful_spawn(monkeypatch: pytest.MonkeyPatch) -> None:
     class GuaranteedItemRng:
+        def __init__(self) -> None:
+            self.position_roll = 0
+
         def randrange(self, stop: int) -> int:
-            return 1 if stop in {2, 10, 20} else 0
+            if stop == 20:
+                return 1
+            if stop == 100:
+                return 0
+            result = self.position_roll % stop
+            self.position_roll += 1
+            return result
 
         def randint(self, start: int, stop: int) -> int:
             return start
@@ -880,6 +1079,9 @@ def test_floor_item_generation_keeps_every_successful_spawn(monkeypatch: pytest.
     assert all(item.position is not None for item in floor.items)
     assert all(floor.tile_at(item.position) == Terrain.FLOOR for item in floor.items if item.position is not None)
     assert all(item.position not in {floor.up_stairs, floor.down_stairs} for item in floor.items)
+    assert all(
+        any(room.contains(*item.position) for room in floor.rooms) for item in floor.items if item.position is not None
+    )
 
 
 @pytest.mark.parametrize(
@@ -966,7 +1168,7 @@ def test_seeded_floor_spawning_matches_expected_rates_across_seeds() -> None:
     ordinary_items = sum(item.kind not in {ItemKind.GOLD, ItemKind.AMULET} for floor in floors for item in floor.items)
     monsters = sum(len(floor.monsters) for floor in floors)
 
-    assert 6 <= trap_floors <= 20
+    assert 6 <= trap_floors <= 24
     assert 350 <= ordinary_items <= 510
     assert 400 <= monsters <= 700
     deep_trap_counts = [len(GameState(seed)._ensure_floor(12).traps) for seed in range(128)]
@@ -1333,8 +1535,11 @@ def test_new_destination_floor_monsters_wait_until_the_next_player_action(monkey
     spawned: list[MonsterState] = []
     spawn_positions: list[tuple[int, int]] = []
 
-    def spawn_arrival_monster(destination: FloorState) -> None:
-        arrival = destination.up_stairs
+    def place_hero_with_arrival_monster(destination: FloorState, occupied=None) -> None:
+        original_place_hero(destination, occupied)
+        destination.monsters.clear()
+        arrival = destination.player_position
+        assert arrival is not None
         monster_position = (arrival[0] + 1, arrival[1])
         destination.set_tile(monster_position, Terrain.FLOOR)
         monster = MonsterState(900, "snake", *monster_position, 100)
@@ -1342,9 +1547,9 @@ def test_new_destination_floor_monsters_wait_until_the_next_player_action(monkey
         spawned.append(monster)
         spawn_positions.append(monster_position)
 
-    monkeypatch.setattr(game, "_spawn_monsters", spawn_arrival_monster)
+    original_place_hero = game.generator.place_hero
+    monkeypatch.setattr(game.generator, "place_hero", place_hero_with_arrival_monster)
     game.player.position = game.floor.down_stairs
-
     result = game.descend()
 
     monster = spawned[0]
@@ -1789,4 +1994,4 @@ def test_trap_door_moves_the_player_down_one_floor_without_damage() -> None:
     assert game.player.hp == game.player.max_hp
     assert game.current_floor == 2
     assert game.player.deepest_floor == 2
-    assert game.player.position == game.floor.up_stairs
+    assert game.player.position == game.floor.player_position

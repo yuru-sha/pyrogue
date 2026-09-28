@@ -48,6 +48,8 @@ uv run --locked --extra dev python -m compileall -q src tests
 変更後は、少なくとも変更箇所のテストと全体テストを実行します。生成ロジックを変更した
 場合は、複数seedで全階の階段到達性も確認します。
 
+階層生成の回帰テストは、重複しない欠落部屋選択、深層の迷路分布、seed再現性、部屋内のアイテム・主人公配置、階段到達性を確認します。
+
 CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します。再現確認のseedを変える場合は、例えば `CLI_TEST_SEED=20260908 make test-cli` とします。
 
 ## 実装ルール
