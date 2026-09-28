@@ -187,6 +187,7 @@ class HelpMenuScreen:
                     "  c          - Call (rename) an item",
                     "  1-255     - Repeat eligible commands",
                     "  ?          - Show help (in-game)",
+                    "  @          - Show full player status",
                     "  s          - Search for secret doors, passages, and traps",
                     "System Commands:",
                     "  Ctrl+S     - Save game",

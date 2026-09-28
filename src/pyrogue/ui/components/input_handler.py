@@ -153,6 +153,8 @@ class InputHandler:
 
     def _execute(self, command: str) -> GameStates | None:
         result = self.game_screen.execute(command)
+        if command in {"@", "status"}:
+            self.game_screen.add_message(result.message)
         if command in {"o", "options"}:
             return GameStates.OPTIONS_MENU
         return {

@@ -18,6 +18,7 @@ from pyrogue.core.rogue_game import (
 )
 from pyrogue.ui.screens.game_screen import GameScreen
 from pyrogue.ui.screens.inventory_screen import InventoryScreen
+from pyrogue.ui.screens.quick_guide_screen import QuickGuideScreen
 
 
 class RecordingConsole:
@@ -787,3 +788,48 @@ def test_load_restores_canonical_inventory_and_clears_stale_selection(monkeypatc
     assert any(item.id == wand.id for item in game_screen.player.inventory)
     assert not game_screen.input_handler.direction_selection_mode
     assert game_screen.input_handler.selected_item_id is None
+
+
+def test_status_key_shows_canonical_message_and_complete_persistent_row() -> None:
+    game_screen = GameScreen(None, seed=1234)
+    game = game_screen.rogue_game
+    game.floor.monsters.clear()
+    player = game.player
+    player.level = 20
+    player.exp = 8_000_000
+    player.gold = 100_000
+    player.hp = 1000
+    player.max_hp = 1000
+    player.strength = 31
+    player.max_strength = 31
+    player.armor_class = -10
+    player.equipped_armor = None
+    player.food_units = 0
+    player.faint_turns = 1
+    turns_before = player.turns_played
+
+    assert game_screen.handle_key(_key("@")) is None
+    assert game.messages[-1] == game.status_text()
+    assert player.turns_played == turns_before
+
+    console = RecordingConsole()
+    game_screen.render(console)
+    status_row = console.lines[-1]
+    assert len(status_row) <= console.width
+    assert "Level:20" in status_row
+    assert "Gold:100000" in status_row
+    assert "Hp:1000(1000)" in status_row
+    assert "Str:31(31)" in status_row
+    assert "Arm:-10" in status_row
+    assert "Exp:20/8000000" in status_row
+    assert status_row.endswith("Faint")
+    player.gold += 1
+    game_screen.render(console)
+    assert "Gold:100001" in console.lines[-1]
+
+
+def test_quick_guide_lists_status_command() -> None:
+    console = RecordingConsole()
+    QuickGuideScreen(console, None).render()
+
+    assert "@                  - Show full player status" in console.lines

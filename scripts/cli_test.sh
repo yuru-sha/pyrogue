@@ -138,7 +138,7 @@ main() {
     run_test_with_args "ヘルプ表示" "--help" "PyRogue - A Python Roguelike Game"
     run_test "CLI終了" "quit" "Goodbye\."
     run_test "ヘルプコマンド" "help\nquit" "hjkl yubn move"
-    run_test "ステータス表示" "status\nquit" "Level 1  HP"
+    run_test "ステータス表示" "status\nquit" "Level:.*Gold:.*Hp:.*Str:.*Arm:.*Exp:"
     run_test "インベントリ表示" "inventory\nquit" "mace"
     run_test "待機コマンド" "wait\nquit" "You wait\."
     run_test "不正な移動方向" "move invalid\nquit" "Invalid direction\."

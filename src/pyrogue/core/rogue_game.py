@@ -3642,8 +3642,23 @@ class GameState:
         return self._result(True, "", True)
 
     def status_text(self) -> str:
-        """Return the compact status line used by CLI and GUI."""
-        return f"Level {self.player.level}  HP {self.player.hp}/{self.player.max_hp}  Atk {self.player.attack}  AC {self.player.defense}  Food {self.player.food_units}  Gold {self.player.gold}"
+        """Return Rogue 5.4.4's canonical player status fields."""
+        player = self.player
+        if player.faint_turns > 0:
+            hunger = "Faint"
+        elif player.food_units < MORETIME:
+            hunger = "Weak"
+        elif player.food_units < 2 * MORETIME:
+            hunger = "Hungry"
+        else:
+            hunger = ""
+
+        status = (
+            f"Level:{player.level} Gold:{player.gold} Hp:{player.hp}({player.max_hp}) "
+            f"Str:{player.effective_strength()}({player.max_strength}) Arm:{player.defense} "
+            f"Exp:{player.level}/{player.exp}"
+        )
+        return f"{status} {hunger}" if hunger else status
 
     @property
     def score(self) -> int:
@@ -3701,8 +3716,11 @@ class GameState:
     def _execute(self, command: str, args: Iterable[Any] = ()) -> CommandResult:  # noqa: PLR0911
         """Execute one canonical command and return its state transition."""
         args = list(args)
+        command, key_value = self._normalize_command(command)
         if self.status != GameStatus.PLAYING:
             return self._result(False, "The game is over.")
+        if command == "status":
+            return self._result(True, self.status_text())
         if self.player.sleep_turns > 0:
             self.player.sleep_turns -= 1
             self._finish_turn()
@@ -3714,7 +3732,6 @@ class GameState:
             self._finish_turn()
             self.player.faint_turns -= 1
             return self._result(True, "You are too weak to act.", True)
-        command, key_value = self._normalize_command(command)
         if command == "move" and key_value is not None:
             return self.move(*key_value)
         command = COMMAND_ALIASES.get(command, command)
@@ -3801,12 +3818,10 @@ class GameState:
             return self._result(
                 True, ", ".join(item.display_name for item in self.player.inventory) or "Your pack is empty."
             )
-        if command == "status":
-            return self._result(True, self.status_text())
         if command == "help":
             return self._result(
                 True,
-                "hjkl yubn move, HJKLYUBN run, f fight <direction>, a repeat, c call <item> <name>, o options, 1-255 repeat eligible commands, , pickup, d drop, e eat, q quaff, r read, s search, ^ trap, / identify, </> stairs, ? help",
+                "hjkl yubn move, HJKLYUBN run, f fight <direction>, a repeat, c call <item> <name>, o options, 1-255 repeat eligible commands, , pickup, d drop, e eat, q quaff, r read, s search, ^ trap, / identify, </> stairs, ? help, @ status",
             )
         if command == "save":
             return self._result(True, "Game state ready to save.", False, self.to_dict())

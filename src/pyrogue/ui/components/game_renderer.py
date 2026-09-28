@@ -34,4 +34,4 @@ class GameRenderer:
             message = game.messages[-1] if game.messages else ""
             status = f"B{game.current_floor}F  {game.status_text()}"
             console.print(0, 0, str(message)[: console.width], fg=(255, 255, 255))
-            console.print(0, console.height - 1, status[: console.width], fg=(255, 255, 255))
+            console.print(0, console.height - 1, status, fg=(255, 255, 255))

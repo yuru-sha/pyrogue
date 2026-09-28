@@ -34,3 +34,14 @@ def test_gui_help_does_not_advertise_excluded_features() -> None:
 
     assert "hidden doors" not in help_content
     assert "Hunger reduces combat effectiveness" not in help_content
+
+
+def test_help_lists_original_full_status_command() -> None:
+    from pyrogue.core.rogue_game import GameState
+    from pyrogue.ui.screens.help_menu_screen import HelpMenuScreen
+
+    help_screen = HelpMenuScreen.__new__(HelpMenuScreen)
+    help_content = " ".join(line for page in help_screen._get_help_sections() for line in page["content"])
+
+    assert "@          - Show full player status" in help_content
+    assert "@ status" in GameState(seed=1234).execute("?").message
