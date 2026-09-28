@@ -793,6 +793,91 @@ def test_room_omission_retries_a_region_already_marked_gone() -> None:
     assert len(floor.rooms) == 6
 
 
+def test_passage_graph_matches_source_walk_restarts_and_extra_edges(monkeypatch: pytest.MonkeyPatch) -> None:
+    class SourceWalkRng(random.Random):
+        def __init__(self) -> None:
+            super().__init__(0)
+            self.region_draws = iter((0, 1, 4, 5, 7, 4, 4))
+            self.stops: list[int] = []
+
+        def randrange(self, start: int, stop: int | None = None, step: int = 1) -> int:
+            assert stop is None
+            assert step == 1
+            self.stops.append(start)
+            if start == DungeonGenerator.REGION_COUNT:
+                return next(self.region_draws)
+            if start == 1:
+                return 0
+            if start == 2:
+                return 1
+            if start == 5:
+                return 2
+            pytest.fail(f"unexpected randrange({start})")
+
+    rng = SourceWalkRng()
+    generator = DungeonGenerator(rng=rng)
+    connections: list[tuple[int, int]] = []
+    monkeypatch.setattr(
+        generator,
+        "_connect_regions",
+        lambda tiles, regions, points, first, second: connections.append((first, second)),
+    )
+
+    generator._connect_passages([], [None] * 9, [(0, 0)] * 9)
+
+    assert connections == [
+        (0, 1),
+        (0, 3),
+        (1, 2),
+        (1, 4),
+        (4, 5),
+        (4, 7),
+        (5, 8),
+        (7, 6),
+        (4, 3),
+    ]
+    assert rng.stops == [9, 1, 2, 1, 9, 1, 2, 1, 9, 1, 2, 1, 9, 1, 9, 1, 5, 9, 1, 9]
+
+
+def test_maze_port_retries_until_an_existing_hidden_passage(monkeypatch: pytest.MonkeyPatch) -> None:
+    generator = DungeonGenerator(rng=random.Random(1))  # noqa: S311
+    tiles = [[Terrain.WALL for _ in range(5)] for _ in range(5)]
+    candidates = [(2, 1), (3, 1)]
+    tiles[1][3] = Terrain.HIDDEN_PASSAGE
+    draws = iter(((2, 1), (3, 1)))
+
+    def choose_port(options: list[tuple[int, int]]) -> tuple[int, int]:
+        position = next(draws)
+        assert position in options
+        return position
+
+    monkeypatch.setattr(generator.rng, "choice", choose_port)
+
+    assert generator._maze_port(tiles, candidates) == (3, 1)
+
+
+def test_maze_connection_preserves_a_hidden_passage_at_its_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    generator = DungeonGenerator(width=30, height=15, rng=random.Random(1))  # noqa: S311
+    generator._floor_number = MAX_FLOOR
+    maze_room = Room(1, 2, 8, 8, is_maze=True)
+    regions: list[Room | None] = [maze_room] + [None] * 8
+    region_points = [(0, 0)] * 9
+    region_points[1] = (15, 5)
+    tiles = generator._blank()
+    port = (maze_room.x + maze_room.width - 1, 5)
+    tiles[port[1]][port[0]] = Terrain.HIDDEN_PASSAGE
+
+    def select_maze_port(_tiles: list[list[Terrain]], candidates: list[tuple[int, int]]) -> tuple[int, int]:
+        assert port in candidates
+        return port
+
+    monkeypatch.setattr(generator, "_maze_port", select_maze_port)
+
+    generator._connect_regions(tiles, regions, region_points, 0, 1)
+
+    assert tiles[port[1]][port[0]] == Terrain.HIDDEN_PASSAGE
+
+
 def test_new_floor_places_the_hero_on_an_unoccupied_room_floor_cell() -> None:
     game = GameState(seed=4324)
     floor = game.floor

@@ -927,6 +927,13 @@ class DungeonGenerator:
             rooms.append(room)
             self._carve_room(tiles, room)
 
+        self._connect_passages(tiles, regions, region_points)
+        return FloorState(floor_number, self.width, self.height, tiles, rooms)
+
+    def _connect_passages(
+        self, tiles: list[list[Terrain]], regions: list[Room | None], region_points: list[Position]
+    ) -> None:
+        """Build Rogue's randomized spanning tree and attempt additional adjacent edges."""
         connections = [[False] * self.REGION_COUNT for _ in range(self.REGION_COUNT)]
         graph = [False] * self.REGION_COUNT
         first_index = self.rng.randrange(self.REGION_COUNT)
@@ -955,7 +962,6 @@ class DungeonGenerator:
             if selected is not None:
                 self._connect_regions(tiles, regions, region_points, first_index, selected)
                 connections[first_index][selected] = connections[selected][first_index] = True
-        return FloorState(floor_number, self.width, self.height, tiles, rooms)
 
     def _random_room_floor(
         self,
@@ -1046,16 +1052,12 @@ class DungeonGenerator:
 
         turn_spot = self.rng.randrange(primary_distance - 1) + 1 if primary_distance > 1 else 1
         if first:
-            if first.is_maze:
-                tiles[start[1]][start[0]] = Terrain.FLOOR
-            else:
+            if not first.is_maze:
                 tiles[start[1]][start[0]] = self._door_terrain()
         else:
             self._carve_passage(tiles, *start)
         if second:
-            if second.is_maze:
-                tiles[end[1]][end[0]] = Terrain.FLOOR
-            else:
+            if not second.is_maze:
                 tiles[end[1]][end[0]] = self._door_terrain()
         else:
             self._carve_passage(tiles, *end)
