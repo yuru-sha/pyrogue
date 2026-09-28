@@ -120,23 +120,28 @@ class GameScreen:
 
         return SaveManager().save_game_state(self.rogue_game.to_dict())
 
-    def load_game(self) -> bool:
+    def load_game(self, data: dict | None = None) -> bool:
         """
-        canonicalなゲーム状態を読み込み。
+        Load canonical game data, consuming a saved session only when no payload was supplied.
 
-        Returns
+        Args:
+        ----
+            data: A previously validated save payload, or None to load it here.
+
+        Returns:
         -------
-            読み込みに成功した場合True
+            True if the game state was restored.
 
         """
-        from pyrogue.core.save_manager import SaveManager
-
-        save_manager = SaveManager()
-        data = save_manager.load_game_state()
         if data is None:
-            if save_manager.last_error is not None:
-                self.add_message(f"Failed to load save data: {save_manager.last_error}")
-            return False
+            from pyrogue.core.save_manager import SaveManager
+
+            save_manager = SaveManager()
+            data = save_manager.load_game_state()
+            if data is None:
+                if save_manager.last_error is not None:
+                    self.add_message(f"Failed to load save data: {save_manager.last_error}")
+                return False
         try:
             self.rogue_game = GameState.from_dict(data)
         except (TypeError, ValueError):

@@ -579,7 +579,7 @@ class FloorState:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FloorState:
         """Restore a floor from serialized data."""
-        return cls(
+        floor = cls(
             number=int(data["number"]),
             width=int(data["width"]),
             height=int(data["height"]),
@@ -593,6 +593,14 @@ class FloorState:
             explored={tuple(position) for position in data.get("explored", [])},
             player_position=tuple(data["player_position"]) if data.get("player_position") else None,
         )
+        if (
+            floor.width <= 0
+            or floor.height <= 0
+            or len(floor.tiles) != floor.height
+            or any(len(row) != floor.width for row in floor.tiles)
+        ):
+            raise ValueError
+        return floor
 
 
 @dataclass
@@ -3869,6 +3877,11 @@ class GameState:
             )
         game.rng.setstate(_tupleize(data["rng_state"]))
         if game.current_floor not in game.floors:
+            raise SaveCompatibilityError
+        floor = game.floors[game.current_floor]
+        if not (0 <= game.player.x < floor.width and 0 <= game.player.y < floor.height):
+            raise SaveCompatibilityError
+        if not floor.is_walkable(game.player.position):
             raise SaveCompatibilityError
         return game
 

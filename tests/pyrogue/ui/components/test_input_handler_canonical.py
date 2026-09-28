@@ -210,3 +210,22 @@ def test_gui_ctrl_l_reports_legacy_save_incompatibility_and_preserves_file(tmp_p
 
     assert any("Unsupported legacy save format" in message for message in screen.rogue_game.messages)
     assert manager.save_file.read_bytes() == before
+
+
+def test_gui_successful_save_returns_to_menu(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    screen = GameScreen(object(), seed=24)
+
+    state = screen.input_handler.handle_key(SimpleNamespace(sym=ord("s"), mod=tcod.event.Modifier.SHIFT, text="s"))
+
+    assert state == GameStates.MENU
+
+
+def test_gui_failed_save_keeps_game_session_active(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    screen = GameScreen(object(), seed=24)
+    screen.rogue_game.to_dict = dict
+
+    state = screen.input_handler.handle_key(SimpleNamespace(sym=ord("s"), mod=tcod.event.Modifier.SHIFT, text="s"))
+
+    assert state is None

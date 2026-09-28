@@ -38,3 +38,37 @@ def test_legacy_save_reports_in_menu_and_is_preserved(tmp_path):
     )
     assert menu.save_manager.save_file.read_bytes() == before
     menu.engine.new_game.assert_not_called()
+
+
+def test_menu_restores_the_payload_it_already_consumed(tmp_path) -> None:
+    from pyrogue.core.rogue_game import GameState
+    from pyrogue.ui.screens.game_screen import GameScreen
+
+    manager = SaveManager(tmp_path)
+    saved_game = GameState(seed=1234)
+    saved_game.player.gold = 42
+    expected = saved_game.to_dict()
+    assert manager.save_game_state(expected)
+
+    menu = MenuScreen.__new__(MenuScreen)
+    menu.save_manager = manager
+    menu.engine = Mock()
+    menu.engine.game_screen = GameScreen(None, seed=9999)
+
+    assert menu._load_game() == GameStates.PLAYERS_TURN
+
+    assert menu.engine.game_screen.rogue_game.to_dict() == expected
+
+
+def test_menu_offers_load_when_only_backup_is_available(tmp_path) -> None:
+    from pyrogue.core.rogue_game import GameState
+
+    manager = SaveManager(tmp_path)
+    assert manager.save_game_state(GameState(1234).to_dict())
+    assert manager.save_game_state(GameState(5678).to_dict())
+    manager.save_file.unlink()
+
+    menu = MenuScreen.__new__(MenuScreen)
+    menu.save_manager = manager
+
+    assert "Load Game" in menu._get_menu_options()

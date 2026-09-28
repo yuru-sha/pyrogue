@@ -29,6 +29,7 @@ seed, and command sequence produces the same game state.
 - Quiet turns restore HP at a level-dependent cadence; combat resets rest progress, and regeneration rings add to healing up to max HP.
 - `current_floor` is the player's current position; victory and death summaries use the separately saved `player.deepest_floor` progress value.
 - CLI and GUI use the same death cleanup; the active save is removed on death, but not on victory.
+- Saving with `S` or CLI `save` exits the current session. A successful restore consumes the save and its backup; incompatible or failed restores preserve available save data.
 
 Movement uses vi keys (`h`, `j`, `k`, `l`, `y`, `u`, `b`, `n`) and `.` waits.
 Press `/` to identify one unknown item in the pack without consuming a turn.

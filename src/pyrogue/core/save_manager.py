@@ -15,6 +15,7 @@ Features:
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import time
@@ -64,8 +65,11 @@ class SaveManager:
         self.save_dir = Path(save_dir)
         self.save_file = self.save_dir / "game_save.json"
         self.backup_file = self.save_dir / "game_save_backup.json"
+        self.backup_rollback_file = self.save_dir / "game_save_backup.rollback"
         self.metadata_file = self.save_dir / "save_metadata.json"
         self.checksum_file = self.save_dir / "save_checksum.txt"
+        self.consumed_file = self.save_dir / "game_save_consumed"
+        self.consumed_temp_file = self.save_dir / "game_save_consumed.tmp"
         self.is_permadeath_triggered = False
         self.last_error: SaveError | None = None
 
@@ -90,14 +94,38 @@ class SaveManager:
             return False
 
         self.last_error = None
+        if self.consumed_file.exists():
+            try:
+                self._clear_save_artifacts()
+                self.consumed_file.unlink()
+            except OSError as error:
+                self.last_error = SaveError(f"Failed to clear consumed save artifacts: {error}")
+                return False
         if not self._check_save_version(game_data):
             game_logger.warning("Cannot save game: invalid save payload")
             return False
 
         try:
+            previous_metadata = self.metadata_file.read_bytes() if self.metadata_file.exists() else None
+        except OSError as error:
+            self.last_error = SaveError(f"Failed to read existing save metadata: {error}")
+            return False
+        if self.backup_rollback_file.exists():
+            try:
+                if self.backup_file.exists():
+                    self.backup_rollback_file.unlink()
+                else:
+                    self.backup_rollback_file.replace(self.backup_file)
+            except OSError as error:
+                self.last_error = SaveError(f"Failed to recover previous backup: {error}")
+                return False
+
+        had_current_save = self.save_file.exists()
+        moved_current_save = False
+        moved_previous_backup = False
+        try:
             player_data = game_data.get("player_stats", game_data.get("player", {}))
             player_hp = player_data.get("hp", 20)
-            # メタデータを作成
             metadata = {
                 "save_time": time.time(),
                 "save_version": GAME_VERSION,
@@ -109,39 +137,47 @@ class SaveManager:
                 "is_alive": game_data.get("status") != "dead" and player_hp > 0,
             }
 
-            # 既存のファイルをバックアップ
-            if self.save_file.exists():
-                try:
-                    self.save_file.rename(self.backup_file)
-                except (OSError, PermissionError) as e:
-                    raise SaveError(f"Failed to backup save file: {e}") from e
-
-            # メインセーブファイルを保存
-            try:
-                with open(self.save_file, "w", encoding="utf-8") as f:
-                    json.dump(game_data, f, ensure_ascii=False, indent=2)
-            except (OSError, PermissionError, TypeError, ValueError) as e:
-                raise SaveError(f"Failed to save game data: {e}") from e
-
-            # メタデータを保存
-            try:
-                with open(self.metadata_file, "w") as f:
-                    json.dump(metadata, f, indent=2)
-            except (OSError, PermissionError, json.JSONDecodeError) as e:
-                raise SaveError(f"Failed to save metadata: {e}") from e
-
-            # セーブファイルのチェックサムを計算・保存
-            self._save_checksum()
-
-            game_logger.info(f"Game saved successfully to {self.save_file}")
-            return True
-
-        except Exception as e:
-            game_logger.error(f"Failed to save game: {e}")
-            # エラーが発生した場合、バックアップから復元
             if self.backup_file.exists():
-                self.backup_file.rename(self.save_file)
+                self.backup_file.replace(self.backup_rollback_file)
+                moved_previous_backup = True
+            if self.save_file.exists():
+                self.save_file.replace(self.backup_file)
+                moved_current_save = True
+
+            with open(self.save_file, "w", encoding="utf-8") as f:
+                json.dump(game_data, f, ensure_ascii=False, indent=2)
+            self._atomic_write(self.metadata_file, json.dumps(metadata, indent=2))
+            self._save_checksum()
+        except Exception as error:
+            self.last_error = error if isinstance(error, SaveError) else SaveError(str(error))
+            game_logger.error(f"Failed to save game: {error}")
+            rollback_main_succeeded = True
+            try:
+                if moved_current_save and self.backup_file.exists():
+                    self.backup_file.replace(self.save_file)
+                elif not had_current_save:
+                    self.save_file.unlink(missing_ok=True)
+            except OSError as rollback_error:
+                game_logger.error(f"Failed to restore previous save: {rollback_error}")
+                rollback_main_succeeded = False
+            if moved_previous_backup and rollback_main_succeeded and self.backup_rollback_file.exists():
+                try:
+                    self.backup_rollback_file.replace(self.backup_file)
+                except OSError as rollback_error:
+                    game_logger.error(f"Failed to restore previous backup: {rollback_error}")
+            try:
+                if previous_metadata is None:
+                    self.metadata_file.unlink(missing_ok=True)
+                else:
+                    self._atomic_write(self.metadata_file, previous_metadata)
+            except (OSError, SaveError) as rollback_error:
+                game_logger.error(f"Failed to restore previous save metadata: {rollback_error}")
             return False
+        if moved_previous_backup:
+            with contextlib.suppress(OSError):
+                self.backup_rollback_file.unlink(missing_ok=True)
+        game_logger.info(f"Game saved successfully to {self.save_file}")
+        return True
 
     def load_game_state(self) -> dict[str, Any] | None:
         """
@@ -153,67 +189,97 @@ class SaveManager:
 
         """
         self.last_error = None
-        if not self.save_file.exists():
-            game_logger.info("No save file found")
+        if self.consumed_file.exists():
+            try:
+                self._clear_save_artifacts()
+            except OSError as error:
+                self.last_error = SaveError(f"Failed to clear consumed save artifacts: {error}")
             return None
+        if not self.save_file.exists():
+            return self._load_backup()
 
         try:
-            # セーブファイルの整合性チェック
             if not self._verify_checksum():
                 game_logger.warning("Save file integrity check failed - potential tampering detected")
                 self.last_error = SaveError("Save file integrity check failed")
                 try:
                     with open(self.save_file, encoding="utf-8") as f:
-                        main_data = json.load(f)
-                    self._check_save_version(main_data)
+                        self._check_save_version(json.load(f))
                 except Exception as main_error:
                     self.last_error = main_error if isinstance(main_error, SaveError) else SaveError(str(main_error))
-                # チェックサム検証失敗時もバックアップを試行
-                if self.backup_file.exists():
-                    try:
-                        with open(self.backup_file, encoding="utf-8") as f:
-                            game_data = json.load(f)
-                        if not self._check_save_version(game_data):
-                            return None
-                        if not self._check_permadeath(game_data):
-                            return None
-                        game_logger.info("Game loaded from backup file after checksum failure")
-                        return game_data
-                    except Exception as backup_error:
-                        game_logger.error(f"Backup file also corrupted: {backup_error}")
-                return None
+                return self._load_backup()
 
-            # セーブデータを読み込み
             with open(self.save_file, encoding="utf-8") as f:
                 game_data = json.load(f)
+            restored = self._restore_and_consume(game_data)
+            return restored if restored is not None else self._load_backup()
+        except Exception as error:
+            self.last_error = error if isinstance(error, SaveError) else SaveError(str(error))
+            game_logger.error(f"Failed to load game: {error}")
+            return self._load_backup()
 
-            if not self._check_save_version(game_data):
-                return None
+    def _load_backup(self) -> dict[str, Any] | None:
+        """Restore from backup when the main save is unreadable or unusable."""
+        for backup_file in (self.backup_file, self.backup_rollback_file):
+            if not backup_file.exists():
+                continue
+            try:
+                with open(backup_file, encoding="utf-8") as f:
+                    game_data = json.load(f)
+                restored = self._restore_and_consume(game_data)
+                if restored is not None:
+                    return restored
+            except Exception as error:
+                game_logger.error(f"Backup file also corrupted: {error}")
+        return None
 
-            if not self._check_permadeath(game_data):
-                return None
-
-            game_logger.info(f"Game loaded successfully from {self.save_file}")
-            return game_data
-
-        except Exception as e:
-            self.last_error = e if isinstance(e, SaveError) else SaveError(str(e))
-            game_logger.error(f"Failed to load game: {e}")
-            # メインファイルが破損している場合、バックアップを試行
-            if self.backup_file.exists():
-                try:
-                    with open(self.backup_file, encoding="utf-8") as f:
-                        game_data = json.load(f)
-                    if not self._check_save_version(game_data):
-                        return None
-                    if not self._check_permadeath(game_data):
-                        return None
-                    game_logger.info("Game loaded from backup file")
-                    return game_data
-                except Exception as backup_error:
-                    game_logger.error(f"Backup file also corrupted: {backup_error}")
-
+    def _restore_and_consume(self, game_data: dict[str, Any]) -> dict[str, Any] | None:
+        """Validate a canonical restore before marking and deleting its save artifacts."""
+        if not self._check_save_version(game_data) or not self._check_permadeath(game_data):
             return None
+        try:
+            from pyrogue.core.rogue_game import GameState
+
+            GameState.from_dict(game_data)
+        except (KeyError, TypeError, ValueError) as error:
+            self.last_error = SaveError(f"Save data is not restorable: {error}")
+            return None
+
+        try:
+            self._atomic_write(self.consumed_file, "consumed")
+        except SaveError as error:
+            self.last_error = SaveError(f"Failed to mark restored save as consumed: {error}")
+            return None
+        try:
+            self._clear_save_artifacts()
+        except OSError as error:
+            game_logger.warning(f"Restored save artifacts could not all be removed: {error}")
+        return game_data
+
+    def _atomic_write(self, path: Path, content: str | bytes) -> None:
+        """Replace a file only after its complete contents have been written."""
+        temporary_file = path.with_suffix(".tmp")
+        try:
+            if isinstance(content, bytes):
+                temporary_file.write_bytes(content)
+            else:
+                temporary_file.write_text(content, encoding="utf-8")
+            temporary_file.replace(path)
+        except OSError as error:
+            with contextlib.suppress(OSError):
+                temporary_file.unlink(missing_ok=True)
+            raise SaveError(f"Failed to atomically write {path.name}: {error}") from error
+
+    def _clear_save_artifacts(self) -> None:
+        """Remove every file that could restore or describe a consumed session."""
+        for path in (
+            self.save_file,
+            self.backup_file,
+            self.backup_rollback_file,
+            self.metadata_file,
+            self.checksum_file,
+        ):
+            path.unlink(missing_ok=True)
 
     def _check_permadeath(self, game_data: dict[str, Any]) -> bool:
         """Reject and delete saves whose payload or metadata records a dead player."""
@@ -295,6 +361,9 @@ class SaveManager:
                 self.backup_file.unlink()
                 game_logger.info("Backup save file deleted (permadeath)")
 
+            if self.backup_rollback_file.exists():
+                self.backup_rollback_file.unlink()
+
             # メタデータファイルを削除
             if self.metadata_file.exists():
                 self.metadata_file.unlink()
@@ -346,7 +415,9 @@ class SaveManager:
             bool: セーブファイルが存在する場合はTrue
 
         """
-        return self.save_file.exists() and not self.is_permadeath_triggered
+        if self.is_permadeath_triggered or self.consumed_file.exists():
+            return False
+        return any(path.exists() for path in (self.save_file, self.backup_file, self.backup_rollback_file))
 
     def get_save_info(self) -> dict[str, Any] | None:
         """
@@ -409,21 +480,14 @@ class SaveManager:
             return ""
 
     def _save_checksum(self) -> None:
-        """
-        セーブファイルのチェックサムを計算・保存。
-
-        """
+        """Write a checksum atomically or fail the containing save operation."""
         if not self.save_file.exists():
-            return
+            raise SaveError("Cannot checksum missing save file")
 
         checksum = self._calculate_checksum(self.save_file)
-        if checksum:
-            try:
-                with open(self.checksum_file, "w") as f:
-                    f.write(checksum)
-                game_logger.debug(f"Checksum saved: {checksum}")
-            except Exception as e:
-                game_logger.error(f"Failed to save checksum: {e}")
+        if not checksum:
+            raise SaveError("Failed to calculate save checksum")
+        self._atomic_write(self.checksum_file, checksum)
 
     def _verify_checksum(self) -> bool:
         """

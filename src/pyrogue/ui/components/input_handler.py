@@ -99,8 +99,7 @@ class InputHandler:
             }.get(key, key)
         if key == ord("S"):
             self.count_prefix = ""
-            self.game_screen.save_game()
-            return None
+            return GameStates.MENU if self.game_screen.save_game() and self.game_screen.engine else None
         if key == tcod.event.KeySym.ESCAPE:
             self.count_prefix = ""
             return GameStates.MENU if self.game_screen.engine else None
@@ -124,8 +123,7 @@ class InputHandler:
             return self._start_item_selection(action)
         if mod & tcod.event.Modifier.CTRL and key in {ord("s"), ord("S")}:
             self.count_prefix = ""
-            self.game_screen.save_game()
-            return None
+            return GameStates.MENU if self.game_screen.save_game() and self.game_screen.engine else None
         if mod & tcod.event.Modifier.CTRL and key in {ord("l"), ord("L")}:
             self.count_prefix = ""
             self.game_screen.load_game()

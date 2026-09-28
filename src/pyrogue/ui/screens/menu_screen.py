@@ -264,10 +264,5 @@ class MenuScreen:
             save_data: セーブデータ辞書
 
         """
-        # ゲームエンジンのゲームスクリーンを初期化
-        self.engine.new_game()
-
-        # ゲームスクリーンが存在する場合はセーブデータを復元
         if hasattr(self.engine, "game_screen") and self.engine.game_screen:
-            # 既存のload_gameメソッドを使用してセーブデータを復元
-            self.engine.game_screen.load_game()
+            self.engine.game_screen.load_game(save_data)
