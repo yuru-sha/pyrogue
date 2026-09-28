@@ -103,17 +103,19 @@ def test_hunger_messages_trigger_when_crossing_original_thresholds() -> None:
 
     game.execute("wait")
     assert "You are starting to get hungry." in game.messages[-2:]
+    assert game.player.hunger_state == 1
 
     game.player.food_units = 150
-
     game.execute("wait")
     assert "You are starting to feel weak." in game.messages[-2:]
+    assert game.player.hunger_state == 2
 
 
 def test_fainting_blocks_player_actions_and_survives_save_round_trip() -> None:
     game = GameState(seed=7)
     game.floor.monsters.clear()
     game.player.faint_turns = 2
+    game.player.hunger_state = 3
     position = game.player.position
     restored = GameState.from_dict(game.to_dict())
 
@@ -135,6 +137,30 @@ def test_fainting_starts_on_seeded_starvation_roll() -> None:
 
     assert "You faint from lack of food." in game.messages
     assert 4 <= game.player.faint_turns <= 11
+
+
+def test_faint_status_persists_after_countdown_and_save_until_eating() -> None:
+    game = GameState(seed=2)
+    game.floor.monsters.clear()
+    game.player.food_units = 0
+    game.rng.seed(2)
+
+    game.execute("wait")
+    assert game.player.hunger_state == 3
+    while game.player.faint_turns > 0:
+        game.execute("wait")
+
+    assert game.status_text().endswith(" Faint")
+    saved = game.to_dict()
+    assert saved["player"]["hunger_state"] == 3
+    restored = GameState.from_dict(saved)
+    assert restored.status_text().endswith(" Faint")
+
+    food = ItemState(9004, ItemKind.FOOD, "food ration")
+    restored.player.inventory.append(food)
+    assert restored.execute("eat", [food.id]).success
+    assert restored.player.hunger_state == 0
+    assert "Faint" not in restored.status_text()
 
 
 def test_starvation_death_uses_original_strict_boundary() -> None:

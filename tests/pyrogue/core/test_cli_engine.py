@@ -76,6 +76,7 @@ def test_cli_status_command_prints_full_canonical_status_without_a_turn(capsys) 
     cli = CLIEngine(seed=1234)
     cli.game_state.floor.monsters.clear()
     cli.game_state.player.food_units = 149
+    cli.game_state.player.hunger_state = 2
     turns_before = cli.game_state.player.turns_played
 
     assert cli.process_command("@")

@@ -19,6 +19,7 @@ def test_save_load_preserves_canonical_state(tmp_path) -> None:
     game.player.gold = 42
     game.player.blind_turns = 4
     game.player.faint_turns = 3
+    game.player.hunger_state = 3
     game.player.monster_confusion_ready = True
     game.player.identified_item_names.append("healing potion")
     game.player.max_strength = 21

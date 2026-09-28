@@ -805,7 +805,8 @@ def test_status_key_shows_canonical_message_and_complete_persistent_row() -> Non
     player.armor_class = -10
     player.equipped_armor = None
     player.food_units = 0
-    player.faint_turns = 1
+    player.hunger_state = 3
+    player.faint_turns = 0
     turns_before = player.turns_played
 
     assert game_screen.handle_key(_key("@")) is None

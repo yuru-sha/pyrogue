@@ -1705,14 +1705,32 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
     assert saved["player"]["deepest_floor"] == MAX_FLOOR
 
 
-def test_old_save_version_is_rejected() -> None:
+@pytest.mark.parametrize("old_version", ["0.3.8", "0.3.11"])
+def test_old_save_version_is_rejected(old_version: str) -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.3.8"
+    game["spec_version"] = old_version
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.11"
+    assert GAME_VERSION == "0.3.12"
+
+
+@pytest.mark.parametrize("hunger_state", [None, True, -1, 4, "Faint"])
+def test_save_rejects_invalid_hunger_state(hunger_state: object) -> None:
+    game = GameState(1234).to_dict()
+    game["player"]["hunger_state"] = hunger_state
+
+    with pytest.raises(SaveCompatibilityError):
+        GameState.from_dict(game)
+
+
+def test_save_rejects_missing_hunger_state() -> None:
+    game = GameState(1234).to_dict()
+    del game["player"]["hunger_state"]
+
+    with pytest.raises(SaveCompatibilityError):
+        GameState.from_dict(game)
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
@@ -2016,13 +2034,12 @@ def test_status_text_reports_original_fields_and_hunger_condition() -> None:
 
 
 @pytest.mark.parametrize(
-    ("food_units", "faint_turns", "condition"),
-    [(301, 0, ""), (300, 0, ""), (299, 0, "Hungry"), (150, 0, "Hungry"), (149, 0, "Weak"), (0, 1, "Faint")],
+    ("hunger_state", "condition"),
+    [(0, ""), (1, "Hungry"), (2, "Weak"), (3, "Faint")],
 )
-def test_status_text_reports_rogue_hunger_state(food_units: int, faint_turns: int, condition: str) -> None:
+def test_status_text_reports_rogue_hunger_state(hunger_state: int, condition: str) -> None:
     game = GameState(1234)
-    game.player.food_units = food_units
-    game.player.faint_turns = faint_turns
+    game.player.hunger_state = hunger_state
 
     status = game.status_text()
     if condition:
@@ -2036,6 +2053,7 @@ def test_status_command_returns_full_status_without_consuming_turn_or_rng(comman
     game = GameState(1234)
     game.floor.monsters.clear()
     game.player.food_units = 149
+    game.player.hunger_state = 2
     game.player.exp = 17
     rng_before = game.rng.getstate()
     turns_before = game.player.turns_played
