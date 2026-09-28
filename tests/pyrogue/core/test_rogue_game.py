@@ -801,10 +801,31 @@ def test_new_floor_places_the_hero_on_an_unoccupied_room_floor_cell() -> None:
     occupied.update((trap.x, trap.y) for trap in floor.traps)
     occupied.update(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
 
+    assert game.player.position == floor.player_position
     assert floor.player_position is not None
     assert floor.player_position not in occupied
     assert floor.tile_at(floor.player_position) == Terrain.FLOOR
     assert any(room.contains(*floor.player_position) for room in floor.rooms)
+
+
+def test_floor_arrival_position_survives_save_and_cached_return() -> None:
+    game = GameState(seed=4325)
+    first_floor = game.floor
+    first_floor.monsters.clear()
+    game.player.position = first_floor.down_stairs
+
+    assert game.descend().success
+    assert game.player.position == game.floor.player_position
+    return_position = first_floor.down_stairs
+    assert first_floor.player_position == return_position
+
+    restored = GameState.from_dict(json.loads(json.dumps(game.to_dict())))
+    restored.floors[1].monsters.clear()
+    restored.floor.monsters.clear()
+    restored.player.position = restored.floor.up_stairs
+
+    assert restored.ascend().success
+    assert restored.player.position == return_position
 
 
 def test_seed_reproduces_initial_state() -> None:
