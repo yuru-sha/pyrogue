@@ -167,6 +167,7 @@ def test_identified_item_keeps_stack_identified_when_merged() -> None:
     assert stack.quantity == 2
     assert stack.identified
     assert stack.found
+    assert item.found
 
 
 def test_dropping_grouped_weapon_drops_the_entire_group() -> None:
@@ -374,6 +375,22 @@ def test_different_weapon_groups_remain_separate() -> None:
 
     assert len(game.player.inventory) == original_entries + 1
     assert separate_group in game.player.inventory
+
+
+def test_independently_generated_arrows_keep_distinct_groups_on_pickup() -> None:
+    game = GameState(seed=108)
+    game.player.inventory.clear()
+    arrows = [game._new_item(game.floor, ItemKind.WEAPON, "arrow") for _ in range(2)]
+    for arrow in arrows:
+        arrow.position = game.player.position
+    game.floor.items.extend(arrows)
+
+    assert all(arrow.group_id != 0 for arrow in arrows)
+    assert arrows[0].group_id != arrows[1].group_id
+    assert game.pickup().success
+    assert game.pickup().success
+
+    assert game.player.inventory == arrows
 
 
 def test_weapon_group_and_pickup_history_survive_save_load() -> None:
