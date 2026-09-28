@@ -166,6 +166,7 @@ def test_identified_item_keeps_stack_identified_when_merged() -> None:
 
     assert stack.quantity == 2
     assert stack.identified
+    assert stack.found
 
 
 def test_dropping_grouped_weapon_drops_the_entire_group() -> None:

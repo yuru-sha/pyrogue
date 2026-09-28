@@ -2822,6 +2822,7 @@ class GameState:
         if stack is not None:
             stack.quantity += item.quantity
             stack.identified = stack.identified or item.identified
+            stack.found = True
             stack.called_name = stack.called_name or item.called_name
             item.position = None
         else:
