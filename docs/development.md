@@ -67,6 +67,7 @@ CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します�
 - TCODの`KeyDown`で`text`がない場合も、`InputHandler`はShift付きの`W`、`T`、`P`、`R`、`S`、`Q`、`Shift+/`（`?`）をcanonicalコマンドへ変換する。
 - アイテムへの移動時取得、所持品のスタック統合、`MAX_PACK` はcanonicalな `GameState` のルールとして扱う。
 - SPECにない機能、依存関係、抽象化を追加しない。
+- セーブ成功時はCLIを終了し、GUIはメニューへ戻る。復元はcanonical状態の検証後にセーブ一式を消費し、失敗時は有効データを保持する。
 
 ## 変更の流れ
 

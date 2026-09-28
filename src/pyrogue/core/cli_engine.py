@@ -60,6 +60,7 @@ class CLIEngine:
             result = self.game_state.execute("save")
             if result.success and SaveManager().save_game_state(self.game_state.to_dict()):
                 print("Game saved successfully.")
+                self.running = False
             else:
                 print("Failed to save game.")
             return True

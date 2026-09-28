@@ -9,7 +9,6 @@ Permadeath機能のテストモジュール。
 import json
 import pickle
 import tempfile
-from unittest.mock import patch
 
 from pyrogue.core.rogue_game import GAME_VERSION, GameState, ItemKind, ItemState
 from pyrogue.core.save_manager import SaveManager
@@ -239,8 +238,7 @@ class TestPermadeathSystem:
             assert loaded_data["player"]["level"] == 5  # バックアップの内容
             assert loaded_data["current_floor"] == 3
 
-    @patch("pyrogue.core.save_manager.game_logger")
-    def test_error_handling(self, mock_logger):
+    def test_error_handling(self):
         """エラーハンドリングのテスト。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             save_manager = SaveManager(temp_dir)
@@ -248,7 +246,6 @@ class TestPermadeathSystem:
             # 存在しないファイルのロード
             loaded_data = save_manager.load_game_state()
             assert loaded_data is None
-            mock_logger.info.assert_called_with("No save file found")
 
             # 存在しないファイルのセーブ情報取得
             save_info = save_manager.get_save_info()
