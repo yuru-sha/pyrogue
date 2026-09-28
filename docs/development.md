@@ -63,6 +63,7 @@ CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します�
 - GUIのTabによるFOV切替は表示専用とし、FOV無効化中も探索済み状態を更新しない。
 - FOV無効化中のGUIコマンドは GameState.execute の update_explored=False を介し、自動可視化だけを抑止する。
 - TCODの`KeyDown`で`text`がない場合も、`InputHandler`はShift付きの`W`、`T`、`P`、`R`、`S`、`Q`、`Shift+/`（`?`）をcanonicalコマンドへ変換する。
+- アイテムへの移動時取得、所持品のスタック統合、`MAX_PACK` はcanonicalな `GameState` のルールとして扱う。
 - SPECにない機能、依存関係、抽象化を追加しない。
 
 ## 変更の流れ

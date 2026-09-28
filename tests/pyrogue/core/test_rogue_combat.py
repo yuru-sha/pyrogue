@@ -1120,10 +1120,10 @@ def test_execute_wait_leprechaun_steals_gold_and_disappears_without_experience()
     assert game.player.exp == 0
 
 
-def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> None:
+def test_execute_wait_nymph_steals_one_unit_of_a_consumable_stack() -> None:
     game, monster = game_with_adjacent_monster("nymph")
-    ring = ItemState(910, ItemKind.RING, "ring of protection", effect="protection")
-    game.player.inventory.append(ring)
+    potion = ItemState(910, ItemKind.POTION, "healing potion", effect="healing", quantity=2)
+    game.player.inventory.append(potion)
     carried_item = ItemState(914, ItemKind.POTION, "healing potion")
     monster.carried_items.append(carried_item)
     game.player.armor_class = 100
@@ -1132,7 +1132,8 @@ def test_execute_wait_nymph_steals_an_unequipped_magic_item_and_disappears() -> 
     result = game.execute("wait")
 
     assert result.success
-    assert ring not in game.player.inventory
+    assert potion.quantity == 1
+    assert potion in game.player.inventory
     assert monster not in game.floor.monsters
     assert carried_item not in game.floor.items
     assert game.player.monsters_killed == 0

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
-GAME_VERSION = "0.3.10"
+GAME_VERSION = "0.3.11"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -250,6 +250,8 @@ class ItemState:
     effect: str = ""
     called_name: str | None = None
     armor_protected: bool = False
+    group_id: int = 0
+    found: bool = False
 
     @property
     def display_name(self) -> str:
@@ -1685,6 +1687,8 @@ class GameState:
         stairs = tuple(position for position in (floor.up_stairs, floor.down_stairs) if position is not None)
         position = self._free_position(floor, stairs) if on_floor else None
         item = ItemState(id=self._next_item_id, kind=kind, name=name, position=position)
+        if kind == ItemKind.WEAPON and name in {"dagger", "arrow", "dart", "shuriken"}:
+            item.group_id = item.id
         self._next_item_id += 1
         appearance_kind = kind in APPEARANCE_EFFECTS
         if kind == ItemKind.WEAPON:
@@ -2401,7 +2405,7 @@ class GameState:
                     )
                 ]
                 if magic_items:
-                    self._remove_inventory_item(self.rng.choice(magic_items))
+                    self._consume_inventory_item(self.rng.choice(magic_items))
                     self.floor.monsters.remove(monster)
         else:
             self._message(f"The {monster.name} misses you.")
@@ -2729,6 +2733,8 @@ class GameState:
         self.player.position = target
         trap = next((trap for trap in self.floor.traps if (trap.x, trap.y) == target), None)
         trap_message = self._trigger_trap(trap) if trap and self.player.levitation_turns <= 0 else ""
+        if trap is None and target not in {self.floor.up_stairs, self.floor.down_stairs}:
+            self._pick_up_floor_item(target)
         self._finish_turn()
         return self._result(True, trap_message, True)
 
@@ -2770,29 +2776,77 @@ class GameState:
         self._finish_turn()
         return self._result(True, "You wait.", True)
 
-    def pickup(self) -> CommandResult:
-        """Pick up the first item at the player's current position."""
-        items = [item for item in self.floor.items if item.position == self.player.position]
-        if not items:
-            return self._result(False, "There is nothing here to pick up.")
-        item = items[0]
-        self.floor.items.remove(item)
+    def _can_stack(self, left: ItemState, right: ItemState) -> bool:
+        if left.kind != right.kind or left.name != right.name or left.effect != right.effect:
+            return False
+        if left.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
+            return left.called_name == right.called_name
+        return (
+            left.kind == ItemKind.WEAPON
+            and left.name in {"dagger", "arrow", "dart", "shuriken"}
+            and left.group_id != 0
+            and left.group_id == right.group_id
+        )
+
+    def _pick_up_floor_item(self, position: Position) -> ItemState | None:
+        item = next((candidate for candidate in self.floor.items if candidate.position == position), None)
+        if item is None or self.player.levitation_turns > 0:
+            return None
+        if item.kind == ItemKind.SCROLL and item.name == "scare monster scroll" and item.found:
+            self.floor.items.remove(item)
+            self._message("The scroll turns to dust as you pick it up.")
+            return item
         if item.kind == ItemKind.GOLD:
+            self.floor.items.remove(item)
             self.player.gold += item.quantity
             self._message(f"You pick up {item.quantity} gold pieces.")
-        elif item.kind == ItemKind.AMULET:
+            return item
+
+        stack = next((carried for carried in self.player.inventory if self._can_stack(carried, item)), None)
+        pack_slots = sum(
+            carried.quantity if carried.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL} else 1
+            for carried in self.player.inventory
+        )
+        if stack is not None and item.kind == ItemKind.WEAPON:
+            incoming_slots = 0
+        elif item.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
+            incoming_slots = item.quantity
+        else:
+            incoming_slots = 1
+        if pack_slots + incoming_slots > MAX_PACK:
+            self._message("Your pack is full.")
+            return None
+
+        self.floor.items.remove(item)
+        item.found = True
+        if stack is not None:
+            stack.quantity += item.quantity
+            stack.identified = stack.identified or item.identified
+            stack.found = True
+            stack.called_name = stack.called_name or item.called_name
             item.position = None
-            self.player.inventory.append(item)
-            self.player.has_amulet = True
-            self._message("You have found the Amulet of Yendor!")
-        elif len(self.player.inventory) >= MAX_PACK:
-            item.position = self.player.position
-            self.floor.items.append(item)
-            return self._result(False, "Your pack is full.")
         else:
             item.position = None
             self.player.inventory.append(item)
+        if item.kind == ItemKind.AMULET:
+            self.player.has_amulet = True
+            self._message("You have found the Amulet of Yendor!")
+        else:
             self._message(f"You pick up {item.display_name}.")
+        return item
+
+    def pickup(self) -> CommandResult:
+        """Pick up the first eligible item at the player's current position."""
+        if not any(item.position == self.player.position for item in self.floor.items):
+            return self._result(False, "There is nothing here to pick up.")
+        item = self._pick_up_floor_item(self.player.position)
+        if item is None:
+            message = (
+                "You are floating too high to pick that up."
+                if self.player.levitation_turns > 0
+                else "Your pack is full."
+            )
+            return self._result(False, message)
         self._finish_turn()
         return self._result(True, "", True, item)
 
@@ -2821,6 +2875,23 @@ class GameState:
         self.player.equipped_rings = [ring_id for ring_id in self.player.equipped_rings if ring_id != item.id]
         self.player.inventory.remove(item)
 
+    def _consume_inventory_item(self, item: ItemState) -> None:
+        if item.quantity > 1:
+            item.quantity -= 1
+        else:
+            self._remove_inventory_item(item)
+
+    def _split_inventory_item(self, item: ItemState) -> ItemState:
+        if item.quantity > 1 and item.kind in {ItemKind.FOOD, ItemKind.POTION, ItemKind.SCROLL}:
+            item.quantity -= 1
+            split = ItemState.from_dict(item.to_dict())
+            split.id = self._next_item_id
+            self._next_item_id += 1
+            split.quantity = 1
+            return split
+        self._remove_inventory_item(item)
+        return item
+
     def _identify_item(self, item: ItemState) -> None:
         item.identified = True
         if item.name not in self.player.identified_item_names:
@@ -2847,11 +2918,11 @@ class GameState:
             return self._result(False, "Usage: drop <item>")
         if item.cursed and item.id in self.player.equipped_item_ids:
             return self._result(False, "You cannot drop a cursed equipped item.")
-        self._remove_inventory_item(item)
-        item.position = self.player.position
-        self.floor.items.append(item)
+        dropped = self._split_inventory_item(item)
+        dropped.position = self.player.position
+        self.floor.items.append(dropped)
         self._finish_turn()
-        return self._result(True, f"You drop the {item.display_name}.", True)
+        return self._result(True, f"You drop the {dropped.display_name}.", True)
 
     def eat(self, value: Any = None) -> CommandResult:
         """Consume food using Rogue's nutrition and taste rules."""
@@ -2859,7 +2930,7 @@ class GameState:
         if not item or item.kind != ItemKind.FOOD:
             return self._result(False, "You have no food to eat.")
 
-        self._remove_inventory_item(item)
+        self._consume_inventory_item(item)
         food_gain = HUNGERTIME - 200 + self.rng.randrange(400)
         self.player.food_units = min(STOMACHSIZE, max(0, self.player.food_units) + food_gain)
 
@@ -2990,7 +3061,7 @@ class GameState:
             learned = message.startswith("You sense magic at ")
         if learned:
             self._identify_item(item)
-        self._remove_inventory_item(item)
+        self._consume_inventory_item(item)
         if effect == "haste_self":
             if getattr(self, "_update_explored", True):
                 self.visible_positions()
@@ -3117,7 +3188,7 @@ class GameState:
             message = "The scroll disappears in a flash of light."
         if learned:
             self._identify_item(item)
-        self._remove_inventory_item(item)
+        self._consume_inventory_item(item)
         self._finish_turn()
         return self._result(True, message, True)
 

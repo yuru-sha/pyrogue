@@ -101,6 +101,310 @@ def test_numeric_prefix_is_capped_at_255_and_zero_is_rejected() -> None:
     assert game.player.turns_played == 0
 
 
+def test_moving_onto_floor_item_picks_it_up() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+    target = (game.player.x + 1, game.player.y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    item = ItemState(9901, ItemKind.POTION, "healing potion", effect="healing", position=target)
+    game.floor.items.append(item)
+
+    result = game.move(1, 0)
+
+    assert result.success
+    assert result.turn_consumed
+    assert item in game.player.inventory
+    assert item not in game.floor.items
+
+
+def test_moving_while_levitating_leaves_floor_item() -> None:
+    game = GameState(seed=108)
+    game.floor.monsters.clear()
+    target = (game.player.x + 1, game.player.y)
+    game.floor.set_tile(target, Terrain.FLOOR)
+    item = ItemState(9902, ItemKind.POTION, "healing potion", effect="healing", position=target)
+    game.floor.items.append(item)
+    game.player.levitation_turns = 5
+
+    game.move(1, 0)
+
+    assert item not in game.player.inventory
+    assert item in game.floor.items
+
+
+def test_pickup_merges_matching_stack_while_pack_has_room() -> None:
+    game = GameState(seed=108)
+    stack = ItemState(9902, ItemKind.POTION, "healing potion", effect="healing")
+    game.player.inventory = [stack]
+    target = game.player.position
+    item = ItemState(9903, ItemKind.POTION, "healing potion", effect="healing", position=target)
+    game.floor.items.append(item)
+
+    result = game.pickup()
+
+    assert result.success
+    assert len(game.player.inventory) == 1
+    assert stack.quantity == 2
+    assert item not in game.floor.items
+
+
+def test_identified_item_keeps_stack_identified_when_merged() -> None:
+    game = GameState(seed=108)
+    stack = ItemState(9913, ItemKind.POTION, "healing potion", effect="healing", identified=False)
+    item = ItemState(
+        9914,
+        ItemKind.POTION,
+        "healing potion",
+        effect="healing",
+        identified=True,
+        position=game.player.position,
+    )
+    game.player.inventory = [stack]
+    game.floor.items.append(item)
+
+    assert game.pickup().success
+
+    assert stack.quantity == 2
+    assert stack.identified
+    assert stack.found
+    assert item.found
+
+
+def test_dropping_grouped_weapon_drops_the_entire_group() -> None:
+    game = GameState(seed=108)
+    arrows = next(item for item in game.player.inventory if item.name == "arrow")
+    quantity = arrows.quantity
+
+    assert game.drop(arrows.id).success
+
+    dropped = next(item for item in game.floor.items if item.name == "arrow")
+    assert dropped.quantity == quantity
+    assert dropped.group_id == arrows.group_id
+    assert arrows not in game.player.inventory
+
+
+@pytest.mark.parametrize(
+    ("kind", "name", "effect"),
+    [
+        (ItemKind.FOOD, "food ration", ""),
+        (ItemKind.POTION, "healing potion", "healing"),
+        (ItemKind.SCROLL, "identify scroll", "identify"),
+    ],
+)
+def test_full_pack_rejects_another_unit_of_an_existing_consumable_stack(kind, name, effect) -> None:
+    game = GameState(seed=108)
+    stack = ItemState(9904, kind, name, effect=effect, quantity=23)
+    game.player.inventory = [stack]
+    item = ItemState(9905, kind, name, effect=effect, position=game.player.position)
+    game.floor.items.append(item)
+
+    result = game.pickup()
+
+    assert not result.success
+    assert not result.turn_consumed
+    assert stack.quantity == 23
+    assert item in game.floor.items
+
+
+def test_grouped_weapon_merge_does_not_use_an_extra_full_pack_slot() -> None:
+    game = GameState(seed=108)
+    arrows = next(item for item in game.player.inventory if item.name == "arrow")
+    quantity_before = arrows.quantity
+    game.player.inventory.extend(ItemState(index, ItemKind.ARMOR, f"armor {index}") for index in range(10_000, 10_018))
+    floor_arrows = ItemState(
+        9906,
+        ItemKind.WEAPON,
+        "arrow",
+        quantity=4,
+        position=game.player.position,
+        group_id=arrows.group_id,
+        called_name="different label",
+    )
+    game.floor.items.append(floor_arrows)
+
+    assert len(game.player.inventory) == 23
+    assert game.pickup().success
+
+    assert len(game.player.inventory) == 23
+    assert arrows.quantity == quantity_before + 4
+    assert floor_arrows not in game.floor.items
+
+
+@pytest.mark.parametrize(
+    ("kind", "name", "effect"),
+    [(ItemKind.SCROLL, "identify scroll", "identify"), (ItemKind.AMULET, "Amulet of Yendor", "")],
+)
+def test_full_pack_leaves_new_item_on_floor_without_changing_inventory(kind, name, effect) -> None:
+    game = GameState(seed=108)
+    game.player.inventory = [
+        ItemState(index, ItemKind.POTION, f"potion {index}", effect=str(index)) for index in range(1, 24)
+    ]
+    inventory_before = list(game.player.inventory)
+    item = ItemState(9904, kind, name, effect=effect, position=game.player.position)
+    game.floor.items.append(item)
+
+    result = game.pickup()
+
+    assert not result.success
+    assert not result.turn_consumed
+    assert item in game.floor.items
+    assert game.player.inventory == inventory_before
+
+
+def test_full_pack_still_collects_gold_without_using_a_slot() -> None:
+    game = GameState(seed=108)
+    game.player.inventory = [ItemState(index, ItemKind.ARMOR, f"armor {index}") for index in range(23)]
+    gold = ItemState(9905, ItemKind.GOLD, "gold", quantity=17, position=game.player.position)
+    game.floor.items.append(gold)
+
+    assert game.pickup().success
+
+    assert game.player.gold == 17
+    assert len(game.player.inventory) == 23
+    assert gold not in game.floor.items
+
+
+def test_grouped_arrows_merge_and_gold_does_not_use_pack_slot() -> None:
+    game = GameState(seed=108)
+    starting_arrows = next(item for item in game.player.inventory if item.name == "arrow")
+    quantity_before = starting_arrows.quantity
+    arrows = ItemState(
+        9905,
+        ItemKind.WEAPON,
+        "arrow",
+        quantity=3,
+        position=game.player.position,
+        group_id=starting_arrows.group_id,
+    )
+    gold = ItemState(9906, ItemKind.GOLD, "gold", quantity=12, position=game.player.position)
+    game.floor.items.extend((arrows, gold))
+    original_entries = len(game.player.inventory)
+
+    assert game.pickup().success
+    assert starting_arrows.quantity == quantity_before + 3
+    assert len(game.player.inventory) == original_entries
+
+    assert game.pickup().success
+    assert game.player.gold == 12
+    assert len(game.player.inventory) == original_entries
+
+
+def test_first_pickup_of_scare_scroll_keeps_it_and_repickup_destroys_it() -> None:
+    game = GameState(seed=108)
+    scroll = ItemState(
+        9907,
+        ItemKind.SCROLL,
+        "scare monster scroll",
+        identified=True,
+        position=game.player.position,
+    )
+    game.floor.items.append(scroll)
+
+    assert game.pickup().success
+    assert scroll in game.player.inventory
+    assert scroll.found
+
+    assert game.drop(scroll.id).success
+    assert game.pickup().success
+    assert scroll not in game.floor.items
+    assert scroll not in game.player.inventory
+
+
+def test_consuming_one_merged_potion_preserves_the_rest() -> None:
+    game = GameState(seed=108)
+    potion = ItemState(9908, ItemKind.POTION, "healing potion", effect="healing", quantity=2)
+    game.player.inventory.append(potion)
+
+    assert game.quaff(potion.id).success
+
+    assert potion.quantity == 1
+    assert potion in game.player.inventory
+
+
+def test_dropping_one_unit_preserves_the_remainder_of_a_stack() -> None:
+    game = GameState(seed=108)
+    potion = ItemState(9912, ItemKind.POTION, "healing potion", effect="healing", quantity=2, found=True)
+    game.player.inventory.append(potion)
+
+    assert game.drop(potion.id).success
+
+    dropped = next(item for item in game.floor.items if item.name == "healing potion")
+    assert potion.quantity == 1
+    assert potion in game.player.inventory
+    assert dropped.quantity == 1
+    assert dropped.id != potion.id
+    assert dropped.found
+
+
+def test_same_kind_wands_keep_separate_charge_counts() -> None:
+    game = GameState(seed=108)
+    carried = ItemState(9909, ItemKind.WAND, "wand of magic missile", effect="damage", charges=0)
+    found = ItemState(
+        9910,
+        ItemKind.WAND,
+        "wand of magic missile",
+        effect="damage",
+        charges=4,
+        position=game.player.position,
+    )
+    game.player.inventory.append(carried)
+    game.floor.items.append(found)
+
+    assert game.pickup().success
+
+    assert carried.charges == 0
+    assert found.charges == 4
+    assert found in game.player.inventory
+
+
+def test_different_weapon_groups_remain_separate() -> None:
+    game = GameState(seed=108)
+    arrows = next(item for item in game.player.inventory if item.name == "arrow")
+    separate_group = ItemState(
+        9911,
+        ItemKind.WEAPON,
+        "arrow",
+        quantity=2,
+        position=game.player.position,
+        group_id=arrows.group_id + 1,
+    )
+    game.floor.items.append(separate_group)
+    original_entries = len(game.player.inventory)
+
+    assert game.pickup().success
+
+    assert len(game.player.inventory) == original_entries + 1
+    assert separate_group in game.player.inventory
+
+
+def test_independently_generated_arrows_keep_distinct_groups_on_pickup() -> None:
+    game = GameState(seed=108)
+    game.player.inventory.clear()
+    arrows = [game._new_item(game.floor, ItemKind.WEAPON, "arrow") for _ in range(2)]
+    for arrow in arrows:
+        arrow.position = game.player.position
+    game.floor.items.extend(arrows)
+
+    assert all(arrow.group_id != 0 for arrow in arrows)
+    assert arrows[0].group_id != arrows[1].group_id
+    assert game.pickup().success
+    assert game.pickup().success
+
+    assert game.player.inventory == arrows
+
+
+def test_weapon_group_and_pickup_history_survive_save_load() -> None:
+    game = GameState(seed=108)
+    arrows = next(item for item in game.player.inventory if item.name == "arrow")
+    arrows.found = True
+
+    restored = GameState.from_dict(game.to_dict())
+    restored_arrows = next(item for item in restored.player.inventory if item.name == "arrow")
+
+    assert restored_arrows.group_id == arrows.group_id
+    assert restored_arrows.found
+
+
 def test_uppercase_direction_runs_through_corridor_until_blocked() -> None:
     game = GameState(seed=108)
     game.floor.monsters.clear()
@@ -1203,7 +1507,7 @@ def test_old_save_version_is_rejected() -> None:
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.10"
+    assert GAME_VERSION == "0.3.11"
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
