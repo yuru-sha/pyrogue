@@ -1245,7 +1245,7 @@ def test_trapdoor_moves_player_to_the_next_floor() -> None:
     assert result.success
     assert result.turn_consumed
     assert game.current_floor == 2
-    assert game.player.position == game.floor.up_stairs
+    assert game.player.position == game.floor.player_position
     assert game.player.hp == initial_hp
     assert "trap door" in result.message.lower()
 
