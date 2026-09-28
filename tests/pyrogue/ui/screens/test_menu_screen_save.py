@@ -72,3 +72,34 @@ def test_menu_offers_load_when_only_backup_is_available(tmp_path) -> None:
     menu.save_manager = manager
 
     assert "Load Game" in menu._get_menu_options()
+
+
+def test_menu_preserves_all_artifacts_when_canonical_restore_fails(tmp_path) -> None:
+    from pyrogue.core.rogue_game import GameState
+
+    manager = SaveManager(tmp_path)
+    payload = GameState(1234).to_dict()
+    payload["player"]["x"] = 10_000
+    payload["player"]["y"] = 10_000
+    assert manager.save_game_state(payload)
+    saved_bytes = manager.save_file.read_bytes()
+    manager.backup_file.write_bytes(saved_bytes)
+    manager.backup_rollback_file.write_bytes(saved_bytes)
+    artifacts = (
+        manager.save_file,
+        manager.backup_file,
+        manager.backup_rollback_file,
+        manager.metadata_file,
+        manager.checksum_file,
+    )
+    before = {path: path.read_bytes() for path in artifacts}
+    menu = MenuScreen.__new__(MenuScreen)
+    menu.save_manager = manager
+    menu.engine = Mock()
+
+    assert menu._load_game() == GameStates.MENU
+
+    assert "Save data is not restorable" in menu.load_error_message
+    assert not manager.consumed_file.exists()
+    assert {path: path.read_bytes() for path in artifacts} == before
+    menu.engine.new_game.assert_not_called()

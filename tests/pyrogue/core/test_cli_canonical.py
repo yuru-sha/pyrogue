@@ -137,3 +137,35 @@ def test_cli_slash_identifies_one_unknown_item(capsys, monkeypatch) -> None:
     assert not result.turn_consumed
     assert item.identified
     assert "You identify the healing potion." in capsys.readouterr().out
+
+
+def test_cli_preserves_all_artifacts_when_canonical_restore_fails(tmp_path, monkeypatch, capsys) -> None:
+    from pyrogue.core.rogue_game import GameState
+
+    monkeypatch.setenv("SAVE_DIRECTORY", str(tmp_path))
+    manager = SaveManager(tmp_path)
+    payload = GameState(1234).to_dict()
+    payload["player"]["x"] = 10_000
+    payload["player"]["y"] = 10_000
+    assert manager.save_game_state(payload)
+    saved_bytes = manager.save_file.read_bytes()
+    manager.backup_file.write_bytes(saved_bytes)
+    manager.backup_rollback_file.write_bytes(saved_bytes)
+    artifacts = (
+        manager.save_file,
+        manager.backup_file,
+        manager.backup_rollback_file,
+        manager.metadata_file,
+        manager.checksum_file,
+    )
+    before = {path: path.read_bytes() for path in artifacts}
+    monkeypatch.setattr("pyrogue.core.cli_engine.SaveManager", lambda: manager)
+    cli = CLIEngine(seed=9999)
+    initial_state = cli.game_state.to_dict()
+
+    assert cli.process_command("load") is True
+
+    assert cli.game_state.to_dict() == initial_state
+    assert "Save data is not restorable" in capsys.readouterr().out
+    assert not manager.consumed_file.exists()
+    assert {path: path.read_bytes() for path in artifacts} == before
