@@ -100,6 +100,7 @@ class QuickGuideScreen:
             "o                  - Open options",
             "c                  - Call (rename) an item",
             "i                  - Open inventory",
+            "@                  - Show full player status",
             "?                  - Show help",
             "s                  - Search for secret doors, passages, and traps",
             "Ctrl+S / Ctrl+L    - Save / Load game",

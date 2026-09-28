@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 Position = tuple[int, int]
-GAME_VERSION = "0.3.11"
+GAME_VERSION = "0.3.12"
 DEFAULT_WIDTH = 80
 DEFAULT_HEIGHT = 45
 MAX_FLOOR = 26
@@ -31,6 +31,11 @@ HUNGERTIME = 1300
 STOMACHSIZE = 2000
 FOOD_BAD_TASTE_ROLL_THRESHOLD = 70
 MORETIME = 150
+HUNGER_STATE_NORMAL = 0
+HUNGER_STATE_HUNGRY = 1
+HUNGER_STATE_WEAK = 2
+HUNGER_STATE_FAINT = 3
+HUNGER_STATUS_NAMES = ("", "Hungry", "Weak", "Faint")
 STARVETIME = 850
 MAX_EQUIPPED_RINGS = 2
 QUIET_HEAL_LEVEL_THRESHOLD = 8
@@ -614,6 +619,7 @@ class PlayerState:
     strength: int = 16
     armor_class: int = 10
     food_units: int = HUNGERTIME
+    hunger_state: int = HUNGER_STATE_NORMAL
     max_food_units: int = STOMACHSIZE
     gold: int = 0
     inventory: list[ItemState] = field(default_factory=list)
@@ -732,7 +738,15 @@ class PlayerState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> PlayerState:
+        """Restore a player after validating persisted hunger status."""
         data = dict(data)
+        hunger_state = data.get("hunger_state")
+        if (
+            isinstance(hunger_state, bool)
+            or not isinstance(hunger_state, int)
+            or not HUNGER_STATE_NORMAL <= hunger_state <= HUNGER_STATE_FAINT
+        ):
+            raise SaveCompatibilityError
         data["inventory"] = [ItemState.from_dict(item) for item in data.get("inventory", [])]
         data["equipped_rings"] = list(data.get("equipped_rings", []))
         data["identified_item_names"] = list(data.get("identified_item_names", []))
@@ -2190,6 +2204,7 @@ class GameState:
                 self._die("starvation")
             elif self.player.faint_turns == 0 and self.rng.randrange(5) == 0:
                 self.player.faint_turns = self.rng.randrange(8) + 4
+                self.player.hunger_state = HUNGER_STATE_FAINT
                 self._message("You faint from lack of food.")
             return
 
@@ -2205,6 +2220,10 @@ class GameState:
                 usage = -usage
             food_drain += usage
         self.player.food_units -= food_drain
+        if old_food >= MORETIME > self.player.food_units:
+            self.player.hunger_state = HUNGER_STATE_WEAK
+        elif old_food >= 2 * MORETIME > self.player.food_units:
+            self.player.hunger_state = HUNGER_STATE_HUNGRY
         if old_food >= 2 * MORETIME > self.player.food_units:
             self._message("You are starting to get hungry.")
         elif old_food >= MORETIME > self.player.food_units:
@@ -2998,6 +3017,7 @@ class GameState:
         self._consume_inventory_item(item)
         food_gain = HUNGERTIME - 200 + self.rng.randrange(400)
         self.player.food_units = min(STOMACHSIZE, max(0, self.player.food_units) + food_gain)
+        self.player.hunger_state = HUNGER_STATE_NORMAL
 
         if item.name == "slime mold":
             message = "My, that was a yummy slime mold."
@@ -3642,8 +3662,15 @@ class GameState:
         return self._result(True, "", True)
 
     def status_text(self) -> str:
-        """Return the compact status line used by CLI and GUI."""
-        return f"Level {self.player.level}  HP {self.player.hp}/{self.player.max_hp}  Atk {self.player.attack}  AC {self.player.defense}  Food {self.player.food_units}  Gold {self.player.gold}"
+        """Return Rogue 5.4.4's canonical player status fields."""
+        player = self.player
+        hunger = HUNGER_STATUS_NAMES[player.hunger_state]
+        status = (
+            f"Level:{player.level} Gold:{player.gold} Hp:{player.hp}({player.max_hp}) "
+            f"Str:{player.effective_strength()}({player.max_strength}) Arm:{player.defense} "
+            f"Exp:{player.level}/{player.exp}"
+        )
+        return f"{status} {hunger}" if hunger else status
 
     @property
     def score(self) -> int:
@@ -3701,8 +3728,11 @@ class GameState:
     def _execute(self, command: str, args: Iterable[Any] = ()) -> CommandResult:  # noqa: PLR0911
         """Execute one canonical command and return its state transition."""
         args = list(args)
+        command, key_value = self._normalize_command(command)
         if self.status != GameStatus.PLAYING:
             return self._result(False, "The game is over.")
+        if command == "status":
+            return self._result(True, self.status_text())
         if self.player.sleep_turns > 0:
             self.player.sleep_turns -= 1
             self._finish_turn()
@@ -3714,7 +3744,6 @@ class GameState:
             self._finish_turn()
             self.player.faint_turns -= 1
             return self._result(True, "You are too weak to act.", True)
-        command, key_value = self._normalize_command(command)
         if command == "move" and key_value is not None:
             return self.move(*key_value)
         command = COMMAND_ALIASES.get(command, command)
@@ -3801,12 +3830,10 @@ class GameState:
             return self._result(
                 True, ", ".join(item.display_name for item in self.player.inventory) or "Your pack is empty."
             )
-        if command == "status":
-            return self._result(True, self.status_text())
         if command == "help":
             return self._result(
                 True,
-                "hjkl yubn move, HJKLYUBN run, f fight <direction>, a repeat, c call <item> <name>, o options, 1-255 repeat eligible commands, , pickup, d drop, e eat, q quaff, r read, s search, ^ trap, / identify, </> stairs, ? help",
+                "hjkl yubn move, HJKLYUBN run, f fight <direction>, a repeat, c call <item> <name>, o options, 1-255 repeat eligible commands, , pickup, d drop, e eat, q quaff, r read, s search, ^ trap, / identify, </> stairs, ? help, @ status",
             )
         if command == "save":
             return self._result(True, "Game state ready to save.", False, self.to_dict())

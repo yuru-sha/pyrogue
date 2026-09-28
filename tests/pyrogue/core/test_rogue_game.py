@@ -1705,14 +1705,32 @@ def test_victory_summary_preserves_deepest_floor_after_return() -> None:
     assert saved["player"]["deepest_floor"] == MAX_FLOOR
 
 
-def test_old_save_version_is_rejected() -> None:
+@pytest.mark.parametrize("old_version", ["0.3.8", "0.3.11"])
+def test_old_save_version_is_rejected(old_version: str) -> None:
     game = GameState(1234).to_dict()
-    game["spec_version"] = "0.3.8"
+    game["spec_version"] = old_version
 
     with pytest.raises(SaveCompatibilityError):
         GameState.from_dict(game)
 
-    assert GAME_VERSION == "0.3.11"
+    assert GAME_VERSION == "0.3.12"
+
+
+@pytest.mark.parametrize("hunger_state", [None, True, -1, 4, "Faint"])
+def test_save_rejects_invalid_hunger_state(hunger_state: object) -> None:
+    game = GameState(1234).to_dict()
+    game["player"]["hunger_state"] = hunger_state
+
+    with pytest.raises(SaveCompatibilityError):
+        GameState.from_dict(game)
+
+
+def test_save_rejects_missing_hunger_state() -> None:
+    game = GameState(1234).to_dict()
+    del game["player"]["hunger_state"]
+
+    with pytest.raises(SaveCompatibilityError):
+        GameState.from_dict(game)
 
 
 def test_save_manager_persists_canonical_json(tmp_path) -> None:
@@ -1995,3 +2013,59 @@ def test_trap_door_moves_the_player_down_one_floor_without_damage() -> None:
     assert game.current_floor == 2
     assert game.player.deepest_floor == 2
     assert game.player.position == game.floor.player_position
+
+
+def test_status_text_reports_original_fields_and_hunger_condition() -> None:
+    game = GameState(1234)
+    player = game.player
+    player.level = 4
+    player.exp = 37
+    player.gold = 1234
+    player.hp = 7
+    player.max_hp = 19
+    player.strength = 15
+    player.max_strength = 18
+    player.armor_class = 6
+    player.equipped_armor = None
+    player.inventory.append(ItemState(9901, ItemKind.RING, "ring of strength", effect="strength", enchantment=3))
+    player.equipped_rings = [9901]
+
+    assert game.status_text() == "Level:4 Gold:1234 Hp:7(19) Str:18(18) Arm:6 Exp:4/37"
+
+
+@pytest.mark.parametrize(
+    ("hunger_state", "condition"),
+    [(0, ""), (1, "Hungry"), (2, "Weak"), (3, "Faint")],
+)
+def test_status_text_reports_rogue_hunger_state(hunger_state: int, condition: str) -> None:
+    game = GameState(1234)
+    game.player.hunger_state = hunger_state
+
+    status = game.status_text()
+    if condition:
+        assert status.endswith(f" {condition}")
+    else:
+        assert all(state not in status for state in ("Hungry", "Weak", "Faint"))
+
+
+@pytest.mark.parametrize("command", ["@", "status"])
+def test_status_command_returns_full_status_without_consuming_turn_or_rng(command: str) -> None:
+    game = GameState(1234)
+    game.floor.monsters.clear()
+    game.player.food_units = 149
+    game.player.hunger_state = 2
+    game.player.exp = 17
+    rng_before = game.rng.getstate()
+    turns_before = game.player.turns_played
+    food_before = game.player.food_units
+
+    result = game.execute(command)
+
+    assert result.success
+    assert result.message == game.status_text()
+    assert not result.turn_consumed
+    assert "Exp:1/17" in result.message
+    assert "Weak" in result.message
+    assert game.player.turns_played == turns_before
+    assert game.player.food_units == food_before
+    assert game.rng.getstate() == rng_before
