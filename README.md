@@ -58,9 +58,10 @@ rejected explicitly.
 make verify
 ```
 
-See [SPEC.md](SPEC.md) for the authoritative 0.3.1 behavior and [docs/README.md](docs/README.md)
+See [docs/SPEC.md](docs/SPEC.md) for the authoritative 0.3.1 behavior and [docs/README.md](docs/README.md)
 for the current documentation map.
 
-## GitHub Release
 
-See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).
+## GitHub workflow
+
+Shared Issue Forms and the default Pull Request template are inherited from `yuru-sha/.github`. Release-note categories are configured in `.github/release.yml`, and shared labels (including `orca:*`) are synchronized from `yuru-sha/project-template`.
