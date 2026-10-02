@@ -42,7 +42,4 @@ temp/
 # Machine-local agent links; keep the project-owned verification skill versioned.
 .agents/agent-capabilities/
 .codex/agents/
-.agents/skills/*
-!.agents/skills/pyrogue-verify/
-!.agents/skills/pyrogue-verify/**
 .codex/config.toml
