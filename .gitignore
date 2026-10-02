@@ -19,6 +19,7 @@ htmlcov/
 !.env.example
 
 # Project runtime/generated data
+artifacts/
 .openmeteo_cache.sqlite
 test_repo.db
 data/

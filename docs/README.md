@@ -29,5 +29,5 @@
 
 ## エージェント機能
 
-- 再現可能なプロジェクトSkill: `.agents/skills/pyrogue-verify/SKILL.md`
+- 再現可能なプロジェクトSkill: `.agents/skills/verify-pyrogue/SKILL.md`
 - `.agents/agent-capabilities/` と `.codex/agents/` は外部絶対パスへのマシンローカルリンクであり、`.gitignore` でコミット対象から除外します。
