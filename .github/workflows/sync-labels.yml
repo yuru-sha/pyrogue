@@ -1,0 +1,32 @@
+name: Sync shared labels
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch canonical label sync assets
+        run: |
+          python3 - <<'PY'
+          from urllib.request import urlretrieve
+
+          base = "https://raw.githubusercontent.com/yuru-sha/project-template/main"
+          urlretrieve(f"{base}/.github/labels.json", "/tmp/shared-labels.json")
+          urlretrieve(f"{base}/scripts/sync-labels.py", "/tmp/sync-labels.py")
+          PY
+
+      - name: Sync labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 /tmp/sync-labels.py
+          --repo "${{ github.repository }}"
+          --labels /tmp/shared-labels.json
