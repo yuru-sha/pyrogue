@@ -56,9 +56,10 @@ GameState -> DisplayCell -> CLI / GameRenderer
 make verify
 ```
 
-仕様の正本は[SPEC.md](SPEC.md)（0.3.1）です。現在の文書一覧は[docs/README.md](docs/README.md)を
+仕様の正本は[docs/SPEC.md](docs/SPEC.md)（0.3.1）です。現在の文書一覧は[docs/README.md](docs/README.md)を
 参照してください。
 
-## GitHub Release
 
-See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).
+## GitHub運用
+
+Issue Form と既定の Pull Request テンプレートは `yuru-sha/.github` の共通設定を利用します。Release Notes のカテゴリは `.github/release.yml` で管理し、`orca:*` を含む共通ラベルは `yuru-sha/project-template` から同期します。
