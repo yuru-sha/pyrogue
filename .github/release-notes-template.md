@@ -1,21 +1,29 @@
 <!--
-Copy this file to create the hand-written introduction for a release.
-HTML comments are hidden from the published body. Write "None" for unused sections.
-GitHub's automatically generated change list is appended after this introduction.
+Use this as the hand-written introduction for a GitHub Release.
+GitHub's automatically generated release notes can follow this introduction.
+Remove unused comments and write "None" where a section is intentionally empty.
 -->
 
 ## Overview
 
-<!-- Describe the purpose and user impact of this release in one to three lines. -->
+<!-- Summarize the purpose and user impact of this release. -->
 
-## Compatibility & Migration
+## Highlights
 
-- Compatibility: No known breaking changes
-- Migration: None
+<!-- List the most important changes without duplicating the generated changelog. -->
+
+## Compatibility / Breaking Changes
+
+None
+
+## Migration
+
+None
 
 ## Verification
 
 <!-- Record only checks that were actually performed. -->
+
 - CI: Record result
 
 ## Known Issues
