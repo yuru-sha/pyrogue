@@ -1,194 +1,45 @@
-# Agent cache files
-.ccache/
-*.cache
-
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
-.Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-# -*- link options: -*-
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
+.pytest_cache/
+.ruff_cache/
 .coverage
 .coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-.openmeteo_cache.sqlite
-test_repo.db
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-logs/
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-# Pipfile.lock
-
-# poetry
-# poetry.lock
-
-# pdm
-# pdm.lock
-# .pdm.toml
-
-# PEP 582; used by PDM, Flit, and potentially other tools
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# Pyre type checker
-.pyre/
-
-# pytype static analysis results
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm files
-.idea/
-
-# VSCode files
-.vscode/
-
-# uv cache
+htmlcov/
+.venv/
 .uv_cache/
 
-# dotenv environment variables file
-.env.local
-.env.docker
+# Local environment and secrets
+.env
+.env.*
+!.env.example
 
-# Docker
-docker-compose.override.yml
-
-# Ignore SpecStory derived-cursor-rules.mdc backup files
-.specstory/
-.cursor/rules/derived-cursor-rules.mdc
-
-# Ruff cache
-.ruff_cache/
-
-# Jupyter Notebook cache
-.cache.sqlite
-
-# Alembic
-alembic.ini
-
-# Model files
-*.pth
-*.joblib
-
-# SpecStory explanation file
-.specstory/.what-is-this.md
-
-# Node modules
-node_modules/
-
-# APP directory and files
+# Project runtime/generated data
+.openmeteo_cache.sqlite
+test_repo.db
 data/
 logs/
 scores.json
 saves/
+*.pth
+*.joblib
 
-# macOS
+# OS / editor / temporary files
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+tmp/
+temp/
 
-# Local agent settings
-.claude/settings.local.json
-.codex/config.toml
-
-# Machine-local agent links; keep only project-owned skills versioned.
+# Machine-local agent links; keep the project-owned verification skill versioned.
 .agents/agent-capabilities/
 .codex/agents/
 .agents/skills/*
