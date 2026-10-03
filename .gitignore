@@ -41,6 +41,7 @@ tmp/
 temp/
 
 # Machine-local agent links; keep the project-owned verification skill versioned.
-.agents/agent-capabilities/
-.codex/agents/
-.codex/config.toml
+.agents/
+!.agents/skills/verify-*
+.omp/
+.pstack/
