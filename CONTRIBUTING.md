@@ -1,5 +1,35 @@
 # Contributing
 
+Thank you for contributing.
+
+## Before starting
+
+- Search existing Issues and Pull Requests to avoid duplicate work.
+- For non-trivial work, use an Issue to define the problem and acceptance criteria.
+- Read `AGENTS.md`, the README, and relevant files under `docs/`.
+- Keep changes focused on one Issue or clearly related outcome.
+- Avoid unrelated cleanup and unnecessary dependencies.
+
+## Development
+
+Use the repository's canonical commands. Keep changes focused and avoid introducing new dependencies, abstractions, or automation without a demonstrated need.
+
+Add or update tests when behavior changes. Update documentation when interfaces, workflows, configuration, or user-visible behavior changes.
+
+## Pull requests
+
+Open changes from a feature branch rather than working directly on `main`.
+
+Pull Requests should:
+
+- explain what changed and why;
+- link the related Issue when one exists;
+- record the checks actually run;
+- identify breaking changes or migration steps;
+- call out remaining risks or follow-up work.
+
+Do not claim checks passed when they were not run.
+
 ## Commit messages
 
 Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/ja/v1.0.0/) for commit messages.
