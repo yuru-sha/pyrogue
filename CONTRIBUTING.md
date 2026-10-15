@@ -59,4 +59,6 @@ Use these types as the default vocabulary:
 
 Use a scope when it adds useful context, for example `fix(forecast): handle missing observations`.
 
+Explain why the change was necessary in the commit message.
+
 Mark a breaking change with `!` after the type or scope, or with a `BREAKING CHANGE:` footer.

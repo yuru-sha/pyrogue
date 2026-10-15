@@ -52,6 +52,12 @@ uv run --locked --extra dev python -m compileall -q src tests
 
 CLIの機能テストは `scripts/cli_test.sh` が固定seedで実行します。再現確認のseedを変える場合は、例えば `CLI_TEST_SEED=20260908 make test-cli` とします。
 
+## コード・テスト・コメント
+
+- コードはHowを示し、実装方法を表現する。
+- テストコードはWhatを示し、期待する振る舞いを検証する。
+- コメントはWhy notを示す。一見単純な別案を採らない理由、制約、コードだけでは分からない意図を説明する。コードの動作を言い換えるだけのコメントは避ける。
+
 ## 実装ルール
 
 - `GameState`のRNG以外でゲーム中の乱数を生成しない。
