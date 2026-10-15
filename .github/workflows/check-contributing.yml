@@ -1,0 +1,78 @@
+name: Check CONTRIBUTING sync
+
+on:
+  pull_request:
+    paths:
+      - CONTRIBUTING.md
+      - .github/workflows/check-contributing.yml
+  push:
+    branches:
+      - main
+    paths:
+      - CONTRIBUTING.md
+      - .github/workflows/check-contributing.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check shared CONTRIBUTING sections
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare with project template
+        shell: python
+        run: |
+          import difflib
+          import pathlib
+          import sys
+          import urllib.request
+
+          canonical_url = (
+              "https://raw.githubusercontent.com/"
+              "yuru-sha/project-template/main/CONTRIBUTING.md"
+          )
+          marker = "\n## Repository-specific guidelines\n"
+
+          local_path = pathlib.Path("CONTRIBUTING.md")
+          if not local_path.is_file():
+              print("CONTRIBUTING.md is missing.", file=sys.stderr)
+              sys.exit(1)
+
+          local = local_path.read_text(encoding="utf-8")
+          shared = local.split(marker, 1)[0].rstrip() + "\n"
+
+          with urllib.request.urlopen(canonical_url, timeout=30) as response:
+              canonical = response.read().decode("utf-8").rstrip() + "\n"
+
+          if shared == canonical:
+              print("Shared CONTRIBUTING sections are in sync.")
+              sys.exit(0)
+
+          print(
+              "Shared CONTRIBUTING sections differ from "
+              "yuru-sha/project-template.",
+              file=sys.stderr,
+          )
+          print(
+              "Only content under '## Repository-specific guidelines' "
+              "may differ.",
+              file=sys.stderr,
+          )
+          print(
+              "".join(
+                  difflib.unified_diff(
+                      canonical.splitlines(keepends=True),
+                      shared.splitlines(keepends=True),
+                      fromfile="project-template/CONTRIBUTING.md",
+                      tofile="CONTRIBUTING.md (shared sections)",
+                  )
+              ),
+              file=sys.stderr,
+          )
+          sys.exit(1)
