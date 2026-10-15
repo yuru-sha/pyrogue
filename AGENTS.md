@@ -15,7 +15,12 @@ CLI / TCOD input → GameState.execute(command, args) → GameState
 
 `docs/SPEC.md` is the product-requirements authority. When historical material in `docs/` conflicts with implementation, do not treat it as current behavior. Keep changes focused, read relevant requirements/callers/tests first, and preserve unrelated worktree changes. Generated files, lockfiles, and untracked files must be confirmed in scope before modification.
 
-Code should show how behavior is implemented; tests should specify expected behavior. Comments should explain why an apparently simpler alternative was not chosen, including constraints and intent not evident from the code. Avoid comments that merely restate behavior.
+## Code, Tests, Commits, and Comments
+
+- Code should make **how** the behavior is implemented clear.
+- Tests should make **what** behavior is expected clear.
+- Commit messages should explain **why** the change is needed.
+- Comments should explain **why not** an apparently reasonable alternative was chosen, including relevant constraints or non-obvious intent. Do not use comments to paraphrase the code's behavior.
 
 Do not expose secrets or personal data. Do not use destructive Git operations. Make changes on a feature branch and submit them through a pull request; do not edit `main` directly.
 
