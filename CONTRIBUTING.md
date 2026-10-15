@@ -63,4 +63,4 @@ Mark a breaking change with `!` after the type or scope, or with a `BREAKING CHA
 
 ## Repository-specific guidelines
 
-Commit messages should explain why the change was necessary.
+Commit logs should explain why the change was necessary.
