@@ -1,94 +1,75 @@
-# AGENTS.md
+# Repository Guidelines
 
-Operational rules for agents working on PyRogue. Product requirements and implementation details belong in the referenced documents, not here.
+## Project Overview
 
-## Sources of truth
+PyRogue is a Python 3.12+ terminal/TCOD roguelike implementing the v0.3.1 requirements in `docs/SPEC.md`. Keep game rules shared between CLI and GUI; do not add features or dependencies outside the specification.
 
-At the start of a task, read the relevant documents:
+## Architecture & Data Flow
 
-- Requirements, scope, exclusions, and acceptance criteria: [docs/SPEC.md](docs/SPEC.md)
-- Documentation index and historical-document policy: [docs/README.md](docs/README.md)
-- Current architecture: [docs/architecture.md](docs/architecture.md)
-- Development and verification commands: [docs/development.md](docs/development.md)
-- Actual behavior: `src/pyrogue/` and `tests/`
+`src/pyrogue/core/rogue_game.py` contains canonical `GameState`, seeded RNG, game rules, commands, serialization, and renderer-neutral `DisplayCell` data. Both adapters call `GameState.execute()`:
 
-`docs/SPEC.md` is the product-requirements authority. When historical material in `docs/` conflicts with the implementation, do not treat it as current behavior. If the requirements must change, update `docs/SPEC.md` and its acceptance criteria first.
-
-## Workflow
-
-1. Run `rtk git status --short --branch` and inspect the diff; preserve existing user changes.
-2. Read the relevant `docs/SPEC.md` section, current callers, and related tests.
-3. Keep the change within the smallest scope required by the specification. Reuse existing types, helpers, and dependencies.
-4. Run `make verify` after the change. If it fails, record the first failure and every check that was not run.
-5. Inspect the final diff, worktree, verification results, and remaining risks before reporting completion.
-
-## Code and comment guidance
-
-Use each artifact to communicate a different kind of intent:
-
-- Code should explain **How** the behavior is implemented.
-- Test code should explain **What** behavior is expected.
-- Commit messages should explain **Why** the change was made.
-- Code comments should explain **Why not**: document non-obvious constraints, rejected alternatives, trade-offs, or reasons the seemingly simpler approach is incorrect.
-
-Do not use comments to restate what the code already makes clear.
-
-## Branch And Pull Request Workflow
-
-- Do not edit, commit, or push directly to `main`. Make changes on a feature branch and merge them through a pull request.
-- Direct work on `main` is allowed only when the user explicitly authorizes it.
-
-## GitHub workflow
-
-- GitHub Issues are the canonical work tracker.
-- Shared Bug / Feature / Question forms and the default Pull Request template are inherited from `yuru-sha/.github`.
-- Shared non-default labels, including `orca:*`, are synchronized from `yuru-sha/project-template`.
-- Use `orca:*` labels only for ORCA execution state; do not treat them as release categories.
-
-## Safety boundaries
-
-- Limit changes to this repository. Operate external services, GitHub, credentials, browsers, or physical devices only when explicitly requested and within the requested scope.
-- Do not merge pull requests, publish releases, rewrite history, or change repository settings unless explicitly requested.
-- Do not run hard-to-recover operations such as `rm -rf`, force-pushes, history rewrites, or database resets. Identify the exact target and wait for explicit approval when such an operation is required.
-- Never expose secrets, tokens, credentials, or personal data in output, logs, fixtures, commits, or external transmissions. `.env` may be used without displaying its values.
-- Confirm that generated files, lockfiles, migrations, external links, and untracked files are in scope before modifying them.
-- Follow the repository RTK convention and run shell commands through `rtk`. Use `apply_patch` for file edits.
-
-Codex sandbox, approval, and network permissions are configured outside the repository and cannot be enforced by this file. Before unattended work, verify a safe profile with workspace-write, approval on-request, and networking disabled. Do not use options such as `--dangerously-bypass-approvals-and-sandbox`.
-
-## Project constraints
-
-- Use Python 3.12 or later and `uv.lock`. Recreate dependencies with `uv sync --locked --extra dev`.
-- Follow the v0.3.1 game requirements in `docs/SPEC.md`. Do not add features, dependencies, or abstractions outside the specification.
-- The canonical rules path is `GameState` and `GameState.execute` in `src/pyrogue/core/rogue_game.py`. Do not add separate rules to the CLI or GUI.
-- Use the seeded RNG owned by the game state and preserve determinism.
-- When changing save formats or `GAME_VERSION`, update compatibility checks and tests together.
-
-## Definition of done
-
-Do not report completion until all of the following are true:
-
-- The diff satisfies the applicable requirements and exclusions in `docs/SPEC.md`.
-- Focused tests and `make verify` pass.
-- Affected boundaries such as seeds, save/load, win/loss, and shared CLI/GUI rules were checked.
-- Documentation was updated for changed code, commands, or configuration.
-- `git diff --check` passes, no secrets are present, and no unintended untracked or changed files remain.
-- Any untested GUI, hardware, OS, or external-CI validation is explicitly reported as untested.
-
-## Verification entry point
-
-```bash
-uv sync --locked --extra dev
-make verify
+```text
+CLI / TCOD input → GameState.execute(command, args) → GameState
+                 → display_cells() → text renderer / TCOD renderer
 ```
 
-`make verify` runs the high-confidence secret-pattern scan, Ruff, Ruff format, mypy, compileall, pytest, and the CLI smoke suite. It is not a complete secret scanner; use an organizational or CI scanner as well when available.
+`docs/SPEC.md` is the product-requirements authority. When historical material in `docs/` conflicts with implementation, do not treat it as current behavior. Keep changes focused, read relevant requirements/callers/tests first, and preserve unrelated worktree changes. Generated files, lockfiles, and untracked files must be confirmed in scope before modification.
 
-## Commit Messages
+Use code to explain how behavior works, tests to specify expected behavior, and commit messages to explain why. Comments should explain non-obvious constraints or rejected alternatives, not restate clear code.
 
-- Follow the commit-message policy in `CONTRIBUTING.md`.
-- Do not create commits unless the user explicitly requests it.
+Do not expose secrets or personal data. Do not use destructive Git operations. Make changes on a feature branch and submit them through a pull request; do not edit `main` directly.
 
-## Git and feedback
+Put rules in `GameState`, not in CLI or GUI. Keep TCOD consoles, glyphs, colors, and tile details out of game state. `GameState` owns randomness; preserve seeded determinism, including save/load of RNG state.
 
-Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. When a review finding or failure needs a permanent fix, use [docs/feedback.md](docs/feedback.md) to decide whether the guard belongs in a test, `make verify`, a hook, documentation, or a Skill without bloating this file.
+## Key Directories
+
+- `src/pyrogue/core/` — canonical game, CLI/GUI lifecycle, and JSON save management.
+- `src/pyrogue/presentation/` — conversion of display-cell data to terminal text.
+- `src/pyrogue/ui/` — GUI screens and input/rendering adapters.
+- `src/pyrogue/config/`, `src/pyrogue/utils/` — configuration and logging support.
+- `tests/` — pytest contracts organized around core rules, adapters, persistence, and UI.
+- `scripts/` — verification helpers and CLI smoke runner.
+- `docs/` — current requirements, architecture, and development guidance; `docs/README.md` describes historical documents.
+
+## Development Commands
+
+```bash
+rtk uv sync --locked --extra dev
+rtk uv run --locked game --cli --seed 1234
+rtk uv run --locked game --seed 1234
+rtk make verify
+```
+
+The console entry point is `game` (`pyrogue.main:main`); omit `--cli` for the GUI. `rtk make verify` runs secret-pattern scanning, Ruff lint/format checks, mypy, compileall, pytest, and the CLI smoke suite. For focused work, use `rtk uv run --locked --extra dev pytest -q <test-file>`. Prefix shell commands with `rtk` in this repository.
+
+## Code Conventions & Common Patterns
+
+- Follow the existing Python style: Ruff, double-quoted strings, four-space indentation, and a 120-character line limit.
+- Use `GameState.execute()` and `CommandResult` for canonical command behavior and result reporting. CLI and GUI translate input and display state; they must not duplicate game rules.
+- Use the `GameState`-owned seeded RNG for every game-random outcome. Keep the RNG state and relevant gameplay state round-trippable in JSON.
+- Keep rendering dependent on `DisplayCell`, not game entities or TCOD objects.
+- Treat incompatible saves as explicit compatibility errors; when changing save formats, update `GAME_VERSION`, compatibility checks, and tests together.
+
+## Important Files
+
+- `docs/SPEC.md` — authoritative requirements, exclusions, and acceptance criteria.
+- `docs/README.md` — documentation index and historical-document policy.
+- `docs/architecture.md`, `docs/development.md` — current architecture and commands.
+- `src/pyrogue/main.py` — CLI/GUI entry point and `--seed` option.
+- `src/pyrogue/core/rogue_game.py` — canonical game state and rules.
+- `src/pyrogue/core/cli_engine.py`, `src/pyrogue/core/engine.py` — CLI and GUI adapters.
+- `src/pyrogue/core/save_manager.py` — JSON persistence and compatibility handling.
+- `src/pyrogue/presentation/display_renderer.py` — text display conversion.
+- `pyproject.toml`, `uv.lock`, `Makefile` — package, locked dependencies, and development commands.
+
+## Runtime/Tooling Preferences
+
+Use Python 3.12 or later and `uv` with the committed `uv.lock`; install development dependencies with `uv sync --locked --extra dev`. TCOD is required for GUI execution. Do not introduce another package manager or runtime.
+
+## Testing & QA
+
+Use pytest; tests live under `tests/` and pytest adds `src` to the import path. Follow existing deterministic `GameState(seed=...)` tests and use `tmp_path` for save-file cases. Check state changes and turn consumption, not just messages. Cover save compatibility, determinism, and CLI/GUI shared behavior when affected.
+
+Run focused tests and `rtk make verify` for code changes. `scripts/cli_test.sh` is the CLI smoke suite; its seed can be set with `CLI_TEST_SEED`, e.g. `CLI_TEST_SEED=20260908 rtk make test-cli`. Secret-pattern scanning is high-confidence only, not a complete secret scanner.
+
+Before implementing, read the relevant `docs/SPEC.md` section and current callers/tests. Preserve unrelated worktree changes; do not commit, push, or perform destructive Git operations unless explicitly requested.
