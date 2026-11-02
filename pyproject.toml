@@ -14,7 +14,7 @@ dependencies = [
     "tcod>=19.0.0",
     "numpy>=1.26.3",
     "typing-extensions>=4.12.2",
-    "python-dotenv>=1.0.0",
+    "python-dotenv>=1.2.4",
 ]
 
 [project.scripts]
