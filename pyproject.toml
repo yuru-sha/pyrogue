@@ -13,7 +13,7 @@ requires-python = ">=3.12"
 dependencies = [
     "tcod>=19.0.0",
     "numpy>=1.26.3",
-    "typing-extensions>=4.12.2",
+    "typing-extensions>=4.16.0",
     "python-dotenv>=1.2.4",
 ]
 
