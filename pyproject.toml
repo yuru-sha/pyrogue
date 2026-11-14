@@ -55,6 +55,8 @@ ignore = [
     "PLR0915",  # Too many statements (especially common in dashboard pages)
     "PLR0912",  # Too many branches (CLI commands naturally have many branches)
     "C901",     # Complex functions (CLI commands are inherently complex)
+    "PLC0415",  # Existing lazy imports avoid circular imports and optional startup dependencies
+    "UP042",    # Keep legacy str/Enum behavior until a separate StrEnum migration
 ]
 
 [tool.ruff.format]
@@ -83,6 +85,7 @@ known-first-party = ["pyrogue"]
     "PLR2004", # Magic value used in comparison (tests often use literal values)
     "PLR0912", # Too many branches (test functions can be complex)
     "PLR0913", # Too many arguments (test functions often need many parameters)
+    "PLR0917", # Parametrized test cases intentionally have multiple positional inputs
     "PLR0915", # Too many statements (test functions can be long)
     "C901",    # Function is too complex (test functions can be complex)
     "RUF002",  # Allow full-width characters in docstrings (Japanese comments)
