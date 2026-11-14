@@ -47,11 +47,11 @@ def key_event(key: str) -> SimpleNamespace:
 
 
 def _key(character: str) -> tcod.event.KeyDown:
-    return tcod.event.KeyDown(0, ord(character), 0)
+    return tcod.event.KeyDown(scancode=0, sym=ord(character), mod=0)
 
 
 def _shifted_key(character: str) -> tcod.event.KeyDown:
-    return tcod.event.KeyDown(0, ord(character), tcod.event.Modifier.SHIFT)
+    return tcod.event.KeyDown(scancode=0, sym=ord(character), mod=tcod.event.Modifier.SHIFT)
 
 
 def game_and_inventory() -> tuple[GameScreen, InventoryScreen]:
@@ -204,7 +204,7 @@ def test_headless_gui_shift_slash_opens_help_without_text_payload() -> None:
     game_screen = GameScreen(None, seed=1234)
     game = game_screen.rogue_game
     turns_before = game.player.turns_played
-    event = tcod.event.KeyDown(0, tcod.event.KeySym.SLASH, tcod.event.Modifier.SHIFT)
+    event = tcod.event.KeyDown(scancode=0, sym=tcod.event.KeySym.SLASH, mod=tcod.event.Modifier.SHIFT)
 
     assert not hasattr(event, "text")
     assert game_screen.handle_key(event) is None
